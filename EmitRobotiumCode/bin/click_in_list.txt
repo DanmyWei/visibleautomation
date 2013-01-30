@@ -1,1 +1,0 @@
-		ArrayList<android.widget.TextView> textViewList%VARIABLE_INDEX% = solo.clickInList(%ITEM_INDEX%, %LIST_INDEX%);

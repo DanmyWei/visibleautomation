@@ -1,2 +1,0 @@
-		%CLASSPATH% view%VARIABLE_INDEX% = (%CLASSPATH%) solo.getView(%ID%);
-		solo.clickOnView(view%VARIABLE_INDEX%);
