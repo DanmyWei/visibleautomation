@@ -11,7 +11,11 @@ The system is far from complete, but it does handle clicks, lists, activity even
 Recorder
 I'm assuming that you've installed the Android SDK, Java, and Eclipse.  Download the robotium jar file from http://code.google.com/p/robotium/downloads/list.
 
-The recorder is set up as a library which integrates with your application using Android Instrumentation.  Create a Android Test Project which references your application, then link with Recorder as a library. From the ApiDemosRecorder example project, copy ApiDemosTest.java to your test package directory, and edit it as follows:
+The recorder is set up as a library which integrates with your application using Android Instrumentation.  Create a Android Test Project which references your application, then link with Recorder as a library.
+
+IMPORTANT NOTE: FOR SOME ABSURD REASON, ECLIPSE TURNS OFF THE IsLibrary flag for Recorder, so you have to right-click properties, then check "Is Library" before you import the ApiDemosRecorder project.  Import ApiDemos before you import ApiDemosRecorder. 
+
+From the ApiDemosRecorder example project, copy ApiDemosTest.java to your test package directory, and edit it as follows:
 
 
 package com.example.android.apis.test;				<-- change this to your test package name
@@ -54,6 +58,8 @@ for example:
 java -cp c:\redfoundry\workspace\EmitRobotiumCode\bin com.androidApp.emitter.EmitRobotiumCode events.txt ApiDemos c:\temp\robotium-solo-3.6.jar
 
 This will create an android project named ApiDemosTest, which you can import as an Android project, and run immediately.  Watch the magic!
+
+The ApiDemosTest project is written to test the ApiDemos project, which is included in the samples in the Android SDK
 
 Best Regards,
 Matthew Reynolds
