@@ -19,7 +19,7 @@ public class Constants {
 		public static final String PACKAGE = "package";
 		public static final String ENTER_TEXT = "enter_text";
 		public static final String BEFORE_TEXT = "before_text";
-		public static final String AFTER_TEXT = "before_text";
+		public static final String AFTER_TEXT = "after_text";
 		public static final String CHECKED = "checked";
 		public static final String CLICK = "click";
 		public static final String TOUCH_UP = "touch_up";
@@ -53,6 +53,10 @@ public class Constants {
 		public static final String ANDROID_MANIFEST_XML = "AndroidManifest.xml";
 		public static final String CLASSPATH = "classpath";
 		public static final String GO_BACK = "go_back.txt";
+		public static final String EDIT_TEXT_ID = "edit_text_id.txt";
+		public static final String EDIT_TEXT_CLASS_INDEX = "edit_text_class_index.txt";
+		public static final String WAIT_FOR_VIEW_ID = "wait_for_view_id.txt";
+		public static final String WAIT_FOR_VIEW_CLASS_INDEX = "wait_for_view_class_index.txt";
 			
 	}
 	// template %replace% variables
@@ -70,6 +74,7 @@ public class Constants {
 		public static final CharSequence ROBOTIUM_JAR = "%ROBOTIUM_JAR%";
 		public static final CharSequence TARGETPACKAGE = "%TARGET_PACKAGE%";
 		public static final CharSequence TARGET_PROJECT = "%TARGET_PROJECT%";
+		public static final CharSequence TEXT = "%TEXT%";
 	}
 	
 	public static class Filenames {
@@ -78,6 +83,7 @@ public class Constants {
 		public static final String ANDROID_MANIFEST_XML = "AndroidManifest.xml";
 		public static final String LAUNCHER_PNG = "ic_launcher.png";
 		public static final String CLASSPATH = ".classpath";
+		public static final String OUTPUT = "output.java";
 	}
 	
 	public static class Dirs {
