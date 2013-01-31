@@ -1,0 +1,2 @@
+		%CLASSPATH% view%VARIABLE_INDEX% = (%CLASSPATH%) solo.getView(%CLASSPATH%.class, %VIEW_INDEX%);
+		solo.waitForView(view%VARIABLE_INDEX%);
