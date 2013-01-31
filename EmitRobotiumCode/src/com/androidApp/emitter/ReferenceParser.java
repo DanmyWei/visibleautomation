@@ -6,6 +6,13 @@ import com.androidApp.util.Constants;
 import com.androidApp.util.Constants;
 import com.androidApp.util.StringUtils;
 
+/**
+ * parse a reference to an android view, either by unique id, which can be a hexadecimal, or a resource id, 
+ * the class of the view, and its index relative to the root view, or a parent with a unique id, or for
+ * text views, a string, and the unique id of its ancestor.
+ * @author Matthew
+ *
+ */
 public class ReferenceParser {
 	public enum ReferenceType {
 		ID,					// resource id (better be unique)
@@ -40,6 +47,7 @@ public class ReferenceParser {
 		mType = ReferenceType.UNKNOWN;
 		mID = null;
 		mClass = null;
+		mIndex = -1;
 		mTextType = TextType.HARDCODED;
 		mIDType = IDType.HARDCODED;
 		if (parts.get(startIndex).equals(Constants.CLASS_INDEX)) {
@@ -78,6 +86,7 @@ public class ReferenceParser {
 		}	
 	}
 	
+	// accessors
 	public ReferenceType getReferenceType() {
 		return mType;
 	}
@@ -104,5 +113,57 @@ public class ReferenceParser {
 	
 	public String getClassName() {
 		return mClass;
+	}
+	
+	/**
+	 * test for equivalent references.
+	 */
+	@Override
+	public boolean equals(Object obj) {
+		if (!(obj instanceof ReferenceParser)) {
+			return false;
+		}
+		ReferenceParser b = (ReferenceParser) obj;
+		if (mType != b.mType) {
+			return false;
+		}
+		switch (mType) {
+		case ID:
+			if ((mID == null) || (b.mID == null)) {
+				return false;
+			}
+			return mID.equals(b.mID);
+		case CLASS_INDEX:
+			if ((mClass == null) || (b.mClass == null)) {
+				return false;
+			}
+			if ((mIndex == -1) || (b.mIndex == -1)) {
+				return false;
+			}
+			return mClass.equals(b.mClass) && (mIndex == b.mIndex);
+		case CLASS_INDEX_ID:
+			if ((mClass == null) || (b.mClass == null)) {
+				return false;
+			}
+			if ((mIndex == -1) || (b.mIndex == -1)) {
+				return false;
+			}
+			if ((mID == null) || (b.mID == null)) {
+				return false;
+			}			
+			return mID.equals(b.mID) && mClass.equals(b.mClass) && (mIndex == b.mIndex);
+		case TEXT_ID:
+			if ((mID == null) || (b.mID == null)) {
+				return false;
+			}			
+			if ((mText == null) || (b.mID == null)) {
+				return false;
+			}	
+			return mID.equals(b.mID) && mText.equals(b.mText); 
+		case UNKNOWN:
+			return false;
+		default:
+			return false;
+		}
 	}
 }
