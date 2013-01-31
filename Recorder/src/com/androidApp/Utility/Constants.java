@@ -59,7 +59,7 @@ public class Constants {
 		public static final String UNKNOWN = "unknown";
 		public static final String ENTER_TEXT = "enter_text";
 		public static final String BEFORE_TEXT = "before_text";
-		public static final String AFTER_TEXT = "before_text";
+		public static final String AFTER_TEXT = "after_text";
 		public static final String CHECKED = "checked";
 		public static final String CLICK = "click";
 		public static final String TOUCH_UP = "touch_up";
