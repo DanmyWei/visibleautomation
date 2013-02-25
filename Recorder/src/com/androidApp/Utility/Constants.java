@@ -22,7 +22,11 @@ public class Constants {
 	public static class Classes {
 		public static final String LISTENER_INFO_CLASS = "android.view.View$ListenerInfo";
 		public static final String PHONE_DECOR_VIEW_CLASS = "com.android.internal.policy.impl.PhoneWindow$DecorView";
-		public static final String ENCLOSING_CLASS = "this$0";		
+		public static final String ENCLOSING_CLASS = "this$0";
+		public static final String DIALOG_TITLE_SIMPLE_NAME = "DialogTitle";
+		public static final String DIALOG_TITLE_CLASS = "com.android.internal.widget.DialogTitle";
+		public static final String PHONE_WINDOW_CLASS = "com.android.internal.policy.impl.PhoneWindow";
+		public static final String WINDOW_MANAGER_CLASS = "android.view.WindowManagerImpl";
 	}
 	
 	// listener field names
@@ -45,6 +49,11 @@ public class Constants {
 		public static final String CHECKED_CHANGE_LISTENER = "mOnCheckedChangeListener";
 		public static final String DIALOG_CLICK_MESSAGE = "mClickMessage";
 		public static final String DIALOG_CANCEL_MESSAGE = "mCancelMessage";
+		public static final String SELECTED_ITEM_FIELD = "mOnItemSelectedListener";
+		public static final String TITLE = "mTitle";
+		public static final String TEXT = "mText";
+		public static final String VIEWS = "mViews";
+		public static final String DECOR = "mDecor";
 	}
 	
 	// possible derive methods which listen for events.
@@ -81,5 +90,14 @@ public class Constants {
 		public static final String DIALOG_KEY = "dialog_key";
 		public static final String DIALOG_CLICK = "dialog_click";
 		public static final String CANCEL_DIALOG = "cancel_dialog";
+		public static final String ITEM_SELECTED = "item_selected";
+		public static final String KEY = "key";
 	}
+	
+	// description strings 
+	public static class Description {
+		public static final String IMAGE_VIEW = "ImageView";
+		public static final String CLICK_ON = "Click on";
+	}
+	
 }

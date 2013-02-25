@@ -21,6 +21,11 @@ import android.widget.Adapter;
 import android.widget.AdapterView;
 import android.widget.TextView;
 
+/**
+ * grab-bag of utilities to extract views from the android view tree.
+ * @author Matthew
+ *
+ */
 public class TestUtils {
 	private static final String TAG = "TestUtils";
 	

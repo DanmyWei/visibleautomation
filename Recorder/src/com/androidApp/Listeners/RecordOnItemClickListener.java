@@ -7,7 +7,7 @@ import android.view.View;
 import android.widget.AdapterView;
 
 // record item clicks for listviews
-public class RecordOnItemClickListener implements AdapterView.OnItemClickListener {
+public class RecordOnItemClickListener extends RecordListener implements AdapterView.OnItemClickListener {
 	protected EventRecorder						mEventRecorder;
 	protected AdapterView<?>					mAdapterView;
 	protected AdapterView.OnItemClickListener	mOriginalItemClickListener;
@@ -17,11 +17,12 @@ public class RecordOnItemClickListener implements AdapterView.OnItemClickListene
 		mAdapterView = adapterView;
 		mOriginalItemClickListener = adapterView.getOnItemClickListener();
 	}
-	
+		
 	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 		long time = SystemClock.uptimeMillis();
 		try {
-			String logString = Constants.EventTags.ITEM_CLICK + ":" + time + ", "+ position + "," + mEventRecorder.getViewReference().getClassIndexReference(parent);
+			String description = getDescription(view);
+			String logString = Constants.EventTags.ITEM_CLICK + ":" + time + ", "+ position + "," + mEventRecorder.getViewReference().getClassIndexReference(parent) + "," + description;
 			mEventRecorder.writeRecord(logString);
 		} catch (Exception ex) {
 			ex.printStackTrace();

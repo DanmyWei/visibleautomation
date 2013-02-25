@@ -9,7 +9,7 @@ import android.content.DialogInterface;
 import android.os.SystemClock;
 import android.view.View;
 
-public class RecordDialogOnCancelListener implements DialogInterface.OnCancelListener {
+public class RecordDialogOnCancelListener extends RecordListener implements DialogInterface.OnCancelListener {
 	protected EventRecorder mEventRecorder;
 	protected DialogInterface.OnCancelListener mOriginalOnCancelListener;
 	
@@ -31,7 +31,8 @@ public class RecordDialogOnCancelListener implements DialogInterface.OnCancelLis
 	public void onCancel(DialogInterface dialog) {
 		long time = SystemClock.uptimeMillis();
 		try {
-			String logString = Constants.EventTags.CANCEL_DIALOG + ":" + time;
+			String description = getDescription(dialog);
+			String logString = Constants.EventTags.CANCEL_DIALOG + ":" + time + "," + description;
 			mEventRecorder.writeRecord(logString);
 		} catch (Exception ex) {
 			ex.printStackTrace();

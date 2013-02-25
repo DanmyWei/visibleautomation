@@ -33,7 +33,8 @@ public class Constants {
 		public static final String ACTIVITY_BACK = "activity_back";
 		public static final String CLASS = "class";	
 		public static final String DISMISS_DIALOG = "dismiss_dialog";
-		public static final Object CANCEL_DIALOG = "cancel_dialog";	
+		public static final Object CANCEL_DIALOG = "cancel_dialog";
+		public static final Object ITEM_SELECTED = "item_selected";	
 	}
 	public static class Templates {
 
@@ -57,6 +58,11 @@ public class Constants {
 		public static final String EDIT_TEXT_CLASS_INDEX = "edit_text_class_index.txt";
 		public static final String WAIT_FOR_VIEW_ID = "wait_for_view_id.txt";
 		public static final String WAIT_FOR_VIEW_CLASS_INDEX = "wait_for_view_class_index.txt";
+		public static final String FUNCTION_HEADER = "function_header.txt";
+		public static final String FUNCTION_TRAILER = "function_trailer.txt";
+		public static final String SELECT_SPINNER_ITEM = "select_spinner_item.txt";
+		public static final String FUNCTION_CALL = "function_call.txt";
+		public static final String CLASS_TRAILER = "class_trailer.txt";
 			
 	}
 	// template %replace% variables
@@ -75,6 +81,9 @@ public class Constants {
 		public static final CharSequence TARGETPACKAGE = "%TARGET_PACKAGE%";
 		public static final CharSequence TARGET_PROJECT = "%TARGET_PROJECT%";
 		public static final CharSequence TEXT = "%TEXT%";
+		public static final CharSequence FUNCTION_NAME = "%FUNCTION_NAME%";
+		public static final CharSequence SPINNER_INDEX = "%SPINNER_INDEX%";
+		public static final CharSequence DESCRIPTION = "%DESCRIPTION%";
 	}
 	
 	public static class Filenames {
@@ -96,5 +105,10 @@ public class Constants {
 	public static class Extensions {
 		public static final String TEST = "Test";
 		public static final String JAVA = "java";
+	}
+	
+	public static class SoloFunctions {
+		public static final String WAIT_FOR_ACTIVITY = "waitForActivity";
+		public static final String GO_BACK = "goBack";
 	}
 }

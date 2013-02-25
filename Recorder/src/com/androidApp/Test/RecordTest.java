@@ -32,7 +32,9 @@ import android.widget.TextView;
 
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
+import com.androidApp.Listeners.RecordOnKeyListener;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.FieldUtils;
 import com.androidApp.Utility.StringUtils;
 import com.androidApp.Utility.TestUtils;
 import com.androidApp.Utility.ViewExtractor;
@@ -45,23 +47,19 @@ import com.androidApp.Utility.ViewExtractor;
  */
 public abstract class RecordTest<T extends Activity> extends ActivityInstrumentationTestCase2<T> {
 	private static final String TAG = "RecordTest";
-	private EventRecorder 					mRecorder;
-	private ActivityMonitor					mActivityMonitor;					// track switches between activities	
-	private Stack<WeakReference<Activity>> 	mActivityStack;						// current stack of activities, managed by TimerThread
-	private static final int 				ACTIVITYSYNCTIME = 50;				// msec polling frequency
-	private Timer 							mActivitySyncTimer;					// timer to run activity stack thread.
-	private boolean							mfFirstActivityInitialized = false;	// if stack is empty, and this is true, then exit.
-	private Dialog							mCurrentDialog = null;				// track the current dialog, so we don't re-record it.
+	private EventRecorder 		mRecorder;
+	private ActivityMonitor		mActivityMonitor;					// track switches between activities	
+	private Thread				mActivityThread;
+	private Dialog				mCurrentDialog = null;				// track the current dialog, so we don't re-record it.
+	private Activity			mStartActivity = null;
+	private boolean				mFinished = false;
+	
 	// initialize the event recorder
-	public void initRecorder() {
-		try {
-			mRecorder = new EventRecorder("events.txt");
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
+	public void initRecorder() throws IOException {
+		mRecorder = new EventRecorder("events.txt");
 	}
 	
-	public RecordTest(Class<T> activityClass) {
+	public RecordTest(Class<T> activityClass) throws IOException {
 		super(activityClass);
 		initRecorder();
 	}
@@ -80,15 +78,12 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	 * initialize the event recorder, the activity monitor, the stack of activities, and the background thread that populates
 	 * that stack.  Use instrumentation to launch the activity
 	 */
-	public void setUp() throws Exception { 
-		super.setUp();
-		
+	public void setUp() throws NameNotFoundException, IOException, Exception { 
+		super.setUp();	
 		initRecorder();
 		initializeResources();
 		setupActivityMonitor();
-		mActivityStack = new Stack<WeakReference<Activity>>();
 		setupActivityStackListener();
-
 		Instrumentation instrumentation = getInstrumentation();
 		Intent intent = new Intent(Intent.ACTION_MAIN);
 		intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -110,137 +105,75 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	*/
 
 	private void setupActivityMonitor() {
-
-		try {
-			IntentFilter filter = null;
-			mActivityMonitor = getInstrumentation().addMonitor(filter, null, false);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		IntentFilter filter = null;
+		mActivityMonitor = getInstrumentation().addMonitor(filter, null, false);
 	}
-
-	// is the activity in the current activity stack?
-	private boolean inActivityStack(Activity activity) {
-		for (WeakReference<Activity> activityRef : RecordTest.this.mActivityStack) {
-			if (activityRef.get().equals(activity)) {
-				return true;
-			}
-		}
-		return false;
-	}
+	
 	/**
-	* This is were the activityStack listener is set up. The listener will keep track of the
-	* opened activities and their positions.
-	*/
-
+	 * activity monitor hits always come in pairs.
+	 * if the activities are the same (A, A), then it is going forward to that activity (A)
+	 * if the activities are different (A, B) then it is going backwards from B to A 
+	 */
 	private void setupActivityStackListener() {
-		mActivitySyncTimer = new Timer();
-		TimerTask activitySyncTimerTask = new TimerTask() {
-			@Override
+		Runnable runnable = new Runnable() {
 			public void run() {
 				if (RecordTest.this.mActivityMonitor != null) {
-					Activity activity = RecordTest.this.mActivityMonitor.getLastActivity();
-					Dialog dialog = TestUtils.findDialog(activity);
-					if ((dialog != null) && (dialog != mCurrentDialog)) {
-						mRecorder.interceptDialog(dialog);
-						mCurrentDialog = dialog;
-					}
-					if (activity != null) {
-						if (!RecordTest.this.mActivityStack.isEmpty()) {
-							WeakReference<Activity> lastStackedActivity = RecordTest.this.mActivityStack.peek();
-							if (lastStackedActivity.get() == null) {
-								return;
+					boolean firstActivity = true;
+					Activity activityA = null, activityB = null;
+					while (true) {
+						Activity activity = RecordTest.this.mActivityMonitor.waitForActivity();
+						if (activity != null) {
+							Dialog dialog = TestUtils.findDialog(activity);
+							if ((dialog != null) && (dialog != mCurrentDialog)) {
+								mRecorder.interceptDialog(dialog);
+								mCurrentDialog = dialog;
 							}
-							if (lastStackedActivity.get().equals(activity)) {
-								return;
-							}
-						}
-						// if the activity matches the activity *previous* to the current activity, then we're going back to it
-						int stackSize = RecordTest.this.mActivityStack.size();
-						if (stackSize >= 2) {
-							int i = 0;
-							for (WeakReference<Activity> activityRef : RecordTest.this.mActivityStack) {
-								Log.i(TAG, "activity[" + i +"] = " + activityRef.get().hashCode());
-								if (activityRef.get().equals(activity)) {
-									Log.i(TAG, "found previous activity index = " + i + " hashtag = " + activityRef.get().hashCode());
-									removeActivityFromStack(activity);
-									RecordTest.this.mActivityStack.pop();
-									long time = SystemClock.uptimeMillis();
-									mRecorder.writeRecord(Constants.EventTags.ACTIVITY_BACK + "," + time + "," + activity.getClass().getName());
-									return;
+							if (firstActivity) {
+								activityA = activity;
+								firstActivity = false;
+								if (mStartActivity == null) {
+									mStartActivity = activityA;
 								}
-								i++;
+							} else {
+								activityB = activity;
+								firstActivity = true;
 							}
-							Log.i(TAG, " currentActivity = " + activity.hashCode());
-						} 
-					
-						if (activity.isFinishing()) {
-							if (inActivityStack(activity)) {
-								removeActivityFromStack(activity);
+							if ((activityA != null) && (activityB != null)) {
 								long time = SystemClock.uptimeMillis();
-								mRecorder.writeRecord(Constants.EventTags.ACTIVITY_BACK + "," + time + "," + activity.getClass().getName());
+								if (activityA != activityB) {
+									String logMsg = Constants.EventTags.ACTIVITY_BACK + ":" + time + "," + activityB.getClass().getName() + "," + activityB.toString();
+									mRecorder.writeRecord(logMsg);
+									if (activityA == mStartActivity) {
+										mFinished = true;
+									}
+								} else {
+									// intercept events on the newly created activity.
+									activityA.runOnUiThread(new InterceptRunnable(activityA));
+									String logMsg = Constants.EventTags.ACTIVITY_FORWARD + ":" + time + "," + activityA.getClass().getName() + "," + activityA.toString();
+									mRecorder.writeRecord(logMsg);
+								}
+								activityA = null;
+								activityB = null;
 							}
-						} else {
-							addActivityToStack(activity);
-							long time = SystemClock.uptimeMillis();
-							mRecorder.writeRecord(Constants.EventTags.ACTIVITY_FORWARD + "," + time + "," + activity.getClass().getName());
 						}
 					}
 				}
 			}
 		};
-		mActivitySyncTimer.schedule(activitySyncTimerTask, 0, ACTIVITYSYNCTIME);
-	}
-
-	/**
-	 * Removes a given activity from the activity stack
-	 * 
-	 * @param activity
-	 *            the activity to remove
-	 */
-	private void removeActivityFromStack(Activity activity) {
-		Iterator<WeakReference<Activity>> activityStackIterator = mActivityStack.iterator();
-		while (activityStackIterator.hasNext()) {
-			Activity activityFromWeakReference = activityStackIterator.next().get();
-			if (activityFromWeakReference == null) {
-				activityStackIterator.remove();
-			}
-			if (activity != null && activityFromWeakReference != null && activityFromWeakReference.equals(activity)) {
-				activityStackIterator.remove();
-			}
-		}
-	}
-
-	/**
-	* Adds an activity to the stack
-	*
-	* @param activity the activity to add
-	*/
-
-	private void addActivityToStack(Activity activity) {
-		activity.runOnUiThread(new InterceptRunnable(activity));
-		WeakReference<Activity> weakActivityReference = new WeakReference<Activity>(activity);
-		
-		if (mActivityStack.isEmpty()) {
-			mfFirstActivityInitialized = true;
-		}
-		activity = null;
-		mActivityStack.push(weakActivityReference);
+		mActivityThread = new Thread(runnable, "activityMonitorThread");
+		mActivityThread.start();
 	}
 	
 	/**
 	 * get the package name for this activity.
 	 * @param activity
 	 * @return
+	 * @throws NameNotFoundException 
 	 */
-	private String getPackageName(Activity activity) {
-		try {
-	        PackageManager pm = activity.getPackageManager();
-	        PackageInfo packageInfo = pm.getPackageInfo(activity.getPackageName(), 0);
-	        return packageInfo.packageName;
-	    } catch (NameNotFoundException e) {
-	    	return null;
-	    }
+	private String getPackageName(Activity activity) throws NameNotFoundException {
+        PackageManager pm = activity.getPackageManager();
+        PackageInfo packageInfo = pm.getPackageInfo(activity.getPackageName(), 0);
+        return packageInfo.packageName;
 	}
 
 	/**
@@ -259,12 +192,13 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 			RecordTest.this.mRecorder.intercept(mActivity);
 		}
 	}
+	
 	public void testRecord() {
 
 		try {
 			do {
 				Thread.sleep(100);
-			} while (!mfFirstActivityInitialized && !mActivityStack.isEmpty());
+			} while (!mFinished);
 		} catch (Exception ex) {
 		}
 		Log.i("foo", "foo");

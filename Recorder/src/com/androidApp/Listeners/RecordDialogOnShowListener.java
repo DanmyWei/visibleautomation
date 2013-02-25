@@ -8,7 +8,7 @@ import android.app.Dialog;
 import android.content.DialogInterface;
 import android.os.SystemClock;
 
-public class RecordDialogOnShowListener implements DialogInterface.OnShowListener {
+public class RecordDialogOnShowListener extends RecordListener implements DialogInterface.OnShowListener {
 	protected EventRecorder mEventRecorder;
 	protected DialogInterface.OnShowListener mOriginalOnShowListener;
 	
@@ -24,7 +24,8 @@ public class RecordDialogOnShowListener implements DialogInterface.OnShowListene
 	public void onShow(DialogInterface dialog) {
 		long time = SystemClock.uptimeMillis();
 		try {
-			String logString = Constants.EventTags.SHOW_DIALOG + ":" + time;
+			String description = getDescription(dialog);
+			String logString = Constants.EventTags.SHOW_DIALOG + ":" + time + "," + description;
 			mEventRecorder.writeRecord(logString);
 		} catch (Exception ex) {
 			ex.printStackTrace();

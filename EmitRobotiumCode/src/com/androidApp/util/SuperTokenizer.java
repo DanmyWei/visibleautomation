@@ -29,12 +29,13 @@ public class SuperTokenizer {
 	
 	// get the next token from,"the",\token,'string' -> [from the token string]
 	public String next() {
-		StringBuffer sbToken = new StringBuffer();
-		boolean fInQuotes = false;
-		char quoteChar = '\0';
 		if ((mString == null) || (mString.length() == 0)) {
 			return null;
 		}
+		int originalStringLength = mString.length();
+		StringBuffer sbToken = new StringBuffer();
+		boolean fInQuotes = false;
+		char quoteChar = '\0';
 		int ich = 0;
 		for ( ich = 0; ich < mString.length(); ich++) {
 			char ch = mString.charAt(ich);
@@ -55,13 +56,13 @@ public class SuperTokenizer {
 					sbToken.append(ch);
 				} else if (mDelimiters.indexOf(ch) != -1) {
 					mString = mString.substring(ich + 1);
-					break;
+					return sbToken.toString();
 				} else {
 					sbToken.append(ch);
 				}
 			}
 		}
-		if (ich == mString.length()) {
+		if (ich == originalStringLength) {
 			mString = null;
 		}
 		return sbToken.toString();

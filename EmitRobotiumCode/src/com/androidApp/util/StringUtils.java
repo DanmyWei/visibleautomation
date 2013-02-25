@@ -116,5 +116,19 @@ public class StringUtils {
 			return s;
 		}
 	}
-	 
+	
+	/**
+	 * return com.example from com.example.foo
+	 * @param s com.example.foo
+	 * @return com.example
+	 */
+
+	public static String getPackageFromClassPath(String className) {
+		int ich = className.lastIndexOf('.');
+		if (ich != -1) {
+			return className.substring(9, ich);
+		} else {
+			return className;
+		}
+	}	 
 }

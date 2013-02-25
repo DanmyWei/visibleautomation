@@ -12,6 +12,7 @@ import com.androidApp.Listeners.RecordDialogOnCancelListener;
 import com.androidApp.Listeners.RecordDialogOnDismissListener;
 import com.androidApp.Listeners.RecordOnClickListener;
 import com.androidApp.Listeners.RecordOnItemClickListener;
+import com.androidApp.Listeners.RecordOnItemSelectedListener;
 import com.androidApp.Listeners.RecordOnLongClickListener;
 import com.androidApp.Listeners.RecordOnScrollListener;
 import com.androidApp.Listeners.RecordOnTouchListener;
@@ -37,6 +38,7 @@ import android.widget.AdapterView;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.SeekBar;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 /**
@@ -124,7 +126,7 @@ public class EventRecorder {
 		try {
 			
 			// adapterViews don't like click listeners, they like item click listeners.
-			if (!(v instanceof AbsListView)) {
+			if (!(v instanceof AdapterView)) {
 				// only replace the touch listener if one has been defined.
 				// replace the touch listener, but make sure that we haven't replaced it already, because that would be re-entrant 
 				AdapterView listView = TestUtils.getAdapterViewAncestor(v);
@@ -155,17 +157,27 @@ public class EventRecorder {
 					}
 				}
 			} else {
-				// TODO: need to support scrolling for objects which are NOT ListViews 
-				AbsListView absListView = (AbsListView) v;
-				AbsListView.OnScrollListener originalScrollListener = ListenerIntercept.getScrollListener(absListView);
-				if (!(originalScrollListener instanceof RecordOnScrollListener)) {
-					RecordOnScrollListener recordScrollListener = new RecordOnScrollListener(this, originalScrollListener);
-					absListView.setOnScrollListener(recordScrollListener);
+				if (v instanceof AbsListView) {
+					// TODO: need to support scrolling for objects which are NOT ListViews 
+					AbsListView absListView = (AbsListView) v;
+					AbsListView.OnScrollListener originalScrollListener = ListenerIntercept.getScrollListener(absListView);
+					if (!(originalScrollListener instanceof RecordOnScrollListener)) {
+						RecordOnScrollListener recordScrollListener = new RecordOnScrollListener(this, originalScrollListener);
+						absListView.setOnScrollListener(recordScrollListener);
+					}
+					AdapterView.OnItemClickListener itemClickListener = absListView.getOnItemClickListener();
+					if (!(itemClickListener instanceof RecordOnItemClickListener)) {
+						RecordOnItemClickListener recordItemClickListener = new RecordOnItemClickListener(this, absListView);
+						absListView.setOnItemClickListener(recordItemClickListener);		
+					}
 				}
-				AdapterView.OnItemClickListener itemClickListener = absListView.getOnItemClickListener();
-				if (!(itemClickListener instanceof RecordOnItemClickListener)) {
-					RecordOnItemClickListener recordItemClickListener = new RecordOnItemClickListener(this, absListView);
-					absListView.setOnItemClickListener(recordItemClickListener);		
+				if (v instanceof Spinner) {
+					Spinner spinner = (Spinner) v;
+					AdapterView.OnItemSelectedListener originalSelectedItemListener = ListenerIntercept.getItemSelectedListener(spinner);
+					if (!(originalSelectedItemListener instanceof RecordOnItemSelectedListener)) {
+						RecordOnItemSelectedListener recordItemSelectedListener = new RecordOnItemSelectedListener(this, originalSelectedItemListener);
+						spinner.setOnItemSelectedListener(recordItemSelectedListener);
+					}
 				}
 			}
 			if (v instanceof EditText) {

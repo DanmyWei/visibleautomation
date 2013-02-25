@@ -14,7 +14,7 @@ import android.widget.TextView;
  * or God Only Knows What changes the text before it's displayed in the text control, this text watcher records the 
  * text after the transformation has been applied (like formatting a phone number or something like that)
  */
-public class RecordTextChangedListener implements TextWatcher {
+public class RecordTextChangedListener extends RecordListener implements TextWatcher {
 	protected EventRecorder			mEventRecorder;
 	protected TextView				mTextView;
 
@@ -29,8 +29,9 @@ public class RecordTextChangedListener implements TextWatcher {
 	public void beforeTextChanged(CharSequence s, int start, int count, int after) {
 		long time = SystemClock.uptimeMillis();
 		try {
+			String description = getDescription(mTextView);
 			String logString = Constants.EventTags.BEFORE_TEXT + ":" + time + "," + s + "," + start + "," +  count + "," + after +
-			   "," + mEventRecorder.getViewReference().getReference(mTextView);
+			   "," + mEventRecorder.getViewReference().getReference(mTextView) + "," + description;
 			mEventRecorder.writeRecord(logString);
 		} catch (Exception ex) {
 			ex.printStackTrace();
@@ -41,7 +42,7 @@ public class RecordTextChangedListener implements TextWatcher {
 	public void onTextChanged(CharSequence s, int start, int before, int count) {
 		long time = SystemClock.uptimeMillis();
 		try {
-			String logString = "aftertext: " + time + "," + s + "," + start + "," + before + "," + count +
+			String logString = Constants.EventTags.AFTER_TEXT + ":" + time + "," + s + "," + start + "," + before + "," + count +
 			   "," + mEventRecorder.getViewReference().getReference(mTextView);
 			mEventRecorder.writeRecord(logString);
 		} catch (Exception ex) {

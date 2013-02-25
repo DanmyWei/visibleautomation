@@ -9,7 +9,7 @@ import android.content.DialogInterface;
 import android.os.SystemClock;
 import android.view.View;
 
-public class RecordDialogOnDismissListener implements DialogInterface.OnDismissListener {
+public class RecordDialogOnDismissListener extends RecordListener implements DialogInterface.OnDismissListener {
 	protected EventRecorder mEventRecorder;
 	protected DialogInterface.OnDismissListener mOriginalOnDismissListener;
 	
@@ -31,7 +31,8 @@ public class RecordDialogOnDismissListener implements DialogInterface.OnDismissL
 	public void onDismiss(DialogInterface dialog) {
 		long time = SystemClock.uptimeMillis();
 		try {
-			String logString = Constants.EventTags.DISMISS_DIALOG + ":" + time;
+			String description = getDescription(dialog);
+			String logString = Constants.EventTags.DISMISS_DIALOG + ":" + time + "," + description;
 			mEventRecorder.writeRecord(logString);
 		} catch (Exception ex) {
 			ex.printStackTrace();

@@ -4,6 +4,7 @@ import %CLASSPATH%;
 import com.jayway.android.robotium.solo.Solo;
 import android.test.ActivityInstrumentationTestCase2;
 import java.util.ArrayList;
+import junit.framework.TestCase;
 
 public class %CLASSNAME%Test extends ActivityInstrumentationTestCase2<%CLASSNAME%> {
   	private Solo solo;

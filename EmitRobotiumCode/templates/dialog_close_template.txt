@@ -1,1 +1,2 @@
+		// %DESCRIPTION%
 		solo.waitForDialogToClose(DIALOG_CLOSE_TIMEOUT);

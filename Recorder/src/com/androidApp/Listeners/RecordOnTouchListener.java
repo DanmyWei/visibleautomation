@@ -11,7 +11,7 @@ import android.view.MotionEvent;
 import android.view.View;
 
 // View.onTouchListener that listens to key events, and writes them to a file.
-public class RecordOnTouchListener implements View.OnTouchListener {
+public class RecordOnTouchListener extends RecordListener implements View.OnTouchListener {
 	protected View.OnTouchListener 	mOriginalOnTouchListener;
 	protected EventRecorder			mEventRecorder;
 	
@@ -39,8 +39,9 @@ public class RecordOnTouchListener implements View.OnTouchListener {
 			} else if (event.getAction() == MotionEvent.ACTION_MOVE) {
 				eventName = Constants.EventTags.TOUCH_MOVE;
 			}
+			String description = getDescription(v);
 			String logString = eventName + ":" + event.getEventTime() + "," + event.getX() + "," + event.getY() + "," +
-			   					mEventRecorder.getViewReference().getReference(v);
+			   					mEventRecorder.getViewReference().getReference(v) + "," + description;
 			mEventRecorder.writeRecord(logString);
 		} catch (Exception ex) {
 			ex.printStackTrace();

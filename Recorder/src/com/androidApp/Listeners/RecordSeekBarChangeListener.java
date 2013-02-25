@@ -7,7 +7,8 @@ import android.os.SystemClock;
 import android.view.View;
 import android.widget.SeekBar;
 
-public class RecordSeekBarChangeListener implements SeekBar.OnSeekBarChangeListener {
+// record a change in a seekbar listener
+public class RecordSeekBarChangeListener extends RecordListener implements SeekBar.OnSeekBarChangeListener {
 	protected SeekBar.OnSeekBarChangeListener 	mOriginalOnSeekBarChangeListener;
 	protected EventRecorder						mEventRecorder;
 	
@@ -30,7 +31,8 @@ public class RecordSeekBarChangeListener implements SeekBar.OnSeekBarChangeListe
 		if (fromUser) {
 			long time = SystemClock.uptimeMillis();
 			try {
-				String logString = Constants.EventTags.PROGRESS_CHANGED + ":" + time + "," + progress + "," + mEventRecorder.getViewReference().getReference(seekBar);
+				String description = getDescription(seekBar);
+				String logString = Constants.EventTags.PROGRESS_CHANGED + ":" + time + "," + progress + "," + mEventRecorder.getViewReference().getReference(seekBar) + "," + description;
 				mEventRecorder.writeRecord(logString);
 			} catch (Exception ex) {
 				ex.printStackTrace();

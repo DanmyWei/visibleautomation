@@ -132,15 +132,4 @@ public class FileUtility {
 		return file.mkdirs();	
 	}
 	
-	/**
-	 * write a list of lines to a file
-	 * @param bw BufferedWriter
-	 * @param lines list of lines
-	 * @throws IOException
-	 */
-	public static void writeLines(BufferedWriter bw, List<String> lines) throws IOException {
-		for (String line : lines) {
-			bw.write(line);
-		}
-	}
 }

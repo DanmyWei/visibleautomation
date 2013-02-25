@@ -97,5 +97,37 @@ public class StringUtils {
 		}
 		return true;
 	}
-	 
+	
+	// XX1 -> XX1st, XX2 -> XX2nd, XX3 -> XX3rd, XXother - XXth
+	public static String getOrdinal(int value) {
+		value++;				// people start from 1, computers start from zero
+		String suffix = null;
+		int lastDigit = value % 10;
+		if (lastDigit == 1) {
+			suffix = "st";
+		} else if (lastDigit == 2) {
+			suffix = "nd";
+		} else if (lastDigit == 3) {
+			suffix = "rd";
+		} else {
+			suffix = "th";
+		}
+		return Integer.toString(value) + suffix;
+	}
+	
+	public static String massageString(String s) {
+		StringBuffer sb = new StringBuffer(s.length());
+		for (int ich = 0; ich < s.length(); ich++) {
+			char ch = s.charAt(ich);
+			if (Character.isLetterOrDigit(ch)) {
+				sb.append(ch);
+			} else if (Character.isWhitespace(ch)) {
+				sb.append(' ');
+			} else {
+				sb.append(' ');
+			}
+		}
+		return sb.toString();
+	}
+
 }

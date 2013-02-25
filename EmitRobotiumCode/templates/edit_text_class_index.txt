@@ -1,3 +1,4 @@
+		// %DESCRIPTION%
 		android.widget.EditText editText%VARIABLE_INDEX% = (android.widget.EditText) solo.getView(android.widget.EditText.class, %VIEW_INDEX%);
 		solo.clearEditText(editText%VARIABLE_INDEX%);
 		solo.enterText(editText, "%TEXT%");

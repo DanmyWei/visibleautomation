@@ -1,6 +1,7 @@
 package com.androidApp.EventRecorder;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 
 import android.app.Dialog;
@@ -8,11 +9,15 @@ import android.content.DialogInterface;
 import android.content.DialogInterface.OnDismissListener;
 import android.os.Message;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.View;
 import android.widget.AbsListView;
+import android.widget.AbsSpinner;
+import android.widget.AdapterView;
 import android.widget.CompoundButton;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
+import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.androidApp.Utility.Constants;
@@ -24,17 +29,54 @@ import com.androidApp.Utility.Constants;
  *
  */
 public class ListenerIntercept {
+	protected static final String TAG = "ListenerIntercept";
+	
+	// handy debug function when extracting fields from objects
+	public static void listFieldsDebug(Class cls) {
+		Field fields[] = cls.getDeclaredFields();
+		for (Field field : fields) {
+			Log.i(TAG, "field name = " + field.getName());
+		}
+	}
 
+	/**
+	 * given an object, its class, and a fieldName, return the value of that field for the object
+	 * because there's a lot of stuff you can set in android, but you can't get it.
+	 * IMPORTANT NOTE: The desired field must be a member of the specified class, not a class that it derives from. 
+	 * TODO: Modify this function to iterate up the class hierarchy to find the field.
+	 * @param o our intended victim
+	 * @param c object class (proletariat, bourgeois, or plutocrat)
+	 * @param fieldName name of the field (it better match)
+	 * @return
+	 * @throws NoSuchFieldException the field didn't match anything the class had
+	 * @throws IllegalAccessException I hope this never happens
+	 */
 	public static Object getFieldValue(Object o, Class c, String fieldName) throws NoSuchFieldException, IllegalAccessException {
 		Field field = c.getDeclaredField(fieldName);
 		field.setAccessible(true);
 		return field.get(o);
 	}
 	
+	/**
+	 * currently unused, because it overlaps onClickListener
+	 * @param cb
+	 * @return
+	 * @throws NoSuchFieldException
+	 * @throws ClassNotFoundException
+	 * @throws IllegalAccessException
+	 */
 	public static CompoundButton.OnCheckedChangeListener getCheckedChangeListener(CompoundButton cb) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
 		return (CompoundButton.OnCheckedChangeListener) getFieldValue(cb, CompoundButton.class, Constants.Fields.CHECKED_CHANGE_LISTENER);
 	}
 
+	/**
+	 * retrieve the click listener for a view.
+	 * @param v the view (isn't that the name of some tv show or something?)
+	 * @return
+	 * @throws NoSuchFieldException
+	 * @throws ClassNotFoundException
+	 * @throws IllegalAccessException
+	 */
 	public static View.OnClickListener getClickListener(View v) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
 		Object listenerInfo = getListenerInfo(v);
 		if (listenerInfo != null) {
@@ -44,6 +86,14 @@ public class ListenerIntercept {
 		}
 	}
 
+	/**
+	 * get the focus change listener for a view (usually a text view)
+	 * @param v
+	 * @return
+	 * @throws NoSuchFieldException
+	 * @throws ClassNotFoundException
+	 * @throws IllegalAccessException
+	 */
 	public static View.OnFocusChangeListener getFocusChangeListener(View v) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
 		Object listenerInfo = getListenerInfo(v);
 		if (listenerInfo != null) {
@@ -53,6 +103,14 @@ public class ListenerIntercept {
 		}
 	}
 
+	/**
+	 * get the key listener for a view. Does anyone use keyboards anymore?
+	 * @param v
+	 * @return
+	 * @throws NoSuchFieldException
+	 * @throws ClassNotFoundException
+	 * @throws IllegalAccessException
+	 */
 	public static View.OnKeyListener getKeyListener(View v) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
 		Object listenerInfo = getListenerInfo(v);
 		if (listenerInfo != null) {
@@ -63,13 +121,13 @@ public class ListenerIntercept {
 	}
 
 	/**
-		 * get the mListenerInfo member of a view, which contains the onTouch, onKey and other listeners.
-		 * @param v 
-		 * @return mListenerInfo as an object (but it can be null if no listeners have been set.
-		 * @throws NoSuchFieldException if mListenerInfo doesn't exist.
-		 * @throws SecurityException if we can't set mListenerInfo
-		 * @throws IllegalAccessException if we can't get mListenerInfo
-		 */
+	 * get the mListenerInfo member of a view, which contains the onTouch, onKey and other listeners.
+	 * @param v 
+	 * @return mListenerInfo as an object (but it can be null if no listeners have been set.
+	 * @throws NoSuchFieldException if mListenerInfo doesn't exist.
+	 * @throws SecurityException if we can't set mListenerInfo
+	 * @throws IllegalAccessException if we can't get mListenerInfo
+	 */
 	public static Object getListenerInfo(View v) throws NoSuchFieldException, SecurityException, IllegalAccessException {
 		return getFieldValue(v, View.class, Constants.Fields.LISTENER_INFO_FIELD);
 	}
@@ -88,6 +146,14 @@ public class ListenerIntercept {
 		return listenerField;
 	}
 
+	/**
+	 * get the long click listener for a view
+	 * @param v the view with a long click listener
+	 * @return
+	 * @throws NoSuchFieldException
+	 * @throws ClassNotFoundException
+	 * @throws IllegalAccessException
+	 */
 	public static View.OnLongClickListener getLongClickListener(View v) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
 		Object listenerInfo = getListenerInfo(v);
 		if (listenerInfo != null) {
@@ -97,12 +163,43 @@ public class ListenerIntercept {
 		}
 	}
 
+	/**
+	 * get the scroll listener for a list view
+	 * @param absListView
+	 * @return
+	 * @throws NoSuchFieldException
+	 * @throws ClassNotFoundException
+	 * @throws IllegalAccessException
+	 */
 	public static AbsListView.OnScrollListener getScrollListener(AbsListView absListView) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
 		return (AbsListView.OnScrollListener) getFieldValue(absListView, AbsListView.class, Constants.Fields.SCROLL_LISTENER_FIELD);
 	}
 
+	/**
+	 * get the change listener for a seekbar
+	 * @param seekbar
+	 * @return
+	 * @throws NoSuchFieldException
+	 * @throws ClassNotFoundException
+	 * @throws IllegalAccessException
+	 */
 	public static SeekBar.OnSeekBarChangeListener getSeekBarChangeListener(SeekBar seekbar) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
 		return (SeekBar.OnSeekBarChangeListener) getFieldValue(seekbar, SeekBar.class, Constants.Fields.SEEKBAR_CHANGE_LISTENER);
+	}
+	
+	/**
+	 * get the onItemSelectedListener for a spinner
+	 * @param spinner
+	 * @return
+	 * @throws NoSuchFieldException
+	 * @throws ClassNotFoundException
+	 * @throws IllegalAccessException
+	 */
+	public static AdapterView.OnItemSelectedListener getItemSelectedListener(Spinner spinner) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
+		listFieldsDebug(Spinner.class);
+		listFieldsDebug(AbsSpinner.class);
+		listFieldsDebug(AdapterView.class);
+		return (AbsListView.OnItemSelectedListener) getFieldValue(spinner, AdapterView.class, Constants.Fields.SELECTED_ITEM_FIELD);
 	}
 
 	/**
@@ -117,6 +214,15 @@ public class ListenerIntercept {
 		return (ArrayList<TextWatcher>) getFieldValue(tv, TextView.class, Constants.Fields.TEXT_WATCHER_LIST_FIELD);
 	}
 
+	/**
+	 * get the touch listener for a view.  This interferes with scroll listeners, lists, clicks, just
+	 * about anything.
+	 * @param v
+	 * @return
+	 * @throws NoSuchFieldException
+	 * @throws ClassNotFoundException
+	 * @throws IllegalAccessException
+	 */
 	public static View.OnTouchListener getTouchListener(View v) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
 		Object listenerInfo = getListenerInfo(v);
 		if (listenerInfo != null) {

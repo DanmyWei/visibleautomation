@@ -1,16 +1,18 @@
 package com.example.android.apis.test;
 
+import java.io.IOException;
+
 import com.androidApp.Test.RecordTest;
 import com.example.android.apis.ApiDemos;
 
 
 public class ApiDemosTest extends RecordTest<ApiDemos> {
 
-	public ApiDemosTest() {
+	public ApiDemosTest() throws IOException {
 		super(ApiDemos.class);
 	}
 	
-	public ApiDemosTest(Class<ApiDemos> activityClass) {
+	public ApiDemosTest(Class<ApiDemos> activityClass) throws IOException {
 		super(activityClass);
 	}
 	

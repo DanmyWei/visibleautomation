@@ -8,7 +8,7 @@ import android.os.SystemClock;
 import android.view.MotionEvent;
 import android.view.View;
 
-public class RecordOnLongClickListener implements View.OnLongClickListener {
+public class RecordOnLongClickListener extends RecordListener implements View.OnLongClickListener {
 	protected View.OnLongClickListener 	mOriginalOnLongClickListener;
 	protected EventRecorder				mEventRecorder;
 	
@@ -29,7 +29,8 @@ public class RecordOnLongClickListener implements View.OnLongClickListener {
 	public boolean onLongClick(View v) {
 		long time = SystemClock.uptimeMillis();
 		try {
-			String logString = Constants.EventTags.CLICK + ":" + time + "," + mEventRecorder.getViewReference().getReference(v);
+			String description = getDescription(v);
+			String logString = Constants.EventTags.CLICK + ":" + time + "," + mEventRecorder.getViewReference().getReference(v) + "," + description;
 			mEventRecorder.writeRecord(logString);
 		} catch (Exception ex) {
 			ex.printStackTrace();

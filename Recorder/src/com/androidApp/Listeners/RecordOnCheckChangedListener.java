@@ -8,7 +8,8 @@ import android.os.SystemClock;
 import android.view.View;
 import android.widget.CompoundButton;
 
-public class RecordOnCheckChangedListener implements CompoundButton.OnCheckedChangeListener {
+// recorder for toggle buttons OnCheckedChangeListener (onClick really does this)
+public class RecordOnCheckChangedListener extends RecordListener implements CompoundButton.OnCheckedChangeListener {
 	protected CompoundButton.OnCheckedChangeListener 	mOriginalOnCheckedChangeListener;
 	protected EventRecorder								mEventRecorder;
 	

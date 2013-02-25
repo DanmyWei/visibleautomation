@@ -7,7 +7,7 @@ import android.os.SystemClock;
 import android.view.View;
 import android.widget.AdapterView;
 
-public class RecordOnItemLongClickListener implements AdapterView.OnItemLongClickListener {
+public class RecordOnItemLongClickListener extends RecordListener implements AdapterView.OnItemLongClickListener {
 	protected EventRecorder							mEventRecorder;
 	protected AdapterView<?>						mAdapterView;
 	protected AdapterView.OnItemLongClickListener	mOriginalItemLongClickListener;
@@ -21,7 +21,8 @@ public class RecordOnItemLongClickListener implements AdapterView.OnItemLongClic
 	public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
 		long time = SystemClock.uptimeMillis();
 		try {
-			String logString = Constants.EventTags.ITEM_LONG_CLICK + ":" + time + ", "+ position + "," + mEventRecorder.getViewReference().getClassIndexReference(parent);
+			String description = getDescription(view);
+			String logString = Constants.EventTags.ITEM_LONG_CLICK + ":" + time + ", "+ position + "," + mEventRecorder.getViewReference().getClassIndexReference(parent) + "," + description;
 			mEventRecorder.writeRecord(logString);
 		} catch (Exception ex) {
 			ex.printStackTrace();

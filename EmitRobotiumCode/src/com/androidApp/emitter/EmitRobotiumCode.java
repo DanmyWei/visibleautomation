@@ -36,6 +36,17 @@ public class EmitRobotiumCode {
 	private static String sResDir;							// res
 	private static String sDrawableDir;						// res/drawable
 	private boolean sLastEventWasWaitForActivity = false;	// want to do a waitForView for next event.
+	private static boolean sfWriteFunctions = false;			// write output as functions broken up by activity.
+	private static int		sMinLines = 5;					// min # of lines in a function
+	public class LineAndTokens {
+		public List<String>	mTokens;				// source tokens
+		public String		mOutputLine;			// output line from populated template
+		
+		public LineAndTokens(List<String> tokens, String outputLine) {
+			mTokens = tokens;
+			mOutputLine = outputLine;
+		}
+	}
 	/**
 	 * take an input file spit out by the event recorder, and generate robotium code
 	 * @param args 4 strings: input file (events.txt), output file test.java, target project name and the robotiumJar file.
@@ -51,25 +62,35 @@ public class EmitRobotiumCode {
 			System.err.println("events.txt is the output file from the recorder");
 			System.err.println("<target-project-name> is the name of the project to instrument via robotium");
 			System.err.println("<robotium-jar-path> path to the robotium jar file (download it from http://code.google.com/p/robotium/downloads/list)");
+			System.err.println("--splitFunctions splits the output into functions bracketed by activities");
+			System.err.println("--minLines <min-lines> minimum # of lines of code in a function (default: 5) ");
 			System.exit(-1);
 		}
 		String eventsFileName = args[0];
 		String targetProject = args[1];
 		String robotiumJarPath = args[2];
 		String outputCodeFileName = Constants.Filenames.OUTPUT;
-
+		processOptions(args);
+		
 		File robotiumFile = new File(robotiumJarPath);
-		List<String> lines = new ArrayList<String>();
+		List<LineAndTokens> lines = new ArrayList<LineAndTokens>();
 		sRobotiumJar = robotiumFile.getName();
 		BufferedReader br = new BufferedReader(new FileReader(eventsFileName));
 		BufferedWriter bw = new BufferedWriter(new FileWriter(outputCodeFileName));
 		EmitRobotiumCode emitter = new EmitRobotiumCode();
 		emitter.emit(br, lines);
 		writeHeader(sTargetClassPath, sTargetClassName, bw);
-		String testFunction = FileUtility.readTemplate(Constants.Templates.TEST_FUNCTION);
-		bw.write(testFunction);
-		FileUtility.writeLines(bw, lines);
-		writeTrailer(bw);
+		if (sfWriteFunctions) {
+			SplitFunction splitter = new SplitFunction(sMinLines);
+			splitter.writeFunctions(bw, "test" + targetProject, 0, lines);
+			writeClassTrailer(bw);
+		} else {
+			String testFunction = FileUtility.readTemplate(Constants.Templates.TEST_FUNCTION);
+			bw.write(testFunction);
+			EmitRobotiumCode.writeLines(bw, lines);
+			writeTrailer(bw);
+		}
+		
 		bw.close();
 		br.close();
 		if ((sTargetClassName != null) && (sTargetClassPath != null)) {
@@ -92,6 +113,22 @@ public class EmitRobotiumCode {
 	}
 	
 	public EmitRobotiumCode() {
+	}
+	
+	/**
+	 * process the options into flags and values.
+	 * @param args
+	 */
+	public static void processOptions(String[] args) {
+		
+		for (int i = 0; i < args.length; i++) {
+			String arg = args[i];
+			if (arg.equals("--splitFunctions")) {
+				sfWriteFunctions = true;
+			} else if (args.equals("--minLines")) {
+				sMinLines = Integer.parseInt(args[i + 1]);
+			}
+		}
 	}
 	
 	/**
@@ -136,7 +173,6 @@ public class EmitRobotiumCode {
 		if (!sourceFile.renameTo(new File(destinationPath))) {
 			throw new EmitterException("failed to rename " + sourceFile.getPath() + " to " + destinationPath);
 		}
-
 	}
 	
 	/**
@@ -214,7 +250,7 @@ public class EmitRobotiumCode {
 	 * @throws IOException
 	 * @throws EmitterException
 	 */
-	public void emit(BufferedReader br, List<String> lines) throws IOException, EmitterException {
+	public void emit(BufferedReader br, List<LineAndTokens> lines) throws IOException, EmitterException {
 		boolean scrollsHaveHappened = false;			// we get a zillion scroll events.  We only care about the last one
 		int scrollFirstVisibleItem = 0;					// preserve scroll values so we can apply it on the last scroll.
 		int scrollListIndex = 0;
@@ -236,6 +272,7 @@ public class EmitRobotiumCode {
 			if (startTime == -1) {
 				startTime = timeMsec;
 			}
+			String outputLine = null;
 			
 			// when the recorder scrolls, it writes out a scroll message for each move, but
 			// we just want robotium to issue a single scroll command, so once we read a scroll
@@ -243,14 +280,14 @@ public class EmitRobotiumCode {
 			// has occurred, and we scroll to the last list item that was recorded.
 			if (scrollsHaveHappened) {
 				if (!action.equals(Constants.Events.SCROLL)) {
-					writeScroll(scrollListIndex, scrollFirstVisibleItem, lines);
+					writeScroll(scrollListIndex, scrollFirstVisibleItem, tokens, lines);
 					scrollsHaveHappened = false;
 				} else {
 					// scroll:195758909,0,11,11,class_index,android.widget.ListView,1
 					// command:time,firstVisible,visibleItemCount,totalItemCount,[view reference]
 					int scrollListIndexTest = Integer.parseInt(tokens.get(7));
 					if (scrollListIndexTest != scrollListIndex) {
-						writeScroll(scrollListIndex, scrollFirstVisibleItem, lines);
+						writeScroll(scrollListIndex, scrollFirstVisibleItem, tokens, lines);
 						scrollsHaveHappened = false;
 					}
 				}
@@ -269,17 +306,20 @@ public class EmitRobotiumCode {
 			if (action.equals(Constants.Events.PACKAGE)) {
 				sTargetPackage = tokens.get(2);
 			} else if (action.equals(Constants.Events.ACTIVITY_FORWARD)) {
-				sTargetClassPath =  tokens.get(2);
-				sTargetClassName = StringUtils.getNameFromClassPath(sTargetClassPath);
+				if (sTargetClassPath == null) {
+					sTargetClassPath =  tokens.get(2);
+					sTargetClassName = StringUtils.getNameFromClassPath(sTargetClassPath);
+				}
 				sLastEventWasWaitForActivity = true;
 				writeWaitForActivity(tokens, lines);
 			} else if (action.equals(Constants.Events.ACTIVITY_BACK)) {
 				writeGoBack(tokens, lines);
 				sLastEventWasWaitForActivity = true;
-				writeWaitForActivity(tokens, lines);
 			} else {
 				if (action.equals(Constants.Events.ITEM_CLICK)) {
 					writeItemClick(tokens, lines);
+				} else if (action.equals(Constants.Events.ITEM_SELECTED)) {
+					writeItemSelected(tokens, lines);
 				} else if (action.equals(Constants.Events.SCROLL)) {
 					scrollFirstVisibleItem = Integer.parseInt(tokens.get(2));
 					scrollsHaveHappened = true;
@@ -304,6 +344,14 @@ public class EmitRobotiumCode {
 		
 		} while (true);
 	}
+	
+	/**
+	 * the description is written as the last token
+	 * @param lines
+	 */
+	public static String getDescription(List<String> tokens) {
+		return tokens.get(tokens.size() - 1);
+	}
 
 	/**
 	 * when we send an event to a view just after we do waitForActivity(), some applications (like ApiDemos) use the same activity
@@ -315,20 +363,25 @@ public class EmitRobotiumCode {
 	 * 
 	 * @throws IOException if the template file can't be read
 	 */
-	public void writeWaitForView(List<String> tokens, int startIndex, List<String> lines) throws IOException {
+	public void writeWaitForView(List<String> tokens, int startIndex, List<LineAndTokens> lines) throws IOException {
 		ReferenceParser ref = new ReferenceParser(tokens, startIndex);
+		String description = getDescription(tokens);
 		if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
 			String waitForViewTemplate = FileUtility.readTemplate(Constants.Templates.WAIT_FOR_VIEW_ID);
+			String fullDescription = "wait for view " + description;
+			waitForViewTemplate = waitForViewTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
 			waitForViewTemplate = waitForViewTemplate.replace(Constants.VariableNames.ID, ref.getID());
 			waitForViewTemplate = waitForViewTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
 			waitForViewTemplate = waitForViewTemplate.replace(Constants.VariableNames.CLASSPATH, ref.getClassName());
-			lines.add(waitForViewTemplate);
+			lines.add(new LineAndTokens(tokens, waitForViewTemplate));
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
 			String waitForClassIndexTemplate = FileUtility.readTemplate(Constants.Templates.WAIT_FOR_VIEW_CLASS_INDEX);
+			String fullDescription = "wait for view " + description;
+			waitForClassIndexTemplate = waitForClassIndexTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
 			waitForClassIndexTemplate = waitForClassIndexTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
 			waitForClassIndexTemplate = waitForClassIndexTemplate.replace(Constants.VariableNames.CLASSPATH, ref.getClassName());
 			waitForClassIndexTemplate = waitForClassIndexTemplate.replace(Constants.VariableNames.VIEW_INDEX, Integer.toString(ref.getIndex()));
-			lines.add(waitForClassIndexTemplate);			
+			lines.add(new LineAndTokens(tokens, waitForClassIndexTemplate));			
 		}
 		mVariableIndex++;
 	}
@@ -339,9 +392,9 @@ public class EmitRobotiumCode {
 	 * @param lines output list of java instructions
 	 * @throws IOException if the template file can't be read
 	 */
-	public void writeGoBack(List<String> tokens, List<String> lines) throws IOException {
+	public void writeGoBack(List<String> tokens, List<LineAndTokens> lines) throws IOException {
 		String goBackTemplate = FileUtility.readTemplate(Constants.Templates.GO_BACK);
-		lines.add(goBackTemplate);
+		lines.add(new LineAndTokens(tokens, goBackTemplate));
 	}
 	
 	/**
@@ -350,11 +403,14 @@ public class EmitRobotiumCode {
 	 * @param lines output list of java instructions
 	 * @throws IOException if the template file can't be read
 	 */
-	public void writeWaitForActivity(List<String> tokens, List<String> lines) throws IOException {
+	public void writeWaitForActivity(List<String> tokens, List<LineAndTokens> lines) throws IOException {
 		String waitTemplate = FileUtility.readTemplate(Constants.Templates.WAIT_FOR_ACTIVITY);
 		String classPath = tokens.get(2);
+		String description = getDescription(tokens);
+		String fullDescription = "wait for activity " + description;
+		waitTemplate = waitTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
 		waitTemplate = waitTemplate.replace(Constants.VariableNames.ACTIVITY_CLASS, classPath);
-		lines.add(waitTemplate);
+		lines.add(new LineAndTokens(tokens, waitTemplate));
 	}
 	
 	/**
@@ -363,9 +419,12 @@ public class EmitRobotiumCode {
 	 * @param lines output list of java instructions
 	 * @throws IOException if the template file can't be read
 	 */
-	public void writeDismissDialog(List<String> tokens, List<String> lines) throws IOException {
+	public void writeDismissDialog(List<String> tokens, List<LineAndTokens> lines) throws IOException {
 		String waitForDialogCloseTemplate = FileUtility.readTemplate(Constants.Templates.DIALOG_CLOSE_TEMPLATE);
-		lines.add(waitForDialogCloseTemplate);
+		String description = getDescription(tokens);
+		String fullDescription = "dismiss dialog " + description;
+		waitForDialogCloseTemplate = waitForDialogCloseTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
+		lines.add(new LineAndTokens(tokens, waitForDialogCloseTemplate));
 	}
 	
 	/**
@@ -374,9 +433,12 @@ public class EmitRobotiumCode {
 	 * @param lines output list of java instructions
 	 * @throws IOException if the template file can't be read
 	 */
-	public void writeCancelDialog(List<String> tokens, List<String> lines) throws IOException {
-		String waitForDialogCloseTemplate = FileUtility.readTemplate(Constants.Templates.GO_BACK);
-		lines.add(waitForDialogCloseTemplate);
+	public void writeCancelDialog(List<String> tokens, List<LineAndTokens> lines) throws IOException {
+		String waitForDialogCancelTemplate = FileUtility.readTemplate(Constants.Templates.GO_BACK);
+		String description = getDescription(tokens);
+		String fullDescription = "cancel dialog " + description;
+		waitForDialogCancelTemplate = waitForDialogCancelTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
+		lines.add(new LineAndTokens(tokens, waitForDialogCancelTemplate));
 	}
 	
 	/**
@@ -386,24 +448,28 @@ public class EmitRobotiumCode {
 	 * @param lines output list of java instructions
 	 * @throws IOException if the template file can't be read
 	 */
-	public void writeClick(List<String> tokens, List<String> lines) throws IOException {
+	public void writeClick(List<String> tokens, List<LineAndTokens> lines) throws IOException {
 		ReferenceParser ref = new ReferenceParser(tokens, 2);
+		String description = getDescription(tokens);
+		String fullDescription = "click on " + description;
 		if (sLastEventWasWaitForActivity) {
 			writeWaitForView(tokens, 2, lines);
 			sLastEventWasWaitForActivity = false;
 		} 
 		if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
 			String clickInViewTemplate = FileUtility.readTemplate(Constants.Templates.CLICK_IN_VIEW_ID);
+			clickInViewTemplate = clickInViewTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
 			clickInViewTemplate = clickInViewTemplate.replace(Constants.VariableNames.ID, ref.getID());
 			clickInViewTemplate = clickInViewTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
 			clickInViewTemplate = clickInViewTemplate.replace(Constants.VariableNames.CLASSPATH, ref.getClassName());
-			lines.add(clickInViewTemplate);
+			lines.add(new LineAndTokens(tokens, clickInViewTemplate));
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
 			String clickInClassIndexTemplate = FileUtility.readTemplate(Constants.Templates.CLICK_IN_VIEW_CLASS_INDEX);
+			clickInClassIndexTemplate = clickInClassIndexTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
 			clickInClassIndexTemplate = clickInClassIndexTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
 			clickInClassIndexTemplate = clickInClassIndexTemplate.replace(Constants.VariableNames.CLASSPATH, ref.getClassName());
 			clickInClassIndexTemplate = clickInClassIndexTemplate.replace(Constants.VariableNames.VIEW_INDEX, Integer.toString(ref.getIndex()));
-			lines.add(clickInClassIndexTemplate);			
+			lines.add(new LineAndTokens(tokens, clickInClassIndexTemplate));			
 		}
 		mVariableIndex++;
 	}
@@ -414,13 +480,16 @@ public class EmitRobotiumCode {
 	 * @param lines output list of java instructions
 	 * @throws IOException if the template file can't be read
 	 */
-	public void writeScroll(int scrollListIndex, int scrollFirstVisibleItem, List<String> lines) throws IOException {
+	public void writeScroll(int scrollListIndex, int scrollFirstVisibleItem, List<String> tokens, List<LineAndTokens> outputLines) throws IOException {
 		String scrollListTemplate = FileUtility.readTemplate(Constants.Templates.SCROLL_LIST);
+		String description = getDescription(tokens);
+		String fullDescription = "scroll down " + description;
+		scrollListTemplate = scrollListTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
 		scrollListTemplate = scrollListTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
 		scrollListTemplate = scrollListTemplate.replace(Constants.VariableNames.LIST_INDEX, Integer.toString(scrollListIndex));
 		scrollListTemplate = scrollListTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(scrollFirstVisibleItem));
-		lines.add(scrollListTemplate);
 		mVariableIndex++;
+		outputLines.add(new LineAndTokens(tokens, scrollListTemplate));
 	}
 	
 	/**
@@ -432,29 +501,33 @@ public class EmitRobotiumCode {
 	 * @throws IOException if the template file can't be read
 	 */
 
-	public void writeEnterText(List<String> tokens, List<String> lines) throws IOException {
+	public void writeEnterText(List<String> tokens, List<LineAndTokens> lines) throws IOException {
 		String text = tokens.get(2);
 		ReferenceParser ref = new ReferenceParser(tokens, 6);
+		String description = getDescription(tokens);
+		String fullDescription = "enter text in " + description;
 		if (sLastEventWasWaitForActivity) {
 			writeWaitForView(tokens, 6, lines);
 			sLastEventWasWaitForActivity = false;
 		} 
 		if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
 			String enterTextClassTemplate = FileUtility.readTemplate(Constants.Templates.EDIT_TEXT_CLASS_INDEX);
+			enterTextClassTemplate = enterTextClassTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
 			enterTextClassTemplate = enterTextClassTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
-			enterTextClassTemplate = enterTextClassTemplate.replace(Constants.VariableNames.VIEW_INDEX, Integer.toString(ref.getIndex()));
-			lines.add(enterTextClassTemplate);			
-			mVariableIndex++;
+			enterTextClassTemplate = enterTextClassTemplate.replace(Constants.VariableNames.VIEW_INDEX, Integer.toString(ref.getIndex()));		
+			lines.add(new LineAndTokens(tokens, enterTextClassTemplate));
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
 			String id = ref.getID();
 			String enterTextIDTemplate = FileUtility.readTemplate(Constants.Templates.EDIT_TEXT_ID);
+			enterTextIDTemplate = enterTextIDTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
 			enterTextIDTemplate = enterTextIDTemplate.replace(Constants.VariableNames.TEXT, text);
 			enterTextIDTemplate = enterTextIDTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
 			enterTextIDTemplate = enterTextIDTemplate.replace(Constants.VariableNames.ID, id);
-			lines.add(enterTextIDTemplate);
-			mVariableIndex++;
+			lines.add(new LineAndTokens(tokens, enterTextIDTemplate));
 		}
+		mVariableIndex++;
 	}
+	
 	/**
 	 * write the item click event for a list item
 	 * item_click:195768219, 2,class_index,android.widget.ListView,1
@@ -463,9 +536,11 @@ public class EmitRobotiumCode {
 	 * @param lines output list of java instructions
 	 * @throws IOException if the template file can't be read
 	 */
-	public void writeItemClick(List<String> tokens, List<String> lines) throws IOException {
+	public void writeItemClick(List<String> tokens, List<LineAndTokens> lines) throws IOException {
 		int itemIndex = Integer.parseInt(tokens.get(2)) + 1;
 		ReferenceParser ref = new ReferenceParser(tokens, 3);
+		String description = getDescription(tokens);
+		String fullDescription = "click item " + description;
 		if (sLastEventWasWaitForActivity) {
 			writeWaitForView(tokens, 3, lines);
 			sLastEventWasWaitForActivity = false;
@@ -474,17 +549,50 @@ public class EmitRobotiumCode {
 			String viewClass = ref.getClassName();
 			int classIndex = ref.getIndex();
 			String itemClickTemplate = FileUtility.readTemplate(Constants.Templates.CLICK_IN_LIST);
+			itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
 			itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
 			itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.LIST_INDEX, Integer.toString(classIndex));
 			itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
-			lines.add(itemClickTemplate);
+			lines.add(new LineAndTokens(tokens, itemClickTemplate));
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
 			String id = ref.getID();
 			String clickListItemTemplate = FileUtility.readTemplate(Constants.Templates.CLICK_LIST_ITEM);
+			clickListItemTemplate = clickListItemTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
 			clickListItemTemplate = clickListItemTemplate.replace(Constants.VariableNames.VARIABLE_INDEX,  Integer.toString(mVariableIndex));
 			clickListItemTemplate = clickListItemTemplate.replace(Constants.VariableNames.ID, id);
 			clickListItemTemplate = clickListItemTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
-			lines.add(clickListItemTemplate);
+			lines.add(new LineAndTokens(tokens, clickListItemTemplate));
+		}
+		mVariableIndex++;	
+	}
+	/**
+	 * write the item selected event for a spinner
+	 * item_click:195768219, 2,class_index,android.widget.ListView,1
+	 * command:time,item_index,[view reference]
+	 * @param tokens parsed from a line in events.txt
+	 * @param lines output list of java instructions
+	 * @throws IOException if the template file can't be read
+	 */
+	public void writeItemSelected(List<String> tokens, List<LineAndTokens> lines) throws IOException {
+		int itemIndex = Integer.parseInt(tokens.get(2)) + 1;
+		ReferenceParser ref = new ReferenceParser(tokens, 3);
+		String description = getDescription(tokens);
+		String fullDescription = "select item " + description;
+		if (sLastEventWasWaitForActivity) {
+			writeWaitForView(tokens, 3, lines);
+			sLastEventWasWaitForActivity = false;
+		} 
+		if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
+			String viewClass = ref.getClassName();
+			int classIndex = ref.getIndex();
+			String itemClickTemplate = FileUtility.readTemplate(Constants.Templates.SELECT_SPINNER_ITEM);
+			itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);			
+			itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
+			itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.SPINNER_INDEX, Integer.toString(classIndex));
+			itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
+			lines.add(new LineAndTokens(tokens, itemClickTemplate));
+		} else {
+			
 		}
 		mVariableIndex++;	
 	}
@@ -513,5 +621,27 @@ public class EmitRobotiumCode {
 	public static void writeTrailer(BufferedWriter bw) throws IOException {
 		String trailer = FileUtility.readTemplate(Constants.Templates.TRAILER);
 		bw.write(trailer);
+	}
+	
+	/**
+	 * write the trailer on completion (split function.
+	 * @param bw output BufferedWriter
+	 * @throws IOException
+	 */
+	public static void writeClassTrailer(BufferedWriter bw) throws IOException {
+		String trailer = FileUtility.readTemplate(Constants.Templates.CLASS_TRAILER);
+		bw.write(trailer);
+	}
+	
+	/**
+	 * write a list of lines to a file
+	 * @param bw BufferedWriter
+	 * @param lines list of lines
+	 * @throws IOException
+	 */
+	public static void writeLines(BufferedWriter bw, List<LineAndTokens> lines) throws IOException {
+		for (LineAndTokens line : lines) {
+			bw.write(line.mOutputLine);
+		}
 	}
 }

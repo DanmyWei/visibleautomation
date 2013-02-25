@@ -8,7 +8,8 @@ import android.os.SystemClock;
 import android.view.MotionEvent;
 import android.view.View;
 
-public class RecordOnClickListener implements View.OnClickListener {
+// recorder for view click events.
+public class RecordOnClickListener extends RecordListener implements View.OnClickListener {
 	protected View.OnClickListener 	mOriginalOnClickListener;
 	protected EventRecorder			mEventRecorder;
 	
@@ -26,10 +27,12 @@ public class RecordOnClickListener implements View.OnClickListener {
 		mOriginalOnClickListener = originalTouchListener;
 	}
 	
+	// click:time,<view reference>,Click on <description>
 	public void onClick(View v) {
 		long time = SystemClock.uptimeMillis();
 		try {
-			String logString = Constants.EventTags.CLICK + ":" + time + "," + mEventRecorder.getViewReference().getReference(v);
+			String logString = Constants.EventTags.CLICK + ":" + time + "," + 
+							   mEventRecorder.getViewReference().getReference(v) + "," + getDescription(v);
 			mEventRecorder.writeRecord(logString);
 		} catch (Exception ex) {
 			ex.printStackTrace();
