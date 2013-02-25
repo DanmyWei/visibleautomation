@@ -1,0 +1,2 @@
+	// %DESCRIPTION%
+	public void %FUNCTION_NAME%() {
