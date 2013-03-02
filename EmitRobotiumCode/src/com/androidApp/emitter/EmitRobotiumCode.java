@@ -5,6 +5,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -101,6 +102,7 @@ public class EmitRobotiumCode {
 			createDirectories(sTestClassName, packagePath);
 			generateBuildXML(sTestClassName);
 			copyBuildFiles(sTestClassName);
+			copyLibrary(sTestClassName);
 			generateManifest(sTestClassName);
 			writeResources(sTestClassName);
 			writeClasspath(sTestClassName, targetProject);
@@ -242,6 +244,19 @@ public class EmitRobotiumCode {
 		bw.close();
 	}
 	
+	/**
+	 * copy support library to the output directory
+	 * @param dirname
+	 * @throws IOException
+	 */
+	public static void copyLibrary(String dirname) throws IOException {
+		String libraryDir = dirname + File.separator + Constants.Dirs.LIBS;
+		byte[] jarData = FileUtility.readBinaryTemplate(Constants.Filenames.UTILITY_JAR);
+		FileOutputStream fos = new FileOutputStream(libraryDir + File.separator + Constants.Filenames.UTILITY_JAR);
+		fos.write(jarData, 0, jarData.length);
+		fos.close();		
+	}
+	
 	
 	/**
 	 * actually emit robotium code from a recorded file
@@ -256,14 +271,37 @@ public class EmitRobotiumCode {
 		int scrollListIndex = 0;
 		long startTime = -1;
 		List<String> lastTextEntryTokens = null;			// to preserve the last text entry event
+		String line = br.readLine();
+		String currentActivityName = null;
+		String nextActivityName = null;
+		String nextActivityVariable = null;
+		boolean fForwardActivityMatches = false;
 		do {
-			String line = br.readLine();
+			String nextLine = br.readLine();
 			if (line == null) {
 				break;
 			}
 			// syntax is event:time,arguments,separated,by,commas
 			SuperTokenizer st = new SuperTokenizer(line, "\"", ":,", '\\');
 			List<String> tokens = st.toList();
+			if (tokens.get(0).equals(Constants.Events.ACTIVITY_FORWARD)) {
+				currentActivityName = tokens.get(2);
+			}
+			
+			// we peek at the next line to see if it's an activity_forward
+			List<String> nextTokens = null;
+			nextActivityName = null;
+			if (nextLine != null) {
+				SuperTokenizer stNext = new SuperTokenizer(nextLine, "\"", ":,", '\\');
+				nextTokens = stNext.toList();
+				if (nextTokens.get(0).equals(Constants.Events.ACTIVITY_FORWARD)) {
+					nextActivityName = nextTokens.get(2);
+					if (nextActivityName.equals(currentActivityName)) {
+						nextActivityVariable = writeGetCurrentActivity(lines);
+						fForwardActivityMatches = true;
+					}
+				} 
+			}
 			
 			// we don't actually write out time, but it's handy, you know.
 			String action = tokens.get(0);
@@ -272,7 +310,6 @@ public class EmitRobotiumCode {
 			if (startTime == -1) {
 				startTime = timeMsec;
 			}
-			String outputLine = null;
 			
 			// when the recorder scrolls, it writes out a scroll message for each move, but
 			// we just want robotium to issue a single scroll command, so once we read a scroll
@@ -311,7 +348,11 @@ public class EmitRobotiumCode {
 					sTargetClassName = StringUtils.getNameFromClassPath(sTargetClassPath);
 				}
 				sLastEventWasWaitForActivity = true;
-				writeWaitForActivity(tokens, lines);
+				if (fForwardActivityMatches) {
+					writeWaitForMatchingActivity(nextActivityVariable, tokens, lines);
+				} else {
+					writeWaitForActivity(tokens, lines);
+				}
 			} else if (action.equals(Constants.Events.ACTIVITY_BACK)) {
 				writeGoBack(tokens, lines);
 				sLastEventWasWaitForActivity = true;
@@ -340,8 +381,8 @@ public class EmitRobotiumCode {
 					}
 					lastTextEntryTokens = tokens;
 				}
-		}
-		
+			}
+			line = nextLine;
 		} while (true);
 	}
 	
@@ -353,6 +394,20 @@ public class EmitRobotiumCode {
 		return tokens.get(tokens.size() - 1);
 	}
 
+	/**
+	 * write the getCurrentActivity() call
+	 * @param lines
+	 * @throws IOException
+	 */
+	public String writeGetCurrentActivity(List<LineAndTokens> lines) throws IOException {
+		String getCurrentActivityTemplate = FileUtility.readTemplate(Constants.Templates.GET_CURRENT_ACTIVITY);
+		getCurrentActivityTemplate = getCurrentActivityTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
+		lines.add(new LineAndTokens(null, getCurrentActivityTemplate));
+		String activityName = Constants.Names.ACTIVITY + Integer.toString(mVariableIndex);
+		mVariableIndex++;
+		return activityName;
+	}
+	
 	/**
 	 * when we send an event to a view just after we do waitForActivity(), some applications (like ApiDemos) use the same activity
 	 * with different contents, so it returns immediately, even though the new screen is up.  If there's just been a waitForActivity(), 
@@ -410,6 +465,17 @@ public class EmitRobotiumCode {
 		String fullDescription = "wait for activity " + description;
 		waitTemplate = waitTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
 		waitTemplate = waitTemplate.replace(Constants.VariableNames.ACTIVITY_CLASS, classPath);
+		lines.add(new LineAndTokens(tokens, waitTemplate));
+	}
+	
+	public void writeWaitForMatchingActivity(String nextActivityVariable, List<String> tokens, List<LineAndTokens> lines) throws IOException {
+		String waitTemplate = FileUtility.readTemplate(Constants.Templates.WAIT_FOR_NEW_ACTIVITY);
+		String classPath = tokens.get(2);
+		String description = getDescription(tokens);
+		String fullDescription = "wait for activity " + description;
+		waitTemplate = waitTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
+		waitTemplate = waitTemplate.replace(Constants.VariableNames.ACTIVITY_CLASS, classPath);
+		waitTemplate = waitTemplate.replace(Constants.VariableNames.ACTIVITY, nextActivityVariable);
 		lines.add(new LineAndTokens(tokens, waitTemplate));
 	}
 	
@@ -506,10 +572,12 @@ public class EmitRobotiumCode {
 		ReferenceParser ref = new ReferenceParser(tokens, 6);
 		String description = getDescription(tokens);
 		String fullDescription = "enter text in " + description;
+		/*
 		if (sLastEventWasWaitForActivity) {
 			writeWaitForView(tokens, 6, lines);
 			sLastEventWasWaitForActivity = false;
 		} 
+		*/
 		if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
 			String enterTextClassTemplate = FileUtility.readTemplate(Constants.Templates.EDIT_TEXT_CLASS_INDEX);
 			enterTextClassTemplate = enterTextClassTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
@@ -527,7 +595,39 @@ public class EmitRobotiumCode {
 		}
 		mVariableIndex++;
 	}
+	public void writeWaitForListClassIndex(List<String> tokens, int itemIndex, List<LineAndTokens> lines) throws IOException {
+		String listItemWaitTemplate = FileUtility.readTemplate(Constants.Templates.WAIT_FOR_LIST_CLASS_INDEX);
+		ReferenceParser ref = new ReferenceParser(tokens, 3);
+		String description = getDescription(tokens);
+		String id = ref.getID();
+		listItemWaitTemplate = listItemWaitTemplate.replace(Constants.VariableNames.DESCRIPTION, description);
+		listItemWaitTemplate = listItemWaitTemplate.replace(Constants.VariableNames.CLASSPATH, ref.getClassName());
+		listItemWaitTemplate = listItemWaitTemplate.replace(Constants.VariableNames.VIEW_INDEX, Integer.toString(ref.getIndex()));
+		listItemWaitTemplate = listItemWaitTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
+		listItemWaitTemplate = listItemWaitTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
+
+		lines.add(new LineAndTokens(tokens, listItemWaitTemplate));				
+	}
 	
+	/**
+	 * List items need a wait for the selected item, not just the list.
+	 * @param tokens tokens from the select item call
+	 * @param itemIndex index of selected item
+	 * @param lines output lines.
+	 * @throws IOException
+	 */
+	public void writeWaitForListIdItem(List<String> tokens, int itemIndex, List<LineAndTokens> lines) throws IOException {
+		String listItemWaitTemplate = FileUtility.readTemplate(Constants.Templates.WAIT_FOR_LIST_ID_ITEM);
+		ReferenceParser ref = new ReferenceParser(tokens, 3);
+		String description = getDescription(tokens);
+		String id = ref.getID();
+		listItemWaitTemplate = listItemWaitTemplate.replace(Constants.VariableNames.DESCRIPTION, description);
+		listItemWaitTemplate = listItemWaitTemplate.replace(Constants.VariableNames.CLASSPATH, ref.getClassName());
+		listItemWaitTemplate = listItemWaitTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
+		listItemWaitTemplate = listItemWaitTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
+		listItemWaitTemplate = listItemWaitTemplate.replace(Constants.VariableNames.ID, id);
+		lines.add(new LineAndTokens(tokens, listItemWaitTemplate));				
+	}
 	/**
 	 * write the item click event for a list item
 	 * item_click:195768219, 2,class_index,android.widget.ListView,1
@@ -542,7 +642,11 @@ public class EmitRobotiumCode {
 		String description = getDescription(tokens);
 		String fullDescription = "click item " + description;
 		if (sLastEventWasWaitForActivity) {
-			writeWaitForView(tokens, 3, lines);
+			if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
+				writeWaitForListIdItem(tokens, itemIndex, lines);
+			} else {
+				writeWaitForListClassIndex(tokens, itemIndex, lines);
+			}
 			sLastEventWasWaitForActivity = false;
 		} 
 		if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
