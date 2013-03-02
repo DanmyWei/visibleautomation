@@ -1,10 +1,13 @@
 package %CLASSPATH%Test;
 
 import %CLASSPATH%;
+import com.androidApp.util.RobotiumUtils;
 import com.jayway.android.robotium.solo.Solo;
 import android.test.ActivityInstrumentationTestCase2;
+import android.view.View;
 import java.util.ArrayList;
 import junit.framework.TestCase;
+import android.app.Activity;
 
 public class %CLASSNAME%Test extends ActivityInstrumentationTestCase2<%CLASSNAME%> {
   	private Solo solo;

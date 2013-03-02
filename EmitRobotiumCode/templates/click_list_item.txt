@@ -1,3 +1,2 @@
 		// %DESCRIPTION%
-		ListView listView%VARIABLE_INDEX% = (android.widget.ListView) solo.getView(%ID%);
-		TestUtils.clickListItem(listView%VARIABLE_INDEX%,%ITEM_INDEX%);
+		RobotiumUtils.waitAndClickInListById(solo, %ID%, %ITEM_INDEX%);
