@@ -63,6 +63,10 @@ public class Constants {
 		public static final String SELECT_SPINNER_ITEM = "select_spinner_item.txt";
 		public static final String FUNCTION_CALL = "function_call.txt";
 		public static final String CLASS_TRAILER = "class_trailer.txt";
+		public static final String WAIT_FOR_LIST_ID_ITEM = "wait_for_list_id_item.txt";
+		public static final String WAIT_FOR_LIST_CLASS_INDEX = "wait_for_list_class_index.txt";
+		public static final String GET_CURRENT_ACTIVITY = "get_current_activity.txt";
+		public static final String WAIT_FOR_NEW_ACTIVITY = "wait_for_new_activity.txt";
 			
 	}
 	// template %replace% variables
@@ -84,6 +88,11 @@ public class Constants {
 		public static final CharSequence FUNCTION_NAME = "%FUNCTION_NAME%";
 		public static final CharSequence SPINNER_INDEX = "%SPINNER_INDEX%";
 		public static final CharSequence DESCRIPTION = "%DESCRIPTION%";
+		public static final CharSequence ACTIVITY = "%ACTIVITY%";
+	}
+	
+	public static class Names {
+		public static final String ACTIVITY = "activity";		
 	}
 	
 	public static class Filenames {
@@ -93,6 +102,7 @@ public class Constants {
 		public static final String LAUNCHER_PNG = "ic_launcher.png";
 		public static final String CLASSPATH = ".classpath";
 		public static final String OUTPUT = "output.java";
+		public static final String UTILITY_JAR = "robotiumutils.jar";
 	}
 	
 	public static class Dirs {

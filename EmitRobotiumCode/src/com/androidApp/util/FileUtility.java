@@ -16,19 +16,18 @@ import com.androidApp.emitter.EmitRobotiumCode;
 
 public class FileUtility {
 	// I'm so lazy, but I'm lazy-fast
-	static int sByteArraySize = 0;
 	protected static final String TAG = "FileUtility";
-	protected static final String TEMPLATES = "/templates/";
 
 	// read into a rubber bytearray.  Keep the length in a static.
 	public static byte[] readToByteArray(InputStream is, int bufferIncrement) throws IOException {
 		byte[] buffer = new byte[bufferIncrement];
+		int byteArraySize = 0;
 		int offset = 0;
 		int nbytesReadPass = 0;
 		do {
 			int nbytesRead = is.read(buffer, offset, bufferIncrement - nbytesReadPass);
 			if (nbytesRead <= 0) {
-				sByteArraySize = offset;
+				byteArraySize = offset;
 				break;
 			} else {
 				offset += nbytesRead;
@@ -41,12 +40,11 @@ public class FileUtility {
 				}
 			}
 		} while (true);
-		return buffer;	
+		byte[] sizedBuffer = new byte[byteArraySize];
+		System.arraycopy(buffer, 0, sizedBuffer, 0, byteArraySize);
+		return sizedBuffer;	
 	}
 
-	public static int getLastByteArrayReadSize() {
-		return sByteArraySize;
-	}
 	// read from a stream into a string until EOF.
 	public static String readToString(InputStream is) throws IOException {
 		StringBuffer sb = new StringBuffer();
@@ -70,7 +68,17 @@ public class FileUtility {
 	 */
 	public static String readTemplate(String templateName) throws IOException {
 		InputStream fis = EmitRobotiumCode.class.getResourceAsStream("/" + templateName);
-		return readToString(fis);
+		return FileUtility.readToString(fis);
+	}
+	/**
+	 * read a template file into a bytearray
+	 * @param templateName template file from templates directory
+	 * @return file read to string
+	 * @throws IOException
+	 */
+	public static byte[] readBinaryTemplate(String templateName) throws IOException {
+		InputStream fis = EmitRobotiumCode.class.getResourceAsStream("/" + templateName);
+		return FileUtility.readToByteArray(fis, 2048);
 	}
 	
 	/**
