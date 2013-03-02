@@ -3,10 +3,6 @@ package com.androidApp.Test;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Stack;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -17,42 +13,40 @@ import android.app.Instrumentation;
 import android.app.Instrumentation.ActivityMonitor;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
-import android.content.res.Resources;
 import android.os.SystemClock;
 import android.test.ActivityInstrumentationTestCase2;
 import android.util.Log;
-import android.view.View;
-import android.view.Window;
-import android.widget.AdapterView;
-import android.widget.TextView;
 
 import com.androidApp.EventRecorder.EventRecorder;
-import com.androidApp.EventRecorder.ListenerIntercept;
-import com.androidApp.Listeners.RecordOnKeyListener;
 import com.androidApp.Utility.Constants;
-import com.androidApp.Utility.FieldUtils;
-import com.androidApp.Utility.StringUtils;
 import com.androidApp.Utility.TestUtils;
-import com.androidApp.Utility.ViewExtractor;
 
 /**
- * record click and key events in an activity. In short, be awesome.
+ * record events in an activity. In short, be awesome.
  * @author matreyno
  *
- * @param <T>
+ * @param <T> activity being subjected to recording
+ * This uses a thread which waits on events from an activity monitor to track activity forward and back events.  
+ * When we navigate forward to an activity, we add intercept listeners to the events on the view hierarchy.  The interceptRunnable
+ * also sets up a view hierarchy (Layout listener) listener which re-traverses the view hierarchy and adds record listeners
+ * for newly created views.
+ * Since dialogs can be popped up at any time, and they aren't picked up by the layout listener, we had to create a timer task
+ * which polls for newly created dialogs in the current activity.  Unfortunately, the event handlers are member functions of
+ * activity, so we can't intercept them, except with methods that are highly intrusive.
  */
 public abstract class RecordTest<T extends Activity> extends ActivityInstrumentationTestCase2<T> {
-	private static final String TAG = "RecordTest";
-	private EventRecorder 		mRecorder;
-	private ActivityMonitor		mActivityMonitor;					// track switches between activities	
-	private Thread				mActivityThread;
-	private Dialog				mCurrentDialog = null;				// track the current dialog, so we don't re-record it.
-	private Activity			mStartActivity = null;
-	private boolean				mFinished = false;
+	private static final String 	TAG = "RecordTest";
+	private static final long		DIALOG_SYNC_TIME = 50;				// test for dialogs 20x second.
+	private EventRecorder 			mRecorder;
+	private Thread					mActivityThread;					// to track the activity monitor thread
+	private Dialog					mCurrentDialog = null;				// track the current dialog, so we don't re-record it.
+	private boolean					mFinished = false;					// have the loops finished?
+	private Timer					mDialogScanTimer = null;			// timer for scanning for new dialogs to set intercept handlers on.
+	private ActivityMonitor 		mActivityMonitor = null;			
+	Stack<WeakReference<Activity>> 	mActivityStack = new Stack<WeakReference<Activity>>();
 	
 	// initialize the event recorder
 	public void initRecorder() throws IOException {
@@ -66,12 +60,17 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	
 	public abstract void initializeResources();
 	
+	// add the resource id references for id's and strings.
 	public void addRdotID(Object rdotid) {
 		mRecorder.addRdotID(rdotid);
 	}
 	
 	public void addRdotString(Object rdotstring) {
 		mRecorder.addRdotString(rdotstring);
+	}
+	
+	public EventRecorder getRecorder() {
+		return mRecorder;
 	}
 
 	/**
@@ -82,31 +81,67 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 		super.setUp();	
 		initRecorder();
 		initializeResources();
-		setupActivityMonitor();
 		setupActivityStackListener();
+		setupDialogListener();
 		Instrumentation instrumentation = getInstrumentation();
 		Intent intent = new Intent(Intent.ACTION_MAIN);
 		intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 		intent.setClassName(instrumentation.getTargetContext(), getActivity().getClass().getName());			// so we can get the package name to write in the manifest and classpath
 		String packageName = getPackageName(getActivity());
 		long time = SystemClock.uptimeMillis();
-		mRecorder.writeRecord(Constants.EventTags.PACKAGE + "," + time + "," + packageName);
+		RecordTest.this.getRecorder().writeRecord(Constants.EventTags.PACKAGE + "," + time + "," + packageName);
 		instrumentation.startActivitySync(intent);
 	}
 
 
 	public void tearDown() throws Exception {
+		Log.i(TAG, "tear down");
 	}
-		
+	
+			
+	/** 
+	 * the unfortunate side-effect of using the blocking listener in the activity stack listener
+	 * is that we can't intercept dialogs, like we could when we did a poll-timer based implementation
+	 * This separate poll-timer thread exists merely to see if a dialog has appeared, and if so, set up
+	 * the recording interceptors on it.
+	 */
+	private void setupDialogListener() {
+		mDialogScanTimer = new Timer();
+		TimerTask scanTask = new TimerTask() {
+			@Override
+			public void run() {
+				Activity activity = RecordTest.this.getCurrentActivity();
+				Dialog dialog = TestUtils.findDialog(activity);
+				if ((dialog != null) && (dialog != RecordTest.this.getCurrentDialog())) {
+					RecordTest.this.getRecorder().interceptDialog(dialog);
+					RecordTest.this.setCurrentDialog(dialog);
+				}
+			}	
+		};
+		mDialogScanTimer.schedule(scanTask, 0, DIALOG_SYNC_TIME);
+	}
+	
 	/**
-	* This is were the activityMonitor is set up. The monitor will keep check
-	* for the currently active activity.
-	*
-	*/
-
-	private void setupActivityMonitor() {
-		IntentFilter filter = null;
-		mActivityMonitor = getInstrumentation().addMonitor(filter, null, false);
+	 * shutdown the dialog scan timertask once the activity stack has been emptied
+	 */
+	public void shutdownDialogScanTimer() {
+		mDialogScanTimer.cancel();
+	}
+	
+	/**
+	 * set the current dialog
+	 * @param dialog
+	 */
+	public void setCurrentDialog(Dialog dialog) {
+		mCurrentDialog = dialog;
+	}
+	
+	/**
+	 * get the current dialog
+	 * @return dialog
+	 */
+	public Dialog getCurrentDialog() {
+		return mCurrentDialog;
 	}
 	
 	/**
@@ -115,53 +150,103 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	 * if the activities are different (A, B) then it is going backwards from B to A 
 	 */
 	private void setupActivityStackListener() {
+		IntentFilter filter = null;
+		
+		// need to initialize this before the runnable, so we don't miss the first activity
+		mActivityMonitor = getInstrumentation().addMonitor(filter, null, false);
+		mActivityStack = new Stack<WeakReference<Activity>>();
 		Runnable runnable = new Runnable() {
 			public void run() {
-				if (RecordTest.this.mActivityMonitor != null) {
-					boolean firstActivity = true;
-					Activity activityA = null, activityB = null;
-					while (true) {
-						Activity activity = RecordTest.this.mActivityMonitor.waitForActivity();
-						if (activity != null) {
-							Dialog dialog = TestUtils.findDialog(activity);
-							if ((dialog != null) && (dialog != mCurrentDialog)) {
-								mRecorder.interceptDialog(dialog);
-								mCurrentDialog = dialog;
-							}
-							if (firstActivity) {
-								activityA = activity;
-								firstActivity = false;
-								if (mStartActivity == null) {
-									mStartActivity = activityA;
-								}
-							} else {
-								activityB = activity;
-								firstActivity = true;
-							}
-							if ((activityA != null) && (activityB != null)) {
-								long time = SystemClock.uptimeMillis();
-								if (activityA != activityB) {
-									String logMsg = Constants.EventTags.ACTIVITY_BACK + ":" + time + "," + activityB.getClass().getName() + "," + activityB.toString();
-									mRecorder.writeRecord(logMsg);
-									if (activityA == mStartActivity) {
-										mFinished = true;
-									}
-								} else {
-									// intercept events on the newly created activity.
-									activityA.runOnUiThread(new InterceptRunnable(activityA));
-									String logMsg = Constants.EventTags.ACTIVITY_FORWARD + ":" + time + "," + activityA.getClass().getName() + "," + activityA.toString();
-									mRecorder.writeRecord(logMsg);
-								}
-								activityA = null;
-								activityB = null;
-							}
+				boolean fStart = true;
+				while (fStart || !RecordTest.this.isActivityStackEmpty()) {
+					Activity activityA = RecordTest.this.mActivityMonitor.waitForActivity();
+					if (fStart) {
+						long time = SystemClock.uptimeMillis();
+						RecordTest.this.pushActivityOnStack(activityA);
+						// intercept events on the newly created activity.
+						activityA.runOnUiThread(new InterceptRunnable(activityA));
+						String logMsg = Constants.EventTags.ACTIVITY_FORWARD + ":" + time + "," + activityA.getClass().getName() + "," + activityA.toString();
+						RecordTest.this.getRecorder().writeRecord(logMsg);
+						fStart = false;
+					} else {
+						Activity activityB = RecordTest.this.mActivityMonitor.waitForActivity();
+						if (RecordTest.this.inActivityStack(activityB)) {
+							long time = SystemClock.uptimeMillis();
+							Activity previousActivity = RecordTest.this.popActivityFromStack();
+						String logMsg = Constants.EventTags.ACTIVITY_BACK + ":" + time + "," + previousActivity.getClass().getName() + "," + previousActivity.toString();
+							RecordTest.this.getRecorder().writeRecord(logMsg);
+						} else {
+							long time = SystemClock.uptimeMillis();
+							RecordTest.this.pushActivityOnStack(activityB);
+							// intercept events on the newly created activity.
+							activityB.runOnUiThread(new InterceptRunnable(activityB));
+							String logMsg = Constants.EventTags.ACTIVITY_FORWARD + ":" + time + "," + activityB.getClass().getName() + "," + activityB.toString();
+							RecordTest.this.getRecorder().writeRecord(logMsg);
 						}
 					}
 				}
+				Log.i(TAG, "activity loop ended finished = " + RecordTest.this.mFinished);
+				RecordTest.this.shutdownDialogScanTimer();
 			}
 		};
 		mActivityThread = new Thread(runnable, "activityMonitorThread");
 		mActivityThread.start();
+	}
+	
+	// activity stack methods
+	
+	/**
+	 * push the activity onto the stack of WeakReferences. We use weak reference so we don't actually hold onto the activity
+	 * after it's been finished.
+	 * @param activity activity to add to the stack
+	 */
+	public void pushActivityOnStack(Activity activity) {
+		WeakReference<Activity> ref = new WeakReference<Activity>(activity);
+		mActivityStack.push(ref);
+	}
+	
+	/**
+	 * pop the activity stack, and return the activity that was referenced by the top WeakReference
+	 * @return activity from the top of the stack
+	 */
+	public Activity popActivityFromStack() {
+		WeakReference<Activity> ref = mActivityStack.pop();
+		return ref.get();
+	}
+	
+	/***
+	 * scan the activity stack to determine if an activity is in it.  
+	 * @param activity activity to search for
+	 * @return true if the activity is found
+	 */
+	public boolean inActivityStack(Activity activity) {
+		for (WeakReference<Activity> ref : mActivityStack) {
+			if (ref.get() == activity) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	/**
+	 * is the activity stack empty?
+	 * @return
+	 */
+	public boolean isActivityStackEmpty() {
+		return mActivityStack.isEmpty();
+	}
+	
+	/**
+	 * get the current activity returned from the activity monitor
+	 * @return current activity
+	 */
+	public Activity getCurrentActivity() {
+		if (!mActivityStack.isEmpty()) {
+			WeakReference<Activity> ref = mActivityStack.peek();
+			return ref.get();
+		} else {
+			return null;
+		}
 	}
 	
 	/**
