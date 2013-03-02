@@ -9,6 +9,11 @@ import android.content.DialogInterface;
 import android.os.SystemClock;
 import android.view.View;
 
+/**
+ * wrapper class to intercept and record dialog cancel events.
+ * @author Matthew
+ *
+ */
 public class RecordDialogOnCancelListener extends RecordListener implements DialogInterface.OnCancelListener {
 	protected EventRecorder mEventRecorder;
 	protected DialogInterface.OnCancelListener mOriginalOnCancelListener;

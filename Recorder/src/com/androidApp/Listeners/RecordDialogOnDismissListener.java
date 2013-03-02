@@ -9,6 +9,12 @@ import android.content.DialogInterface;
 import android.os.SystemClock;
 import android.view.View;
 
+/**
+ * recorder wrapper to intercept dialog dismiss events
+ * @author Matthew
+ *
+ */
+
 public class RecordDialogOnDismissListener extends RecordListener implements DialogInterface.OnDismissListener {
 	protected EventRecorder mEventRecorder;
 	protected DialogInterface.OnDismissListener mOriginalOnDismissListener;
