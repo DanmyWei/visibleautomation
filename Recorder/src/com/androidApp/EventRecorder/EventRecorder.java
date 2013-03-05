@@ -188,7 +188,7 @@ public class EventRecorder {
 				}
 				// make sure that we haven't already added the intercepting text watcher.
 				if (!ListenerIntercept.containsTextWatcher(textWatcherList, RecordTextChangedListener.class)) {
-					textWatcherList.add(0, new RecordTextChangedListener(tv, this));
+					textWatcherList.add(0, new RecordTextChangedListener(this, tv));
 					ListenerIntercept.setTextWatcherList(tv, textWatcherList);
 				}
 			}
