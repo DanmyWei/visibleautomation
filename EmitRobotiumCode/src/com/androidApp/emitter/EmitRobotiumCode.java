@@ -3,13 +3,11 @@ package com.androidApp.emitter;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,19 +24,14 @@ import com.androidApp.util.SuperTokenizer;
 public class EmitRobotiumCode {
 	protected int mVariableIndex = 0;						// incremented for unique variable names
 	protected static String sTargetClassPath = null;		// class path of initial activity.	
-	protected static String	sTargetClassName = null;		// class name of initial activity
-	protected static String sTestClassPath = null;			// class path of the test code
-	protected static String sTestClassName = null;
-	protected static String sRobotiumJar = null;			// path to the robotium jar file
 	protected static String sTargetPackage = null;			// package name that the recorder pulled from the app
-	private static String sSrcDir;							// src directory
-	private static String sPackageDir;						// src/com/application/test dir
-	private static String sLibDir;							// lib
-	private static String sResDir;							// res
-	private static String sDrawableDir;						// res/drawable
-	private boolean sLastEventWasWaitForActivity = false;	// want to do a waitForView for next event.
-	private static boolean sfWriteFunctions = false;			// write output as functions broken up by activity.
-	private static int		sMinLines = 5;					// min # of lines in a function
+	private boolean mLastEventWasWaitForActivity = false;	// want to do a waitForView for next event.
+	
+	/**
+	 * subclass to preserve the tokens that the original line was parsed from for debugging
+	 * @author Matthew
+	 *
+	 */
 	public class LineAndTokens {
 		public List<String>	mTokens;				// source tokens
 		public String		mOutputLine;			// output line from populated template
@@ -48,6 +41,27 @@ public class EmitRobotiumCode {
 			mOutputLine = outputLine;
 		}
 	}
+	
+	/**
+	 * retains parsed options
+	 * @author Matthew
+	 *
+	 */
+	public class Options {
+		public boolean 	mfWriteFunctions = false;			// write output as functions broken up by activity.
+		public int		mMinLines = 5;						// min # of lines in a function		
+	}
+	
+	/**
+	 * retains directories
+	 */
+	public class Dirs {
+		public String mSrcDir = null;							// src
+		public String mLibDir = null;							// lib
+		public String mResDir = null;							// res
+		public String mDrawableDir = null;						// res/drawable	
+	}
+	
 	/**
 	 * take an input file spit out by the event recorder, and generate robotium code
 	 * @param args 4 strings: input file (events.txt), output file test.java, target project name and the robotiumJar file.
@@ -59,9 +73,12 @@ public class EmitRobotiumCode {
 	 */
 	public static void main(String[] args) throws FileNotFoundException, IOException, EmitterException {
 		if (args.length < 3) {
-			System.err.println("usage: EmitRobotium events.txt <target-project-name> <robotium-jar-path>");
+			System.err.println("usage: EmitRobotium [events.txt|device] <target-project-name> <robotium-jar-path>");
 			System.err.println("events.txt is the output file from the recorder");
+			System.err.println("device pulls the events.txt file from /sdcard/events.txt");
 			System.err.println("<target-project-name> is the name of the project to instrument via robotium");
+			System.err.println("if <target-project-name> directory exists, then the output code will be written into");
+			System.err.println("a new file with a numeric suffix, e.g. ApiDemosTest1.java");
 			System.err.println("<robotium-jar-path> path to the robotium jar file (download it from http://code.google.com/p/robotium/downloads/list)");
 			System.err.println("--splitFunctions splits the output into functions bracketed by activities");
 			System.err.println("--minLines <min-lines> minimum # of lines of code in a function (default: 5) ");
@@ -71,18 +88,54 @@ public class EmitRobotiumCode {
 		String targetProject = args[1];
 		String robotiumJarPath = args[2];
 		String outputCodeFileName = Constants.Filenames.OUTPUT;
-		processOptions(args);
+		EmitRobotiumCode emitter = new EmitRobotiumCode();
+
+		Options options = emitter.processOptions(args);
 		
 		File robotiumFile = new File(robotiumJarPath);
 		List<LineAndTokens> lines = new ArrayList<LineAndTokens>();
-		sRobotiumJar = robotiumFile.getName();
+		String robotiumJar = robotiumFile.getName();
+		
+		// if he specified device, use adb to pull the events file off the device.
+		if (eventsFileName.equals(Constants.Names.DEVICE)) {
+	       Process proc = null;
+	       String cmd = "adb pull /sdcard/events.txt";
+	       try {
+	            proc = Runtime.getRuntime().exec(cmd);
+	        } catch (IOException e) {
+	            System.err.println("failed to execute " + cmd + " " + e.getMessage());
+	            System.exit(-1);
+	        }
+	        try {
+	            int result = proc.waitFor();
+	        } catch (InterruptedException e) {
+	            System.err.println("interrupted executing " + cmd + " " + e.getMessage());
+	            System.exit(-1);
+	        }
+	        eventsFileName = "events.txt";
+		}
 		BufferedReader br = new BufferedReader(new FileReader(eventsFileName));
 		BufferedWriter bw = new BufferedWriter(new FileWriter(outputCodeFileName));
-		EmitRobotiumCode emitter = new EmitRobotiumCode();
 		emitter.emit(br, lines);
-		writeHeader(sTargetClassPath, sTargetClassName, bw);
-		if (sfWriteFunctions) {
-			SplitFunction splitter = new SplitFunction(sMinLines);
+		if (emitter.getApplicationClassPath() == null) {
+			System.err.println("unable to generate output code, no activity reference");
+			System.exit(-1);
+		}
+		String testClassPath = emitter.getApplicationClassPath() + Constants.Extensions.TEST;
+		
+		// generated test class name
+		String testClassName = emitter.getApplicationClassName() + Constants.Extensions.TEST;
+		String srcdirname = testClassName + File.separator + Constants.Dirs.SRC;
+		String packageFilePath = srcdirname + File.separator + FileUtility.sourceDirectoryFromClassName(testClassPath);
+		String templateFileName = testClassName + "." + Constants.Extensions.JAVA;
+		int uniqueFileIndex = FileUtility.uniqueFileIndex(packageFilePath, templateFileName);
+		if (uniqueFileIndex != 0) {
+			testClassPath += Integer.toString(uniqueFileIndex);
+			testClassName += Integer.toString(uniqueFileIndex) ;
+		}
+		writeHeader(emitter.getApplicationClassPath(), testClassName, emitter.getApplicationClassName(), bw);
+		if (options.mfWriteFunctions) {
+			SplitFunction splitter = new SplitFunction(options.mMinLines);
 			splitter.writeFunctions(bw, "test" + targetProject, 0, lines);
 			writeClassTrailer(bw);
 		} else {
@@ -94,21 +147,19 @@ public class EmitRobotiumCode {
 		
 		bw.close();
 		br.close();
-		if ((sTargetClassName != null) && (sTargetClassPath != null)) {
-			sTestClassPath = sTargetClassPath + Constants.Extensions.TEST;
-			sTestClassName = sTargetClassName + Constants.Extensions.TEST;
-			String srcdirname = sTestClassName + File.separator + Constants.Dirs.SRC;
-			String packagePath = srcdirname + File.separator + sTestClassPath;
-			createDirectories(sTestClassName, packagePath);
-			generateBuildXML(sTestClassName);
-			copyBuildFiles(sTestClassName);
-			copyLibrary(sTestClassName);
-			generateManifest(sTestClassName);
-			writeResources(sTestClassName);
-			writeClasspath(sTestClassName, targetProject);
-			FileUtility.copyFile(robotiumFile.getPath(), sTestClassName + File.separator + Constants.Dirs.LIBS + File.separator + sRobotiumJar);
-			moveOutputCodeToPackage(outputCodeFileName, packagePath);
-
+		if (emitter.getApplicationClassPath() != null) {
+			if (uniqueFileIndex == 0) {
+				Dirs dirs = emitter.createDirectories(testClassName, packageFilePath);
+				generateBuildXML(testClassName, emitter.getApplicationClassPath());
+				copyBuildFiles(testClassName);
+				copyLibrary(dirs.mLibDir);
+				generateManifest(testClassName, testClassName, testClassPath, emitter.getApplicationPackage());
+				copyTestDriverFile(packageFilePath, emitter.getApplicationClassPath());
+				writeResources(dirs, testClassName);
+				writeClasspath(testClassName, targetProject, robotiumJar);
+				FileUtility.copyFile(robotiumFile.getPath(), testClassName + File.separator + Constants.Dirs.LIBS + File.separator + robotiumJar);
+			}
+			moveOutputCodeToPackage(packageFilePath, outputCodeFileName, testClassName);
 		} else {
 			System.err.println("no activity class specified");
 		}
@@ -121,16 +172,45 @@ public class EmitRobotiumCode {
 	 * process the options into flags and values.
 	 * @param args
 	 */
-	public static void processOptions(String[] args) {
-		
+	public Options processOptions(String[] args) {
+		Options options = new Options();
 		for (int i = 0; i < args.length; i++) {
 			String arg = args[i];
 			if (arg.equals("--splitFunctions")) {
-				sfWriteFunctions = true;
+				options.mfWriteFunctions = true;
 			} else if (args.equals("--minLines")) {
-				sMinLines = Integer.parseInt(args[i + 1]);
+				options.mMinLines = Integer.parseInt(args[i + 1]);
 			}
 		}
+		return options;
+	}
+	
+	/**
+	 * return the fully qualified class path of the application under test
+	 * @return
+	 */
+	public String getApplicationClassPath() {
+		return sTargetClassPath;
+	}
+	
+	/**
+	 * return the class name of the application under test
+	 * @return
+	 */
+	public String getApplicationClassName() {
+		if (sTargetClassPath != null) {
+			return StringUtils.getNameFromClassPath(sTargetClassPath);
+		} else {
+			return null;
+		}
+	}
+	
+	/**
+	 * return the package name of the application under test.
+	 * @return
+	 */
+	public String getApplicationPackage() {
+		return sTargetPackage;
 	}
 	
 	/**
@@ -141,37 +221,37 @@ public class EmitRobotiumCode {
 	 * res/drawable - directory for icons and stuff
 	 * res/values - directory for strings and stuff
 	 * libs - directory for libraries (specifically the robotium jar)
-	 * @param dirname
-	 * @param packageName
+	 * @param dirname name of the output test class (also the name of the project)
+	 * @param testClassFilePath full path directory to output test class files
 	 */
-	public static boolean createDirectories(String dirname, String packageName) throws IOException {
+	public Dirs createDirectories(String dirname, String testClassFilePath) throws IOException {
+		Dirs dirs = new Dirs();
 		boolean fOK = true;
-		sSrcDir = dirname + File.separator + Constants.Dirs.SRC;
-		sPackageDir = FileUtility.sourceDirectoryFromClassName(sSrcDir + File.separator + sTestClassPath);
-		File packageDir = new File(sPackageDir);
+		dirs.mSrcDir = dirname + File.separator + Constants.Dirs.SRC;
+		File packageDir = new File(testClassFilePath);
 		fOK = packageDir.mkdirs();
-		sLibDir = dirname + File.separator + Constants.Dirs.LIBS;
-		File libdir = new File(sLibDir);
+		dirs.mLibDir = dirname + File.separator + Constants.Dirs.LIBS;
+		File libdir = new File(dirs.mLibDir);
 		fOK &= libdir.mkdirs();
-		sResDir = dirname + File.separator + Constants.Dirs.RES;
-		File resdir = new File(sResDir);
+		dirs.mResDir = dirname + File.separator + Constants.Dirs.RES;
+		File resdir = new File(dirs.mResDir);
 		fOK &= resdir.mkdir();
-		sDrawableDir = resdir.getPath() + File.separator + Constants.Dirs.DRAWABLE;
-		File drawabledir = new File(sDrawableDir);
+		dirs.mDrawableDir = resdir.getPath() + File.separator + Constants.Dirs.DRAWABLE;
+		File drawabledir = new File(dirs.mDrawableDir);
 		fOK &= drawabledir.mkdir();
-		return fOK;
-
+		return dirs;
 	}
 	
 	/**
 	 * copy the output file to the package, since we don't know the package name until we've read the first activity
+	 * @param packageDir output package directory src/com/foo/barTest
 	 * @param outputCodeFileName argv[1]
-	 * @param packagePath package name of the first activity encountered in the script.
+	 * @param packagePath class name of the test class
 	 * @throws EmitterException if the file can't be moved
 	 */
-	public static void moveOutputCodeToPackage(String outputCodeFileName, String packagePath) throws EmitterException {
+	public static void moveOutputCodeToPackage(String packageDir, String outputCodeFileName, String testClassName) throws EmitterException {
 		File sourceFile = new File(outputCodeFileName);
-		String destinationPath = sPackageDir + File.separator + sTestClassName + "." + Constants.Extensions.JAVA;
+		String destinationPath = packageDir + File.separator + testClassName + "." + Constants.Extensions.JAVA;
 		if (!sourceFile.renameTo(new File(destinationPath))) {
 			throw new EmitterException("failed to rename " + sourceFile.getPath() + " to " + destinationPath);
 		}
@@ -181,13 +261,14 @@ public class EmitRobotiumCode {
 	 * generate the .classpath file for building the project.  We  add the target project name
 	 * for eclipse/ant, and the robotium jar in the libs directory.
 	 * @param dirname directory that the .classpath file is written into
-	 * @param projectName name of the tarrget project
+	 * @param projectName name of the target project
+	 * @param name of the robotium-solo-X.XX.jar
 	 * @throws IOException if the file can't be written
 	 */
-	public static void writeClasspath(String dirname, String projectName) throws IOException {
+	public static void writeClasspath(String dirname, String projectName, String robotiumJar) throws IOException {
 		String classpath = FileUtility.readTemplate(Constants.Templates.CLASSPATH);
 		classpath = classpath.replace(Constants.VariableNames.TARGET_PROJECT, projectName);
-		classpath = classpath.replace(Constants.VariableNames.ROBOTIUM_JAR, sRobotiumJar);
+		classpath = classpath.replace(Constants.VariableNames.ROBOTIUM_JAR, robotiumJar);
 		String path = dirname + File.separator + Constants.Filenames.CLASSPATH;
 		BufferedWriter bw = new BufferedWriter(new FileWriter(path));
 		bw.write(classpath);
@@ -200,20 +281,23 @@ public class EmitRobotiumCode {
 	 * @return true if the resources were written correctly.
 	 * @throws IOException
 	 */
-	public static void writeResources(String dirname) throws IOException {
-		FileUtility.writeResource(Constants.Filenames.LAUNCHER_PNG, sDrawableDir);
+	public static void writeResources(Dirs dirs, String dirname) throws IOException {
+		FileUtility.writeResource(Constants.Filenames.LAUNCHER_PNG, dirs.mDrawableDir);
 	}
 	
 	/**
 	 * write the AndroidManifest.xml
-	 * @param dirname
+	 * @param dirname name of the top-level directory to write the manifest into
+	 * @param testClassName name of the test class.
+	 * @param testClassPath fully.qualified.testClass.path
+	 * @param targetPackage package of test class
 	 * @throws IOException
 	 */
-	public static void generateManifest(String dirname)throws IOException {
+	public static void generateManifest(String dirname, String testClassName, String testClassPath, String targetPackage)throws IOException {
 		String manifest = FileUtility.readTemplate(Constants.Templates.ANDROID_MANIFEST_XML); 
-		manifest = manifest.replace(Constants.VariableNames.CLASSPATH, sTestClassPath);
+		manifest = manifest.replace(Constants.VariableNames.CLASSPATH, testClassPath);
 		manifest = manifest.replace(Constants.VariableNames.TARGETPACKAGE, sTargetPackage);
-		manifest = manifest.replace(Constants.VariableNames.CLASSNAME, sTestClassName);
+		manifest = manifest.replace(Constants.VariableNames.CLASSNAME, testClassName);
 		BufferedWriter bw = new BufferedWriter(new FileWriter(dirname + File.separator + Constants.Filenames.ANDROID_MANIFEST_XML));
 		bw.write(manifest);
 		bw.close();
@@ -221,11 +305,13 @@ public class EmitRobotiumCode {
 	
 	/**
 	 * replace the variables in the build.xml template and write out the file
+	 * @param dirname target top-level directory
+	 * @param targetClassPath full class name of application class being tested.
 	 * @throws IOException
 	 */
-	public static void generateBuildXML(String dirname) throws IOException {
+	public static void generateBuildXML(String dirname, String targetClassPath) throws IOException {
 		String buildXML = FileUtility.readTemplate(Constants.Templates.BUILD_XML);
-		String className = StringUtils.getNameFromClassPath(sTargetClassPath);
+		String className = StringUtils.getNameFromClassPath(targetClassPath);
 		buildXML = buildXML.replace(Constants.VariableNames.CLASSNAME, className);
 		BufferedWriter bw = new BufferedWriter(new FileWriter(dirname + File.separator + Constants.Filenames.BUILD_XML));
 		bw.write(buildXML);
@@ -245,12 +331,26 @@ public class EmitRobotiumCode {
 	}
 	
 	/**
-	 * copy support library to the output directory
-	 * @param dirname
-	 * @throws IOException
+	 * write out the AllTests.java to the output class directory src\foo\bar\path
+	 * @packagePathName file/path/to/class/output/directory
+	 * @param applicationClassPath fully.qualified.path.to.application.under.test
+	 * @throws IOException if the template can't be found
 	 */
-	public static void copyLibrary(String dirname) throws IOException {
-		String libraryDir = dirname + File.separator + Constants.Dirs.LIBS;
+	public static void copyTestDriverFile(String packagePathName, String applicationClassPath) throws IOException {
+		String allTests = FileUtility.readTemplate(Constants.Templates.ALL_TESTS);
+		allTests = allTests.replace(Constants.VariableNames.CLASSPATH, applicationClassPath);
+		BufferedWriter bw = new BufferedWriter(new FileWriter(packagePathName + File.separator + Constants.Filenames.ALL_TESTS));
+		bw.write(allTests);
+		bw.close();
+		
+	}
+	
+	/**
+	 * copy support library to the output directory
+	 * @param libraryDir libs directory
+	 * @throws IOException if the template can't be found
+	 */
+	public static void copyLibrary(String libraryDir) throws IOException {
 		byte[] jarData = FileUtility.readBinaryTemplate(Constants.Filenames.UTILITY_JAR);
 		FileOutputStream fos = new FileOutputStream(libraryDir + File.separator + Constants.Filenames.UTILITY_JAR);
 		fos.write(jarData, 0, jarData.length);
@@ -260,22 +360,23 @@ public class EmitRobotiumCode {
 	
 	/**
 	 * actually emit robotium code from a recorded file
+	 * TODO: change this so it returns the target class path and class name, not modifying statics
 	 * @param br BufferedReader on events.txt file
 	 * @param lines output lines
 	 * @throws IOException
 	 * @throws EmitterException
 	 */
 	public void emit(BufferedReader br, List<LineAndTokens> lines) throws IOException, EmitterException {
-		boolean scrollsHaveHappened = false;			// we get a zillion scroll events.  We only care about the last one
-		int scrollFirstVisibleItem = 0;					// preserve scroll values so we can apply it on the last scroll.
-		int scrollListIndex = 0;
-		long startTime = -1;
+		boolean scrollsHaveHappened = false;				// we get a zillion scroll events.  We only care about the last one
+		int scrollFirstVisibleItem = 0;						// preserve scroll values so we can apply it on the last scroll.
+		int scrollListIndex = 0;							// track the current scroll index to write on the next non-scroll instruction
 		List<String> lastTextEntryTokens = null;			// to preserve the last text entry event
-		String line = br.readLine();
-		String currentActivityName = null;
-		String nextActivityName = null;
+		String currentActivityName = null;					// to track the activity class name to see if it changes in transitions
 		String nextActivityVariable = null;
-		boolean fForwardActivityMatches = false;
+		String previousActivityVariable = null;		
+		boolean fForwardActivityMatches = false;			// there was a navigation to a new activity with the same class name
+		boolean fBackActivityMatches = false;				// there was a navigation to a previous activity with the same class name
+		String line = br.readLine();
 		do {
 			String nextLine = br.readLine();
 			if (line == null) {
@@ -286,30 +387,37 @@ public class EmitRobotiumCode {
 			List<String> tokens = st.toList();
 			if (tokens.get(0).equals(Constants.Events.ACTIVITY_FORWARD)) {
 				currentActivityName = tokens.get(2);
+				if (sTargetClassPath == null) {
+					sTargetClassPath =  tokens.get(2);
+				}
 			}
 			
 			// we peek at the next line to see if it's an activity_forward
 			List<String> nextTokens = null;
-			nextActivityName = null;
 			if (nextLine != null) {
 				SuperTokenizer stNext = new SuperTokenizer(nextLine, "\"", ":,", '\\');
 				nextTokens = stNext.toList();
-				if (nextTokens.get(0).equals(Constants.Events.ACTIVITY_FORWARD)) {
-					nextActivityName = nextTokens.get(2);
+				if ((nextTokens.size() > 2) && nextTokens.get(0).equals(Constants.Events.ACTIVITY_FORWARD)) {
+					String nextActivityName = nextTokens.get(2);
 					if (nextActivityName.equals(currentActivityName)) {
 						nextActivityVariable = writeGetCurrentActivity(lines);
 						fForwardActivityMatches = true;
+					} else {
+						fForwardActivityMatches = false;
 					}
 				} 
+				if ((nextTokens.size() > 2) && nextTokens.get(0).equals(Constants.Events.ACTIVITY_BACK)) {
+					String previousActivityName = nextTokens.get(2);
+					if (previousActivityName.equals(currentActivityName)) {
+						previousActivityVariable = writeGetCurrentActivity(lines);
+						fBackActivityMatches = true;
+					} else {
+						fBackActivityMatches = false;
+					}
+				}
+
 			}
-			
-			// we don't actually write out time, but it's handy, you know.
 			String action = tokens.get(0);
-			String time = tokens.get(1);
-			long timeMsec = Long.parseLong(time);
-			if (startTime == -1) {
-				startTime = timeMsec;
-			}
 			
 			// when the recorder scrolls, it writes out a scroll message for each move, but
 			// we just want robotium to issue a single scroll command, so once we read a scroll
@@ -345,17 +453,20 @@ public class EmitRobotiumCode {
 			} else if (action.equals(Constants.Events.ACTIVITY_FORWARD)) {
 				if (sTargetClassPath == null) {
 					sTargetClassPath =  tokens.get(2);
-					sTargetClassName = StringUtils.getNameFromClassPath(sTargetClassPath);
 				}
-				sLastEventWasWaitForActivity = true;
+				mLastEventWasWaitForActivity = true;
 				if (fForwardActivityMatches) {
 					writeWaitForMatchingActivity(nextActivityVariable, tokens, lines);
 				} else {
 					writeWaitForActivity(tokens, lines);
 				}
 			} else if (action.equals(Constants.Events.ACTIVITY_BACK)) {
-				writeGoBack(tokens, lines);
-				sLastEventWasWaitForActivity = true;
+				if (fBackActivityMatches) {
+					writeGoBackToMatchingActivity(previousActivityVariable, tokens, lines);
+				} else {
+					writeGoBack(tokens, lines);
+				}
+				mLastEventWasWaitForActivity = true;
 			} else {
 				if (action.equals(Constants.Events.ITEM_CLICK)) {
 					writeItemClick(tokens, lines);
@@ -402,6 +513,8 @@ public class EmitRobotiumCode {
 	public String writeGetCurrentActivity(List<LineAndTokens> lines) throws IOException {
 		String getCurrentActivityTemplate = FileUtility.readTemplate(Constants.Templates.GET_CURRENT_ACTIVITY);
 		getCurrentActivityTemplate = getCurrentActivityTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
+		getCurrentActivityTemplate = getCurrentActivityTemplate.replace(Constants.VariableNames.DESCRIPTION, "get the current activity, since the next one has the same class name");
+		
 		lines.add(new LineAndTokens(null, getCurrentActivityTemplate));
 		String activityName = Constants.Names.ACTIVITY + Integer.toString(mVariableIndex);
 		mVariableIndex++;
@@ -440,6 +553,26 @@ public class EmitRobotiumCode {
 		}
 		mVariableIndex++;
 	}
+	
+	/**
+	 * when we go back to an activity of the same name as the current one, we get the current activity
+	 * variable, then save it, and wait for another activity of the same name to come into existence
+	 * which is different from that variable
+	 * @param nextActivityVariable name of the activity variable we saved
+	 * @param tokens parsed from a line in events.txt
+	 * @param lines output list of java instructions
+	 * @throws IOException if the template file can't be read
+	 */
+	public void writeGoBackToMatchingActivity(String nextActivityVariable, List<String> tokens, List<LineAndTokens> lines) throws IOException {
+		String waitTemplate = FileUtility.readTemplate(Constants.Templates.GO_BACK_TO_MATCHING_ATIVITY);
+		String classPath = tokens.get(2);
+		String description = getDescription(tokens);
+		String fullDescription = "wait for activity " + description;
+		waitTemplate = waitTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
+		waitTemplate = waitTemplate.replace(Constants.VariableNames.ACTIVITY_CLASS, classPath);
+		waitTemplate = waitTemplate.replace(Constants.VariableNames.ACTIVITY, nextActivityVariable);
+		lines.add(new LineAndTokens(tokens, waitTemplate));
+	}
 
 	/**
 	 * write the solo.goBack() call
@@ -448,8 +581,18 @@ public class EmitRobotiumCode {
 	 * @throws IOException if the template file can't be read
 	 */
 	public void writeGoBack(List<String> tokens, List<LineAndTokens> lines) throws IOException {
-		String goBackTemplate = FileUtility.readTemplate(Constants.Templates.GO_BACK);
-		lines.add(new LineAndTokens(tokens, goBackTemplate));
+		if (tokens.size() == 2) {
+			String goBackTemplate = FileUtility.readTemplate(Constants.Templates.GO_BACK);
+			lines.add(new LineAndTokens(tokens, goBackTemplate));
+		} else {
+			String activityClass = tokens.get(2);
+			String description = getDescription(tokens);
+			String goBackTemplate = FileUtility.readTemplate(Constants.Templates.GO_BACK_WAIT_ATIVITY);
+			String fullDescription = "go back to activity " + description;
+			goBackTemplate = goBackTemplate.replace(Constants.VariableNames.ACTIVITY_CLASS, activityClass);
+			goBackTemplate = goBackTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
+			lines.add(new LineAndTokens(tokens, goBackTemplate));
+		}
 	}
 	
 	/**
@@ -468,6 +611,16 @@ public class EmitRobotiumCode {
 		lines.add(new LineAndTokens(tokens, waitTemplate));
 	}
 	
+	/**
+	 * when we go forward to an activity of the same name as the current one, we get the current activity
+	 * variable, then save it, and wait for another activity of the same name to come into existence
+	 * which is different from that variable
+	 * @param nextActivityVariable name of the activity variable we saved
+	 * @param tokens parsed from a line in events.txt
+	 * @param lines output list of java instructions
+	 * @throws IOException if the template file can't be read
+	 */
+
 	public void writeWaitForMatchingActivity(String nextActivityVariable, List<String> tokens, List<LineAndTokens> lines) throws IOException {
 		String waitTemplate = FileUtility.readTemplate(Constants.Templates.WAIT_FOR_NEW_ACTIVITY);
 		String classPath = tokens.get(2);
@@ -518,9 +671,9 @@ public class EmitRobotiumCode {
 		ReferenceParser ref = new ReferenceParser(tokens, 2);
 		String description = getDescription(tokens);
 		String fullDescription = "click on " + description;
-		if (sLastEventWasWaitForActivity) {
+		if (mLastEventWasWaitForActivity) {
 			writeWaitForView(tokens, 2, lines);
-			sLastEventWasWaitForActivity = false;
+			mLastEventWasWaitForActivity = false;
 		} 
 		if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
 			String clickInViewTemplate = FileUtility.readTemplate(Constants.Templates.CLICK_IN_VIEW_ID);
@@ -581,6 +734,7 @@ public class EmitRobotiumCode {
 		if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
 			String enterTextClassTemplate = FileUtility.readTemplate(Constants.Templates.EDIT_TEXT_CLASS_INDEX);
 			enterTextClassTemplate = enterTextClassTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
+			enterTextClassTemplate = enterTextClassTemplate.replace(Constants.VariableNames.TEXT, text);
 			enterTextClassTemplate = enterTextClassTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
 			enterTextClassTemplate = enterTextClassTemplate.replace(Constants.VariableNames.VIEW_INDEX, Integer.toString(ref.getIndex()));		
 			lines.add(new LineAndTokens(tokens, enterTextClassTemplate));
@@ -595,6 +749,14 @@ public class EmitRobotiumCode {
 		}
 		mVariableIndex++;
 	}
+	
+	/**
+	 * wait for a list element, where the list is referenced by class and index.
+	 * @param tokens
+	 * @param itemIndex
+	 * @param lines
+	 * @throws IOException
+	 */
 	public void writeWaitForListClassIndex(List<String> tokens, int itemIndex, List<LineAndTokens> lines) throws IOException {
 		String listItemWaitTemplate = FileUtility.readTemplate(Constants.Templates.WAIT_FOR_LIST_CLASS_INDEX);
 		ReferenceParser ref = new ReferenceParser(tokens, 3);
@@ -641,14 +803,16 @@ public class EmitRobotiumCode {
 		ReferenceParser ref = new ReferenceParser(tokens, 3);
 		String description = getDescription(tokens);
 		String fullDescription = "click item " + description;
-		if (sLastEventWasWaitForActivity) {
+		/*
+		if (mLastEventWasWaitForActivity) {
 			if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
 				writeWaitForListIdItem(tokens, itemIndex, lines);
 			} else {
 				writeWaitForListClassIndex(tokens, itemIndex, lines);
 			}
-			sLastEventWasWaitForActivity = false;
+			mLastEventWasWaitForActivity = false;
 		} 
+		*/
 		if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
 			String viewClass = ref.getClassName();
 			int classIndex = ref.getIndex();
@@ -682,9 +846,9 @@ public class EmitRobotiumCode {
 		ReferenceParser ref = new ReferenceParser(tokens, 3);
 		String description = getDescription(tokens);
 		String fullDescription = "select item " + description;
-		if (sLastEventWasWaitForActivity) {
+		if (mLastEventWasWaitForActivity) {
 			writeWaitForView(tokens, 3, lines);
-			sLastEventWasWaitForActivity = false;
+			mLastEventWasWaitForActivity = false;
 		} 
 		if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
 			String viewClass = ref.getClassName();
@@ -705,15 +869,17 @@ public class EmitRobotiumCode {
 	/**
 	 * write the header on the first activity
 	 * @param classPath com.package.name for the test application
+	 * @param testClassName classNameTest<index>
 	 * @param className name of the test application
 	 * @param bw output BufferedWriter
 	 * @throws IOException
 	 */
-	public static void writeHeader(String classPath, String className, BufferedWriter bw) throws IOException {
+	public static void writeHeader(String classPath, String testClassName, String className, BufferedWriter bw) throws IOException {
 		String header = FileUtility.readTemplate(Constants.Templates.HEADER);
 		header = header.replace(Constants.VariableNames.CLASSPATH, classPath);
 		header = header.replace(Constants.VariableNames.CLASSPACKAGE, classPath);
 		header = header.replace(Constants.VariableNames.CLASSNAME, className);
+		header = header.replace(Constants.VariableNames.TESTCLASSNAME, testClassName);
 		bw.write(header);
 	}
 	
@@ -748,4 +914,5 @@ public class EmitRobotiumCode {
 			bw.write(line.mOutputLine);
 		}
 	}
+
 }
