@@ -9,12 +9,12 @@ import java.util.ArrayList;
 import junit.framework.TestCase;
 import android.app.Activity;
 
-public class %CLASSNAME%Test extends ActivityInstrumentationTestCase2<%CLASSNAME%> {
+public class %TESTCLASSNAME% extends ActivityInstrumentationTestCase2<%CLASSNAME%> {
   	private Solo solo;
   	protected static final int ACTIVITY_WAIT_MSEC = 5000;		// wait 5 seconds for new activities by default
 	protected static final int DIALOG_CLOSE_TIMEOUT = 5000;		// wait 5 seconds for dialogs to close.
- 
-  	public %CLASSNAME%Test() {
+ 	protected static final int VIEW_WAIT_MSEC = 5000;			// wait 5 seconds for views to appear
+  	public %TESTCLASSNAME%() {
 		super("%CLASSPACKAGE%", %CLASSNAME%.class);
   	}
 
