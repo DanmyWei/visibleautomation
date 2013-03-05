@@ -1,0 +1,3 @@
+		// %DESCRIPTION%
+		solo.goBack();
+		TestCase.assertTrue(solo.waitForActivity(%ACTIVITY_CLASS%.class.getSimpleName(), ACTIVITY_WAIT_MSEC));
