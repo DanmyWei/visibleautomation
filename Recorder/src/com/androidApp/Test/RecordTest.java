@@ -173,8 +173,14 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 						if (RecordTest.this.inActivityStack(activityB)) {
 							long time = SystemClock.uptimeMillis();
 							Activity previousActivity = RecordTest.this.popActivityFromStack();
-						String logMsg = Constants.EventTags.ACTIVITY_BACK + ":" + time + "," + previousActivity.getClass().getName() + "," + previousActivity.toString();
-							RecordTest.this.getRecorder().writeRecord(logMsg);
+							previousActivity = RecordTest.this.peekActivityOnStack();
+							if (previousActivity != null) {
+								String logMsg = Constants.EventTags.ACTIVITY_BACK + ":" + time + "," + previousActivity.getClass().getName() + "," + previousActivity.toString();
+								RecordTest.this.getRecorder().writeRecord(logMsg);
+							} else {
+								String logMsg = Constants.EventTags.ACTIVITY_BACK + ":" + time;
+								RecordTest.this.getRecorder().writeRecord(logMsg);
+							} 
 						} else {
 							long time = SystemClock.uptimeMillis();
 							RecordTest.this.pushActivityOnStack(activityB);
@@ -212,6 +218,19 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	public Activity popActivityFromStack() {
 		WeakReference<Activity> ref = mActivityStack.pop();
 		return ref.get();
+	}
+	
+	/**
+	 * return the activity that's on the top of the stack
+	 * @return top activity
+	 */
+	public Activity peekActivityOnStack() {
+		if (mActivityStack.isEmpty()) {
+			return null;
+		} else {
+			WeakReference<Activity> ref = mActivityStack.peek();
+			return ref.get();
+		}
 	}
 	
 	/***
