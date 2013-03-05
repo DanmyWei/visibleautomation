@@ -12,10 +12,9 @@ import android.view.View;
 // recorder for view click events.
 public class RecordOnKeyListener extends RecordListener implements View.OnKeyListener {
 	protected View.OnKeyListener 	mOriginalOnKeyListener;
-	protected EventRecorder			mEventRecorder;
 	
 	public RecordOnKeyListener(EventRecorder eventRecorder, View v) {
-		mEventRecorder = eventRecorder;
+		super(eventRecorder);
 		try {
 			mOriginalOnKeyListener = ListenerIntercept.getKeyListener(v);
 		} catch (Exception ex) {
@@ -24,7 +23,7 @@ public class RecordOnKeyListener extends RecordListener implements View.OnKeyLis
 	}
 	
 	public RecordOnKeyListener(EventRecorder eventRecorder, View.OnKeyListener originalKeyListener) {
-		mEventRecorder = eventRecorder;
+		super(eventRecorder);
 		mOriginalOnKeyListener = originalKeyListener;
 	}
 	

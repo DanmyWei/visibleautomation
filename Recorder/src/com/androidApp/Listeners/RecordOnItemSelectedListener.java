@@ -10,20 +10,18 @@ import android.widget.Spinner;
 
 // record item Selects for spinners
 public class RecordOnItemSelectedListener extends RecordListener implements AdapterView.OnItemSelectedListener {
-	protected EventRecorder						mEventRecorder;
 	protected AdapterView.OnItemSelectedListener	mOriginalItemSelectedListener;
 	
 	public RecordOnItemSelectedListener(EventRecorder eventRecorder, Spinner spinner) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
-		mEventRecorder = eventRecorder;
+		super(eventRecorder);
 		mOriginalItemSelectedListener = ListenerIntercept.getItemSelectedListener(spinner);
 	}
 
 	
 	public RecordOnItemSelectedListener(EventRecorder eventRecorder, AdapterView.OnItemSelectedListener	originalItemSelectedListener) {
-		mEventRecorder = eventRecorder;
+		super(eventRecorder);
 		mOriginalItemSelectedListener = originalItemSelectedListener;
 	}
-
 
 	// solo.pressSpinnerItem() only supports class index references.
 	@Override

@@ -8,12 +8,11 @@ import android.view.View;
 import android.widget.AdapterView;
 
 public class RecordOnItemLongClickListener extends RecordListener implements AdapterView.OnItemLongClickListener {
-	protected EventRecorder							mEventRecorder;
 	protected AdapterView<?>						mAdapterView;
 	protected AdapterView.OnItemLongClickListener	mOriginalItemLongClickListener;
 	
 	public RecordOnItemLongClickListener(EventRecorder eventRecorder, AdapterView<?> adapterView) {
-		mEventRecorder = eventRecorder;
+		super(eventRecorder);
 		mAdapterView = adapterView;
 		mOriginalItemLongClickListener = adapterView.getOnItemLongClickListener();
 	}

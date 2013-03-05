@@ -13,10 +13,9 @@ import android.view.View;
 // View.onTouchListener that listens to key events, and writes them to a file.
 public class RecordOnTouchListener extends RecordListener implements View.OnTouchListener {
 	protected View.OnTouchListener 	mOriginalOnTouchListener;
-	protected EventRecorder			mEventRecorder;
 	
 	public RecordOnTouchListener(EventRecorder eventRecorder, View v) {
-		mEventRecorder = eventRecorder;
+		super(eventRecorder);
 		try {
 			mOriginalOnTouchListener = ListenerIntercept.getTouchListener(v);
 		} catch (Exception ex) {
@@ -25,7 +24,7 @@ public class RecordOnTouchListener extends RecordListener implements View.OnTouc
 	}
 	
 	public RecordOnTouchListener(EventRecorder eventRecorder, View.OnTouchListener originalTouchListener) {
-		mEventRecorder = eventRecorder;
+		super(eventRecorder);
 		mOriginalOnTouchListener = originalTouchListener;
 	}
 	

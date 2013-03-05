@@ -9,11 +9,10 @@ import android.content.DialogInterface;
 import android.os.SystemClock;
 
 public class RecordDialogOnShowListener extends RecordListener implements DialogInterface.OnShowListener {
-	protected EventRecorder mEventRecorder;
 	protected DialogInterface.OnShowListener mOriginalOnShowListener;
 	
 	public RecordDialogOnShowListener(EventRecorder eventRecorder, DialogInterface dialog) {
-		mEventRecorder = eventRecorder;
+		super(eventRecorder);
 		try {
 			mOriginalOnShowListener = ListenerIntercept.getOnShowListener((Dialog) dialog);
 		} catch (Exception ex) {

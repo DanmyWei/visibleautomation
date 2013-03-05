@@ -8,12 +8,11 @@ import android.widget.AdapterView;
 
 // record item clicks for listviews
 public class RecordOnItemClickListener extends RecordListener implements AdapterView.OnItemClickListener {
-	protected EventRecorder						mEventRecorder;
 	protected AdapterView<?>					mAdapterView;
 	protected AdapterView.OnItemClickListener	mOriginalItemClickListener;
 	
 	public RecordOnItemClickListener(EventRecorder eventRecorder, AdapterView<?> adapterView) {
-		mEventRecorder = eventRecorder;
+		super(eventRecorder);
 		mAdapterView = adapterView;
 		mOriginalItemClickListener = adapterView.getOnItemClickListener();
 	}

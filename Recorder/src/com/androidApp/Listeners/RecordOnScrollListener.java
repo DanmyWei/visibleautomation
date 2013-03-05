@@ -17,16 +17,15 @@ import android.widget.AdapterView;
 public class RecordOnScrollListener extends RecordListener implements AbsListView.OnScrollListener {
 	private static final String 			TAG = "RecordOnScrollListener";
 	protected AbsListView.OnScrollListener 	mOriginalOnScrollListener;
-	protected EventRecorder					mEventRecorder;
 	protected int							mScrollState = AbsListView.OnScrollListener.SCROLL_STATE_IDLE;
 	
 	public RecordOnScrollListener(EventRecorder eventRecorder, AbsListView.OnScrollListener originalOnScrollListener) {
-		mEventRecorder = eventRecorder;
+		super(eventRecorder);
 		mOriginalOnScrollListener = originalOnScrollListener;
 	}
 	
 	public RecordOnScrollListener(EventRecorder eventRecorder, AbsListView listView) {
-		mEventRecorder = eventRecorder;
+		super(eventRecorder);
 		try {
 			mOriginalOnScrollListener = ListenerIntercept.getScrollListener(listView);
 		} catch (Exception ex) {

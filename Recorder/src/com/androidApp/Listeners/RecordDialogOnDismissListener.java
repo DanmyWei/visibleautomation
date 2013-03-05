@@ -16,11 +16,10 @@ import android.view.View;
  */
 
 public class RecordDialogOnDismissListener extends RecordListener implements DialogInterface.OnDismissListener {
-	protected EventRecorder mEventRecorder;
 	protected DialogInterface.OnDismissListener mOriginalOnDismissListener;
 	
 	public RecordDialogOnDismissListener(EventRecorder eventRecorder, Dialog dialog) {
-		mEventRecorder = eventRecorder;
+		super(eventRecorder);
 		try {
 			mOriginalOnDismissListener = ListenerIntercept.getOnDismissListener(dialog);
 		} catch (Exception ex) {
@@ -29,7 +28,7 @@ public class RecordDialogOnDismissListener extends RecordListener implements Dia
 	}
 	
 	public RecordDialogOnDismissListener(EventRecorder eventRecorder, DialogInterface.OnDismissListener originalDismissListener) {
-		mEventRecorder = eventRecorder;
+		super(eventRecorder);
 		mOriginalOnDismissListener = originalDismissListener;
 	}
 

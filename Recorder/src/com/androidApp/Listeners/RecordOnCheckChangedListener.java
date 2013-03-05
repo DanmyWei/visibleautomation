@@ -11,10 +11,9 @@ import android.widget.CompoundButton;
 // recorder for toggle buttons OnCheckedChangeListener (onClick really does this)
 public class RecordOnCheckChangedListener extends RecordListener implements CompoundButton.OnCheckedChangeListener {
 	protected CompoundButton.OnCheckedChangeListener 	mOriginalOnCheckedChangeListener;
-	protected EventRecorder								mEventRecorder;
 	
 	public RecordOnCheckChangedListener(EventRecorder eventRecorder, CompoundButton v) {
-		mEventRecorder = eventRecorder;
+		super(eventRecorder);
 		try {
 			mOriginalOnCheckedChangeListener = ListenerIntercept.getCheckedChangeListener(v);
 		} catch (Exception ex) {
@@ -23,7 +22,7 @@ public class RecordOnCheckChangedListener extends RecordListener implements Comp
 	}
 	
 	public RecordOnCheckChangedListener(EventRecorder eventRecorder, CompoundButton.OnCheckedChangeListener originalOnCheckedChangeListener) {
-		mEventRecorder = eventRecorder;
+		super(eventRecorder);
 		mOriginalOnCheckedChangeListener = originalOnCheckedChangeListener;
 	}
 	

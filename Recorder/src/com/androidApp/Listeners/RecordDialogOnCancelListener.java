@@ -15,11 +15,10 @@ import android.view.View;
  *
  */
 public class RecordDialogOnCancelListener extends RecordListener implements DialogInterface.OnCancelListener {
-	protected EventRecorder mEventRecorder;
 	protected DialogInterface.OnCancelListener mOriginalOnCancelListener;
 	
 	public RecordDialogOnCancelListener(EventRecorder eventRecorder, Dialog dialog) {
-		mEventRecorder = eventRecorder;
+		super(eventRecorder);
 		try {
 			mOriginalOnCancelListener = ListenerIntercept.getOnCancelListener(dialog);
 		} catch (Exception ex) {
@@ -28,7 +27,7 @@ public class RecordDialogOnCancelListener extends RecordListener implements Dial
 	}
 	
 	public RecordDialogOnCancelListener(EventRecorder eventRecorder, DialogInterface.OnCancelListener originalCancelListener) {
-		mEventRecorder = eventRecorder;
+		super(eventRecorder);
 		mOriginalOnCancelListener = originalCancelListener;
 	}
 

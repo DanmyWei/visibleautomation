@@ -10,10 +10,9 @@ import android.widget.SeekBar;
 // record a change in a seekbar listener
 public class RecordSeekBarChangeListener extends RecordListener implements SeekBar.OnSeekBarChangeListener {
 	protected SeekBar.OnSeekBarChangeListener 	mOriginalOnSeekBarChangeListener;
-	protected EventRecorder						mEventRecorder;
 	
 	public RecordSeekBarChangeListener(EventRecorder eventRecorder, SeekBar seekbar) {
-		mEventRecorder = eventRecorder;
+		super(eventRecorder);
 		try {
 			mOriginalOnSeekBarChangeListener = ListenerIntercept.getSeekBarChangeListener(seekbar);
 		} catch (Exception ex) {
@@ -22,7 +21,7 @@ public class RecordSeekBarChangeListener extends RecordListener implements SeekB
 	}
 	
 	public RecordSeekBarChangeListener(EventRecorder eventRecorder, SeekBar.OnSeekBarChangeListener originalOnSeekBarChangeListener) {
-		mEventRecorder = eventRecorder;
+		super(eventRecorder);
 		mOriginalOnSeekBarChangeListener = originalOnSeekBarChangeListener;
 	}
 	

@@ -15,12 +15,11 @@ import android.widget.TextView;
  * text after the transformation has been applied (like formatting a phone number or something like that)
  */
 public class RecordTextChangedListener extends RecordListener implements TextWatcher {
-	protected EventRecorder			mEventRecorder;
 	protected TextView				mTextView;
 
-	public RecordTextChangedListener(TextView textView, EventRecorder eventRecorder) {
+	public RecordTextChangedListener(EventRecorder eventRecorder, TextView textView) {
+		super(eventRecorder);
 		mTextView = textView;
-		mEventRecorder = eventRecorder;
 	}
 	
 	public void afterTextChanged(Editable editable) {

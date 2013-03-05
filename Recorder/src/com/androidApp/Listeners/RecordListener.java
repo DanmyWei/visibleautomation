@@ -1,5 +1,6 @@
 package com.androidApp.Listeners;
 
+import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.FieldUtils;
 import com.androidApp.Utility.StringUtils;
@@ -14,9 +15,13 @@ import android.view.Window;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-// base class for all listeners, implements common functions
+// base class for all listeners, implements common functions, retains reference to event recorder.
 public class RecordListener {
-	
+	protected EventRecorder mEventRecorder;
+
+	public RecordListener(EventRecorder eventRecorder) {
+		mEventRecorder = eventRecorder;
+	}
 	
 	// get a description of a view.
 	public static String getDescription(View v) {

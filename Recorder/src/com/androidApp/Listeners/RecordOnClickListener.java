@@ -11,10 +11,9 @@ import android.view.View;
 // recorder for view click events.
 public class RecordOnClickListener extends RecordListener implements View.OnClickListener {
 	protected View.OnClickListener 	mOriginalOnClickListener;
-	protected EventRecorder			mEventRecorder;
 	
 	public RecordOnClickListener(EventRecorder eventRecorder, View v) {
-		mEventRecorder = eventRecorder;
+		super(eventRecorder);
 		try {
 			mOriginalOnClickListener = ListenerIntercept.getClickListener(v);
 		} catch (Exception ex) {
@@ -23,7 +22,7 @@ public class RecordOnClickListener extends RecordListener implements View.OnClic
 	}
 	
 	public RecordOnClickListener(EventRecorder eventRecorder, View.OnClickListener originalTouchListener) {
-		mEventRecorder = eventRecorder;
+		super(eventRecorder);
 		mOriginalOnClickListener = originalTouchListener;
 	}
 	

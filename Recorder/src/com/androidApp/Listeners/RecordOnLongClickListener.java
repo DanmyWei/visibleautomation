@@ -10,10 +10,9 @@ import android.view.View;
 
 public class RecordOnLongClickListener extends RecordListener implements View.OnLongClickListener {
 	protected View.OnLongClickListener 	mOriginalOnLongClickListener;
-	protected EventRecorder				mEventRecorder;
 	
 	public RecordOnLongClickListener(EventRecorder eventRecorder, View v) {
-		mEventRecorder = eventRecorder;
+		super(eventRecorder);
 		try {
 			mOriginalOnLongClickListener = ListenerIntercept.getLongClickListener(v);
 		} catch (Exception ex) {
@@ -22,7 +21,7 @@ public class RecordOnLongClickListener extends RecordListener implements View.On
 	}
 	
 	public RecordOnLongClickListener(EventRecorder eventRecorder, View.OnLongClickListener originalLongClickListener) {
-		mEventRecorder = eventRecorder;
+		super(eventRecorder);
 		mOriginalOnLongClickListener = originalLongClickListener;
 	}
 	
