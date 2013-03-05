@@ -140,4 +140,72 @@ public class FileUtility {
 		return file.mkdirs();	
 	}
 	
+	/**
+	 * given a directory which may contain files containing the name 'templateFilename',
+	 * generate an index number such that templatePrefix<index>.templateExtension is unique
+	 * @param directory path to directory containing files
+	 * @param templateFilename template file to search for
+	 * @return an integer of the unique file, or 0 if there was no matching file, or the
+	 * directory was not found.
+	 */
+	public static int uniqueFileIndex(String directory, String templateFilename) {
+		int ichDot = templateFilename.lastIndexOf('.');
+		String name = templateFilename;
+		if (ichDot != -1) {
+			name = templateFilename.substring(0, ichDot);
+	}
+		File dir = new File(directory);
+		if (!dir.exists()) {
+			return 0;
+		}
+		File path = new File(dir, templateFilename);
+		if (!path.exists()) {
+			return 0;
+		}
+		File[] filesInDir = dir.listFiles();
+		int maxFileNumber = 0;
+		for (File candFile : filesInDir) {
+			if (candFile.getName().startsWith(name)) {
+				String candFileName = candFile.getName();
+				String numericSuffix = "0";
+				ichDot = candFileName.indexOf('.');
+				if (ichDot != -1) {
+					numericSuffix = candFileName.substring(name.length(), ichDot);
+				} else {
+					numericSuffix = candFileName.substring(name.length());
+				}
+				if (StringUtils.isNumber(numericSuffix)) {
+					int candFileNumber = Integer.parseInt(numericSuffix);
+					if (candFileNumber > maxFileNumber) {
+						maxFileNumber = candFileNumber;
+					}
+				}
+			}
+		}
+		return maxFileNumber + 1;
+	}
+	/**
+	 * generate a file with a unique number based on a template, so for example ApiDemos.java will become ApiDemos5.java
+	 * @param directory directory to search against.
+	 * @param filename filename prefix
+	 * @return unique indexed file name
+	 */
+	public static String uniqueIndexedFileName(String directory, String templateFilename) {
+		int uniqueIndex = uniqueFileIndex(directory, templateFilename);
+		if (uniqueIndex == 0) {
+			return templateFilename;
+		}
+		String extension = null;
+		String name = templateFilename;
+		int ichDot = templateFilename.lastIndexOf('.');
+		if (ichDot != -1) {
+			name = templateFilename.substring(0, ichDot);
+			extension = templateFilename.substring(ichDot + 1);
+		}
+		String uniqueFileName =  name + Integer.toString(uniqueIndex);
+		if (extension != null) {
+			uniqueFileName += "." + extension;
+		}
+		return uniqueFileName;
+	}
 }

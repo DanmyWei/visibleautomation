@@ -87,12 +87,32 @@ public class StringUtils {
 			return false;
 		}
 		for (int ich = 2; ich < s.length(); ich++) {
-			if (!Character.isDigit(s.charAt(ich))) {
+			char ch = s.charAt(ich);
+			if (!Character.isDigit(ch) && ((Character.toLowerCase(ch) >= 'a') || (Character.toLowerCase(ch) <= 'f'))) {
 				return false;
 			}
 		}
 		return true;
 	}
+	
+	/**
+	 * is s a number
+	 * @param s string to test
+	 * @return true if digits and length > 0, false otherwise.
+	 */
+	public static boolean isNumber(String s) {
+		if (s.length() == 0) {
+			return false;
+		}
+		for (int ich = 0; ich < s.length(); ich++) {
+			char ch = s.charAt(ich);
+			if (!Character.isDigit(ch)) {
+				return false;
+			}
+		}
+		return true;
+	}	 
+
 	
 	/**
 	 * is s a quoted string
@@ -130,5 +150,6 @@ public class StringUtils {
 		} else {
 			return className;
 		}
-	}	 
+	}
+
 }

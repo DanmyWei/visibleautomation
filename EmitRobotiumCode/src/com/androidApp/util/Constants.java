@@ -67,6 +67,9 @@ public class Constants {
 		public static final String WAIT_FOR_LIST_CLASS_INDEX = "wait_for_list_class_index.txt";
 		public static final String GET_CURRENT_ACTIVITY = "get_current_activity.txt";
 		public static final String WAIT_FOR_NEW_ACTIVITY = "wait_for_new_activity.txt";
+		public static final String ALL_TESTS = "AllTests.txt";
+		public static final String GO_BACK_TO_MATCHING_ATIVITY = "go_back_to_matching_activity.txt";
+		public static final String GO_BACK_WAIT_ATIVITY = "go_back_wait_activity.txt";
 			
 	}
 	// template %replace% variables
@@ -89,12 +92,16 @@ public class Constants {
 		public static final CharSequence SPINNER_INDEX = "%SPINNER_INDEX%";
 		public static final CharSequence DESCRIPTION = "%DESCRIPTION%";
 		public static final CharSequence ACTIVITY = "%ACTIVITY%";
+		public static final CharSequence TESTCLASSNAME = "%TESTCLASSNAME%";
 	}
 	
+	// generic names
 	public static class Names {
-		public static final String ACTIVITY = "activity";		
+		public static final String ACTIVITY = "activity";
+		public static final Object DEVICE = "device";		
 	}
 	
+	// filenames used in the project
 	public static class Filenames {
 		public static final String BUILD_XML = "build.xml";
 		public static final String PROJECT_PROPERTIES = "project.properties";
@@ -103,8 +110,10 @@ public class Constants {
 		public static final String CLASSPATH = ".classpath";
 		public static final String OUTPUT = "output.java";
 		public static final String UTILITY_JAR = "robotiumutils.jar";
+		public static final String ALL_TESTS = "AllTests.java";
 	}
 	
+	// output directories
 	public static class Dirs {
 		public static final String SRC = "src";
 		public static final String RES = "res";
@@ -112,6 +121,7 @@ public class Constants {
 		public static final String LIBS = "libs";
 	}
 	
+	// outfile file extension
 	public static class Extensions {
 		public static final String TEST = "Test";
 		public static final String JAVA = "java";
