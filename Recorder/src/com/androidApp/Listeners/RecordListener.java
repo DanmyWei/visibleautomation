@@ -58,7 +58,7 @@ public class RecordListener {
 	public static String getDescription(DialogInterface dialogInterface) throws ClassNotFoundException, IllegalAccessException, NoSuchFieldException  {
 		Dialog dialog = (Dialog) dialogInterface;
 		Window window = dialog.getWindow();
-		Class phoneWindowClass = Class.forName(Constants.Classes.PHONE_WINDOW_CLASS);
+		Class phoneWindowClass = Class.forName(Constants.Classes.PHONE_WINDOW);
 		String titleString = (String) FieldUtils.getFieldValue(window, phoneWindowClass, Constants.Fields.TITLE);
 		if (titleString != null) {
 			return StringUtils.massageString(titleString);
@@ -66,7 +66,11 @@ public class RecordListener {
 			View dialogView = window.getDecorView();
 			View dialogTitle = ViewExtractor.getChildByClassName(dialogView, Constants.Classes.DIALOG_TITLE_SIMPLE_NAME);
 			titleString = (String) FieldUtils.getFieldValue(dialogTitle, TextView.class, Constants.Fields.TEXT);
-			return StringUtils.massageString(titleString);
+			if (!StringUtils.isEmpty(titleString)) {
+				return StringUtils.massageString(titleString);
+			} else {
+				return Constants.Description.UNTITLED_DIALOG;
+			}
 		}
 	}
 	
