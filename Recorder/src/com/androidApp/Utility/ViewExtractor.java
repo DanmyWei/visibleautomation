@@ -29,7 +29,7 @@ public class ViewExtractor {
 	private static Class<?> sWindowManager;
 	static {
 		try {
-			sWindowManager = Class.forName(Constants.Classes.WINDOW_MANAGER_CLASS);
+			sWindowManager = Class.forName(Constants.Classes.WINDOW_MANAGER);
 
 		} catch (ClassNotFoundException e) {
 			throw new RuntimeException(e);

@@ -20,27 +20,28 @@ public class Constants {
 	}
 	
 	public static class Classes {
-		public static final String LISTENER_INFO_CLASS = "android.view.View$ListenerInfo";
-		public static final String PHONE_DECOR_VIEW_CLASS = "com.android.internal.policy.impl.PhoneWindow$DecorView";
+		public static final String LISTENER_INFO = "android.view.View$ListenerInfo";
+		public static final String PHONE_DECOR_VIEW = "com.android.internal.policy.impl.PhoneWindow$DecorView";
 		public static final String ENCLOSING_CLASS = "this$0";
 		public static final String DIALOG_TITLE_SIMPLE_NAME = "DialogTitle";
-		public static final String DIALOG_TITLE_CLASS = "com.android.internal.widget.DialogTitle";
-		public static final String PHONE_WINDOW_CLASS = "com.android.internal.policy.impl.PhoneWindow";
-		public static final String WINDOW_MANAGER_CLASS = "android.view.WindowManagerImpl";
+		public static final String DIALOG_TITLE = "com.android.internal.widget.DialogTitle";
+		public static final String PHONE_WINDOW = "com.android.internal.policy.impl.PhoneWindow";
+		public static final String WINDOW_MANAGER = "android.view.WindowManagerImpl";
+		public static final String SPINNER_DIALOG_POPUP = "android.widget.Spinner$DialogPopup";
 	}
 	
 	// listener field names
 	public static class Fields {
-		public static final String TEXT_WATCHER_LIST_FIELD = "mListeners";
-		public static final String TOUCH_LISTENER_FIELD = "mOnTouchListener";
-		public static final String CLICK_LISTENER_FIELD = "mOnClickListener";
-		public static final String DRAG_LISTENER_FIELD = "mOnDragListener";
-		public static final String FOCUS_CHANGE_LISTENER_FIELD = "mOnFocusChangeListener";
-		public static final String ITEM_CLICK_LISTENER_FIELD = "mOnItemClickListener";
-		public static final String KEY_LISTENER_FIELD = "mOnKeyListener";
-		public static final String LISTENER_INFO_FIELD = "mListenerInfo";
-		public static final String LONG_CLICK_LISTENER_FIELD = "mOnLongClickListener";
-		public static final String SCROLL_LISTENER_FIELD = "mOnScrollListener";
+		public static final String TEXT_WATCHER_LIST = "mListeners";
+		public static final String TOUCH_LISTENER = "mOnTouchListener";
+		public static final String CLICK_LISTENER = "mOnClickListener";
+		public static final String DRAG_LISTENER = "mOnDragListener";
+		public static final String FOCUS_CHANGE_LISTENER = "mOnFocusChangeListener";
+		public static final String ITEM_CLICK_LISTENER = "mOnItemClickListener";
+		public static final String KEY_LISTENER = "mOnKeyListener";
+		public static final String LISTENER_INFO = "mListenerInfo";
+		public static final String LONG_CLICK_LISTENER = "mOnLongClickListener";
+		public static final String SCROLL_LISTENER = "mOnScrollListener";
 		public static final String SEEKBAR_CHANGE_LISTENER = "mOnSeekBarChangeListener";
 		public static final String DIALOG_DISMISS_LISTENER = "mOnDialogDismissListener";
 		public static final String DIALOG_DISMISS_MESSAGE = "mDismissMessage";
@@ -49,7 +50,8 @@ public class Constants {
 		public static final String CHECKED_CHANGE_LISTENER = "mOnCheckedChangeListener";
 		public static final String DIALOG_CLICK_MESSAGE = "mClickMessage";
 		public static final String DIALOG_CANCEL_MESSAGE = "mCancelMessage";
-		public static final String SELECTED_ITEM_FIELD = "mOnItemSelectedListener";
+		public static final String SELECTED_ITEM_LISTENER = "mOnItemSelectedListener";
+		public static final String POPUP = "mPopup";
 		public static final String TITLE = "mTitle";
 		public static final String TEXT = "mText";
 		public static final String VIEWS = "mViews";
@@ -92,12 +94,17 @@ public class Constants {
 		public static final String CANCEL_DIALOG = "cancel_dialog";
 		public static final String ITEM_SELECTED = "item_selected";
 		public static final String KEY = "key";
+		public static final String SPINNER_CLICK = "spinner_click";
+		public static final String EXCEPTION = "exception";
+		public static final String DISMISS_SPINNER_DIALOG = "dismiss_spinner_dialog";
+		public static final String CANCEL_SPINNER_DIALOG = "cancel_spinner_dialog";
 	}
 	
 	// description strings 
 	public static class Description {
 		public static final String IMAGE_VIEW = "ImageView";
 		public static final String CLICK_ON = "Click on";
+		public static final String UNTITLED_DIALOG = "Untitled Dialog";
 	}
 	
 }

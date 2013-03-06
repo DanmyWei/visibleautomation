@@ -572,7 +572,7 @@ public class TestUtils {
 				for (int iView = 0; iView < numDecorViews; iView++) {
 					View v = views[iView];
 					if (TestUtils.isDialog(activity, v)) {					
-						Class phoneDecorViewClass = Class.forName(Constants.Classes.PHONE_DECOR_VIEW_CLASS);
+						Class phoneDecorViewClass = Class.forName(Constants.Classes.PHONE_DECOR_VIEW);
 						Class enclosingClass = phoneDecorViewClass.getEnclosingClass();
 						Window phoneWindow = (Window) ListenerIntercept.getFieldValue(v, phoneDecorViewClass, "this$0");
 						Window.Callback callback = phoneWindow.getCallback();
