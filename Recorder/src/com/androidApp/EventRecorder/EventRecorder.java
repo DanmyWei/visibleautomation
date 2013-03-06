@@ -10,6 +10,7 @@ import java.util.List;
 
 import com.androidApp.Listeners.RecordDialogOnCancelListener;
 import com.androidApp.Listeners.RecordDialogOnDismissListener;
+import com.androidApp.Listeners.RecordListener;
 import com.androidApp.Listeners.RecordOnClickListener;
 import com.androidApp.Listeners.RecordOnItemClickListener;
 import com.androidApp.Listeners.RecordOnItemSelectedListener;
@@ -27,6 +28,7 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.os.Environment;
+import android.os.SystemClock;
 import android.text.TextWatcher;
 import android.text.method.KeyListener;
 import android.view.View;
@@ -50,6 +52,7 @@ public class EventRecorder {
 	protected BufferedWriter 	mRecordWriter;						// to write the events to file
 	protected int 				mHashCode = 0x0;					// for fast tracking of view tree changes
 	protected ViewReference		mViewReference;
+	protected List<Spinner>		mSpinnerList;
 
 	// constructor which opens the recording file, which is stashed somewhere on the sdcard.
 	public EventRecorder(String recordFileName) throws IOException {				
@@ -59,6 +62,7 @@ public class EventRecorder {
 		FileWriter fw = new FileWriter(path, true);
 		mRecordWriter = new BufferedWriter(fw);
 		mViewReference = new ViewReference();
+		mSpinnerList = new ArrayList<Spinner>();
 	}
 	
 	public void addRdotID(Object rdotid) {
@@ -71,6 +75,14 @@ public class EventRecorder {
 	
 	public ViewReference getViewReference() {
 		return mViewReference;
+	}
+	
+	public List<Spinner> getSpinnerList() {
+		return mSpinnerList;
+	}
+	
+	public void clearSpinnerList() {
+		mSpinnerList.clear();
 	}
 
 	public void writeRecord(String s)  {
@@ -177,6 +189,7 @@ public class EventRecorder {
 					if (!(originalSelectedItemListener instanceof RecordOnItemSelectedListener)) {
 						RecordOnItemSelectedListener recordItemSelectedListener = new RecordOnItemSelectedListener(this, originalSelectedItemListener);
 						spinner.setOnItemSelectedListener(recordItemSelectedListener);
+						mSpinnerList.add(spinner);
 					}
 				}
 			}
@@ -192,12 +205,15 @@ public class EventRecorder {
 					ListenerIntercept.setTextWatcherList(tv, textWatcherList);
 				}
 			}
-		} catch (NoSuchFieldException nsfex) {
-			nsfex.printStackTrace();
-		} catch (IllegalAccessException iaex) {
-			iaex.printStackTrace();
-		} catch (ClassNotFoundException cnfex) {
-			cnfex.printStackTrace();
+		} catch (Exception ex) {
+			long time = SystemClock.uptimeMillis();
+			try {
+				String description = "Intercepting view " +  RecordListener.getDescription(v);
+				String logString = Constants.EventTags.EXCEPTION + ":" + time + "," + description;
+				writeRecord(logString);
+			} catch (Exception exlog) {
+				writeRecord(Constants.EventTags.EXCEPTION + ":" + time + " unknown description");
+			}
 		}
 	}
 	
@@ -245,23 +261,37 @@ public class EventRecorder {
 
 	/**
 	 * intercept the listeners associated with a dialog.
+	 * We pass in a spinner, because we want to change the cancel and dismiss events for its dialog popup, and we want to suppress
+	 * click, scroll, touch events in the spinner, since it's all covered by onItemSelected()
 	 * @param dialog
 	 */
-	public void interceptDialog(Dialog dialog) {
+	public void interceptDialog(Dialog dialog, Spinner spinner) {
 		try {
 			DialogInterface.OnDismissListener originalDismissListener = ListenerIntercept.getOnDismissListener(dialog);
 			if ((originalDismissListener == null) || (originalDismissListener.getClass() != RecordDialogOnDismissListener.class)) {
-				RecordDialogOnDismissListener recordOnDismissListener = new RecordDialogOnDismissListener(this, originalDismissListener);
+				RecordDialogOnDismissListener recordOnDismissListener = new RecordDialogOnDismissListener(this, spinner, originalDismissListener);
 				dialog.setOnDismissListener(recordOnDismissListener);
 			}
 			DialogInterface.OnCancelListener originalCancelListener = ListenerIntercept.getOnCancelListener(dialog);
 			if ((originalCancelListener == null) || (originalCancelListener.getClass() != RecordDialogOnCancelListener.class)) {
-				RecordDialogOnCancelListener recordOnCancelListener = new RecordDialogOnCancelListener(this, originalCancelListener);
+				RecordDialogOnCancelListener recordOnCancelListener = new RecordDialogOnCancelListener(this, spinner, originalCancelListener);
 				dialog.setOnCancelListener(recordOnCancelListener);
 			}
-			Window window = dialog.getWindow();
-			intercept(window.getDecorView());
+			// if the dialog was kicked off by a spinner, then Spinner.OnItemSelected() is the event we want, and we want to 
+			// suppress click events.
+			if (spinner != null) {
+				Window window = dialog.getWindow();
+				intercept(window.getDecorView());
+			}
 		} catch (Exception ex) {
+			long time = SystemClock.uptimeMillis();
+			try {
+				String description = "Intercepting dialog " +  RecordListener.getDescription(dialog);
+				String logString = Constants.EventTags.EXCEPTION + ":" + time + "," + description;
+				writeRecord(logString);
+			} catch (Exception exlog) {
+				writeRecord(Constants.EventTags.EXCEPTION + ":" + time + " unknown description");
+			}
 			ex.printStackTrace();
 		}
 	}

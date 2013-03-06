@@ -80,7 +80,7 @@ public class ListenerIntercept {
 	public static View.OnClickListener getClickListener(View v) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
 		Object listenerInfo = getListenerInfo(v);
 		if (listenerInfo != null) {
-			return (View.OnClickListener) getListenerInfoField(Constants.Fields.CLICK_LISTENER_FIELD).get(listenerInfo);
+			return (View.OnClickListener) getListenerInfoField(Constants.Fields.CLICK_LISTENER).get(listenerInfo);
 		} else {
 			return null;
 		}
@@ -97,7 +97,7 @@ public class ListenerIntercept {
 	public static View.OnFocusChangeListener getFocusChangeListener(View v) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
 		Object listenerInfo = getListenerInfo(v);
 		if (listenerInfo != null) {
-			return (View.OnFocusChangeListener) getListenerInfoField(Constants.Fields.FOCUS_CHANGE_LISTENER_FIELD).get(listenerInfo);
+			return (View.OnFocusChangeListener) getListenerInfoField(Constants.Fields.FOCUS_CHANGE_LISTENER).get(listenerInfo);
 		} else {
 			return null;
 		}
@@ -114,7 +114,7 @@ public class ListenerIntercept {
 	public static View.OnKeyListener getKeyListener(View v) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
 		Object listenerInfo = getListenerInfo(v);
 		if (listenerInfo != null) {
-			return (View.OnKeyListener) getListenerInfoField(Constants.Fields.KEY_LISTENER_FIELD).get(listenerInfo);
+			return (View.OnKeyListener) getListenerInfoField(Constants.Fields.KEY_LISTENER).get(listenerInfo);
 		} else {
 			return null;
 		}
@@ -129,7 +129,7 @@ public class ListenerIntercept {
 	 * @throws IllegalAccessException if we can't get mListenerInfo
 	 */
 	public static Object getListenerInfo(View v) throws NoSuchFieldException, SecurityException, IllegalAccessException {
-		return getFieldValue(v, View.class, Constants.Fields.LISTENER_INFO_FIELD);
+		return getFieldValue(v, View.class, Constants.Fields.LISTENER_INFO);
 	}
 
 	/**
@@ -140,7 +140,7 @@ public class ListenerIntercept {
 	 * @throws ClassNotFoundException
 	 */
 	public static Field getListenerInfoField(String fieldName) throws NoSuchFieldException, ClassNotFoundException {
-		Class listenerInfoClass = Class.forName(Constants.Classes.LISTENER_INFO_CLASS);
+		Class listenerInfoClass = Class.forName(Constants.Classes.LISTENER_INFO);
 		Field listenerField = listenerInfoClass.getDeclaredField(fieldName);
 		listenerField.setAccessible(true);
 		return listenerField;
@@ -157,7 +157,7 @@ public class ListenerIntercept {
 	public static View.OnLongClickListener getLongClickListener(View v) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
 		Object listenerInfo = getListenerInfo(v);
 		if (listenerInfo != null) {
-			return (View.OnLongClickListener) getListenerInfoField(Constants.Fields.LONG_CLICK_LISTENER_FIELD).get(listenerInfo);
+			return (View.OnLongClickListener) getListenerInfoField(Constants.Fields.LONG_CLICK_LISTENER).get(listenerInfo);
 		} else {
 			return null;
 		}
@@ -172,7 +172,7 @@ public class ListenerIntercept {
 	 * @throws IllegalAccessException
 	 */
 	public static AbsListView.OnScrollListener getScrollListener(AbsListView absListView) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
-		return (AbsListView.OnScrollListener) getFieldValue(absListView, AbsListView.class, Constants.Fields.SCROLL_LISTENER_FIELD);
+		return (AbsListView.OnScrollListener) getFieldValue(absListView, AbsListView.class, Constants.Fields.SCROLL_LISTENER);
 	}
 
 	/**
@@ -199,7 +199,7 @@ public class ListenerIntercept {
 		listFieldsDebug(Spinner.class);
 		listFieldsDebug(AbsSpinner.class);
 		listFieldsDebug(AdapterView.class);
-		return (AbsListView.OnItemSelectedListener) getFieldValue(spinner, AdapterView.class, Constants.Fields.SELECTED_ITEM_FIELD);
+		return (AbsListView.OnItemSelectedListener) getFieldValue(spinner, AdapterView.class, Constants.Fields.SELECTED_ITEM_LISTENER);
 	}
 
 	/**
@@ -211,7 +211,7 @@ public class ListenerIntercept {
 	 * @throws IllegalAccessException if we can't get mListeners
 	 */
 	public static ArrayList<TextWatcher> getTextWatcherList(TextView tv) throws NoSuchFieldException, SecurityException, IllegalAccessException {
-		return (ArrayList<TextWatcher>) getFieldValue(tv, TextView.class, Constants.Fields.TEXT_WATCHER_LIST_FIELD);
+		return (ArrayList<TextWatcher>) getFieldValue(tv, TextView.class, Constants.Fields.TEXT_WATCHER_LIST);
 	}
 
 	/**
@@ -226,7 +226,7 @@ public class ListenerIntercept {
 	public static View.OnTouchListener getTouchListener(View v) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
 		Object listenerInfo = getListenerInfo(v);
 		if (listenerInfo != null) {
-			return (View.OnTouchListener) getListenerInfoField(Constants.Fields.TOUCH_LISTENER_FIELD).get(listenerInfo);
+			return (View.OnTouchListener) getListenerInfoField(Constants.Fields.TOUCH_LISTENER).get(listenerInfo);
 		} else {
 			return null;
 		}
@@ -242,7 +242,7 @@ public class ListenerIntercept {
 	 * @throws IllegalAccessException if we can't get mListeners
 	 */
 	public static void setTextWatcherList(TextView tv, ArrayList<TextWatcher> textWatcherList) throws NoSuchFieldException, SecurityException, IllegalAccessException {
-		Field textWatcherListField = TextView.class.getDeclaredField(Constants.Fields.TEXT_WATCHER_LIST_FIELD);
+		Field textWatcherListField = TextView.class.getDeclaredField(Constants.Fields.TEXT_WATCHER_LIST);
 		textWatcherListField.setAccessible(true);
 		textWatcherListField.set(tv, textWatcherList);
 	}
