@@ -1,3 +1,3 @@
 		// %DESCRIPTION%
 		%CLASSPATH% view%VARIABLE_INDEX% = (%CLASSPATH%) solo.getView(%ID%);
-		RobotiumUtils.clickOnViewAndScrollIfNeeded(solo, view%VARIABLE_INDEX%);
+		RobotiumUtils.hideIME(view%VARIABLE_INDEX%);
