@@ -98,6 +98,10 @@ public class Constants {
 		public static final String EXCEPTION = "exception";
 		public static final String DISMISS_SPINNER_DIALOG = "dismiss_spinner_dialog";
 		public static final String CANCEL_SPINNER_DIALOG = "cancel_spinner_dialog";
+		public static final String GET_FOCUS = "get_focus";
+		public static final String LOSE_FOCUS = "lose_focus";
+		public static final String SHOW_IME = "show_ime";
+		public static final String HIDE_IME = "hide_ime";
 	}
 	
 	// description strings 
