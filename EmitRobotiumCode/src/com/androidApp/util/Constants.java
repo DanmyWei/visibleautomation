@@ -33,8 +33,10 @@ public class Constants {
 		public static final String ACTIVITY_BACK = "activity_back";
 		public static final String CLASS = "class";	
 		public static final String DISMISS_DIALOG = "dismiss_dialog";
-		public static final Object CANCEL_DIALOG = "cancel_dialog";
-		public static final Object ITEM_SELECTED = "item_selected";	
+		public static final String CANCEL_DIALOG = "cancel_dialog";
+		public static final String ITEM_SELECTED = "item_selected";
+		public static final String SHOW_IME = "show_ime";	
+		public static final String HIDE_IME = "hide_ime";	
 	}
 	public static class Templates {
 
@@ -68,8 +70,12 @@ public class Constants {
 		public static final String GET_CURRENT_ACTIVITY = "get_current_activity.txt";
 		public static final String WAIT_FOR_NEW_ACTIVITY = "wait_for_new_activity.txt";
 		public static final String ALL_TESTS = "AllTests.txt";
-		public static final String GO_BACK_TO_MATCHING_ATIVITY = "go_back_to_matching_activity.txt";
-		public static final String GO_BACK_WAIT_ATIVITY = "go_back_wait_activity.txt";
+		public static final String GO_BACK_TO_MATCHING_ACTIVITY = "go_back_to_matching_activity.txt";
+		public static final String GO_BACK_WAIT_ACTIVITY = "go_back_wait_activity.txt";
+		public static final String SHOW_IME_ID = "show_ime_id.txt";
+		public static final String SHOW_IME_CLASS_INDEX = "show_ime_class_index.txt";
+		public static final String HIDE_IME_ID = "hide_ime_id.txt";
+		public static final String HIDE_IME_CLASS_INDEX = "hide_ime_class_index.txt";
 			
 	}
 	// template %replace% variables
