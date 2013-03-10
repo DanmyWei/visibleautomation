@@ -12,6 +12,7 @@ import com.androidApp.Listeners.RecordDialogOnCancelListener;
 import com.androidApp.Listeners.RecordDialogOnDismissListener;
 import com.androidApp.Listeners.RecordListener;
 import com.androidApp.Listeners.RecordOnClickListener;
+import com.androidApp.Listeners.RecordOnFocusChangeListener;
 import com.androidApp.Listeners.RecordOnItemClickListener;
 import com.androidApp.Listeners.RecordOnItemSelectedListener;
 import com.androidApp.Listeners.RecordOnLongClickListener;
@@ -49,11 +50,14 @@ import android.widget.TextView;
  *
  */
 public class EventRecorder {
+	public static final float	GUESS_IME_HEIGHT = 0.25F;			// guess that IME takes up this amount of the screen.
 	protected BufferedWriter 	mRecordWriter;						// to write the events to file
 	protected int 				mHashCode = 0x0;					// for fast tracking of view tree changes
 	protected ViewReference		mViewReference;
-	protected List<Spinner>		mSpinnerList;
-
+	protected List<Spinner>		mSpinnerList;						// filter spinner-generated dialogs, to generate selectSpinner
+	protected View				mViewFocus;							// view OnFocusChanged.onFocusChange() hasFocus = true for IME detection
+	protected boolean			mIMEWasDisplayed = false;			// IME was displayed in the last layout
+	
 	// constructor which opens the recording file, which is stashed somewhere on the sdcard.
 	public EventRecorder(String recordFileName) throws IOException {				
 		File extDir = Environment.getExternalStorageDirectory();
@@ -63,6 +67,7 @@ public class EventRecorder {
 		mRecordWriter = new BufferedWriter(fw);
 		mViewReference = new ViewReference();
 		mSpinnerList = new ArrayList<Spinner>();
+		mViewFocus = null;
 	}
 	
 	public void addRdotID(Object rdotid) {
@@ -77,14 +82,25 @@ public class EventRecorder {
 		return mViewReference;
 	}
 	
+	// accessors/mutator for focused view for IME display/remove event
+	public View getFocusedView() {
+		return mViewFocus;
+	}
+	
+	public void setFocusedView(View v) {
+		mViewFocus = v;
+	}
+	// get the spinner list to see if the dialog was created by a spinner
 	public List<Spinner> getSpinnerList() {
 		return mSpinnerList;
 	}
 	
+	// reset the spinner list
 	public void clearSpinnerList() {
 		mSpinnerList.clear();
 	}
 
+	// write a record to the output
 	public void writeRecord(String s)  {
 		try {
 			mRecordWriter.write(s + "\n");
@@ -92,6 +108,24 @@ public class EventRecorder {
 		} catch (IOException ioex) {
 			ioex.printStackTrace();
 		}
+	}
+	
+	// wrapper to write a record with an event, time and message to the system	
+	public void writeRecord(String event, String message) {
+		long time = SystemClock.uptimeMillis();
+		writeRecord(event + ":" + time + "," + message);
+	}
+	
+	// wrapper for wrapper to write a record with an event, time view description, and message to the system	
+	public void writeRecord(String event, View v, String message) {
+		long time = SystemClock.uptimeMillis();
+		writeRecord(event + ":" + time + "," + RecordListener.getDescription(v) + "," + message);
+	}
+	
+	// yet another wrapper with just a view to be described.
+	public void writeRecord(String event, View v) {
+		long time = SystemClock.uptimeMillis();
+		writeRecord(event + ":" + time + "," + RecordListener.getDescription(v));
 	}
 	
 	/**
@@ -204,15 +238,19 @@ public class EventRecorder {
 					textWatcherList.add(0, new RecordTextChangedListener(this, tv));
 					ListenerIntercept.setTextWatcherList(tv, textWatcherList);
 				}
+				// add listener for focus
+				View.OnFocusChangeListener originalFocusChangeListener = tv.getOnFocusChangeListener();
+				if (!(originalFocusChangeListener instanceof RecordOnFocusChangeListener)) {
+					View.OnFocusChangeListener recordFocusChangeListener = new RecordOnFocusChangeListener(this, originalFocusChangeListener);
+					tv.setOnFocusChangeListener(recordFocusChangeListener);
+				}
 			}
 		} catch (Exception ex) {
-			long time = SystemClock.uptimeMillis();
 			try {
 				String description = "Intercepting view " +  RecordListener.getDescription(v);
-				String logString = Constants.EventTags.EXCEPTION + ":" + time + "," + description;
-				writeRecord(logString);
+				writeRecord(Constants.EventTags.EXCEPTION, description);
 			} catch (Exception exlog) {
-				writeRecord(Constants.EventTags.EXCEPTION + ":" + time + " unknown description");
+				writeRecord(Constants.EventTags.EXCEPTION + "unknown description");
 			}
 		}
 	}
@@ -250,13 +288,25 @@ public class EventRecorder {
 			mActivity = activity;
 		}
 		public void onGlobalLayout() {
-	        View v = mActivity.getWindow().getDecorView().findViewById(android.R.id.content);
-			int hashCode = EventRecorder.viewTreeHashCode(v);
+	        View contentView = mActivity.getWindow().getDecorView().findViewById(android.R.id.content);
+	        if ((getFocusedView() != null) && isIMEDisplayed(contentView)) {
+	        	mIMEWasDisplayed = true;
+				writeRecord(Constants.EventTags.SHOW_IME, getFocusedView(), "IME displayed");
+	        } else if (mIMEWasDisplayed && !isIMEDisplayed(contentView)) {
+				writeRecord(Constants.EventTags.HIDE_IME, getFocusedView(), "IME hidden");
+	        }
+			int hashCode = EventRecorder.viewTreeHashCode(contentView);
 			if (hashCode != mHashCode) {
-				intercept(v);
+				intercept(contentView);
 				mHashCode = hashCode;
 			}
 		}
+	}
+	
+	public static boolean isIMEDisplayed(View contentView) {
+		View contentParent = (View) contentView.getParent();
+		int imeHeight = contentParent.getMeasuredHeight() - contentView.getMeasuredHeight();
+		return imeHeight > ((int) (contentParent.getMeasuredHeight()*GUESS_IME_HEIGHT));
 	}
 
 	/**
@@ -279,18 +329,16 @@ public class EventRecorder {
 			}
 			// if the dialog was kicked off by a spinner, then Spinner.OnItemSelected() is the event we want, and we want to 
 			// suppress click events.
-			if (spinner != null) {
+			if (spinner == null) {
 				Window window = dialog.getWindow();
 				intercept(window.getDecorView());
 			}
 		} catch (Exception ex) {
-			long time = SystemClock.uptimeMillis();
 			try {
 				String description = "Intercepting dialog " +  RecordListener.getDescription(dialog);
-				String logString = Constants.EventTags.EXCEPTION + ":" + time + "," + description;
-				writeRecord(logString);
+				writeRecord(Constants.EventTags.EXCEPTION, description);
 			} catch (Exception exlog) {
-				writeRecord(Constants.EventTags.EXCEPTION + ":" + time + " unknown description");
+				writeRecord(Constants.EventTags.EXCEPTION, "unknown description");
 			}
 			ex.printStackTrace();
 		}
