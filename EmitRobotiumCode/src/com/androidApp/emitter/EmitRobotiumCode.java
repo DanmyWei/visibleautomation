@@ -408,14 +408,8 @@ public class EmitRobotiumCode {
 				} 
 				if ((nextTokens.size() > 2) && nextTokens.get(0).equals(Constants.Events.ACTIVITY_BACK)) {
 					String previousActivityName = nextTokens.get(2);
-					if (previousActivityName.equals(currentActivityName)) {
-						previousActivityVariable = writeGetCurrentActivity(lines);
-						fBackActivityMatches = true;
-					} else {
-						fBackActivityMatches = false;
-					}
+					fBackActivityMatches = previousActivityName.equals(currentActivityName);
 				}
-
 			}
 			String action = tokens.get(0);
 			
@@ -462,6 +456,7 @@ public class EmitRobotiumCode {
 				}
 			} else if (action.equals(Constants.Events.ACTIVITY_BACK)) {
 				if (fBackActivityMatches) {
+					previousActivityVariable = writeGetCurrentActivity(lines);
 					writeGoBackToMatchingActivity(previousActivityVariable, tokens, lines);
 				} else {
 					writeGoBack(tokens, lines);
@@ -482,6 +477,10 @@ public class EmitRobotiumCode {
 					writeDismissDialog(tokens, lines);
 				} else if (action.equals(Constants.Events.CANCEL_DIALOG)) {
 					writeCancelDialog(tokens, lines);
+				} else if (action.equals(Constants.Events.SHOW_IME)) {
+					writeShowIME(tokens, lines);
+				} else if (action.equals(Constants.Events.HIDE_IME)) {
+					writeHideIME(tokens, lines);
 				} else if (action.equals(Constants.Events.AFTER_TEXT)) {
 					if (lastTextEntryTokens != null) {
 						ReferenceParser lastViewRef = new ReferenceParser(lastTextEntryTokens, 6);
@@ -534,21 +533,12 @@ public class EmitRobotiumCode {
 	public void writeWaitForView(List<String> tokens, int startIndex, List<LineAndTokens> lines) throws IOException {
 		ReferenceParser ref = new ReferenceParser(tokens, startIndex);
 		String description = getDescription(tokens);
+		String fullDescription = "wait for view " + description;
 		if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
-			String waitForViewTemplate = FileUtility.readTemplate(Constants.Templates.WAIT_FOR_VIEW_ID);
-			String fullDescription = "wait for view " + description;
-			waitForViewTemplate = waitForViewTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
-			waitForViewTemplate = waitForViewTemplate.replace(Constants.VariableNames.ID, ref.getID());
-			waitForViewTemplate = waitForViewTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
-			waitForViewTemplate = waitForViewTemplate.replace(Constants.VariableNames.CLASSPATH, ref.getClassName());
+			String waitForViewTemplate = writeViewIDCommand(Constants.Templates.WAIT_FOR_VIEW_ID, ref, fullDescription);
 			lines.add(new LineAndTokens(tokens, waitForViewTemplate));
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
-			String waitForClassIndexTemplate = FileUtility.readTemplate(Constants.Templates.WAIT_FOR_VIEW_CLASS_INDEX);
-			String fullDescription = "wait for view " + description;
-			waitForClassIndexTemplate = waitForClassIndexTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
-			waitForClassIndexTemplate = waitForClassIndexTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
-			waitForClassIndexTemplate = waitForClassIndexTemplate.replace(Constants.VariableNames.CLASSPATH, ref.getClassName());
-			waitForClassIndexTemplate = waitForClassIndexTemplate.replace(Constants.VariableNames.VIEW_INDEX, Integer.toString(ref.getIndex()));
+			String waitForClassIndexTemplate = writeViewClassIndexCommand(Constants.Templates.WAIT_FOR_VIEW_CLASS_INDEX, ref, fullDescription);
 			lines.add(new LineAndTokens(tokens, waitForClassIndexTemplate));			
 		}
 		mVariableIndex++;
@@ -564,7 +554,7 @@ public class EmitRobotiumCode {
 	 * @throws IOException if the template file can't be read
 	 */
 	public void writeGoBackToMatchingActivity(String nextActivityVariable, List<String> tokens, List<LineAndTokens> lines) throws IOException {
-		String waitTemplate = FileUtility.readTemplate(Constants.Templates.GO_BACK_TO_MATCHING_ATIVITY);
+		String waitTemplate = FileUtility.readTemplate(Constants.Templates.GO_BACK_TO_MATCHING_ACTIVITY);
 		String classPath = tokens.get(2);
 		String description = getDescription(tokens);
 		String fullDescription = "wait for activity " + description;
@@ -587,7 +577,7 @@ public class EmitRobotiumCode {
 		} else {
 			String activityClass = tokens.get(2);
 			String description = getDescription(tokens);
-			String goBackTemplate = FileUtility.readTemplate(Constants.Templates.GO_BACK_WAIT_ATIVITY);
+			String goBackTemplate = FileUtility.readTemplate(Constants.Templates.GO_BACK_WAIT_ACTIVITY);
 			String fullDescription = "go back to activity " + description;
 			goBackTemplate = goBackTemplate.replace(Constants.VariableNames.ACTIVITY_CLASS, activityClass);
 			goBackTemplate = goBackTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
@@ -676,21 +666,53 @@ public class EmitRobotiumCode {
 			mLastEventWasWaitForActivity = false;
 		} 
 		if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
-			String clickInViewTemplate = FileUtility.readTemplate(Constants.Templates.CLICK_IN_VIEW_ID);
-			clickInViewTemplate = clickInViewTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
-			clickInViewTemplate = clickInViewTemplate.replace(Constants.VariableNames.ID, ref.getID());
-			clickInViewTemplate = clickInViewTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
-			clickInViewTemplate = clickInViewTemplate.replace(Constants.VariableNames.CLASSPATH, ref.getClassName());
+			String clickInViewTemplate =  writeViewIDCommand(Constants.Templates.CLICK_IN_VIEW_ID, ref, fullDescription);
 			lines.add(new LineAndTokens(tokens, clickInViewTemplate));
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
-			String clickInClassIndexTemplate = FileUtility.readTemplate(Constants.Templates.CLICK_IN_VIEW_CLASS_INDEX);
-			clickInClassIndexTemplate = clickInClassIndexTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
-			clickInClassIndexTemplate = clickInClassIndexTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
-			clickInClassIndexTemplate = clickInClassIndexTemplate.replace(Constants.VariableNames.CLASSPATH, ref.getClassName());
-			clickInClassIndexTemplate = clickInClassIndexTemplate.replace(Constants.VariableNames.VIEW_INDEX, Integer.toString(ref.getIndex()));
+			String clickInClassIndexTemplate = writeViewClassIndexCommand(Constants.Templates.CLICK_IN_VIEW_CLASS_INDEX, ref, fullDescription);
 			lines.add(new LineAndTokens(tokens, clickInClassIndexTemplate));			
 		}
-		mVariableIndex++;
+	}
+	
+	/**
+	 * write out the show ime command:
+	 * show_ime:195773901,id,com.example.android.apis.R$id.radio_button
+	 * @param tokens parsed from a line in events.txt
+	 * @param lines output list of java instructions
+	 * @throws IOException if the template file can't be read
+	 */
+	public void writeShowIME(List<String> tokens, List<LineAndTokens> lines) throws IOException {
+		ReferenceParser ref = new ReferenceParser(tokens, 2);
+		String description = getDescription(tokens);
+		String fullDescription = "show IME for " + description;
+		if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
+			String showImeViewTemplate = writeViewIDCommand(Constants.Templates.SHOW_IME_ID, ref, fullDescription);
+			lines.add(new LineAndTokens(tokens, showImeViewTemplate));
+		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
+			String showImeClassIndexTemplate = FileUtility.readTemplate(Constants.Templates.SHOW_IME_CLASS_INDEX);
+			String showImeViewTemplate = writeViewClassIndexCommand(Constants.Templates.SHOW_IME_ID, ref, fullDescription);
+			lines.add(new LineAndTokens(tokens, showImeClassIndexTemplate));			
+		}
+	}
+	/**
+	 * write out the show ime command:
+	 * show_ime:195773901,id,com.example.android.apis.R$id.radio_button
+	 * @param tokens parsed from a line in events.txt
+	 * @param lines output list of java instructions
+	 * @throws IOException if the template file can't be read
+	 */
+	public void writeHideIME(List<String> tokens, List<LineAndTokens> lines) throws IOException {
+		ReferenceParser ref = new ReferenceParser(tokens, 2);
+		String description = getDescription(tokens);
+		String fullDescription = "hide IME for " + description;
+		if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
+			String hideImeViewTemplate = writeViewIDCommand(Constants.Templates.HIDE_IME_ID, ref, fullDescription);
+			lines.add(new LineAndTokens(tokens, hideImeViewTemplate));
+		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
+			String hideImeClassIndexTemplate = FileUtility.readTemplate(Constants.Templates.HIDE_IME_CLASS_INDEX);
+			String hideImeViewTemplate = writeViewClassIndexCommand(Constants.Templates.SHOW_IME_ID, ref, fullDescription);
+			lines.add(new LineAndTokens(tokens, hideImeClassIndexTemplate));			
+		}
 	}
 	
 	/**
@@ -725,26 +747,20 @@ public class EmitRobotiumCode {
 		ReferenceParser ref = new ReferenceParser(tokens, 6);
 		String description = getDescription(tokens);
 		String fullDescription = "enter text in " + description;
-		/*
+		/* why is this commented out?
 		if (sLastEventWasWaitForActivity) {
 			writeWaitForView(tokens, 6, lines);
 			sLastEventWasWaitForActivity = false;
 		} 
 		*/
 		if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
-			String enterTextClassTemplate = FileUtility.readTemplate(Constants.Templates.EDIT_TEXT_CLASS_INDEX);
-			enterTextClassTemplate = enterTextClassTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
+			String enterTextClassTemplate = writeViewIDCommand(Constants.Templates.EDIT_TEXT_CLASS_INDEX, ref, fullDescription);
 			enterTextClassTemplate = enterTextClassTemplate.replace(Constants.VariableNames.TEXT, text);
-			enterTextClassTemplate = enterTextClassTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
-			enterTextClassTemplate = enterTextClassTemplate.replace(Constants.VariableNames.VIEW_INDEX, Integer.toString(ref.getIndex()));		
 			lines.add(new LineAndTokens(tokens, enterTextClassTemplate));
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
 			String id = ref.getID();
-			String enterTextIDTemplate = FileUtility.readTemplate(Constants.Templates.EDIT_TEXT_ID);
-			enterTextIDTemplate = enterTextIDTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
+			String enterTextIDTemplate = writeViewIDCommand(Constants.Templates.EDIT_TEXT_ID, ref, fullDescription);
 			enterTextIDTemplate = enterTextIDTemplate.replace(Constants.VariableNames.TEXT, text);
-			enterTextIDTemplate = enterTextIDTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
-			enterTextIDTemplate = enterTextIDTemplate.replace(Constants.VariableNames.ID, id);
 			lines.add(new LineAndTokens(tokens, enterTextIDTemplate));
 		}
 		mVariableIndex++;
@@ -767,7 +783,6 @@ public class EmitRobotiumCode {
 		listItemWaitTemplate = listItemWaitTemplate.replace(Constants.VariableNames.VIEW_INDEX, Integer.toString(ref.getIndex()));
 		listItemWaitTemplate = listItemWaitTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
 		listItemWaitTemplate = listItemWaitTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
-
 		lines.add(new LineAndTokens(tokens, listItemWaitTemplate));				
 	}
 	
@@ -914,5 +929,40 @@ public class EmitRobotiumCode {
 			bw.write(line.mOutputLine);
 		}
 	}
+	/**
+	 * utility function to write out commands which are based on the view ID for the view reference
+	 * @param templateFile name of template file from template resources with %VARIABLE_NAMES% to replace.
+	 * @param ref view reference (by view ID)
+	 * @param fullDescription put this in the comment
+	 * @return filled out template
+	 * @throws IOException
+	 */
+	public String writeViewIDCommand(String templateFile, ReferenceParser ref, String fullDescription) throws IOException {
+		String template = FileUtility.readTemplate(templateFile);
+		template = template.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
+		template = template.replace(Constants.VariableNames.ID, ref.getID());
+		template = template.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex++));
+		template = template.replace(Constants.VariableNames.CLASSPATH, ref.getClassName());
+		return template;
+	}
+	/**
+	 * same as writeViewIDCommand, except for views referenced by a class and index.
+	 * @param templateFile name of template file from template resources with %VARIABLE_NAMES% to replace.
+	 * @param ref view reference (by view ID)
+	 * @param fullDescription put this in the comment
+	 * @return filled out template
+	 * @throws IOException
+	 */
+	
+	public String writeViewClassIndexCommand(String templateFile, ReferenceParser ref, String fullDescription) throws IOException {
+		String template = FileUtility.readTemplate(templateFile);
+		template = template.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
+		template = template.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex++));
+		template = template.replace(Constants.VariableNames.CLASSPATH, ref.getClassName());
+		template = template.replace(Constants.VariableNames.VIEW_INDEX, Integer.toString(ref.getIndex()));
+		return template;
+	}
+	
+
 
 }
