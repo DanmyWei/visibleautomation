@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Iterator;
+import java.util.List;
 
 public class StringUtils {
 	
@@ -151,5 +153,21 @@ public class StringUtils {
 			return className;
 		}
 	}
-
+	
+	/**
+	 * given a list of strings, return the concatenated string with delimiters.
+	 * @param stringList list of strings to concatenate
+	 * @param delimiter to stick in between them
+	 */
+	public static String concatStringList(List<String> stringList, String delimiter) {
+		StringBuffer sb = new StringBuffer();
+		for (Iterator<String> iter = stringList.iterator(); iter.hasNext(); ) {
+			String s = iter.next();
+			sb.append(s);
+			if (iter.hasNext()) {
+				sb.append(delimiter);
+			}
+		}
+		return sb.toString();
+	}
 }

@@ -86,7 +86,6 @@ public class Constants {
 		public static final CharSequence CLASSPACKAGE = "%CLASSPACKAGE%";
 		public static final CharSequence ACTIVITY_CLASS = "%ACTIVITY_CLASS%";
 		public static final CharSequence VARIABLE_INDEX = "%VARIABLE_INDEX%";
-		public static final CharSequence LIST_INDEX = "%LIST_INDEX%";
 		public static final CharSequence ITEM_INDEX = "%ITEM_INDEX%";
 		public static final CharSequence VIEW_INDEX = "%VIEW_INDEX%";
 		public static final CharSequence ID = "%ID%";

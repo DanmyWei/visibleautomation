@@ -377,122 +377,135 @@ public class EmitRobotiumCode {
 		boolean fForwardActivityMatches = false;			// there was a navigation to a new activity with the same class name
 		boolean fBackActivityMatches = false;				// there was a navigation to a previous activity with the same class name
 		String line = br.readLine();
+		int lineNumber = 0;									// track line number for errors
 		do {
 			String nextLine = br.readLine();
 			if (line == null) {
 				break;
 			}
-			// syntax is event:time,arguments,separated,by,commas
-			SuperTokenizer st = new SuperTokenizer(line, "\"", ":,", '\\');
-			List<String> tokens = st.toList();
-			if (tokens.get(0).equals(Constants.Events.ACTIVITY_FORWARD)) {
-				currentActivityName = tokens.get(2);
-				if (sTargetClassPath == null) {
-					sTargetClassPath =  tokens.get(2);
-				}
-			}
-			
-			// we peek at the next line to see if it's an activity_forward
-			List<String> nextTokens = null;
-			if (nextLine != null) {
-				SuperTokenizer stNext = new SuperTokenizer(nextLine, "\"", ":,", '\\');
-				nextTokens = stNext.toList();
-				if ((nextTokens.size() > 2) && nextTokens.get(0).equals(Constants.Events.ACTIVITY_FORWARD)) {
-					String nextActivityName = nextTokens.get(2);
-					if (nextActivityName.equals(currentActivityName)) {
-						nextActivityVariable = writeGetCurrentActivity(lines);
-						fForwardActivityMatches = true;
-					} else {
-						fForwardActivityMatches = false;
+			lineNumber++;
+			try {
+				// syntax is event:time,arguments,separated,by,commas
+				SuperTokenizer st = new SuperTokenizer(line, "\"", ":,", '\\');
+				List<String> tokens = st.toList();
+				if (tokens.get(0).equals(Constants.Events.ACTIVITY_FORWARD)) {
+					currentActivityName = tokens.get(2);
+					if (sTargetClassPath == null) {
+						sTargetClassPath =  tokens.get(2);
 					}
-				} 
-				if ((nextTokens.size() > 2) && nextTokens.get(0).equals(Constants.Events.ACTIVITY_BACK)) {
-					String previousActivityName = nextTokens.get(2);
-					fBackActivityMatches = previousActivityName.equals(currentActivityName);
 				}
-			}
-			String action = tokens.get(0);
-			
-			// when the recorder scrolls, it writes out a scroll message for each move, but
-			// we just want robotium to issue a single scroll command, so once we read a scroll
-			// command, we wait until a scroll happens on another listview, or a different event
-			// has occurred, and we scroll to the last list item that was recorded.
-			if (scrollsHaveHappened) {
-				if (!action.equals(Constants.Events.SCROLL)) {
-					writeScroll(scrollListIndex, scrollFirstVisibleItem, tokens, lines);
-					scrollsHaveHappened = false;
-				} else {
-					// scroll:195758909,0,11,11,class_index,android.widget.ListView,1
-					// command:time,firstVisible,visibleItemCount,totalItemCount,[view reference]
-					int scrollListIndexTest = Integer.parseInt(tokens.get(7));
-					if (scrollListIndexTest != scrollListIndex) {
+				
+				// we peek at the next line to see if it's an activity_forward
+				List<String> nextTokens = null;
+				if (nextLine != null) {
+					SuperTokenizer stNext = new SuperTokenizer(nextLine, "\"", ":,", '\\');
+					nextTokens = stNext.toList();
+					if ((nextTokens.size() > 2) && nextTokens.get(0).equals(Constants.Events.ACTIVITY_FORWARD)) {
+						String nextActivityName = nextTokens.get(2);
+						if (nextActivityName.equals(currentActivityName)) {
+							nextActivityVariable = writeGetCurrentActivity(lines);
+							fForwardActivityMatches = true;
+						} else {
+							fForwardActivityMatches = false;
+						}
+					} 
+					if (nextTokens.get(0).equals(Constants.Events.ACTIVITY_BACK)) {
+						if (nextTokens.size() > 2) {
+							String previousActivityName = nextTokens.get(2);
+							fBackActivityMatches = previousActivityName.equals(currentActivityName);
+						} else {
+							fBackActivityMatches = false;
+						}
+					} 
+				}
+				String action = tokens.get(0);
+				
+				// when the recorder scrolls, it writes out a scroll message for each move, but
+				// we just want robotium to issue a single scroll command, so once we read a scroll
+				// command, we wait until a scroll happens on another listview, or a different event
+				// has occurred, and we scroll to the last list item that was recorded.
+				if (scrollsHaveHappened) {
+					if (!action.equals(Constants.Events.SCROLL)) {
 						writeScroll(scrollListIndex, scrollFirstVisibleItem, tokens, lines);
 						scrollsHaveHappened = false;
+					} else {
+						// scroll:195758909,0,11,11,class_index,android.widget.ListView,1
+						// command:time,firstVisible,visibleItemCount,totalItemCount,[view reference]
+						int scrollListIndexTest = Integer.parseInt(tokens.get(7));
+						if (scrollListIndexTest != scrollListIndex) {
+							writeScroll(scrollListIndex, scrollFirstVisibleItem, tokens, lines);
+							scrollsHaveHappened = false;
+						}
 					}
 				}
-			}
-			
-			// since the recorder spews TextWatcher events after each key press, we're really only interested
-			// in the last one. We detect it by saving each event, then writing it out when either a non-textwatcher
-			// event comes in or a textwatcher event on a different view.
-			if (!action.equals(Constants.Events.AFTER_TEXT) && !action.equals(Constants.Events.BEFORE_TEXT) && (lastTextEntryTokens != null)) {
-				writeEnterText(lastTextEntryTokens, lines);
-				lastTextEntryTokens = null;
-			}
-			
-			
-			// then everything else is switched on the event name.
-			if (action.equals(Constants.Events.PACKAGE)) {
-				sTargetPackage = tokens.get(2);
-			} else if (action.equals(Constants.Events.ACTIVITY_FORWARD)) {
-				if (sTargetClassPath == null) {
-					sTargetClassPath =  tokens.get(2);
+				
+				// since the recorder spews TextWatcher events after each key press, we're really only interested
+				// in the last one. We detect it by saving each event, then writing it out when either a non-textwatcher
+				// event comes in or a textwatcher event on a different view.
+				if (!action.equals(Constants.Events.AFTER_TEXT) && !action.equals(Constants.Events.BEFORE_TEXT) && (lastTextEntryTokens != null)) {
+					writeEnterText(lastTextEntryTokens, lines);
+					lastTextEntryTokens = null;
 				}
-				mLastEventWasWaitForActivity = true;
-				if (fForwardActivityMatches) {
-					writeWaitForMatchingActivity(nextActivityVariable, tokens, lines);
-				} else {
-					writeWaitForActivity(tokens, lines);
-				}
-			} else if (action.equals(Constants.Events.ACTIVITY_BACK)) {
-				if (fBackActivityMatches) {
-					previousActivityVariable = writeGetCurrentActivity(lines);
-					writeGoBackToMatchingActivity(previousActivityVariable, tokens, lines);
-				} else {
-					writeGoBack(tokens, lines);
-				}
-				mLastEventWasWaitForActivity = true;
-			} else {
-				if (action.equals(Constants.Events.ITEM_CLICK)) {
-					writeItemClick(tokens, lines);
-				} else if (action.equals(Constants.Events.ITEM_SELECTED)) {
-					writeItemSelected(tokens, lines);
-				} else if (action.equals(Constants.Events.SCROLL)) {
-					scrollFirstVisibleItem = Integer.parseInt(tokens.get(2));
-					scrollsHaveHappened = true;
-					scrollListIndex = Integer.parseInt(tokens.get(7));
-				} else if (action.equals(Constants.Events.CLICK)) {
-					writeClick(tokens, lines);
-				} else if (action.equals(Constants.Events.DISMISS_DIALOG)) {
-					writeDismissDialog(tokens, lines);
-				} else if (action.equals(Constants.Events.CANCEL_DIALOG)) {
-					writeCancelDialog(tokens, lines);
-				} else if (action.equals(Constants.Events.SHOW_IME)) {
-					writeShowIME(tokens, lines);
-				} else if (action.equals(Constants.Events.HIDE_IME)) {
-					writeHideIME(tokens, lines);
-				} else if (action.equals(Constants.Events.AFTER_TEXT)) {
-					if (lastTextEntryTokens != null) {
-						ReferenceParser lastViewRef = new ReferenceParser(lastTextEntryTokens, 6);
-						ReferenceParser currentViewRef = new ReferenceParser(tokens, 6);
-						if (!currentViewRef.equals(lastViewRef)) {
-							writeEnterText(lastTextEntryTokens, lines);
-						}	
+				
+				
+				// then everything else is switched on the event name.
+				if (action.equals(Constants.Events.PACKAGE)) {
+					sTargetPackage = tokens.get(2);
+				} else if (action.equals(Constants.Events.ACTIVITY_FORWARD)) {
+					if (sTargetClassPath == null) {
+						sTargetClassPath =  tokens.get(2);
 					}
-					lastTextEntryTokens = tokens;
+					mLastEventWasWaitForActivity = true;
+					if (fForwardActivityMatches) {
+						writeWaitForMatchingActivity(nextActivityVariable, tokens, lines);
+					} else {
+						writeWaitForActivity(tokens, lines);
+					}
+				} else if (action.equals(Constants.Events.ACTIVITY_BACK)) {
+					if (fBackActivityMatches) {
+						previousActivityVariable = writeGetCurrentActivity(lines);
+						writeGoBackToMatchingActivity(previousActivityVariable, tokens, lines);
+					} else {
+						writeGoBack(tokens, lines);
+					}
+					mLastEventWasWaitForActivity = true;
+				} else {
+					if (action.equals(Constants.Events.ITEM_CLICK)) {
+						writeItemClick(tokens, lines);
+					} else if (action.equals(Constants.Events.ITEM_SELECTED)) {
+						writeItemSelected(tokens, lines);
+					} else if (action.equals(Constants.Events.SCROLL)) {
+						scrollFirstVisibleItem = Integer.parseInt(tokens.get(2));
+						scrollsHaveHappened = true;
+						scrollListIndex = Integer.parseInt(tokens.get(7));
+					} else if (action.equals(Constants.Events.CLICK)) {
+						writeClick(tokens, lines);
+					} else if (action.equals(Constants.Events.DISMISS_DIALOG)) {
+						writeDismissDialog(tokens, lines);
+					} else if (action.equals(Constants.Events.CANCEL_DIALOG)) {
+						writeCancelDialog(tokens, lines);
+					} else if (action.equals(Constants.Events.SHOW_IME)) {
+						writeShowIME(tokens, lines);
+					} else if (action.equals(Constants.Events.HIDE_IME)) {
+						writeHideIME(tokens, lines);
+					} else if (action.equals(Constants.Events.AFTER_TEXT)) {
+						if (lastTextEntryTokens != null) {
+							ReferenceParser lastViewRef = new ReferenceParser(lastTextEntryTokens, 6);
+							ReferenceParser currentViewRef = new ReferenceParser(tokens, 6);
+							if (!currentViewRef.equals(lastViewRef)) {
+								writeEnterText(lastTextEntryTokens, lines);
+							}	
+						}
+						lastTextEntryTokens = tokens;
+					}
 				}
+				line = nextLine;
+			} catch (Exception ex) {
+				System.err.println("error parsing line " + lineNumber);
+				System.err.println("line = " + line);
+				ex.printStackTrace();
+				System.exit(-1);
 			}
-			line = nextLine;
 		} while (true);
 	}
 	
@@ -657,7 +670,7 @@ public class EmitRobotiumCode {
 	 * @param lines output list of java instructions
 	 * @throws IOException if the template file can't be read
 	 */
-	public void writeClick(List<String> tokens, List<LineAndTokens> lines) throws IOException {
+	public void writeClick(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
 		ReferenceParser ref = new ReferenceParser(tokens, 2);
 		String description = getDescription(tokens);
 		String fullDescription = "click on " + description;
@@ -671,6 +684,8 @@ public class EmitRobotiumCode {
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
 			String clickInClassIndexTemplate = writeViewClassIndexCommand(Constants.Templates.CLICK_IN_VIEW_CLASS_INDEX, ref, fullDescription);
 			lines.add(new LineAndTokens(tokens, clickInClassIndexTemplate));			
+		} else {
+			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
 		}
 	}
 	
@@ -681,7 +696,7 @@ public class EmitRobotiumCode {
 	 * @param lines output list of java instructions
 	 * @throws IOException if the template file can't be read
 	 */
-	public void writeShowIME(List<String> tokens, List<LineAndTokens> lines) throws IOException {
+	public void writeShowIME(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
 		ReferenceParser ref = new ReferenceParser(tokens, 2);
 		String description = getDescription(tokens);
 		String fullDescription = "show IME for " + description;
@@ -692,6 +707,8 @@ public class EmitRobotiumCode {
 			String showImeClassIndexTemplate = FileUtility.readTemplate(Constants.Templates.SHOW_IME_CLASS_INDEX);
 			String showImeViewTemplate = writeViewClassIndexCommand(Constants.Templates.SHOW_IME_ID, ref, fullDescription);
 			lines.add(new LineAndTokens(tokens, showImeClassIndexTemplate));			
+		} else {
+			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
 		}
 	}
 	/**
@@ -701,7 +718,7 @@ public class EmitRobotiumCode {
 	 * @param lines output list of java instructions
 	 * @throws IOException if the template file can't be read
 	 */
-	public void writeHideIME(List<String> tokens, List<LineAndTokens> lines) throws IOException {
+	public void writeHideIME(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
 		ReferenceParser ref = new ReferenceParser(tokens, 2);
 		String description = getDescription(tokens);
 		String fullDescription = "hide IME for " + description;
@@ -709,14 +726,16 @@ public class EmitRobotiumCode {
 			String hideImeViewTemplate = writeViewIDCommand(Constants.Templates.HIDE_IME_ID, ref, fullDescription);
 			lines.add(new LineAndTokens(tokens, hideImeViewTemplate));
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
-			String hideImeClassIndexTemplate = FileUtility.readTemplate(Constants.Templates.HIDE_IME_CLASS_INDEX);
-			String hideImeViewTemplate = writeViewClassIndexCommand(Constants.Templates.SHOW_IME_ID, ref, fullDescription);
+			String hideImeClassIndexTemplate = writeViewClassIndexCommand(Constants.Templates.HIDE_IME_CLASS_INDEX, ref, fullDescription);
 			lines.add(new LineAndTokens(tokens, hideImeClassIndexTemplate));			
+		} else {
+			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
 		}
 	}
 	
 	/**
-	 * write out the scroll command for robotium
+	 * write out the scroll command for robotium.  This is different because we're not parsing a line, but
+	 * rather the last scroll in a continuous list of scroll events.
 	 * @param tokens parsed from a line in events.txt
 	 * @param lines output list of java instructions
 	 * @throws IOException if the template file can't be read
@@ -727,7 +746,7 @@ public class EmitRobotiumCode {
 		String fullDescription = "scroll down " + description;
 		scrollListTemplate = scrollListTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
 		scrollListTemplate = scrollListTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
-		scrollListTemplate = scrollListTemplate.replace(Constants.VariableNames.LIST_INDEX, Integer.toString(scrollListIndex));
+		scrollListTemplate = scrollListTemplate.replace(Constants.VariableNames.VIEW_INDEX, Integer.toString(scrollListIndex));
 		scrollListTemplate = scrollListTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(scrollFirstVisibleItem));
 		mVariableIndex++;
 		outputLines.add(new LineAndTokens(tokens, scrollListTemplate));
@@ -742,28 +761,29 @@ public class EmitRobotiumCode {
 	 * @throws IOException if the template file can't be read
 	 */
 
-	public void writeEnterText(List<String> tokens, List<LineAndTokens> lines) throws IOException {
+	public void writeEnterText(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
 		String text = tokens.get(2);
 		ReferenceParser ref = new ReferenceParser(tokens, 6);
 		String description = getDescription(tokens);
 		String fullDescription = "enter text in " + description;
-		/* why is this commented out?
+		/* why is this commented out?  Is this written by the caller? Verify and remove if so.
 		if (sLastEventWasWaitForActivity) {
 			writeWaitForView(tokens, 6, lines);
 			sLastEventWasWaitForActivity = false;
 		} 
 		*/
 		if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
-			String enterTextClassTemplate = writeViewIDCommand(Constants.Templates.EDIT_TEXT_CLASS_INDEX, ref, fullDescription);
-			enterTextClassTemplate = enterTextClassTemplate.replace(Constants.VariableNames.TEXT, text);
-			lines.add(new LineAndTokens(tokens, enterTextClassTemplate));
+			String enterTextClassIndexTemplate = writeViewClassIndexCommand(Constants.Templates.EDIT_TEXT_CLASS_INDEX, ref, fullDescription);
+			enterTextClassIndexTemplate = enterTextClassIndexTemplate.replace(Constants.VariableNames.TEXT, text);
+			lines.add(new LineAndTokens(tokens, enterTextClassIndexTemplate));
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
 			String id = ref.getID();
 			String enterTextIDTemplate = writeViewIDCommand(Constants.Templates.EDIT_TEXT_ID, ref, fullDescription);
 			enterTextIDTemplate = enterTextIDTemplate.replace(Constants.VariableNames.TEXT, text);
 			lines.add(new LineAndTokens(tokens, enterTextIDTemplate));
+		} else {
+			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
 		}
-		mVariableIndex++;
 	}
 	
 	/**
@@ -774,14 +794,9 @@ public class EmitRobotiumCode {
 	 * @throws IOException
 	 */
 	public void writeWaitForListClassIndex(List<String> tokens, int itemIndex, List<LineAndTokens> lines) throws IOException {
-		String listItemWaitTemplate = FileUtility.readTemplate(Constants.Templates.WAIT_FOR_LIST_CLASS_INDEX);
 		ReferenceParser ref = new ReferenceParser(tokens, 3);
-		String description = getDescription(tokens);
-		String id = ref.getID();
-		listItemWaitTemplate = listItemWaitTemplate.replace(Constants.VariableNames.DESCRIPTION, description);
-		listItemWaitTemplate = listItemWaitTemplate.replace(Constants.VariableNames.CLASSPATH, ref.getClassName());
-		listItemWaitTemplate = listItemWaitTemplate.replace(Constants.VariableNames.VIEW_INDEX, Integer.toString(ref.getIndex()));
-		listItemWaitTemplate = listItemWaitTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
+		String fullDescription = "select item " + itemIndex + " in " + getDescription(tokens);
+		String listItemWaitTemplate = writeViewClassIndexCommand(Constants.Templates.WAIT_FOR_LIST_CLASS_INDEX, ref, fullDescription);
 		listItemWaitTemplate = listItemWaitTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
 		lines.add(new LineAndTokens(tokens, listItemWaitTemplate));				
 	}
@@ -794,15 +809,10 @@ public class EmitRobotiumCode {
 	 * @throws IOException
 	 */
 	public void writeWaitForListIdItem(List<String> tokens, int itemIndex, List<LineAndTokens> lines) throws IOException {
-		String listItemWaitTemplate = FileUtility.readTemplate(Constants.Templates.WAIT_FOR_LIST_ID_ITEM);
 		ReferenceParser ref = new ReferenceParser(tokens, 3);
-		String description = getDescription(tokens);
-		String id = ref.getID();
-		listItemWaitTemplate = listItemWaitTemplate.replace(Constants.VariableNames.DESCRIPTION, description);
-		listItemWaitTemplate = listItemWaitTemplate.replace(Constants.VariableNames.CLASSPATH, ref.getClassName());
-		listItemWaitTemplate = listItemWaitTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
+		String fullDescription = "select item " + itemIndex + " in " + getDescription(tokens);
+		String listItemWaitTemplate = writeViewIDCommand(Constants.Templates.WAIT_FOR_LIST_ID_ITEM, ref, fullDescription);
 		listItemWaitTemplate = listItemWaitTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
-		listItemWaitTemplate = listItemWaitTemplate.replace(Constants.VariableNames.ID, id);
 		lines.add(new LineAndTokens(tokens, listItemWaitTemplate));				
 	}
 	/**
@@ -813,12 +823,12 @@ public class EmitRobotiumCode {
 	 * @param lines output list of java instructions
 	 * @throws IOException if the template file can't be read
 	 */
-	public void writeItemClick(List<String> tokens, List<LineAndTokens> lines) throws IOException {
+	public void writeItemClick(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
 		int itemIndex = Integer.parseInt(tokens.get(2)) + 1;
 		ReferenceParser ref = new ReferenceParser(tokens, 3);
 		String description = getDescription(tokens);
 		String fullDescription = "click item " + description;
-		/*
+		/* TODO: is this written out by the caller? verify and remove if so.
 		if (mLastEventWasWaitForActivity) {
 			if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
 				writeWaitForListIdItem(tokens, itemIndex, lines);
@@ -829,24 +839,16 @@ public class EmitRobotiumCode {
 		} 
 		*/
 		if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
-			String viewClass = ref.getClassName();
-			int classIndex = ref.getIndex();
-			String itemClickTemplate = FileUtility.readTemplate(Constants.Templates.CLICK_IN_LIST);
-			itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
-			itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
-			itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.LIST_INDEX, Integer.toString(classIndex));
+			String itemClickTemplate = writeViewClassIndexCommand(Constants.Templates.CLICK_IN_LIST, ref, fullDescription);
 			itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
 			lines.add(new LineAndTokens(tokens, itemClickTemplate));
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
-			String id = ref.getID();
-			String clickListItemTemplate = FileUtility.readTemplate(Constants.Templates.CLICK_LIST_ITEM);
-			clickListItemTemplate = clickListItemTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
-			clickListItemTemplate = clickListItemTemplate.replace(Constants.VariableNames.VARIABLE_INDEX,  Integer.toString(mVariableIndex));
-			clickListItemTemplate = clickListItemTemplate.replace(Constants.VariableNames.ID, id);
+			String clickListItemTemplate = writeViewIDCommand(Constants.Templates.CLICK_LIST_ITEM, ref, fullDescription);
 			clickListItemTemplate = clickListItemTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
 			lines.add(new LineAndTokens(tokens, clickListItemTemplate));
+		} else {
+			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
 		}
-		mVariableIndex++;	
 	}
 	/**
 	 * write the item selected event for a spinner
@@ -856,7 +858,7 @@ public class EmitRobotiumCode {
 	 * @param lines output list of java instructions
 	 * @throws IOException if the template file can't be read
 	 */
-	public void writeItemSelected(List<String> tokens, List<LineAndTokens> lines) throws IOException {
+	public void writeItemSelected(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
 		int itemIndex = Integer.parseInt(tokens.get(2)) + 1;
 		ReferenceParser ref = new ReferenceParser(tokens, 3);
 		String description = getDescription(tokens);
@@ -866,16 +868,13 @@ public class EmitRobotiumCode {
 			mLastEventWasWaitForActivity = false;
 		} 
 		if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
-			String viewClass = ref.getClassName();
 			int classIndex = ref.getIndex();
-			String itemClickTemplate = FileUtility.readTemplate(Constants.Templates.SELECT_SPINNER_ITEM);
-			itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);			
-			itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
+			String itemClickTemplate = writeViewClassIndexCommand(Constants.Templates.SELECT_SPINNER_ITEM, ref, fullDescription);
 			itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.SPINNER_INDEX, Integer.toString(classIndex));
 			itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
 			lines.add(new LineAndTokens(tokens, itemClickTemplate));
 		} else {
-			
+			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
 		}
 		mVariableIndex++;	
 	}
