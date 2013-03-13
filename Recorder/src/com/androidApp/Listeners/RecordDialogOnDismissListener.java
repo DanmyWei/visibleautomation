@@ -40,21 +40,23 @@ public class RecordDialogOnDismissListener extends RecordListener implements Dia
 
 	
 	public void onDismiss(DialogInterface dialog) {
-		long time = SystemClock.uptimeMillis();
-		try {
-			String description = getDescription(dialog);
-			if (mSpinner != null) {
-				String logString = Constants.EventTags.DISMISS_SPINNER_DIALOG + ":" + time + "," + description;
-				mEventRecorder.writeRecord(logString);
-			} else {
-				String logString = Constants.EventTags.DISMISS_DIALOG + ":" + time + "," + description;
-				mEventRecorder.writeRecord(logString);
+		if (!mfReentryBlock) {
+			mfReentryBlock = true;
+			try {
+				String description = getDescription(dialog);
+				if (mSpinner != null) {
+					mEventRecorder.writeRecord(Constants.EventTags.DISMISS_SPINNER_DIALOG, description);
+				} else {
+					mEventRecorder.writeRecord(Constants.EventTags.DISMISS_DIALOG, description);
+				}
+				if (mOriginalOnDismissListener != null) {
+					mOriginalOnDismissListener.onDismiss(dialog);
+				} 
+			} catch (Exception ex) {
+				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, "on dismiss dialog");
+				ex.printStackTrace();
 			}
-		} catch (Exception ex) {
-			ex.printStackTrace();
+			mfReentryBlock = false;
 		}
-		if (mOriginalOnDismissListener != null) {
-			mOriginalOnDismissListener.onDismiss(dialog);
-		} 
 	}
 }

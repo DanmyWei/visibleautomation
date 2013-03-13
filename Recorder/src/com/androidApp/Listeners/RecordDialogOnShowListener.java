@@ -8,6 +8,7 @@ import android.app.Dialog;
 import android.content.DialogInterface;
 import android.os.SystemClock;
 
+// log when a dialog is displayed
 public class RecordDialogOnShowListener extends RecordListener implements DialogInterface.OnShowListener {
 	protected DialogInterface.OnShowListener mOriginalOnShowListener;
 	
@@ -21,16 +22,19 @@ public class RecordDialogOnShowListener extends RecordListener implements Dialog
 	}
 	
 	public void onShow(DialogInterface dialog) {
-		long time = SystemClock.uptimeMillis();
-		try {
-			String description = getDescription(dialog);
-			String logString = Constants.EventTags.SHOW_DIALOG + ":" + time + "," + description;
-			mEventRecorder.writeRecord(logString);
-		} catch (Exception ex) {
-			ex.printStackTrace();
+		if (!mfReentryBlock) {
+			mfReentryBlock = true;
+			try {
+				String description = getDescription(dialog);
+				mEventRecorder.writeRecord(Constants.EventTags.SHOW_DIALOG, description);
+				if (mOriginalOnShowListener != null) {
+					mOriginalOnShowListener.onShow(dialog);
+				} 
+			} catch (Exception ex) {
+				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, "on show dialog");
+				ex.printStackTrace();
+			}
+			mfReentryBlock = false;
 		}
-		if (mOriginalOnShowListener != null) {
-			mOriginalOnShowListener.onShow(dialog);
-		} 
 	}
 }

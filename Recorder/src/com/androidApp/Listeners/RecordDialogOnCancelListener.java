@@ -38,21 +38,23 @@ public class RecordDialogOnCancelListener extends RecordListener implements Dial
 
 	
 	public void onCancel(DialogInterface dialog) {
-		long time = SystemClock.uptimeMillis();
-		try {
-			String description = getDescription(dialog);
-			if (mSpinner != null) {
-				String logString = Constants.EventTags.CANCEL_SPINNER_DIALOG + ":" + time + "," + description;
-				mEventRecorder.writeRecord(logString);
-			} else {
-				String logString = Constants.EventTags.CANCEL_DIALOG + ":" + time + "," + description;
-				mEventRecorder.writeRecord(logString);
-			}
-		} catch (Exception ex) {
-			ex.printStackTrace();
+		if (!mfReentryBlock) {
+			mfReentryBlock = true;
+			try {
+				String description = getDescription(dialog);
+				if (mSpinner != null) {
+					mEventRecorder.writeRecord(Constants.EventTags.CANCEL_SPINNER_DIALOG, description);
+				} else {
+					mEventRecorder.writeRecord(Constants.EventTags.CANCEL_DIALOG, description);
+				}
+				if (mOriginalOnCancelListener != null) {
+					mOriginalOnCancelListener.onCancel(dialog);
+				} 
+			} catch (Exception ex) {
+				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, "on cancel dialog");
+				ex.printStackTrace();
+			} 
+			mfReentryBlock = false;
 		}
-		if (mOriginalOnCancelListener != null) {
-			mOriginalOnCancelListener.onCancel(dialog);
-		} 
 	}
 }

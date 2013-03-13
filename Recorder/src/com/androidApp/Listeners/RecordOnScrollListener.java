@@ -1,6 +1,7 @@
 package com.androidApp.Listeners;
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
+import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
 
 import android.os.SystemClock;
@@ -34,23 +35,26 @@ public class RecordOnScrollListener extends RecordListener implements AbsListVie
 	}
 
 	public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
-		long time = SystemClock.uptimeMillis();
-		try {
-			if (mScrollState != AbsListView.OnScrollListener.SCROLL_STATE_IDLE) {
-				// list views only use class-index references because robotium doesn't support
-				// scrolling with a ScrollView Specified.
-				String description = getDescriptionByClassIndex(view);
-				String logString = Constants.EventTags.SCROLL + ":" + time + "," + firstVisibleItem + "," + visibleItemCount + "," + 
-				   					totalItemCount + "," + mEventRecorder.getViewReference().getClassIndexReference(view) + "," + description;
-				mEventRecorder.writeRecord(logString);
+		if (!mfReentryBlock) {
+			mfReentryBlock = true;
+			try {
+				if (mScrollState != AbsListView.OnScrollListener.SCROLL_STATE_IDLE) {
+					// list views only use class-index references because robotium doesn't support
+					// scrolling with a ScrollView Specified.
+					String description = getDescriptionByClassIndex(view);
+					String logString = firstVisibleItem + "," + visibleItemCount + "," + 
+					   					totalItemCount + "," + ViewReference.getClassIndexReference(view) + "," + description;
+					mEventRecorder.writeRecord(Constants.EventTags.SCROLL, logString);
+					if (mOriginalOnScrollListener != null) {
+						mOriginalOnScrollListener.onScroll(view, firstVisibleItem, visibleItemCount, totalItemCount);
+					} 
+				}
+			} catch (Exception ex) {
+				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, view, "on scroll");
+				ex.printStackTrace();
 			}
-		} catch (Exception ex) {
-			ex.printStackTrace();
+			mfReentryBlock = false;
 		}
-		if (mOriginalOnScrollListener != null) {
-			mOriginalOnScrollListener.onScroll(view, firstVisibleItem, visibleItemCount, totalItemCount);
-		} 
-		
 	}
 
 	public void onScrollStateChanged(AbsListView view, int scrollState) {

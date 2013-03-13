@@ -28,16 +28,18 @@ public class RecordOnClickListener extends RecordListener implements View.OnClic
 	
 	// click:time,<view reference>,Click on <description>
 	public void onClick(View v) {
-		long time = SystemClock.uptimeMillis();
-		try {
-			String logString = Constants.EventTags.CLICK + ":" + time + "," + 
-							   mEventRecorder.getViewReference().getReference(v) + "," + getDescription(v);
-			mEventRecorder.writeRecord(logString);
-		} catch (Exception ex) {
-			ex.printStackTrace();
+		if (!mfReentryBlock) {
+			mfReentryBlock = true;
+			try {
+				mEventRecorder.writeRecord(Constants.EventTags.CLICK, v, getDescription(v));
+				if (mOriginalOnClickListener != null) {
+					 mOriginalOnClickListener.onClick(v);
+				} 
+			} catch (Exception ex) {
+				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, v, "on click");
+				ex.printStackTrace();
+			}
+			mfReentryBlock = false;
 		}
-		if (mOriginalOnClickListener != null) {
-			 mOriginalOnClickListener.onClick(v);
-		} 
 	}
 }

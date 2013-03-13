@@ -1,6 +1,7 @@
 package com.androidApp.Listeners;
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
+import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
 
 import android.os.SystemClock;
@@ -27,45 +28,53 @@ public class RecordSeekBarChangeListener extends RecordListener implements SeekB
 	
 
 	public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-		if (fromUser) {
-			long time = SystemClock.uptimeMillis();
-			try {
-				String description = getDescription(seekBar);
-				String logString = Constants.EventTags.PROGRESS_CHANGED + ":" + time + "," + progress + "," + mEventRecorder.getViewReference().getReference(seekBar) + "," + description;
-				mEventRecorder.writeRecord(logString);
-			} catch (Exception ex) {
-				ex.printStackTrace();
+		if (!mfReentryBlock) {
+			mfReentryBlock = true;
+			if (fromUser) {
+				try {
+					String description = getDescription(seekBar);
+					mEventRecorder.writeRecord( Constants.EventTags.PROGRESS_CHANGED, progress + "," + mEventRecorder.getViewReference().getReference(seekBar) + "," + description);
+					if (mOriginalOnSeekBarChangeListener != null) {
+						mOriginalOnSeekBarChangeListener.onProgressChanged(seekBar, progress, fromUser);
+					} 
+				} catch (Exception ex) {
+					mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, seekBar, "on progress changed");
+					ex.printStackTrace();
+				}
 			}
-			if (mOriginalOnSeekBarChangeListener != null) {
-				mOriginalOnSeekBarChangeListener.onProgressChanged(seekBar, progress, fromUser);
-			} 
+			mfReentryBlock = false;
 		}
 	}
 
 	public void onStartTrackingTouch(SeekBar seekBar) {
-		long time = SystemClock.uptimeMillis();
-		try {
-			String logString = Constants.EventTags.START_TRACKING + ":" + time + "," + mEventRecorder.getViewReference().getReference(seekBar);
-			mEventRecorder.writeRecord(logString);
-		} catch (Exception ex) {
-			ex.printStackTrace();
+		if (!mfReentryBlock) {
+			mfReentryBlock = true;
+			try {
+				mEventRecorder.writeRecord(Constants.EventTags.START_TRACKING, mEventRecorder.getViewReference().getReference(seekBar));
+				if (mOriginalOnSeekBarChangeListener != null) {
+					mOriginalOnSeekBarChangeListener.onStartTrackingTouch(seekBar);
+				} 		
+			} catch (Exception ex) {
+				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, seekBar, "on start tracking touch");
+				ex.printStackTrace();
+			}
+			mfReentryBlock = false;
 		}
-		if (mOriginalOnSeekBarChangeListener != null) {
-			mOriginalOnSeekBarChangeListener.onStartTrackingTouch(seekBar);
-		} 		
 	}
 
 	public void onStopTrackingTouch(SeekBar seekBar) {
-		long time = SystemClock.uptimeMillis();
-		try {
-			String logString = Constants.EventTags.STOP_TRACKING + ":" + time + "," + mEventRecorder.getViewReference().getReference(seekBar);
-			mEventRecorder.writeRecord(logString);
-		} catch (Exception ex) {
-			ex.printStackTrace();
+		if (!mfReentryBlock) {
+			mfReentryBlock = true;
+			try {
+				mEventRecorder.writeRecord(Constants.EventTags.STOP_TRACKING, mEventRecorder.getViewReference().getReference(seekBar));
+				if (mOriginalOnSeekBarChangeListener != null) {
+					mOriginalOnSeekBarChangeListener.onStartTrackingTouch(seekBar);
+				} 
+			} catch (Exception ex) {
+				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, seekBar, "on stop tracking touch");
+				ex.printStackTrace();
+			}
+			mfReentryBlock = false;
 		}
-		if (mOriginalOnSeekBarChangeListener != null) {
-			mOriginalOnSeekBarChangeListener.onStartTrackingTouch(seekBar);
-		} 
 	}
-
 }

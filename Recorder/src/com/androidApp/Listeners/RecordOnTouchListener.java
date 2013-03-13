@@ -4,6 +4,7 @@ import java.lang.reflect.Field;
 
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
+import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
 
 
@@ -29,26 +30,32 @@ public class RecordOnTouchListener extends RecordListener implements View.OnTouc
 	}
 	
 	public boolean onTouch(View v, MotionEvent event) {
-		try {
-			String eventName = Constants.EventTags.UNKNOWN;
-			if (event.getAction() == MotionEvent.ACTION_DOWN) {
-				eventName = Constants.EventTags.TOUCH_DOWN;
-			} else if (event.getAction() == MotionEvent.ACTION_UP) {
-				eventName = Constants.EventTags.TOUCH_UP;
-			} else if (event.getAction() == MotionEvent.ACTION_MOVE) {
-				eventName = Constants.EventTags.TOUCH_MOVE;
+		boolean fConsumeEvent = false;
+		if (!mfReentryBlock) {
+			mfReentryBlock = true;
+			try {
+				String eventName = Constants.EventTags.UNKNOWN;
+				if (event.getAction() == MotionEvent.ACTION_DOWN) {
+					eventName = Constants.EventTags.TOUCH_DOWN;
+				} else if (event.getAction() == MotionEvent.ACTION_UP) {
+					eventName = Constants.EventTags.TOUCH_UP;
+				} else if (event.getAction() == MotionEvent.ACTION_MOVE) {
+					eventName = Constants.EventTags.TOUCH_MOVE;
+				}
+				
+				String description = getDescription(v);
+				String logString = event.getX() + "," + event.getY() + "," +
+								   mEventRecorder.getViewReference().getReference(v) + "," + description;
+				mEventRecorder.writeRecord(eventName, logString);
+				if (mOriginalOnTouchListener != null) {
+					fConsumeEvent = mOriginalOnTouchListener.onTouch(v, event);
+				} 
+			} catch (Exception ex) {
+				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, v, "on touch");
+				ex.printStackTrace();
 			}
-			String description = getDescription(v);
-			String logString = eventName + ":" + event.getEventTime() + "," + event.getX() + "," + event.getY() + "," +
-			   					mEventRecorder.getViewReference().getReference(v) + "," + description;
-			mEventRecorder.writeRecord(logString);
-		} catch (Exception ex) {
-			ex.printStackTrace();
+			mfReentryBlock = false;
 		}
-		if (mOriginalOnTouchListener != null) {
-			return mOriginalOnTouchListener.onTouch(v, event);
-		} else {
-			return false;
-		}
+		return fConsumeEvent;
 	}
 }

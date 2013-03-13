@@ -2,6 +2,7 @@ package com.androidApp.Listeners;
 
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
+import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
 
 import android.os.SystemClock;
@@ -9,7 +10,7 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 
-// recorder for view click events.
+// recorder for view key events.
 public class RecordOnKeyListener extends RecordListener implements View.OnKeyListener {
 	protected View.OnKeyListener 	mOriginalOnKeyListener;
 	
@@ -29,23 +30,27 @@ public class RecordOnKeyListener extends RecordListener implements View.OnKeyLis
 	
 	@Override
 	public boolean onKey(View v, int keyCode, KeyEvent keyEvent) {
-		long time = SystemClock.uptimeMillis();
-		try {
-			String action = "unknown";
-			if (keyEvent.getAction() == KeyEvent.ACTION_DOWN) {
-				action = "down";
-			} else if (keyEvent.getAction() == KeyEvent.ACTION_UP) {
-				action = "up";
+		boolean fConsumeEvent = false;
+		if (!mfReentryBlock) {
+			mfReentryBlock = true;
+			try {
+				String action = Constants.Action.UNKNOWN;
+				if (keyEvent.getAction() == KeyEvent.ACTION_DOWN) {
+					action = Constants.Action.DOWN;
+				} else if (keyEvent.getAction() == KeyEvent.ACTION_UP) {
+					action = Constants.Action.UP;
+				}
+				mEventRecorder.writeRecord(Constants.EventTags.KEY, keyCode + "," + action + "," +
+										   mEventRecorder.getViewReference().getReference(v) + "," + getDescription(v));
+			} catch (Exception ex) {
+				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, v, " key event");
+				ex.printStackTrace();
 			}
-			String logString = Constants.EventTags.KEY + ":" + time + "," + keyCode + "," + action + "," +
-							   mEventRecorder.getViewReference().getReference(v) + "," + getDescription(v);
-			mEventRecorder.writeRecord(logString);
-		} catch (Exception ex) {
-			ex.printStackTrace();
+			if (mOriginalOnKeyListener != null) {
+				 fConsumeEvent = mOriginalOnKeyListener.onKey(v, keyCode, keyEvent);
+			} 
+			mfReentryBlock = false;
 		}
-		if (mOriginalOnKeyListener != null) {
-			 return mOriginalOnKeyListener.onKey(v, keyCode, keyEvent);
-		} 
-		return false;
+		return fConsumeEvent;
 	}
 }

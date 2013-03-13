@@ -26,18 +26,21 @@ public class RecordOnLongClickListener extends RecordListener implements View.On
 	}
 	
 	public boolean onLongClick(View v) {
-		long time = SystemClock.uptimeMillis();
-		try {
-			String description = getDescription(v);
-			String logString = Constants.EventTags.CLICK + ":" + time + "," + mEventRecorder.getViewReference().getReference(v) + "," + description;
-			mEventRecorder.writeRecord(logString);
-		} catch (Exception ex) {
-			ex.printStackTrace();
+		boolean fConsumeEvent = false;
+		if (!mfReentryBlock) {
+			mfReentryBlock = true;
+			try {
+				String description = getDescription(v);
+				mEventRecorder.writeRecord(Constants.EventTags.LONG_CLICK, v, description);
+			} catch (Exception ex) {
+				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, v, "long click");
+				ex.printStackTrace();
+			}
+			if (mOriginalOnLongClickListener != null) {
+				fConsumeEvent = mOriginalOnLongClickListener.onLongClick(v);
+			} 
+			mfReentryBlock = false;
 		}
-		if (mOriginalOnLongClickListener != null) {
-			return mOriginalOnLongClickListener.onLongClick(v);
-		} else {
-			return false;
-		}
+		return fConsumeEvent;
 	}
 }

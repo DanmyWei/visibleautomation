@@ -102,6 +102,7 @@ public class Constants {
 		public static final String LOSE_FOCUS = "lose_focus";
 		public static final String SHOW_IME = "show_ime";
 		public static final String HIDE_IME = "hide_ime";
+		public static final String LONG_CLICK = "long_click";
 	}
 	
 	// description strings 
@@ -111,4 +112,10 @@ public class Constants {
 		public static final String UNTITLED_DIALOG = "Untitled Dialog";
 	}
 	
+	// key actions
+	public static class Action {
+		public static final String UNKNOWN = "unknown";
+		public static final String UP = "up";
+		public static final String DOWN = "down";
+	}
 }

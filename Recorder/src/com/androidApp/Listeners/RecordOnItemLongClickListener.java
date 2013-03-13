@@ -1,12 +1,15 @@
 package com.androidApp.Listeners;
 
 import com.androidApp.EventRecorder.EventRecorder;
+import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
 
 import android.os.SystemClock;
 import android.view.View;
 import android.widget.AdapterView;
 
+// record long click listener
+// TODO: this will handle the UI for waitForText() and extended record interface
 public class RecordOnItemLongClickListener extends RecordListener implements AdapterView.OnItemLongClickListener {
 	protected AdapterView<?>						mAdapterView;
 	protected AdapterView.OnItemLongClickListener	mOriginalItemLongClickListener;
@@ -18,18 +21,20 @@ public class RecordOnItemLongClickListener extends RecordListener implements Ada
 	}
 	
 	public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-		long time = SystemClock.uptimeMillis();
-		try {
-			String description = getDescription(view);
-			String logString = Constants.EventTags.ITEM_LONG_CLICK + ":" + time + ", "+ position + "," + mEventRecorder.getViewReference().getClassIndexReference(parent) + "," + description;
-			mEventRecorder.writeRecord(logString);
-		} catch (Exception ex) {
-			ex.printStackTrace();
+		boolean fConsumeEvent = false;
+		if (!mfReentryBlock) {
+			mfReentryBlock = true;
+			try {
+				mEventRecorder.writeRecord(Constants.EventTags.ITEM_LONG_CLICK, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
+				if (mOriginalItemLongClickListener != null) {
+					fConsumeEvent = mOriginalItemLongClickListener.onItemLongClick(parent, view, position, id);
+				} 
+			} catch (Exception ex) {
+				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, view, "item long click");
+				ex.printStackTrace();
+			}
+			mfReentryBlock = false;
 		}
-		if (mOriginalItemLongClickListener != null) {
-			return mOriginalItemLongClickListener.onItemLongClick(parent, view, position, id);
-		} else {
-			return false;
-		}
+		return fConsumeEvent;
 	}
 }

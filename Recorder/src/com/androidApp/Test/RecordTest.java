@@ -3,6 +3,7 @@ package com.androidApp.Test;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.util.List;
 import java.util.Stack;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -19,9 +20,12 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.os.SystemClock;
 import android.test.ActivityInstrumentationTestCase2;
 import android.util.Log;
+import android.view.Window;
+import android.widget.Spinner;
 
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.FieldUtils;
 import com.androidApp.Utility.TestUtils;
 
 /**
@@ -88,8 +92,7 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 		intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 		intent.setClassName(instrumentation.getTargetContext(), getActivity().getClass().getName());			// so we can get the package name to write in the manifest and classpath
 		String packageName = getPackageName(getActivity());
-		long time = SystemClock.uptimeMillis();
-		RecordTest.this.getRecorder().writeRecord(Constants.EventTags.PACKAGE + "," + time + "," + packageName);
+		RecordTest.this.getRecorder().writeRecord(Constants.EventTags.PACKAGE, packageName);
 		instrumentation.startActivitySync(intent);
 	}
 
@@ -113,12 +116,59 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 				Activity activity = RecordTest.this.getCurrentActivity();
 				Dialog dialog = TestUtils.findDialog(activity);
 				if ((dialog != null) && (dialog != RecordTest.this.getCurrentDialog())) {
-					RecordTest.this.getRecorder().interceptDialog(dialog);
+					List<Spinner> spinnerList = RecordTest.this.getRecorder().getSpinnerList();
+					Spinner spinner = null;
+					try {
+						spinner = RecordTest.matchSpinnerDialog(spinnerList, dialog);
+					} catch (Exception ex) {
+						ex.printStackTrace();
+					}
+					RecordTest.this.getRecorder().interceptDialog(dialog, spinner);
 					RecordTest.this.setCurrentDialog(dialog);
 				}
 			}	
 		};
 		mDialogScanTimer.schedule(scanTask, 0, DIALOG_SYNC_TIME);
+	}
+
+	/**
+	 * using reflection, get the popup dialog associated with this spinner.
+	 * basically spinner.mPopup.mPopup
+	 * @param spinner spinner to extract popup from.
+	 * @return Dialog, or null if there's no popup
+	 * @throws IllegalAccessException
+	 * @throws NoSuchFieldException
+	 * @throws ClassNotFoundException
+	 */
+	public static Dialog getSpinnerPopup(Spinner spinner) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
+		Object spinnerDialogPopup = FieldUtils.getFieldValue(spinner, Spinner.class, Constants.Fields.POPUP);
+		Class spinnerDialogPopupClass = Class.forName(Constants.Classes.SPINNER_DIALOG_POPUP);
+		Dialog dialog = (Dialog) FieldUtils.getFieldValue(spinnerDialogPopup, spinnerDialogPopupClass, Constants.Fields.POPUP);
+		return dialog;
+	}
+	
+	/**
+	 * given the list of spinners, see if the dialog is the popup for one of them
+	 * @param spinnerList list of spinners assocated with this activity.
+	 * @param dialog currently displayed dialog
+	 * @return Spinner or null.
+	 * @throws IllegalAccessException
+	 * @throws NoSuchFieldException
+	 * @throws ClassNotFoundException
+	 */
+	public static Spinner matchSpinnerDialog(List<Spinner> spinnerList, Dialog dialog)  throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
+		for (Spinner spinner : spinnerList) {
+			Dialog spinnerPopup = RecordTest.getSpinnerPopup(spinner);
+			Window spinnerPopupWindow = spinnerPopup.getWindow();
+			Window dialogWindow = dialog.getWindow();
+			if (spinnerPopupWindow == dialogWindow) {
+				return spinner;
+			}
+			if (spinnerPopupWindow.equals(dialogWindow)) {
+				return spinner;
+			}
+		}
+		return null;
 	}
 	
 	/**
@@ -161,33 +211,31 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 				while (fStart || !RecordTest.this.isActivityStackEmpty()) {
 					Activity activityA = RecordTest.this.mActivityMonitor.waitForActivity();
 					if (fStart) {
-						long time = SystemClock.uptimeMillis();
 						RecordTest.this.pushActivityOnStack(activityA);
 						// intercept events on the newly created activity.
 						activityA.runOnUiThread(new InterceptRunnable(activityA));
-						String logMsg = Constants.EventTags.ACTIVITY_FORWARD + ":" + time + "," + activityA.getClass().getName() + "," + activityA.toString();
-						RecordTest.this.getRecorder().writeRecord(logMsg);
+						String logMsg = activityA.getClass().getName() + "," + activityA.toString();
+						RecordTest.this.getRecorder().writeRecord(Constants.EventTags.ACTIVITY_FORWARD, logMsg);
 						fStart = false;
 					} else {
 						Activity activityB = RecordTest.this.mActivityMonitor.waitForActivity();
 						if (RecordTest.this.inActivityStack(activityB)) {
-							long time = SystemClock.uptimeMillis();
 							Activity previousActivity = RecordTest.this.popActivityFromStack();
 							previousActivity = RecordTest.this.peekActivityOnStack();
 							if (previousActivity != null) {
-								String logMsg = Constants.EventTags.ACTIVITY_BACK + ":" + time + "," + previousActivity.getClass().getName() + "," + previousActivity.toString();
-								RecordTest.this.getRecorder().writeRecord(logMsg);
+								String logMsg = previousActivity.getClass().getName() + "," + previousActivity.toString();
+								RecordTest.this.getRecorder().writeRecord(Constants.EventTags.ACTIVITY_BACK, logMsg);
 							} else {
+								long time = SystemClock.uptimeMillis();
 								String logMsg = Constants.EventTags.ACTIVITY_BACK + ":" + time;
 								RecordTest.this.getRecorder().writeRecord(logMsg);
 							} 
 						} else {
-							long time = SystemClock.uptimeMillis();
 							RecordTest.this.pushActivityOnStack(activityB);
 							// intercept events on the newly created activity.
 							activityB.runOnUiThread(new InterceptRunnable(activityB));
-							String logMsg = Constants.EventTags.ACTIVITY_FORWARD + ":" + time + "," + activityB.getClass().getName() + "," + activityB.toString();
-							RecordTest.this.getRecorder().writeRecord(logMsg);
+							String logMsg =  activityB.getClass().getName() + "," + activityB.toString();
+							RecordTest.this.getRecorder().writeRecord(Constants.EventTags.ACTIVITY_FORWARD, logMsg);
 						}
 					}
 				}
@@ -293,6 +341,7 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 		}
 		
 		public void run() {
+			RecordTest.this.mRecorder.clearSpinnerList();
 			RecordTest.this.mRecorder.intercept(mActivity);
 		}
 	}

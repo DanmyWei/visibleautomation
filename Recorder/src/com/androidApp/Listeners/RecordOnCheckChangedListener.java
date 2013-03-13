@@ -2,6 +2,7 @@ package com.androidApp.Listeners;
 
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
+import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
 
 import android.os.SystemClock;
@@ -9,6 +10,7 @@ import android.view.View;
 import android.widget.CompoundButton;
 
 // recorder for toggle buttons OnCheckedChangeListener (onClick really does this)
+// NOTE: currently unused
 public class RecordOnCheckChangedListener extends RecordListener implements CompoundButton.OnCheckedChangeListener {
 	protected CompoundButton.OnCheckedChangeListener 	mOriginalOnCheckedChangeListener;
 	
@@ -27,15 +29,19 @@ public class RecordOnCheckChangedListener extends RecordListener implements Comp
 	}
 	
 	public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-		long time = SystemClock.uptimeMillis();
-		try {
-			String logString = Constants.EventTags.CHECKED + ":" + time + "," + isChecked + "," + mEventRecorder.getViewReference().getReference(buttonView);
-			mEventRecorder.writeRecord(logString);
-		} catch (Exception ex) {
-			ex.printStackTrace();
+		if (!mfReentryBlock) {
+			mfReentryBlock = true;
+			try {
+				String fullDescription = isChecked + "," + mEventRecorder.getViewReference().getReference(buttonView);
+				mEventRecorder.writeRecord(Constants.EventTags.CHECKED, fullDescription);
+			} catch (Exception ex) {
+				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, buttonView, "on check changed");
+				ex.printStackTrace();
+			}
+			if (mOriginalOnCheckedChangeListener != null) {
+				mOriginalOnCheckedChangeListener.onCheckedChanged(buttonView, isChecked);
+			}
+			mfReentryBlock = false;
 		}
-		if (mOriginalOnCheckedChangeListener != null) {
-			mOriginalOnCheckedChangeListener.onCheckedChanged(buttonView, isChecked);
-		} 
 	}
 }

@@ -17,7 +17,13 @@ import android.widget.TextView;
 
 // base class for all listeners, implements common functions, retains reference to event recorder.
 public class RecordListener {
-	protected EventRecorder mEventRecorder;
+	
+	// handle to the recorder 
+	protected EventRecorder mEventRecorder;	
+	
+	// because the recorder wrappers may be wrapped themselves, like in AutoCompleteTextView, we use a re-entry
+	// flag to prevent stack overflow recursion
+	protected boolean		mfReentryBlock;				
 
 	public RecordListener(EventRecorder eventRecorder) {
 		mEventRecorder = eventRecorder;

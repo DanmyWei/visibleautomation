@@ -1,6 +1,7 @@
 package com.androidApp.Listeners;
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
+import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
 
 import android.os.SystemClock;
@@ -26,17 +27,19 @@ public class RecordOnItemSelectedListener extends RecordListener implements Adap
 	// solo.pressSpinnerItem() only supports class index references.
 	@Override
 	public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-		long time = SystemClock.uptimeMillis();
-		try {
-			String description = getDescription(view);
-			String logString = Constants.EventTags.ITEM_SELECTED + ":" + time + ", "+ position + "," + mEventRecorder.getViewReference().getClassIndexReference(parent) + "," + description;
-			mEventRecorder.writeRecord(logString);
-		} catch (Exception ex) {
-			ex.printStackTrace();
+		if (!mfReentryBlock) {
+			mfReentryBlock = true;
+			try {
+				mEventRecorder.writeRecord(Constants.EventTags.ITEM_SELECTED, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
+				if (mOriginalItemSelectedListener != null) {
+					mOriginalItemSelectedListener.onItemSelected(parent, view, position, id);
+				} 
+			} catch (Exception ex) {
+				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, view, "item selected");
+				ex.printStackTrace();
+			}
+			mfReentryBlock = false;
 		}
-		if (mOriginalItemSelectedListener != null) {
-			mOriginalItemSelectedListener.onItemSelected(parent, view, position, id);
-		} 
 	}
 
 	@Override
