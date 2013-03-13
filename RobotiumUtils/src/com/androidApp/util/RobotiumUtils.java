@@ -283,9 +283,10 @@ public class RobotiumUtils {
 	 * @param v view that the IME is being shown for.
 	 */
 	public static void showIME(View v) {
-        InputMethodManager imm = (InputMethodManager)v.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
-        imm.showSoftInput(v, 0);
-		
+		if (v != null) {
+	        InputMethodManager imm = (InputMethodManager)v.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+	        imm.showSoftInput(v, 0);
+		}
 	}
 	
 	/**
@@ -293,8 +294,9 @@ public class RobotiumUtils {
 	 * @param v
 	 */
 	public static void hideIME(View v) {
-        InputMethodManager imm = (InputMethodManager)v.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
-        imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
-
+		if (v != null) {
+	        InputMethodManager imm = (InputMethodManager)v.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+	        imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
+		}
 	}
 }
