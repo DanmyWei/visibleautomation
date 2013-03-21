@@ -22,12 +22,18 @@ public class Constants {
 	public static class Classes {
 		public static final String LISTENER_INFO = "android.view.View$ListenerInfo";
 		public static final String PHONE_DECOR_VIEW = "com.android.internal.policy.impl.PhoneWindow$DecorView";
+		public static final String POPUP_VIEW_CONTAINER = "android.widget.PopupWindow.PopupViewContainer";
+		public static final String POPUP_VIEW_CONTAINER_CREATECLASS = "android.widget.PopupWindow$PopupViewContainer";
 		public static final String ENCLOSING_CLASS = "this$0";
 		public static final String DIALOG_TITLE_SIMPLE_NAME = "DialogTitle";
 		public static final String DIALOG_TITLE = "com.android.internal.widget.DialogTitle";
 		public static final String PHONE_WINDOW = "com.android.internal.policy.impl.PhoneWindow";
 		public static final String WINDOW_MANAGER = "android.view.WindowManagerImpl";
 		public static final String SPINNER_DIALOG_POPUP = "android.widget.Spinner$DialogPopup";
+		public static final String AUTOCOMPLETE_DIALOG_POPUP = "android.widget.PopupWindow$PopupViewContainer";
+		public static final String LIST_WINDOW_POPUP = "android.widget.ListPopupWindow";
+		public static final String LIST_WINDOW_POPUP_DROPDOWN_LIST_VIEW = "android.widget.ListPopupWindow$DropDownListView";
+		public static final String THIS = "this$0";
 	}
 	
 	// listener field names
@@ -56,6 +62,10 @@ public class Constants {
 		public static final String TEXT = "mText";
 		public static final String VIEWS = "mViews";
 		public static final String DECOR = "mDecor";
+		public static final String POPUP_WINDOW_ON_DISMISS_LISTENER = "mOnDismissListener";
+		public static final String WINDOW_MANAGER_FIELD = "mWindowManager";
+		public static final String WINDOW_MANAGER_FIELD_STATIC = "sWindowManager";
+		
 	}
 	
 	// possible derive methods which listen for events.
@@ -103,6 +113,9 @@ public class Constants {
 		public static final String SHOW_IME = "show_ime";
 		public static final String HIDE_IME = "hide_ime";
 		public static final String LONG_CLICK = "long_click";
+		public static final String DISMISS_AUTOCOMPLETE_DROPDOWN = "dismiss_autocomplete_dropdown";
+		public static final String DISMISS_POPUP_WINDOW = "dismiss_popup_window";
+		public static final String CREATE_POPUP_WINDOW = "create_popup_window";
 	}
 	
 	// description strings 
@@ -110,6 +123,7 @@ public class Constants {
 		public static final String IMAGE_VIEW = "ImageView";
 		public static final String CLICK_ON = "Click on";
 		public static final String UNTITLED_DIALOG = "Untitled Dialog";
+		public static final String EMPTY_TEXT = "Empty Text View";
 	}
 	
 	// key actions

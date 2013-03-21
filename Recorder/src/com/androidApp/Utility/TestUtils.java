@@ -19,6 +19,7 @@ import android.view.ViewParent;
 import android.view.Window;
 import android.widget.Adapter;
 import android.widget.AdapterView;
+import android.widget.PopupWindow;
 import android.widget.TextView;
 
 /**
@@ -539,7 +540,7 @@ public class TestUtils {
 		return "0x" + Integer.toHexString(idValue);
 	}
 
-	public static boolean isDialog(Activity a, View v) {
+	public static boolean isDialogOrPopup(Activity a, View v) {
 		Context c = v.getContext();
 		// dialogs use a context theme wrapper, not a context, so we have to extract he context from the theme wrapper's
 		// base context
@@ -549,8 +550,8 @@ public class TestUtils {
 		}
 		// if the view has the same context (i.e. is owned by the application), and it's not the application's 
 		// decor view, then a dialog is up.
-		if (c == a) {
-			if (v.hasWindowFocus() && (v != a.getWindow().getDecorView())) {
+		if (c.equals(a.getBaseContext())) {
+			if (v != a.getWindow().getDecorView()) {
 				return true;
 			}
 		}
@@ -571,13 +572,47 @@ public class TestUtils {
 				// iterate through the set of decor windows.  The dialog may already have been presented.
 				for (int iView = 0; iView < numDecorViews; iView++) {
 					View v = views[iView];
-					if (TestUtils.isDialog(activity, v)) {					
-						Class phoneDecorViewClass = Class.forName(Constants.Classes.PHONE_DECOR_VIEW);
-						Class enclosingClass = phoneDecorViewClass.getEnclosingClass();
-						Window phoneWindow = (Window) ListenerIntercept.getFieldValue(v, phoneDecorViewClass, "this$0");
-						Window.Callback callback = phoneWindow.getCallback();
-						Dialog dialog = (Dialog) callback;
-						return dialog;
+					if (TestUtils.isDialogOrPopup(activity, v)) {	
+						String className = v.getClass().getCanonicalName();
+						if (className.equals(Constants.Classes.PHONE_DECOR_VIEW)) {
+							Class phoneDecorViewClass = Class.forName(Constants.Classes.PHONE_DECOR_VIEW);
+							Window phoneWindow = (Window) ListenerIntercept.getFieldValue(v, phoneDecorViewClass, Constants.Classes.THIS);
+							Window.Callback callback = phoneWindow.getCallback();
+							Dialog dialog = (Dialog) callback;
+							return dialog;
+						} 
+					}
+				}
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+		return null;		
+	}
+	
+	/**
+	 * popup windows are slightly different than dialogs, so we have a separate path which polls for them
+	 * to set up in RecordTest
+	 * @param activity
+	 * @return
+	 */
+	public static PopupWindow findPopupWindow(Activity activity) {
+		try {
+			ViewExtractor viewExractor = new ViewExtractor();
+			View[] views = viewExractor.getWindowDecorViews();
+			if (views != null) {
+				int numDecorViews = views.length;
+				
+				// iterate through the set of decor windows.  The dialog may already have been presented.
+				for (int iView = 0; iView < numDecorViews; iView++) {
+					View v = views[iView];
+					if (TestUtils.isDialogOrPopup(activity, v)) {	
+						String className = v.getClass().getCanonicalName();
+						if (className.equals(Constants.Classes.POPUP_VIEW_CONTAINER)) {
+							Class popupViewContainerClass = Class.forName(Constants.Classes.POPUP_VIEW_CONTAINER_CREATECLASS);
+							PopupWindow popupWindow = (PopupWindow) ListenerIntercept.getFieldValue(v, popupViewContainerClass, Constants.Classes.THIS);
+							return popupWindow;
+						}
 					}
 				}
 			}

@@ -16,9 +16,9 @@ import android.view.ViewGroup;
 public class ViewExtractor {
 	protected static String getWindowManagerString(){
 		if (android.os.Build.VERSION.SDK_INT >= 13) {
-			return "sWindowManager";
+			return Constants.Fields.WINDOW_MANAGER_FIELD_STATIC;
 		} else {
-			return "mWindowManager";
+			return Constants.Fields.WINDOW_MANAGER_FIELD;
 		}
 	}
 	
@@ -30,7 +30,6 @@ public class ViewExtractor {
 	static {
 		try {
 			sWindowManager = Class.forName(Constants.Classes.WINDOW_MANAGER);
-
 		} catch (ClassNotFoundException e) {
 			throw new RuntimeException(e);
 		} catch (SecurityException e) {
@@ -53,18 +52,17 @@ public class ViewExtractor {
 			instanceField.setAccessible(true);
 			Object instance = instanceField.get(null);
 			return (View[]) viewsField.get(instance);
-		} catch (SecurityException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
-		} catch (NoSuchFieldException e) {
-			e.printStackTrace();
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		}
+		} 
 		return null;
 	}
 	
+	/**
+	 * flatten the view hierarchy into a list.
+	 * @param vg view group parent
+	 * @param childList list to populate.
+	 */
 	public void addChildren(ViewGroup vg, List<View> childList) {
 		int nChild = vg.getChildCount();
 		for (int iChild = 0; iChild < nChild; iChild++) {
@@ -76,6 +74,11 @@ public class ViewExtractor {
 		}
 	}
 	
+	/**
+	 * recursively retrieve the views associated with an activity
+	 * @param activity
+	 * @return list of views (flattened hierarchy)
+	 */
 	public List<View> getActivityViews(Activity activity) {
 		View[] decorViews = getWindowDecorViews();
 		View currentDecorView = null;
