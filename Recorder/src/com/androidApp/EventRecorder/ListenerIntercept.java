@@ -14,7 +14,9 @@ import android.view.View;
 import android.widget.AbsListView;
 import android.widget.AbsSpinner;
 import android.widget.AdapterView;
+import android.widget.AutoCompleteTextView;
 import android.widget.CompoundButton;
+import android.widget.PopupWindow;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.Spinner;
@@ -188,20 +190,16 @@ public class ListenerIntercept {
 	}
 	
 	/**
-	 * get the onItemSelectedListener for a spinner
-	 * @param spinner
-	 * @return
-	 * @throws NoSuchFieldException
+	 * get the onItemSelectedListener for an adapterView
+	 * @param adapterView
+	 * @return OnItemSelectedListener
+	 * @throws NoSuchFieldException thrown if any of the reflection stuff fails
 	 * @throws ClassNotFoundException
 	 * @throws IllegalAccessException
 	 */
-	public static AdapterView.OnItemSelectedListener getItemSelectedListener(Spinner spinner) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
-		listFieldsDebug(Spinner.class);
-		listFieldsDebug(AbsSpinner.class);
-		listFieldsDebug(AdapterView.class);
-		return (AbsListView.OnItemSelectedListener) getFieldValue(spinner, AdapterView.class, Constants.Fields.SELECTED_ITEM_LISTENER);
+	public static AdapterView.OnItemSelectedListener getItemSelectedListener(AdapterView adapterView) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
+		return (AbsListView.OnItemSelectedListener) getFieldValue(adapterView, AdapterView.class, Constants.Fields.SELECTED_ITEM_LISTENER);
 	}
-
 	/**
 	 * retrieve the list of text watchers for this view.
 	 * @param tv TextView (though it's probably an edit text)
@@ -250,7 +248,7 @@ public class ListenerIntercept {
 	/**
 	 * does the text watcher list for this edit text contain the interception text watcher?
 	 * @param textWatcherList
-	 * @return
+	 * @return true if the interception/record text watcher is in the textWatcherList.
 	 */
 	public static boolean containsTextWatcher(ArrayList<TextWatcher> textWatcherList, Class targetClass) {
 		for (TextWatcher tw : textWatcherList) {
@@ -264,8 +262,8 @@ public class ListenerIntercept {
 	/**
 	 * dialog dismiss listener.
 	 * @param dialog
-	 * @return
-	 * @throws NoSuchFieldException
+	 * @return the dialog's dismiss listener or null, if none was set
+	 * @throws NoSuchFieldException thrown if any of the reflection stuff fails
 	 * @throws SecurityException
 	 * @throws IllegalAccessException
 	 */
@@ -277,12 +275,25 @@ public class ListenerIntercept {
 			return null;
 		}
 	}
+	/**
+	 * popupWindow dismiss listener.
+	 * @param dialog
+	 * @return the dialog's dismiss listener or null, if none was set
+	 * @throws NoSuchFieldException thrown if any of the reflection stuff fails
+	 * @throws SecurityException
+	 * @throws IllegalAccessException
+	 */
+	public static PopupWindow.OnDismissListener getOnDismissListener(PopupWindow popupWindow) throws NoSuchFieldException, SecurityException, IllegalAccessException  {
+		PopupWindow.OnDismissListener dismissListener = (PopupWindow.OnDismissListener) getFieldValue(popupWindow, PopupWindow.class, Constants.Fields.POPUP_WINDOW_ON_DISMISS_LISTENER);
+		return dismissListener;
+	}
+
 
 	/**
 	 * dialog cancel listener.
 	 * @param dialog
-	 * @return
-	 * @throws NoSuchFieldException
+	 * @return the dialog's cancel listener or null, if none was set
+	 * @throws NoSuchFieldException thrown if any of the reflection stuff fails
 	 * @throws SecurityException
 	 * @throws IllegalAccessException
 	 */

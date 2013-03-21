@@ -8,6 +8,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.androidApp.Listeners.FinishTextChangedListener;
 import com.androidApp.Listeners.RecordDialogOnCancelListener;
 import com.androidApp.Listeners.RecordDialogOnDismissListener;
 import com.androidApp.Listeners.RecordListener;
@@ -18,6 +19,7 @@ import com.androidApp.Listeners.RecordOnItemSelectedListener;
 import com.androidApp.Listeners.RecordOnLongClickListener;
 import com.androidApp.Listeners.RecordOnScrollListener;
 import com.androidApp.Listeners.RecordOnTouchListener;
+import com.androidApp.Listeners.RecordPopupWindowOnDismissListener;
 import com.androidApp.Listeners.RecordSeekBarChangeListener;
 import com.androidApp.Listeners.RecordTextChangedListener;
 import com.androidApp.Utility.Constants;
@@ -38,8 +40,10 @@ import android.view.ViewTreeObserver;
 import android.view.Window;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
+import android.widget.AutoCompleteTextView;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.PopupWindow;
 import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -50,13 +54,12 @@ import android.widget.TextView;
  *
  */
 public class EventRecorder {
-	public static final float	GUESS_IME_HEIGHT = 0.25F;			// guess that IME takes up this amount of the screen.
-	protected BufferedWriter 	mRecordWriter;						// to write the events to file
-	protected int 				mHashCode = 0x0;					// for fast tracking of view tree changes
-	protected ViewReference		mViewReference;
-	protected List<Spinner>		mSpinnerList;						// filter spinner-generated dialogs, to generate selectSpinner
-	protected View				mViewFocus;							// view OnFocusChanged.onFocusChange() hasFocus = true for IME detection
-	protected boolean			mIMEWasDisplayed = false;			// IME was displayed in the last layout
+	public static final float				GUESS_IME_HEIGHT = 0.25F;			// guess that IME takes up this amount of the screen.
+	protected BufferedWriter 				mRecordWriter;						// to write the events to file
+	protected int 							mHashCode = 0x0;					// for fast tracking of view tree changes
+	protected ViewReference					mViewReference;
+	protected View							mViewFocus;							// view OnFocusChanged.onFocusChange() hasFocus = true for IME detection
+	protected boolean						mIMEWasDisplayed = false;			// IME was displayed in the last layout
 	
 	// constructor which opens the recording file, which is stashed somewhere on the sdcard.
 	public EventRecorder(String recordFileName) throws IOException {				
@@ -66,7 +69,6 @@ public class EventRecorder {
 		FileWriter fw = new FileWriter(path, true);
 		mRecordWriter = new BufferedWriter(fw);
 		mViewReference = new ViewReference();
-		mSpinnerList = new ArrayList<Spinner>();
 		mViewFocus = null;
 	}
 	
@@ -89,15 +91,6 @@ public class EventRecorder {
 	
 	public void setFocusedView(View v) {
 		mViewFocus = v;
-	}
-	// get the spinner list to see if the dialog was created by a spinner
-	public List<Spinner> getSpinnerList() {
-		return mSpinnerList;
-	}
-	
-	// reset the spinner list
-	public void clearSpinnerList() {
-		mSpinnerList.clear();
 	}
 
 	// write a record to the output
@@ -202,6 +195,8 @@ public class EventRecorder {
 						v.setOnTouchListener(recordTouchListener);
 					}
 				}
+				
+				// specific handlers for seekbars/progress bars/etc.
 				if (v instanceof SeekBar) {
 					SeekBar seekBar = (SeekBar) v;
 					SeekBar.OnSeekBarChangeListener originalSeekBarChangeListener = ListenerIntercept.getSeekBarChangeListener(seekBar);
@@ -223,15 +218,16 @@ public class EventRecorder {
 					if (!(itemClickListener instanceof RecordOnItemClickListener)) {
 						RecordOnItemClickListener recordItemClickListener = new RecordOnItemClickListener(this, absListView);
 						absListView.setOnItemClickListener(recordItemClickListener);		
-					}
-				}
-				if (v instanceof Spinner) {
-					Spinner spinner = (Spinner) v;
-					AdapterView.OnItemSelectedListener originalSelectedItemListener = ListenerIntercept.getItemSelectedListener(spinner);
-					if (!(originalSelectedItemListener instanceof RecordOnItemSelectedListener)) {
-						RecordOnItemSelectedListener recordItemSelectedListener = new RecordOnItemSelectedListener(this, originalSelectedItemListener);
-						spinner.setOnItemSelectedListener(recordItemSelectedListener);
-						mSpinnerList.add(spinner);
+					}				
+					// special case for spinners, which receive onItemSelected, but not onItemClick events.
+					// if (v instanceof Spinner) {
+					if (true) {
+						// Spinner spinner = (Spinner) v;
+						AdapterView.OnItemSelectedListener originalSelectedItemListener = ListenerIntercept.getItemSelectedListener(absListView);
+						if (!(originalSelectedItemListener instanceof RecordOnItemSelectedListener)) {
+							RecordOnItemSelectedListener recordItemSelectedListener = new RecordOnItemSelectedListener(this, originalSelectedItemListener);
+							absListView.setOnItemSelectedListener(recordItemSelectedListener);
+						}
 					}
 				}
 			}
@@ -244,6 +240,7 @@ public class EventRecorder {
 				// make sure that we haven't already added the intercepting text watcher.
 				if (!ListenerIntercept.containsTextWatcher(textWatcherList, RecordTextChangedListener.class)) {
 					textWatcherList.add(0, new RecordTextChangedListener(this, tv));
+					textWatcherList.add(new FinishTextChangedListener(this));
 					ListenerIntercept.setTextWatcherList(tv, textWatcherList);
 				}
 				// add listener for focus
@@ -258,7 +255,7 @@ public class EventRecorder {
 				String description = "Intercepting view " +  RecordListener.getDescription(v);
 				writeRecord(Constants.EventTags.EXCEPTION, description);
 			} catch (Exception exlog) {
-				writeRecord(Constants.EventTags.EXCEPTION + "unknown description");
+				writeRecord(Constants.EventTags.EXCEPTION + " unknown description");
 			}
 		}
 	}
@@ -311,6 +308,13 @@ public class EventRecorder {
 		}
 	}
 	
+	/**
+	 * unfortunately, there isn't an event for IME display/hide, so we have to guess by examining the content view
+	 * and seeing if it's enough smaller than its parent that the IME could probably fit in there.  This is called
+	 * in the global layout listener, so we at least know that the layout has changed, but not why.
+	 * @param contentView android.R.id.content from the activity's window.
+	 * @return true if the IME is probably up, false if it's certainly down.
+	 */
 	public static boolean isIMEDisplayed(View contentView) {
 		View contentParent = (View) contentView.getParent();
 		int imeHeight = contentParent.getMeasuredHeight() - contentView.getMeasuredHeight();
@@ -323,32 +327,93 @@ public class EventRecorder {
 	 * click, scroll, touch events in the spinner, since it's all covered by onItemSelected()
 	 * @param dialog
 	 */
-	public void interceptDialog(Dialog dialog, Spinner spinner) {
+	public void interceptSpinnerDialog(Dialog dialog) {
 		try {
 			DialogInterface.OnDismissListener originalDismissListener = ListenerIntercept.getOnDismissListener(dialog);
 			if ((originalDismissListener == null) || (originalDismissListener.getClass() != RecordDialogOnDismissListener.class)) {
-				RecordDialogOnDismissListener recordOnDismissListener = new RecordDialogOnDismissListener(this, spinner, originalDismissListener);
+				RecordDialogOnDismissListener recordOnDismissListener = new RecordDialogOnDismissListener(this, originalDismissListener, Constants.EventTags.DISMISS_SPINNER_DIALOG);
 				dialog.setOnDismissListener(recordOnDismissListener);
 			}
 			DialogInterface.OnCancelListener originalCancelListener = ListenerIntercept.getOnCancelListener(dialog);
 			if ((originalCancelListener == null) || (originalCancelListener.getClass() != RecordDialogOnCancelListener.class)) {
-				RecordDialogOnCancelListener recordOnCancelListener = new RecordDialogOnCancelListener(this, spinner, originalCancelListener);
+				RecordDialogOnCancelListener recordOnCancelListener = new RecordDialogOnCancelListener(this, originalCancelListener, Constants.EventTags.CANCEL_SPINNER_DIALOG);
 				dialog.setOnCancelListener(recordOnCancelListener);
 			}
-			// if the dialog was kicked off by a spinner, then Spinner.OnItemSelected() is the event we want, and we want to 
-			// suppress click events.
-			if (spinner == null) {
-				Window window = dialog.getWindow();
-				intercept(window.getDecorView());
+		} catch (Exception ex) {
+			try {
+				String description = "Intercepting spinner dialog " +  RecordListener.getDescription(dialog);
+				writeRecord(Constants.EventTags.EXCEPTION, description);
+			} catch (Exception exlog) {
+				writeRecord(Constants.EventTags.EXCEPTION,  "unknown description");
 			}
+			ex.printStackTrace();
+		}
+	}
+	
+	public void interceptPopupWindow(PopupWindow popupWindow) {
+		try {
+			PopupWindow.OnDismissListener originalDismissListener = ListenerIntercept.getOnDismissListener(popupWindow);
+			if ((originalDismissListener == null) || (originalDismissListener.getClass() != RecordDialogOnDismissListener.class)) {
+				RecordPopupWindowOnDismissListener recordOnDismissListener = new RecordPopupWindowOnDismissListener(this, null, popupWindow, Constants.EventTags.DISMISS_POPUP_WINDOW, originalDismissListener);
+				popupWindow.setOnDismissListener(recordOnDismissListener);
+			}
+		} catch (Exception ex) {
+			writeRecord(Constants.EventTags.EXCEPTION, "Intercepting popup window");
+			ex.printStackTrace();
+		}
+	}
+	
+	public void interceptDialog(Dialog dialog) {
+		try {
+			DialogInterface.OnDismissListener originalDismissListener = ListenerIntercept.getOnDismissListener(dialog);
+			if ((originalDismissListener == null) || (originalDismissListener.getClass() != RecordDialogOnDismissListener.class)) {
+				RecordDialogOnDismissListener recordOnDismissListener = new RecordDialogOnDismissListener(this, originalDismissListener);
+				dialog.setOnDismissListener(recordOnDismissListener);
+			}
+			DialogInterface.OnCancelListener originalCancelListener = ListenerIntercept.getOnCancelListener(dialog);
+			if ((originalCancelListener == null) || (originalCancelListener.getClass() != RecordDialogOnCancelListener.class)) {
+				RecordDialogOnCancelListener recordOnCancelListener = new RecordDialogOnCancelListener(this, originalCancelListener);
+				dialog.setOnCancelListener(recordOnCancelListener);
+			}
+			Window window = dialog.getWindow();
+			intercept(window.getDecorView());
 		} catch (Exception ex) {
 			try {
 				String description = "Intercepting dialog " +  RecordListener.getDescription(dialog);
 				writeRecord(Constants.EventTags.EXCEPTION, description);
 			} catch (Exception exlog) {
-				writeRecord(Constants.EventTags.EXCEPTION, "unknown description");
+				writeRecord(Constants.EventTags.EXCEPTION, " unknown description");
 			}
 			ex.printStackTrace();
 		}
 	}
+	
+	public void interceptAutoCompletePopupWindow(AutoCompleteTextView autoComplete, PopupWindow popupWindow) {
+		try {
+			// we would pick up the autoComplete onDismissListener, but that's not available until API level 17
+			PopupWindow.OnDismissListener originalDismissListener = ListenerIntercept.getOnDismissListener(popupWindow);
+			if ((originalDismissListener == null) || (originalDismissListener.getClass() != RecordPopupWindowOnDismissListener.class)) {
+				RecordPopupWindowOnDismissListener recordOnDismissListener = 
+					new RecordPopupWindowOnDismissListener(this, autoComplete, popupWindow, Constants.EventTags.DISMISS_AUTOCOMPLETE_DROPDOWN, originalDismissListener);
+				popupWindow.setOnDismissListener(recordOnDismissListener);
+			}
+			/*
+			AdapterView.OnItemClickListener originalItemClickListener = autoComplete.getOnItemClickListener();
+			if (!(originalItemClickListener instanceof RecordOnItemClickListener)) {
+				RecordOnItemClickListener recordItemClickListener = new RecordOnItemClickListener(this, originalItemClickListener);
+				autoComplete.setOnItemClickListener(recordItemClickListener);		
+			}
+			*/
+		} catch (Exception ex) {
+			try {
+				String description = "Intercepting popup for " +  RecordListener.getDescription(autoComplete);
+				writeRecord(Constants.EventTags.EXCEPTION, description);
+			} catch (Exception exlog) {
+				writeRecord(Constants.EventTags.EXCEPTION, " unknown description");
+			}
+			ex.printStackTrace();
+		}
+
+	}
+
 }
