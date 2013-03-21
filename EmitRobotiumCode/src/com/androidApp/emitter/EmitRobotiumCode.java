@@ -497,6 +497,10 @@ public class EmitRobotiumCode {
 							}	
 						}
 						lastTextEntryTokens = tokens;
+					} else if (action.equals(Constants.Events.DISMISS_AUTOCOMPLETE_DROPDOWN)) {
+						writeDismissAutoCompleteDropdown(tokens, lines);
+					} else if (action.equals(Constants.Events.DISMISS_POPUP_WINDOW)) {
+						writeDismissPopupWindow(tokens, lines);
 					}
 				}
 				line = nextLine;
@@ -690,6 +694,41 @@ public class EmitRobotiumCode {
 	}
 	
 	/**
+	 * write out the dismiss_autocomplete_dropdown
+	 * @param tokens
+	 * @param lines
+	 * @throws IOException
+	 * @throws EmitterException
+	 */
+	public void writeDismissAutoCompleteDropdown(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
+		ReferenceParser ref = new ReferenceParser(tokens, 2);
+		String description = getDescription(tokens);
+		String fullDescription = "dismiss autocomplete dropdown on " + description;
+		if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID)  {
+			String dismissDropdownIDTemplate =  writeViewIDCommand(Constants.Templates.DISMISS_AUTOCOMPLETE_DROPDOWN_ID, ref, fullDescription);
+			lines.add(new LineAndTokens(tokens, dismissDropdownIDTemplate));
+		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
+			String dismissDropdownClassIndexTemplate = writeViewClassIndexCommand(Constants.Templates.DISMISS_AUTOCOMPLETE_DROPDOWN_CLASS_INDEX, ref, fullDescription);
+			lines.add(new LineAndTokens(tokens, dismissDropdownClassIndexTemplate));			
+		} else {
+			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
+		}
+	}
+	
+	/**
+	 * write out the dismiss popup window class
+	 * @param tokens
+	 * @param lines
+	 * @throws IOException
+	 * @throws EmitterException
+	 */
+	public void writeDismissPopupWindow(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
+		String dismissPopupTemplate = FileUtility.readTemplate(Constants.Templates.DISMISS_POPUP_WINDOW);
+		dismissPopupTemplate = dismissPopupTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex++));
+		lines.add(new LineAndTokens(tokens, dismissPopupTemplate));
+	}
+	
+	/**
 	 * write out the show ime command:
 	 * show_ime:195773901,id,com.example.android.apis.R$id.radio_button
 	 * @param tokens parsed from a line in events.txt
@@ -762,7 +801,7 @@ public class EmitRobotiumCode {
 	 */
 
 	public void writeEnterText(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
-		String text = tokens.get(2);
+		String text =  StringUtils.unescapeString(StringUtils.stripQuotes(tokens.get(2)), '\\');
 		ReferenceParser ref = new ReferenceParser(tokens, 6);
 		String description = getDescription(tokens);
 		String fullDescription = "enter text in " + description;
