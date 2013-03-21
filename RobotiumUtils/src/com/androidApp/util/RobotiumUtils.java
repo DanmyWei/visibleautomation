@@ -12,7 +12,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.AutoCompleteTextView;
 import android.widget.ListView;
+import android.widget.PopupWindow;
 import android.widget.ScrollView;
 
 
@@ -20,6 +22,15 @@ public class RobotiumUtils {
 	protected static int ACTIVITY_POLL_INTERVAL_MSEC = 1000;			// interval for activity existence polling
 	protected static int VIEW_TIMEOUT_MSEC = 5000;						// time to wait for view to be visible
 	protected static int VIEW_POLL_INTERVAL_MSEC = 1000;				// poll interval for view existence
+	protected static int WAIT_INCREMENT_MSEC = 100;
+	protected static RobotiumUtils sRobotiumUtils = null;
+	
+	public static RobotiumUtils getInstance() {
+		if (sRobotiumUtils == null) {
+			sRobotiumUtils = new RobotiumUtils();
+		}
+		return sRobotiumUtils;
+	}
 	
 	// get a list view item.  
 	public static View getListViewItem(ListView lv, int itemIndex) {
@@ -298,5 +309,68 @@ public class RobotiumUtils {
 	        InputMethodManager imm = (InputMethodManager)v.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
 	        imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
 		}
+	}
+	
+	/**
+	 * create a runnable which dismisses the auto complete dropdown
+	 * @param solo
+	 * @param autoCompleteTextView
+	 */
+	public static void dismissAutoCompleteDialog(Solo solo, AutoCompleteTextView autoCompleteTextView) {
+		Activity activity = solo.getCurrentActivity();
+		activity.runOnUiThread(RobotiumUtils.getInstance().new DismissAutoCompleteRunnable(autoCompleteTextView));
+	}
+	
+	public class DismissAutoCompleteRunnable implements Runnable {
+		public AutoCompleteTextView mAutoCompleteTextView;
+		
+		public DismissAutoCompleteRunnable(AutoCompleteTextView autoCompleteTextView) {
+			mAutoCompleteTextView = autoCompleteTextView;
+		}
+
+		@Override
+		public void run() {
+			mAutoCompleteTextView.dismissDropDown();		
+		}		
+	}
+	
+	/**
+	 * dismissing a popup has to be done on the UI thread via a runnable
+	 * @author Matthew
+	 *
+	 */
+	public class DismissPopupWindowRunnable implements Runnable {
+		public PopupWindow mPopupWindow;
+		
+		public DismissPopupWindowRunnable(PopupWindow popupWindow) {
+			mPopupWindow = popupWindow;
+		}
+		
+		@Override
+		public void run() {
+			mPopupWindow.dismiss();
+		}
+	}
+	
+	public static void dismissPopupWindow(Activity activity) throws TestException {
+		dismissPopupWindow(activity, VIEW_TIMEOUT_MSEC);
+	}
+	/**
+	 * dismiss a popup window, like a menu popup, autocomplete dropdown, etc.  I hope there is only one popup.
+	 * @param activity
+	 */
+	public static void dismissPopupWindow(Activity activity, long waitMsec) throws TestException {
+		while (waitMsec > 0) {
+			PopupWindow popupWindow = ViewExtractor.findPopupWindow(activity);
+			if (popupWindow != null) {
+				activity.runOnUiThread(RobotiumUtils.getInstance().new DismissPopupWindowRunnable(popupWindow));
+				return;
+			}
+			try {
+				Thread.sleep(WAIT_INCREMENT_MSEC);
+			} catch (InterruptedException iex) {}
+			waitMsec -= WAIT_INCREMENT_MSEC;
+		}
+		throw new TestException("failed to find popup window to dismiss");
 	}
 }
