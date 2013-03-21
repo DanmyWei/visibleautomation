@@ -37,6 +37,10 @@ public class Constants {
 		public static final String ITEM_SELECTED = "item_selected";
 		public static final String SHOW_IME = "show_ime";	
 		public static final String HIDE_IME = "hide_ime";	
+		public static final String DISMISS_AUTOCOMPLETE_DROPDOWN = "dismiss_autocomplete_dropdown";
+		public static final String CREATE_POPUP_WINDOW = "create_popup_window";
+		public static final String DISMISS_POPUP_WINDOW = "dismiss_popup_window";
+		
 	}
 	public static class Templates {
 
@@ -76,6 +80,9 @@ public class Constants {
 		public static final String SHOW_IME_CLASS_INDEX = "show_ime_class_index.txt";
 		public static final String HIDE_IME_ID = "hide_ime_id.txt";
 		public static final String HIDE_IME_CLASS_INDEX = "hide_ime_class_index.txt";
+		public static final String DISMISS_AUTOCOMPLETE_DROPDOWN_ID = "dismiss_autocomplete_dropdown_id.txt";
+		public static final String DISMISS_AUTOCOMPLETE_DROPDOWN_CLASS_INDEX = "dismiss_autocomplete_dropdown_class_index.txt";
+		public static final String DISMISS_POPUP_WINDOW = "dismiss_popup_window.txt";
 			
 	}
 	// template %replace% variables

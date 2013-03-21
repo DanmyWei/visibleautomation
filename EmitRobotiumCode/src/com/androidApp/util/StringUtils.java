@@ -78,6 +78,28 @@ public class StringUtils {
 		}
 		return sb.toString();
 	}
+	
+	// unescape a string,  Strip the prefixes.
+	public static String unescapeString(String s, char prefix) {
+		StringBuffer sb = new StringBuffer(s.length());
+		for (int ich = 0; ich < s.length(); ich++) {
+			char ch = s.charAt(ich);
+			if (ch == prefix) {
+				continue;
+			} 
+			sb.append(ch);
+		}
+		return sb.toString();
+	}
+	
+	// strip the quotes surrounding the string
+	public static String stripQuotes(String s) {
+		if ((s.charAt(0) == '"') && (s.charAt(s.length() - 1) == '"')){
+			return s.substring(1, s.length() - 1);
+		} else {
+			return s;
+		}
+	}
 
 	/**
 	 * is s a hexidecimal number

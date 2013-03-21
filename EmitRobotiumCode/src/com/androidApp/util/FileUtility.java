@@ -68,6 +68,9 @@ public class FileUtility {
 	 */
 	public static String readTemplate(String templateName) throws IOException {
 		InputStream fis = EmitRobotiumCode.class.getResourceAsStream("/" + templateName);
+		if (fis == null) {
+			throw new IOException("failed to open resource " + templateName);
+		}
 		return FileUtility.readToString(fis);
 	}
 	/**
