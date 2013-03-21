@@ -11,9 +11,7 @@ import android.view.View;
 import android.widget.Spinner;
 
 /**
- * wrapper class to intercept and record dialog cancel events.
- * We have an exception case for dialogs created by spinners, so the emitter can generate
- * spinner-specific code.
+ * wrapper class to receive focus change events.
  * @author Matthew
  *
  */
@@ -24,6 +22,7 @@ public class RecordOnFocusChangeListener extends RecordListener implements View.
 		super(eventRecorder);
 		try {
 			mOriginalOnFocusChangeListener = view.getOnFocusChangeListener();
+			view.setOnFocusChangeListener(mOriginalOnFocusChangeListener);
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
@@ -33,12 +32,26 @@ public class RecordOnFocusChangeListener extends RecordListener implements View.
 		super(eventRecorder);
 		mOriginalOnFocusChangeListener = originalFocusChangeListener;
 	}
-
 	
+	/**
+	 * we shouldn't intercept if we're already recording the focus change listener.
+	 */
+	public boolean shouldIntercept(View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
+		if (super.shouldIntercept(v)) {
+			View.OnFocusChangeListener originalOnFocusChangeListener = v.getOnFocusChangeListener();
+			return !(originalOnFocusChangeListener instanceof RecordOnFocusChangeListener);
+		}
+		return false;
+	}
+
+	/**
+	 * actual focus change record point.
+	 */
 	@Override
 	public void onFocusChange(View v, boolean hasFocus) {
-		if (!mfReentryBlock) {
-			mfReentryBlock = true;
+		boolean fReentryBlock = getReentryBlock();
+		if (!RecordListener.getEventBlock()) {
+			setEventBlock(true);
 			try {
 				if (hasFocus) {
 					// save the view for IME event detection
@@ -47,14 +60,16 @@ public class RecordOnFocusChangeListener extends RecordListener implements View.
 				} else {
 					mEventRecorder.writeRecord(Constants.EventTags.LOSE_FOCUS, v);
 				}
-				if (mOriginalOnFocusChangeListener != null) {
-					mOriginalOnFocusChangeListener.onFocusChange(v, hasFocus);
-				}		
 			} catch (Exception ex) {
 				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, v, "on focus change " + hasFocus);
 				ex.printStackTrace();
 			}
-			mfReentryBlock = false;
 		}
+		if (!fReentryBlock) {
+			if (mOriginalOnFocusChangeListener != null) {
+				mOriginalOnFocusChangeListener.onFocusChange(v, hasFocus);
+			}		
+		}
+		setEventBlock(false);
 	}
 }

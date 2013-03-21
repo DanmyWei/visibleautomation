@@ -8,6 +8,12 @@ import android.os.SystemClock;
 import android.view.MotionEvent;
 import android.view.View;
 
+/**
+ * intercept long clicks.  Note: this will get much more interesting, since this will provide the interface
+ * for specifying views and references for "expect" targets
+ * @author Matthew
+ *
+ */
 public class RecordOnLongClickListener extends RecordListener implements View.OnLongClickListener {
 	protected View.OnLongClickListener 	mOriginalOnLongClickListener;
 	
@@ -25,10 +31,29 @@ public class RecordOnLongClickListener extends RecordListener implements View.On
 		mOriginalOnLongClickListener = originalLongClickListener;
 	}
 	
+	/**
+	 * we shouldn't intercept if we're already recording the long click listener.
+	 */
+	public boolean shouldIntercept(View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
+		if (super.shouldIntercept(v)) {
+			View.OnLongClickListener originalOnLongClickListener = ListenerIntercept.getLongClickListener(v);
+			return !(originalOnLongClickListener instanceof RecordOnLongClickListener);
+		}
+		return false;
+	}
+
+	/**
+	 * record onLongClick
+	 * click:time,<view reference>,Click on <description>
+	 * @param v view being intercepted.
+	 * return true if the wrapped long click listener consumed the event.
+	 */
+	@Override
 	public boolean onLongClick(View v) {
 		boolean fConsumeEvent = false;
-		if (!mfReentryBlock) {
-			mfReentryBlock = true;
+		boolean fReentryBlock = getReentryBlock();
+		if (!RecordListener.getEventBlock()) {
+			setEventBlock(true);
 			try {
 				String description = getDescription(v);
 				mEventRecorder.writeRecord(Constants.EventTags.LONG_CLICK, v, description);
@@ -36,11 +61,13 @@ public class RecordOnLongClickListener extends RecordListener implements View.On
 				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, v, "long click");
 				ex.printStackTrace();
 			}
+		}
+		if (!fReentryBlock) {
 			if (mOriginalOnLongClickListener != null) {
 				fConsumeEvent = mOriginalOnLongClickListener.onLongClick(v);
 			} 
-			mfReentryBlock = false;
-		}
+		}		
+		setEventBlock(false);
 		return fConsumeEvent;
 	}
 }

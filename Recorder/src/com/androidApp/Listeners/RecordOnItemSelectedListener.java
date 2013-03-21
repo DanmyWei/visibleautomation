@@ -9,13 +9,15 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Spinner;
 
-// record item Selects for spinners
+// record item Selects for spinners, list views, etc.
+
 public class RecordOnItemSelectedListener extends RecordListener implements AdapterView.OnItemSelectedListener {
 	protected AdapterView.OnItemSelectedListener	mOriginalItemSelectedListener;
 	
-	public RecordOnItemSelectedListener(EventRecorder eventRecorder, Spinner spinner) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
+	public RecordOnItemSelectedListener(EventRecorder eventRecorder, AdapterView adapterView) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
 		super(eventRecorder);
-		mOriginalItemSelectedListener = ListenerIntercept.getItemSelectedListener(spinner);
+		mOriginalItemSelectedListener = ListenerIntercept.getItemSelectedListener(adapterView);
+		adapterView.setOnItemSelectedListener(this);
 	}
 
 	
@@ -23,28 +25,47 @@ public class RecordOnItemSelectedListener extends RecordListener implements Adap
 		super(eventRecorder);
 		mOriginalItemSelectedListener = originalItemSelectedListener;
 	}
+	/**
+	 * we don't call super for intercept, since it fails on parent adapter views.
+	 */
+	public boolean shouldIntercept(View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
+		AdapterView.OnItemSelectedListener originalOnItemSelectedListener = ((AdapterView) v).getOnItemSelectedListener();
+		return !(originalOnItemSelectedListener instanceof RecordOnItemSelectedListener);
+	}
 
-	// solo.pressSpinnerItem() only supports class index references.
+	/**
+	 * output:
+	 * item_selected:<time>,position,<reference>,<description>
+	 *  solo.pressSpinnerItem() only supports class index references.
+	 *  @param parent parent adapter
+	 *  @param view selected view
+	 *  @param position index in adapter
+	 *  @param id adapter item id
+	 */
 	@Override
 	public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-		if (!mfReentryBlock) {
-			mfReentryBlock = true;
+		boolean fReentryBlock = getReentryBlock();
+		if (!RecordListener.getEventBlock()) {
+			setEventBlock(true);
 			try {
 				mEventRecorder.writeRecord(Constants.EventTags.ITEM_SELECTED, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
-				if (mOriginalItemSelectedListener != null) {
-					mOriginalItemSelectedListener.onItemSelected(parent, view, position, id);
-				} 
 			} catch (Exception ex) {
 				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, view, "item selected");
 				ex.printStackTrace();
 			}
-			mfReentryBlock = false;
 		}
+		if (!fReentryBlock) {
+			if (mOriginalItemSelectedListener != null) {
+				mOriginalItemSelectedListener.onItemSelected(parent, view, position, id);
+			} 	
+		}
+		setEventBlock(false);
 	}
 
+	/**
+	 * TODO: record this as well (maybe)
+	 */
 	@Override
 	public void onNothingSelected(AdapterView<?> arg0) {
-		// TODO Auto-generated method stub
-		
 	}
 }

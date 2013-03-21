@@ -3,6 +3,7 @@ package com.androidApp.Listeners;
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.StringUtils;
 
 import android.os.SystemClock;
 import android.text.Editable;
@@ -25,28 +26,35 @@ public class RecordTextChangedListener extends RecordListener implements TextWat
 	
 	// since these methods are called in a chain, rather than wrapping the native listeners, we don't need to block re-entrancy
 	public void afterTextChanged(Editable editable) {
+		setEventBlock(true);
 	}
 
 	public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-		try {
-			String description = getDescription(mTextView);
-			String logString = s + "," + start + "," +  count + "," + after + "," + mEventRecorder.getViewReference().getReference(mTextView) + "," + description;
-			mEventRecorder.writeRecord(Constants.EventTags.BEFORE_TEXT, logString);
-		} catch (Exception ex) {
-			mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, mTextView, "before text changed");
-			ex.printStackTrace();
-		}	
+		if (!RecordListener.getEventBlock()) {
+			setEventBlock(true);
+			try {
+				String description = getDescription(mTextView);
+				String logString = '\"' + StringUtils.escapeString(s.toString(), "\"", '\\') + '\"' + "," + start + "," +  count + "," + after + "," + mEventRecorder.getViewReference().getReference(mTextView) + "," + description;
+				mEventRecorder.writeRecord(Constants.EventTags.BEFORE_TEXT, logString);
+			} catch (Exception ex) {
+				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, mTextView, "before text changed");
+				ex.printStackTrace();
+			}	
+		}
 	}
 
 	// We can scan the stack to see if the calling method is TextWatcher.afterTextChanged()
 	public void onTextChanged(CharSequence s, int start, int before, int count) {
-		try {
-			String description = getDescription(mTextView);
-			String logString = s + "," + start + "," + before + "," + count + "," + mEventRecorder.getViewReference().getReference(mTextView) + "," + description;
-			mEventRecorder.writeRecord(Constants.EventTags.AFTER_TEXT, logString);
-		} catch (Exception ex) {
-			mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, mTextView, "on text changed");
-			ex.printStackTrace();
-		}	
+		if (!RecordListener.getEventBlock()) {
+			setEventBlock(true);
+			try {
+				String description = getDescription(mTextView);
+				String logString = '\"' + StringUtils.escapeString(s.toString(), "\"", '\\') + '\"' + "," + start + "," + before + "," + count + "," + mEventRecorder.getViewReference().getReference(mTextView) + "," + description;
+				mEventRecorder.writeRecord(Constants.EventTags.AFTER_TEXT, logString);
+			} catch (Exception ex) {
+				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, mTextView, "on text changed");
+				ex.printStackTrace();
+			}	
+		}
 	}
 }

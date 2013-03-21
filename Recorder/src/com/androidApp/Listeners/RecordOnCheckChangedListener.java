@@ -29,8 +29,9 @@ public class RecordOnCheckChangedListener extends RecordListener implements Comp
 	}
 	
 	public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-		if (!mfReentryBlock) {
-			mfReentryBlock = true;
+		boolean fReentryBlock = getReentryBlock();
+		if (!RecordListener.getEventBlock()) {
+			setEventBlock(true);
 			try {
 				String fullDescription = isChecked + "," + mEventRecorder.getViewReference().getReference(buttonView);
 				mEventRecorder.writeRecord(Constants.EventTags.CHECKED, fullDescription);
@@ -38,10 +39,12 @@ public class RecordOnCheckChangedListener extends RecordListener implements Comp
 				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, buttonView, "on check changed");
 				ex.printStackTrace();
 			}
+		}
+		if (!fReentryBlock) {
 			if (mOriginalOnCheckedChangeListener != null) {
 				mOriginalOnCheckedChangeListener.onCheckedChanged(buttonView, isChecked);
-			}
-			mfReentryBlock = false;
+			}	
 		}
+		setEventBlock(false);
 	}
 }

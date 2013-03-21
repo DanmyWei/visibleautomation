@@ -20,43 +20,40 @@ import android.widget.Spinner;
 
 public class RecordDialogOnDismissListener extends RecordListener implements DialogInterface.OnDismissListener {
 	protected DialogInterface.OnDismissListener mOriginalOnDismissListener;
-	protected Spinner							mSpinner;					// if dialog was popped up from a spinner
+	protected String							mEventTag;					// so we can write out custom dialog event types, like spinner and autocomplete
 	
-	public RecordDialogOnDismissListener(EventRecorder eventRecorder, Spinner spinner, Dialog dialog) {
-		super(eventRecorder);
-		mSpinner = spinner;
-		try {
-			mOriginalOnDismissListener = ListenerIntercept.getOnDismissListener(dialog);
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
+	public RecordDialogOnDismissListener() {
 	}
 	
-	public RecordDialogOnDismissListener(EventRecorder eventRecorder, Spinner spinner, DialogInterface.OnDismissListener originalDismissListener) {
+	public RecordDialogOnDismissListener(EventRecorder eventRecorder, DialogInterface.OnDismissListener originalDismissListener) {
 		super(eventRecorder);
-		mSpinner = spinner;
 		mOriginalOnDismissListener = originalDismissListener;
+		mEventTag = Constants.EventTags.DISMISS_DIALOG;
 	}
 
-	
+	public RecordDialogOnDismissListener(EventRecorder eventRecorder, DialogInterface.OnDismissListener originalDismissListener, String eventTag) {
+		super(eventRecorder);
+		mOriginalOnDismissListener = originalDismissListener;
+		mEventTag = eventTag;
+	}
+
 	public void onDismiss(DialogInterface dialog) {
-		if (!mfReentryBlock) {
-			mfReentryBlock = true;
+		boolean fReentryBlock = getReentryBlock();
+		if (!RecordListener.getEventBlock()) {
+			setEventBlock(true);
 			try {
 				String description = getDescription(dialog);
-				if (mSpinner != null) {
-					mEventRecorder.writeRecord(Constants.EventTags.DISMISS_SPINNER_DIALOG, description);
-				} else {
-					mEventRecorder.writeRecord(Constants.EventTags.DISMISS_DIALOG, description);
-				}
-				if (mOriginalOnDismissListener != null) {
-					mOriginalOnDismissListener.onDismiss(dialog);
-				} 
+				mEventRecorder.writeRecord(mEventTag, description);
 			} catch (Exception ex) {
 				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, "on dismiss dialog");
 				ex.printStackTrace();
 			}
-			mfReentryBlock = false;
 		}
+		if (!fReentryBlock) {
+			if (mOriginalOnDismissListener != null) {
+				mOriginalOnDismissListener.onDismiss(dialog);
+			} 
+		}
+		setEventBlock(false);
 	}
 }

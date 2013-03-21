@@ -18,6 +18,7 @@ public class RecordOnKeyListener extends RecordListener implements View.OnKeyLis
 		super(eventRecorder);
 		try {
 			mOriginalOnKeyListener = ListenerIntercept.getKeyListener(v);
+			v.setOnKeyListener(this);
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}		
@@ -28,11 +29,30 @@ public class RecordOnKeyListener extends RecordListener implements View.OnKeyLis
 		mOriginalOnKeyListener = originalKeyListener;
 	}
 	
+	/**
+	 * we shouldn't intercept if we're already recording the click listener.
+	 */
+	public boolean shouldIntercept(View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
+		if (super.shouldIntercept(v)) {
+			View.OnKeyListener originalOnKeyListener = ListenerIntercept.getKeyListener(v);
+			return !(originalOnKeyListener instanceof RecordOnKeyListener);
+		}
+		return false;
+	}
+
+	/**
+	 * intercepts the key event.
+	 * key:<time_msec>,<up/down>,reference,description
+	 * @param v view
+	 * @param keyCode keyCode
+	 * @param keyEvent keyEvent
+	 */
 	@Override
 	public boolean onKey(View v, int keyCode, KeyEvent keyEvent) {
 		boolean fConsumeEvent = false;
-		if (!mfReentryBlock) {
-			mfReentryBlock = true;
+		boolean fReentryBlock = getReentryBlock();
+		if (!RecordListener.getEventBlock()) {
+			setEventBlock(true);
 			try {
 				String action = Constants.Action.UNKNOWN;
 				if (keyEvent.getAction() == KeyEvent.ACTION_DOWN) {
@@ -46,11 +66,15 @@ public class RecordOnKeyListener extends RecordListener implements View.OnKeyLis
 				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, v, " key event");
 				ex.printStackTrace();
 			}
+		}
+		if (!fReentryBlock) {
+			
+			// always call the original key listener if there is one.
 			if (mOriginalOnKeyListener != null) {
 				 fConsumeEvent = mOriginalOnKeyListener.onKey(v, keyCode, keyEvent);
 			} 
-			mfReentryBlock = false;
 		}
+		setEventBlock(false);
 		return fConsumeEvent;
 	}
 }

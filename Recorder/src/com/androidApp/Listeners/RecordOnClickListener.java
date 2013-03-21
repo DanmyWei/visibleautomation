@@ -16,6 +16,7 @@ public class RecordOnClickListener extends RecordListener implements View.OnClic
 		super(eventRecorder);
 		try {
 			mOriginalOnClickListener = ListenerIntercept.getClickListener(v);
+			v.setOnClickListener(this);
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}		
@@ -26,20 +27,37 @@ public class RecordOnClickListener extends RecordListener implements View.OnClic
 		mOriginalOnClickListener = originalTouchListener;
 	}
 	
-	// click:time,<view reference>,Click on <description>
+	/**
+	 * we shouldn't intercept if we're already recording the click listener.
+	 */
+	public boolean shouldIntercept(View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
+		if (super.shouldIntercept(v)) {
+			View.OnClickListener originalOnClickListener = ListenerIntercept.getClickListener(v);
+			return !(originalOnClickListener instanceof RecordOnClickListener);
+		}
+		return false;
+	}
+	
+	/**
+	 * record the all-pervasive click event
+	 * click:time,<view reference>,Click on <description>
+	 */
 	public void onClick(View v) {
-		if (!mfReentryBlock) {
-			mfReentryBlock = true;
+		boolean fReentryBlock = getReentryBlock();
+		if (!RecordListener.getEventBlock()) {
+			setEventBlock(true);
 			try {
 				mEventRecorder.writeRecord(Constants.EventTags.CLICK, v, getDescription(v));
-				if (mOriginalOnClickListener != null) {
-					 mOriginalOnClickListener.onClick(v);
-				} 
 			} catch (Exception ex) {
 				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, v, "on click");
 				ex.printStackTrace();
 			}
-			mfReentryBlock = false;
 		}
+		if (!fReentryBlock) {
+			if (mOriginalOnClickListener != null) {
+				 mOriginalOnClickListener.onClick(v);
+			} 
+		}
+		setEventBlock(false);
 	}
 }

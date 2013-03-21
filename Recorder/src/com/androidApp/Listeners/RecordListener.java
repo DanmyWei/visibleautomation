@@ -12,6 +12,7 @@ import android.content.DialogInterface;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.widget.AdapterView;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -19,21 +20,69 @@ import android.widget.TextView;
 public class RecordListener {
 	
 	// handle to the recorder 
-	protected EventRecorder mEventRecorder;	
+	protected EventRecorder 	mEventRecorder;	
 	
 	// because the recorder wrappers may be wrapped themselves, like in AutoCompleteTextView, we use a re-entry
 	// flag to prevent stack overflow recursion
-	protected boolean		mfReentryBlock;				
+	protected boolean			mfReentryBlock;
+	
+	// don't record if this event was kicked off by another event. statics are dangerous
+	protected static boolean	sfEventBlock;				
 
+	public RecordListener() {
+		mEventRecorder = null;
+	}
+	
 	public RecordListener(EventRecorder eventRecorder) {
 		mEventRecorder = eventRecorder;
 	}
 	
+	/**
+	 * should this event be intercepted?  Default is don't install recorder for views which are children of listviews.
+	 * Also, no recorder should re-install itself.
+	 * @param v view to intercept events on
+	 * @return
+	 */
+	public boolean shouldIntercept(View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
+		AdapterView listView = TestUtils.getAdapterViewAncestor(v);
+		return listView == null;
+	}
+	
+	/**
+	 * when an event kicks off a sequence of events, we actually only want to record the first event, since the 
+	 * other events will be chained from it.  Also, some of the views actually install their own wrappers, and we
+	 * wind up wrapping ourselves in that case.
+	 * @return
+	 */
+	public static boolean getEventBlock() {
+		return sfEventBlock;
+	}
+	
+	public void setEventBlock(boolean f) {
+		sfEventBlock = f;
+		mfReentryBlock = f;
+	}
+	
+	public static boolean getReentryBlock() {
+		return sfEventBlock;
+	}
+		
 	// get a description of a view.
 	public static String getDescription(View v) {
+		
+		// say something if the view is null.
+		if (v == null) {
+			return "null view";
+		}
+		
+		// text, text...we like text.
 		if (v instanceof TextView) {
 			TextView tv = (TextView) v;
-			return StringUtils.massageString(tv.getText().toString());
+			if (tv.getText().length() > 0) {
+				return StringUtils.massageString(tv.getText().toString());
+			} else {
+				return Constants.Description.EMPTY_TEXT;
+			}
 		} else if (v instanceof ImageView) {
 			return Constants.Description.IMAGE_VIEW;
 		} else if (v instanceof ViewGroup) {

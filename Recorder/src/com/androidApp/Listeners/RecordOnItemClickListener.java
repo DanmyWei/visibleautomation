@@ -1,5 +1,6 @@
 package com.androidApp.Listeners;
 import com.androidApp.EventRecorder.EventRecorder;
+import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
 
@@ -9,28 +10,53 @@ import android.widget.AdapterView;
 
 // record item clicks for listviews
 public class RecordOnItemClickListener extends RecordListener implements AdapterView.OnItemClickListener {
-	protected AdapterView<?>					mAdapterView;
 	protected AdapterView.OnItemClickListener	mOriginalItemClickListener;
 	
 	public RecordOnItemClickListener(EventRecorder eventRecorder, AdapterView<?> adapterView) {
 		super(eventRecorder);
-		mAdapterView = adapterView;
 		mOriginalItemClickListener = adapterView.getOnItemClickListener();
+		adapterView.setOnItemClickListener(this);
 	}
-		
+	
+	public RecordOnItemClickListener(EventRecorder eventRecorder, AdapterView.OnItemClickListener originalListener) {
+		super(eventRecorder);
+		mOriginalItemClickListener = originalListener;
+	}
+	
+	/**
+	 * we don't call super for intercept, since it fails on parent adapter views.
+	 */
+	public boolean shouldIntercept(View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
+		AdapterView.OnItemClickListener originalOnItemClickListener = ((AdapterView) v).getOnItemClickListener();
+		return !(originalOnItemClickListener instanceof RecordOnItemClickListener);
+	}
+
+	/**
+	 * record the the onItemClick event
+	 * output:
+	 * item_click:<time>,position,<reference>,<description>
+	 *  @param parent parent adapter
+	 *  @param view selected view
+	 *  @param position index in adapter
+	 *  @param id adapter item id
+	 */
+
 	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-		if (!mfReentryBlock) {
-			mfReentryBlock = true;
+		boolean fReentryBlock = getReentryBlock();
+		if (!RecordListener.getEventBlock()) {
+			setEventBlock(true);
 			try {
 				mEventRecorder.writeRecord(Constants.EventTags.ITEM_CLICK, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
-				if (mOriginalItemClickListener != null) {
-					mOriginalItemClickListener.onItemClick(parent, view, position, id);
-				} 
 			} catch (Exception ex) {
 				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, view, "item click");
 				ex.printStackTrace();
-			}
-			mfReentryBlock = false;
+			}	
 		}
+		if (!fReentryBlock) {
+			if (mOriginalItemClickListener != null) {
+				mOriginalItemClickListener.onItemClick(parent, view, position, id);
+			} 
+		}
+		setEventBlock(false);
 	}
 }

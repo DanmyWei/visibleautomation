@@ -19,6 +19,7 @@ public class RecordOnTouchListener extends RecordListener implements View.OnTouc
 		super(eventRecorder);
 		try {
 			mOriginalOnTouchListener = ListenerIntercept.getTouchListener(v);
+			v.setOnTouchListener(this);
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}		
@@ -29,10 +30,27 @@ public class RecordOnTouchListener extends RecordListener implements View.OnTouc
 		mOriginalOnTouchListener = originalTouchListener;
 	}
 	
+	/**
+	 * we shouldn't intercept if we're already recording the click listener.
+	 */
+	public boolean shouldIntercept(View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
+		if (super.shouldIntercept(v)) {
+			View.OnTouchListener originalOnTouchListener = ListenerIntercept.getTouchListener(v);
+			return !(originalOnTouchListener instanceof RecordOnTouchListener);
+		}
+		return false;
+	}
+
+	/**
+	 * record the actual touch event
+	 * <touch_down/touch_up/touch_move>:time,x,y,<reference>,<description>
+	 * 
+	 */
 	public boolean onTouch(View v, MotionEvent event) {
 		boolean fConsumeEvent = false;
-		if (!mfReentryBlock) {
-			mfReentryBlock = true;
+		boolean fReentryBlock = getReentryBlock();
+		if (!RecordListener.getEventBlock()) {
+			setEventBlock(true);
 			try {
 				String eventName = Constants.EventTags.UNKNOWN;
 				if (event.getAction() == MotionEvent.ACTION_DOWN) {
@@ -47,15 +65,17 @@ public class RecordOnTouchListener extends RecordListener implements View.OnTouc
 				String logString = event.getX() + "," + event.getY() + "," +
 								   mEventRecorder.getViewReference().getReference(v) + "," + description;
 				mEventRecorder.writeRecord(eventName, logString);
-				if (mOriginalOnTouchListener != null) {
-					fConsumeEvent = mOriginalOnTouchListener.onTouch(v, event);
-				} 
 			} catch (Exception ex) {
 				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, v, "on touch");
 				ex.printStackTrace();
 			}
-			mfReentryBlock = false;
 		}
+		if (!fReentryBlock) {
+			if (mOriginalOnTouchListener != null) {
+				fConsumeEvent = mOriginalOnTouchListener.onTouch(v, event);
+			} 
+		}
+		setEventBlock(false);
 		return fConsumeEvent;
 	}
 }

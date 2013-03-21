@@ -22,19 +22,22 @@ public class RecordDialogOnShowListener extends RecordListener implements Dialog
 	}
 	
 	public void onShow(DialogInterface dialog) {
-		if (!mfReentryBlock) {
-			mfReentryBlock = true;
+		boolean fReentryBlock = getReentryBlock();
+		if (!RecordListener.getEventBlock()) {
+			setEventBlock(true);
 			try {
 				String description = getDescription(dialog);
 				mEventRecorder.writeRecord(Constants.EventTags.SHOW_DIALOG, description);
-				if (mOriginalOnShowListener != null) {
-					mOriginalOnShowListener.onShow(dialog);
-				} 
 			} catch (Exception ex) {
 				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, "on show dialog");
 				ex.printStackTrace();
 			}
-			mfReentryBlock = false;
 		}
+		if (!fReentryBlock) {
+			if (mOriginalOnShowListener != null) {
+				mOriginalOnShowListener.onShow(dialog);
+			} 
+		}
+		setEventBlock(false);
 	}
 }
