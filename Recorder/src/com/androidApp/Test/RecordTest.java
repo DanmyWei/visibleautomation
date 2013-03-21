@@ -21,6 +21,8 @@ import android.os.SystemClock;
 import android.test.ActivityInstrumentationTestCase2;
 import android.util.Log;
 import android.view.Window;
+import android.widget.AutoCompleteTextView;
+import android.widget.PopupWindow;
 import android.widget.Spinner;
 
 import com.androidApp.EventRecorder.EventRecorder;
@@ -44,11 +46,13 @@ import com.androidApp.Utility.TestUtils;
 public abstract class RecordTest<T extends Activity> extends ActivityInstrumentationTestCase2<T> {
 	private static final String 	TAG = "RecordTest";
 	private static final long		DIALOG_SYNC_TIME = 50;				// test for dialogs 20x second.
+	private static final long		POPUP_WINDOW_SYNC_TIME = 50;		// test for popups 20x second.
 	private EventRecorder 			mRecorder;
 	private Thread					mActivityThread;					// to track the activity monitor thread
 	private Dialog					mCurrentDialog = null;				// track the current dialog, so we don't re-record it.
+	private PopupWindow				mCurrentPopupWindow = null;			// current popup window, which is like the current dialog, but different
 	private boolean					mFinished = false;					// have the loops finished?
-	private Timer					mDialogScanTimer = null;			// timer for scanning for new dialogs to set intercept handlers on.
+	private Timer					mScanTimer = null;					// timer for scanning for new dialogs to set intercept handlers on.
 	private ActivityMonitor 		mActivityMonitor = null;			
 	Stack<WeakReference<Activity>> 	mActivityStack = new Stack<WeakReference<Activity>>();
 	
@@ -60,6 +64,7 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	public RecordTest(Class<T> activityClass) throws IOException {
 		super(activityClass);
 		initRecorder();
+		mScanTimer = new Timer();
 	}
 	
 	public abstract void initializeResources();
@@ -87,6 +92,7 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 		initializeResources();
 		setupActivityStackListener();
 		setupDialogListener();
+		setupPopupWindowListener();
 		Instrumentation instrumentation = getInstrumentation();
 		Intent intent = new Intent(Intent.ACTION_MAIN);
 		intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -109,26 +115,52 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	 * the recording interceptors on it.
 	 */
 	private void setupDialogListener() {
-		mDialogScanTimer = new Timer();
 		TimerTask scanTask = new TimerTask() {
 			@Override
 			public void run() {
-				Activity activity = RecordTest.this.getCurrentActivity();
-				Dialog dialog = TestUtils.findDialog(activity);
-				if ((dialog != null) && (dialog != RecordTest.this.getCurrentDialog())) {
-					List<Spinner> spinnerList = RecordTest.this.getRecorder().getSpinnerList();
-					Spinner spinner = null;
-					try {
-						spinner = RecordTest.matchSpinnerDialog(spinnerList, dialog);
-					} catch (Exception ex) {
-						ex.printStackTrace();
+				try {
+					Activity activity = RecordTest.this.getCurrentActivity();
+					if (activity != null) {
+						Dialog dialog = TestUtils.findDialog(activity);
+						if ((dialog != null) && (dialog != RecordTest.this.getCurrentDialog())) {
+							RecordTest.this.getRecorder().interceptDialog(dialog);
+							RecordTest.this.setCurrentDialog(dialog);
+						}
 					}
-					RecordTest.this.getRecorder().interceptDialog(dialog, spinner);
-					RecordTest.this.setCurrentDialog(dialog);
+				} catch (Exception ex) {
+					ex.printStackTrace();
 				}
 			}	
 		};
-		mDialogScanTimer.schedule(scanTask, 0, DIALOG_SYNC_TIME);
+		mScanTimer.schedule(scanTask, 0, DIALOG_SYNC_TIME);
+	}
+	
+	/**
+	 * similar to listener for dialogs, except that it searches for popup windows.
+	 */
+	private void setupPopupWindowListener() {
+		TimerTask scanTask = new TimerTask() {
+			@Override
+			public void run() {
+				try {
+					Activity activity = RecordTest.this.getCurrentActivity();
+					if (activity !=  null) {
+						PopupWindow popupWindow = TestUtils.findPopupWindow(activity);
+						if ((popupWindow != null) && (popupWindow != RecordTest.this.getCurrentPopupWindow())) {
+							RecordTest.this.getRecorder().writeRecord(Constants.EventTags.CREATE_POPUP_WINDOW, "create popup window");
+							RecordTest.this.getRecorder().interceptPopupWindow(popupWindow);
+							RecordTest.this.getRecorder().intercept(popupWindow.getContentView());
+							if (popupWindow != null) {
+								RecordTest.this.setCurrentPopupWindow(popupWindow);
+							}
+						}
+					}
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
+			}	
+		};
+		mScanTimer.schedule(scanTask, 0, POPUP_WINDOW_SYNC_TIME);
 	}
 
 	/**
@@ -147,6 +179,13 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 		return dialog;
 	}
 	
+	public static PopupWindow getAutoCompletePopup(AutoCompleteTextView textView) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
+		Object autoCompletePopup = FieldUtils.getFieldValue(textView, AutoCompleteTextView.class, Constants.Fields.POPUP);
+		Class listWindowPopupClass = Class.forName(Constants.Classes.LIST_WINDOW_POPUP);
+		PopupWindow popupWindow = (PopupWindow) FieldUtils.getFieldValue(autoCompletePopup, listWindowPopupClass, Constants.Fields.POPUP);
+		return popupWindow;
+	}
+	
 	/**
 	 * given the list of spinners, see if the dialog is the popup for one of them
 	 * @param spinnerList list of spinners assocated with this activity.
@@ -156,11 +195,13 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	 * @throws NoSuchFieldException
 	 * @throws ClassNotFoundException
 	 */
-	public static Spinner matchSpinnerDialog(List<Spinner> spinnerList, Dialog dialog)  throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
+	public static Spinner matchSpinnerDialog(List<Spinner> spinnerList, Dialog dialog) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
 		for (Spinner spinner : spinnerList) {
 			Dialog spinnerPopup = RecordTest.getSpinnerPopup(spinner);
 			Window spinnerPopupWindow = spinnerPopup.getWindow();
 			Window dialogWindow = dialog.getWindow();
+		
+			// TODO: de dumb-ass this.
 			if (spinnerPopupWindow == dialogWindow) {
 				return spinner;
 			}
@@ -171,11 +212,25 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 		return null;
 	}
 	
+	public static AutoCompleteTextView matchAutoCompleteDialog(List<AutoCompleteTextView> autoCompleteTextViewList, PopupWindow popupWindow) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
+		for (AutoCompleteTextView textView : autoCompleteTextViewList) {
+			PopupWindow autoCompletePopupWindow = RecordTest.getAutoCompletePopup(textView);
+		
+			// TODO: de dumb-ass this.
+			if (autoCompletePopupWindow == popupWindow) {
+				return textView;
+			}
+			if (autoCompletePopupWindow.equals(popupWindow)) {
+				return textView;
+			}
+		}
+		return null;
+	}
 	/**
 	 * shutdown the dialog scan timertask once the activity stack has been emptied
 	 */
-	public void shutdownDialogScanTimer() {
-		mDialogScanTimer.cancel();
+	public void shutdownScanTimer() {
+		mScanTimer.cancel();
 	}
 	
 	/**
@@ -192,6 +247,22 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	 */
 	public Dialog getCurrentDialog() {
 		return mCurrentDialog;
+	}
+	
+	/**
+	 * get the current popup window
+	 * @return popup window
+	 */
+	public PopupWindow getCurrentPopupWindow() {
+		return mCurrentPopupWindow;
+	}
+	
+	/**
+	 * set the current popup window
+	 * @param popupWindow
+	 */
+	public void setCurrentPopupWindow(PopupWindow popupWindow) {
+		mCurrentPopupWindow = popupWindow;
 	}
 	
 	/**
@@ -240,7 +311,7 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 					}
 				}
 				Log.i(TAG, "activity loop ended finished = " + RecordTest.this.mFinished);
-				RecordTest.this.shutdownDialogScanTimer();
+				RecordTest.this.shutdownScanTimer();
 			}
 		};
 		mActivityThread = new Thread(runnable, "activityMonitorThread");
@@ -341,7 +412,6 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 		}
 		
 		public void run() {
-			RecordTest.this.mRecorder.clearSpinnerList();
 			RecordTest.this.mRecorder.intercept(mActivity);
 		}
 	}
