@@ -220,9 +220,7 @@ public class EventRecorder {
 						absListView.setOnItemClickListener(recordItemClickListener);		
 					}				
 					// special case for spinners, which receive onItemSelected, but not onItemClick events.
-					// if (v instanceof Spinner) {
-					if (true) {
-						// Spinner spinner = (Spinner) v;
+					 if (v instanceof Spinner) {
 						AdapterView.OnItemSelectedListener originalSelectedItemListener = ListenerIntercept.getItemSelectedListener(absListView);
 						if (!(originalSelectedItemListener instanceof RecordOnItemSelectedListener)) {
 							RecordOnItemSelectedListener recordItemSelectedListener = new RecordOnItemSelectedListener(this, originalSelectedItemListener);
