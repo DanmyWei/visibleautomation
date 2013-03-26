@@ -2,6 +2,7 @@ package %CLASSPATH%Test;
 
 import %CLASSPATH%;
 import com.androidApp.util.RobotiumUtils;
+import com.androidApp.util.TestException;
 import com.jayway.android.robotium.solo.Solo;
 import android.test.ActivityInstrumentationTestCase2;
 import android.view.View;
@@ -26,12 +27,4 @@ public class %TESTCLASSNAME% extends ActivityInstrumentationTestCase2<%CLASSNAME
    	public void tearDown() throws Exception {
         solo.finishOpenedActivities();
   	}
-  	
-  	// for exceptions thrown by test cases.
-  	protected class TestException extends Exception {
-  		static final long serialVersionUID = 0;
-  		
-  		public TestException(String s) {
-  			super(s);
-  		}
-  	}	
+  
