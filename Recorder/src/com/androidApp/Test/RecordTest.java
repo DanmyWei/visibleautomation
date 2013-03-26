@@ -12,14 +12,19 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.app.Instrumentation;
 import android.app.Instrumentation.ActivityMonitor;
+import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.content.res.Configuration;
+import android.hardware.SensorManager;
 import android.os.SystemClock;
 import android.test.ActivityInstrumentationTestCase2;
 import android.util.Log;
+import android.view.OrientationEventListener;
+import android.view.Surface;
 import android.view.Window;
 import android.widget.AutoCompleteTextView;
 import android.widget.PopupWindow;
@@ -47,13 +52,13 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	private static final String 	TAG = "RecordTest";
 	private static final long		DIALOG_SYNC_TIME = 50;				// test for dialogs 20x second.
 	private static final long		POPUP_WINDOW_SYNC_TIME = 50;		// test for popups 20x second.
+	private static final long 		INTERCEPTOR_WAIT_MSEC = 1000;
 	private EventRecorder 			mRecorder;
-	private Thread					mActivityThread;					// to track the activity monitor thread
 	private Dialog					mCurrentDialog = null;				// track the current dialog, so we don't re-record it.
 	private PopupWindow				mCurrentPopupWindow = null;			// current popup window, which is like the current dialog, but different
 	private boolean					mFinished = false;					// have the loops finished?
 	private Timer					mScanTimer = null;					// timer for scanning for new dialogs to set intercept handlers on.
-	private ActivityMonitor 		mActivityMonitor = null;			
+	private ActivityInterceptor		mActivityInterceptor = null;
 	Stack<WeakReference<Activity>> 	mActivityStack = new Stack<WeakReference<Activity>>();
 	
 	// initialize the event recorder
@@ -63,8 +68,6 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	
 	public RecordTest(Class<T> activityClass) throws IOException {
 		super(activityClass);
-		initRecorder();
-		mScanTimer = new Timer();
 	}
 	
 	public abstract void initializeResources();
@@ -81,6 +84,14 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	public EventRecorder getRecorder() {
 		return mRecorder;
 	}
+	
+	/**
+	 * return the reference to the activity interceptor
+	 * @return activity interceptor reference
+	 */
+	public ActivityInterceptor getActivityInterceptor() {
+		return mActivityInterceptor;
+	}
 
 	/**
 	 * initialize the event recorder, the activity monitor, the stack of activities, and the background thread that populates
@@ -89,16 +100,25 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	public void setUp() throws NameNotFoundException, IOException, Exception { 
 		super.setUp();	
 		initRecorder();
+		mScanTimer = new Timer();
+		mActivityInterceptor = new ActivityInterceptor(getRecorder());
 		initializeResources();
-		setupActivityStackListener();
 		setupDialogListener();
 		setupPopupWindowListener();
 		Instrumentation instrumentation = getInstrumentation();
+		mActivityInterceptor.setupActivityStackListener(instrumentation);
+		// need to make sure the activity monitor is set up before the first activity is fired.
+		try {
+			synchronized(mActivityInterceptor) {
+				mActivityInterceptor.wait(INTERCEPTOR_WAIT_MSEC);
+			}
+		} catch (InterruptedException iex) {
+		}
 		Intent intent = new Intent(Intent.ACTION_MAIN);
 		intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 		intent.setClassName(instrumentation.getTargetContext(), getActivity().getClass().getName());			// so we can get the package name to write in the manifest and classpath
 		String packageName = getPackageName(getActivity());
-		RecordTest.this.getRecorder().writeRecord(Constants.EventTags.PACKAGE, packageName);
+		getRecorder().writeRecord(Constants.EventTags.PACKAGE, packageName);
 		instrumentation.startActivitySync(intent);
 	}
 
@@ -106,7 +126,6 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	public void tearDown() throws Exception {
 		Log.i(TAG, "tear down");
 	}
-	
 			
 	/** 
 	 * the unfortunate side-effect of using the blocking listener in the activity stack listener
@@ -119,11 +138,11 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 			@Override
 			public void run() {
 				try {
-					Activity activity = RecordTest.this.getCurrentActivity();
+					Activity activity = RecordTest.this.getActivityInterceptor().getCurrentActivity();
 					if (activity != null) {
 						Dialog dialog = TestUtils.findDialog(activity);
 						if ((dialog != null) && (dialog != RecordTest.this.getCurrentDialog())) {
-							RecordTest.this.getRecorder().interceptDialog(dialog);
+							activity.runOnUiThread(new InterceptDialogRunnable(dialog));
 							RecordTest.this.setCurrentDialog(dialog);
 						}
 					}
@@ -143,13 +162,12 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 			@Override
 			public void run() {
 				try {
-					Activity activity = RecordTest.this.getCurrentActivity();
+					Activity activity = RecordTest.this.getActivityInterceptor().getCurrentActivity();
 					if (activity !=  null) {
 						PopupWindow popupWindow = TestUtils.findPopupWindow(activity);
 						if ((popupWindow != null) && (popupWindow != RecordTest.this.getCurrentPopupWindow())) {
 							RecordTest.this.getRecorder().writeRecord(Constants.EventTags.CREATE_POPUP_WINDOW, "create popup window");
-							RecordTest.this.getRecorder().interceptPopupWindow(popupWindow);
-							RecordTest.this.getRecorder().intercept(popupWindow.getContentView());
+							activity.runOnUiThread(new InterceptPopupWindowRunnable(popupWindow));
 							if (popupWindow != null) {
 								RecordTest.this.setCurrentPopupWindow(popupWindow);
 							}
@@ -161,70 +179,6 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 			}	
 		};
 		mScanTimer.schedule(scanTask, 0, POPUP_WINDOW_SYNC_TIME);
-	}
-
-	/**
-	 * using reflection, get the popup dialog associated with this spinner.
-	 * basically spinner.mPopup.mPopup
-	 * @param spinner spinner to extract popup from.
-	 * @return Dialog, or null if there's no popup
-	 * @throws IllegalAccessException
-	 * @throws NoSuchFieldException
-	 * @throws ClassNotFoundException
-	 */
-	public static Dialog getSpinnerPopup(Spinner spinner) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
-		Object spinnerDialogPopup = FieldUtils.getFieldValue(spinner, Spinner.class, Constants.Fields.POPUP);
-		Class spinnerDialogPopupClass = Class.forName(Constants.Classes.SPINNER_DIALOG_POPUP);
-		Dialog dialog = (Dialog) FieldUtils.getFieldValue(spinnerDialogPopup, spinnerDialogPopupClass, Constants.Fields.POPUP);
-		return dialog;
-	}
-	
-	public static PopupWindow getAutoCompletePopup(AutoCompleteTextView textView) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
-		Object autoCompletePopup = FieldUtils.getFieldValue(textView, AutoCompleteTextView.class, Constants.Fields.POPUP);
-		Class listWindowPopupClass = Class.forName(Constants.Classes.LIST_WINDOW_POPUP);
-		PopupWindow popupWindow = (PopupWindow) FieldUtils.getFieldValue(autoCompletePopup, listWindowPopupClass, Constants.Fields.POPUP);
-		return popupWindow;
-	}
-	
-	/**
-	 * given the list of spinners, see if the dialog is the popup for one of them
-	 * @param spinnerList list of spinners assocated with this activity.
-	 * @param dialog currently displayed dialog
-	 * @return Spinner or null.
-	 * @throws IllegalAccessException
-	 * @throws NoSuchFieldException
-	 * @throws ClassNotFoundException
-	 */
-	public static Spinner matchSpinnerDialog(List<Spinner> spinnerList, Dialog dialog) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
-		for (Spinner spinner : spinnerList) {
-			Dialog spinnerPopup = RecordTest.getSpinnerPopup(spinner);
-			Window spinnerPopupWindow = spinnerPopup.getWindow();
-			Window dialogWindow = dialog.getWindow();
-		
-			// TODO: de dumb-ass this.
-			if (spinnerPopupWindow == dialogWindow) {
-				return spinner;
-			}
-			if (spinnerPopupWindow.equals(dialogWindow)) {
-				return spinner;
-			}
-		}
-		return null;
-	}
-	
-	public static AutoCompleteTextView matchAutoCompleteDialog(List<AutoCompleteTextView> autoCompleteTextViewList, PopupWindow popupWindow) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
-		for (AutoCompleteTextView textView : autoCompleteTextViewList) {
-			PopupWindow autoCompletePopupWindow = RecordTest.getAutoCompletePopup(textView);
-		
-			// TODO: de dumb-ass this.
-			if (autoCompletePopupWindow == popupWindow) {
-				return textView;
-			}
-			if (autoCompletePopupWindow.equals(popupWindow)) {
-				return textView;
-			}
-		}
-		return null;
 	}
 	/**
 	 * shutdown the dialog scan timertask once the activity stack has been emptied
@@ -264,133 +218,12 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	public void setCurrentPopupWindow(PopupWindow popupWindow) {
 		mCurrentPopupWindow = popupWindow;
 	}
-	
-	/**
-	 * activity monitor hits always come in pairs.
-	 * if the activities are the same (A, A), then it is going forward to that activity (A)
-	 * if the activities are different (A, B) then it is going backwards from B to A 
-	 */
-	private void setupActivityStackListener() {
-		IntentFilter filter = null;
+			
 		
-		// need to initialize this before the runnable, so we don't miss the first activity
-		mActivityMonitor = getInstrumentation().addMonitor(filter, null, false);
-		mActivityStack = new Stack<WeakReference<Activity>>();
-		Runnable runnable = new Runnable() {
-			public void run() {
-				boolean fStart = true;
-				while (fStart || !RecordTest.this.isActivityStackEmpty()) {
-					Activity activityA = RecordTest.this.mActivityMonitor.waitForActivity();
-					if (fStart) {
-						RecordTest.this.pushActivityOnStack(activityA);
-						// intercept events on the newly created activity.
-						activityA.runOnUiThread(new InterceptRunnable(activityA));
-						String logMsg = activityA.getClass().getName() + "," + activityA.toString();
-						RecordTest.this.getRecorder().writeRecord(Constants.EventTags.ACTIVITY_FORWARD, logMsg);
-						fStart = false;
-					} else {
-						Activity activityB = RecordTest.this.mActivityMonitor.waitForActivity();
-						if (RecordTest.this.inActivityStack(activityB)) {
-							Activity previousActivity = RecordTest.this.popActivityFromStack();
-							previousActivity = RecordTest.this.peekActivityOnStack();
-							if (previousActivity != null) {
-								String logMsg = previousActivity.getClass().getName() + "," + previousActivity.toString();
-								RecordTest.this.getRecorder().writeRecord(Constants.EventTags.ACTIVITY_BACK, logMsg);
-							} else {
-								long time = SystemClock.uptimeMillis();
-								String logMsg = Constants.EventTags.ACTIVITY_BACK + ":" + time;
-								RecordTest.this.getRecorder().writeRecord(logMsg);
-							} 
-						} else {
-							RecordTest.this.pushActivityOnStack(activityB);
-							// intercept events on the newly created activity.
-							activityB.runOnUiThread(new InterceptRunnable(activityB));
-							String logMsg =  activityB.getClass().getName() + "," + activityB.toString();
-							RecordTest.this.getRecorder().writeRecord(Constants.EventTags.ACTIVITY_FORWARD, logMsg);
-						}
-					}
-				}
-				Log.i(TAG, "activity loop ended finished = " + RecordTest.this.mFinished);
-				RecordTest.this.shutdownScanTimer();
-			}
-		};
-		mActivityThread = new Thread(runnable, "activityMonitorThread");
-		mActivityThread.start();
-	}
-	
-	// activity stack methods
-	
-	/**
-	 * push the activity onto the stack of WeakReferences. We use weak reference so we don't actually hold onto the activity
-	 * after it's been finished.
-	 * @param activity activity to add to the stack
-	 */
-	public void pushActivityOnStack(Activity activity) {
-		WeakReference<Activity> ref = new WeakReference<Activity>(activity);
-		mActivityStack.push(ref);
-	}
-	
-	/**
-	 * pop the activity stack, and return the activity that was referenced by the top WeakReference
-	 * @return activity from the top of the stack
-	 */
-	public Activity popActivityFromStack() {
-		WeakReference<Activity> ref = mActivityStack.pop();
-		return ref.get();
-	}
-	
-	/**
-	 * return the activity that's on the top of the stack
-	 * @return top activity
-	 */
-	public Activity peekActivityOnStack() {
-		if (mActivityStack.isEmpty()) {
-			return null;
-		} else {
-			WeakReference<Activity> ref = mActivityStack.peek();
-			return ref.get();
-		}
-	}
-	
-	/***
-	 * scan the activity stack to determine if an activity is in it.  
-	 * @param activity activity to search for
-	 * @return true if the activity is found
-	 */
-	public boolean inActivityStack(Activity activity) {
-		for (WeakReference<Activity> ref : mActivityStack) {
-			if (ref.get() == activity) {
-				return true;
-			}
-		}
-		return false;
-	}
-	
-	/**
-	 * is the activity stack empty?
-	 * @return
-	 */
-	public boolean isActivityStackEmpty() {
-		return mActivityStack.isEmpty();
-	}
-	
-	/**
-	 * get the current activity returned from the activity monitor
-	 * @return current activity
-	 */
-	public Activity getCurrentActivity() {
-		if (!mActivityStack.isEmpty()) {
-			WeakReference<Activity> ref = mActivityStack.peek();
-			return ref.get();
-		} else {
-			return null;
-		}
-	}
-	
 	/**
 	 * get the package name for this activity.
 	 * @param activity
-	 * @return
+	 * @return package name 
 	 * @throws NameNotFoundException 
 	 */
 	private String getPackageName(Activity activity) throws NameNotFoundException {
@@ -404,18 +237,34 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	 * @author matreyno
 	 *
 	 */
-	public class InterceptRunnable implements Runnable {
-		protected Activity mActivity;
+	public class InterceptDialogRunnable implements Runnable {
+		protected Dialog mDialog;
 		
-		public InterceptRunnable(Activity activity) {
-			mActivity = activity;
+		public InterceptDialogRunnable(Dialog dialog) {
+			mDialog = dialog;
 		}
 		
 		public void run() {
-			RecordTest.this.mRecorder.intercept(mActivity);
+			RecordTest.this.mRecorder.interceptDialog(mDialog);
 		}
 	}
 	
+	/**
+	 * same, except for intercepting popup windows
+	 */
+	public class InterceptPopupWindowRunnable implements Runnable {
+		protected PopupWindow mPopupWindow;
+		
+		public InterceptPopupWindowRunnable(PopupWindow popupWindow) {
+			mPopupWindow = popupWindow;
+		}
+		
+		public void run() {
+			RecordTest.this.getRecorder().interceptPopupWindow(mPopupWindow);
+			RecordTest.this.getRecorder().intercept(mPopupWindow.getContentView());
+		}
+	}
+
 	public void testRecord() {
 
 		try {

@@ -541,21 +541,15 @@ public class TestUtils {
 	}
 
 	public static boolean isDialogOrPopup(Activity a, View v) {
-		Context c = v.getContext();
+		Context viewContext = v.getContext();
 		// dialogs use a context theme wrapper, not a context, so we have to extract he context from the theme wrapper's
 		// base context
-		if (c instanceof ContextThemeWrapper) {
-			ContextThemeWrapper ctw = (ContextThemeWrapper) c;
-			c = ctw.getBaseContext();
+		if (viewContext instanceof ContextThemeWrapper) {
+			ContextThemeWrapper ctw = (ContextThemeWrapper) viewContext;
+			viewContext = ctw.getBaseContext();
 		}
-		// if the view has the same context (i.e. is owned by the application), and it's not the application's 
-		// decor view, then a dialog is up.
-		if (c.equals(a.getBaseContext())) {
-			if (v != a.getWindow().getDecorView()) {
-				return true;
-			}
-		}
-		return false;
+		Context activityContext = a;
+		return activityContext.equals(viewContext) && (v != a.getWindow().getDecorView());
 	}
 	/**
 	 * see if this dialog has popped up an activity.
@@ -574,7 +568,7 @@ public class TestUtils {
 					View v = views[iView];
 					if (TestUtils.isDialogOrPopup(activity, v)) {	
 						String className = v.getClass().getCanonicalName();
-						if (className.equals(Constants.Classes.PHONE_DECOR_VIEW)) {
+						if (TestUtils.classNameEquals(className, Constants.Classes.PHONE_DECOR_VIEW)) {
 							Class phoneDecorViewClass = Class.forName(Constants.Classes.PHONE_DECOR_VIEW);
 							Window phoneWindow = (Window) ListenerIntercept.getFieldValue(v, phoneDecorViewClass, Constants.Classes.THIS);
 							Window.Callback callback = phoneWindow.getCallback();
@@ -608,7 +602,7 @@ public class TestUtils {
 					View v = views[iView];
 					if (TestUtils.isDialogOrPopup(activity, v)) {	
 						String className = v.getClass().getCanonicalName();
-						if (className.equals(Constants.Classes.POPUP_VIEW_CONTAINER)) {
+						if (TestUtils.classNameEquals(className, Constants.Classes.POPUP_VIEW_CONTAINER)) {
 							Class popupViewContainerClass = Class.forName(Constants.Classes.POPUP_VIEW_CONTAINER_CREATECLASS);
 							PopupWindow popupWindow = (PopupWindow) ListenerIntercept.getFieldValue(v, popupViewContainerClass, Constants.Classes.THIS);
 							return popupWindow;
@@ -622,4 +616,13 @@ public class TestUtils {
 		return null;		
 	}
 
+	/**
+	 * sometimes they put '$'s in the classname, sometimes they don't
+	 * @param a
+	 * @param b
+	 * @return
+	 */
+	public static boolean classNameEquals(String a, String b) {
+		return a.replace('$', '.').equals(b.replace('$', '.'));
+	}
 }

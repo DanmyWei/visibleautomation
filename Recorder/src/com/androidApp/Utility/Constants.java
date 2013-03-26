@@ -34,6 +34,7 @@ public class Constants {
 		public static final String LIST_WINDOW_POPUP = "android.widget.ListPopupWindow";
 		public static final String LIST_WINDOW_POPUP_DROPDOWN_LIST_VIEW = "android.widget.ListPopupWindow$DropDownListView";
 		public static final String THIS = "this$0";
+		public static final String ACTION_BAR_IMPL = "com.android.internal.app.ActionBarImpl";
 	}
 	
 	// listener field names
@@ -65,6 +66,10 @@ public class Constants {
 		public static final String POPUP_WINDOW_ON_DISMISS_LISTENER = "mOnDismissListener";
 		public static final String WINDOW_MANAGER_FIELD = "mWindowManager";
 		public static final String WINDOW_MANAGER_FIELD_STATIC = "sWindowManager";
+		public static final String CONTENT_VIEW = "mContentView";
+		public static final String ACTION_VIEW = "mActionView";
+		public static final String CONTAINER_VIEW = "mContainerView";
+		public static final String CANCEL_AND_DISMISS_TAKEN = "mCancelAndDismissTaken";
 		
 	}
 	
@@ -116,6 +121,7 @@ public class Constants {
 		public static final String DISMISS_AUTOCOMPLETE_DROPDOWN = "dismiss_autocomplete_dropdown";
 		public static final String DISMISS_POPUP_WINDOW = "dismiss_popup_window";
 		public static final String CREATE_POPUP_WINDOW = "create_popup_window";
+		public static final String ROTATION = "rotation";
 	}
 	
 	// description strings 

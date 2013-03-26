@@ -59,6 +59,22 @@ public class ListenerIntercept {
 		return field.get(o);
 	}
 	
+	
+	/**
+	 * given an object, its class, a fieldName and a value, set the value of that field to the object
+	 * @param o our intended victim
+	 * @param c object class (proletariat, bourgeois, or plutocrat)
+	 * @param fieldName name of the field (it better match)
+	 * @param value value to set
+	 * @throws NoSuchFieldException the field didn't match anything the class had
+	 * @throws IllegalAccessException I hope this never happens
+	 */
+	public static void setFieldValue(Object o, Class c, String fieldName, Object value) throws NoSuchFieldException, IllegalAccessException {
+		Field field = c.getDeclaredField(fieldName);
+		field.setAccessible(true);
+		field.set(o, value);
+	}
+	
 	/**
 	 * currently unused, because it overlaps onClickListener
 	 * @param cb
@@ -275,6 +291,31 @@ public class ListenerIntercept {
 			return null;
 		}
 	}
+	
+	/**
+	 * in dialog fragments, we can't call setOnDismissListener(), so we have to do it serruptiously
+	 * java.lang.IllegalStateException: OnDismissListener is already taken by DialogFragment and can not be replaced.
+	 */
+	
+	public static void setOnDismissListener(Dialog dialog, DialogInterface.OnDismissListener dismissListener) throws NoSuchFieldException, SecurityException, IllegalAccessException  {
+		Message dismissMessage = (Message) getFieldValue(dialog, Dialog.class, Constants.Fields.DIALOG_DISMISS_MESSAGE);
+		if (dismissMessage != null) {
+			dismissMessage.obj = dismissListener;
+		} 
+	}
+	
+	public static void setOnCancelListener(Dialog dialog, DialogInterface.OnCancelListener cancelListener) throws NoSuchFieldException, SecurityException, IllegalAccessException  {
+		Message cancelMessage = (Message) getFieldValue(dialog, Dialog.class, Constants.Fields.DIALOG_CANCEL_MESSAGE);
+		if (cancelMessage != null) {
+			cancelMessage.obj = cancelListener;
+		} 
+	}
+	
+	public static boolean isCancelAndDismissTaken(Dialog dialog) throws NoSuchFieldException, SecurityException, IllegalAccessException  {
+		String sOwner = (String) getFieldValue(dialog, Dialog.class, Constants.Fields.CANCEL_AND_DISMISS_TAKEN);
+		return sOwner != null;
+	}
+
 	/**
 	 * popupWindow dismiss listener.
 	 * @param dialog

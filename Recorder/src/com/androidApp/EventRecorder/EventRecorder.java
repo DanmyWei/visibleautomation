@@ -27,6 +27,7 @@ import com.androidApp.Utility.TestUtils;
 
 
 
+import android.app.ActionBar;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.DialogInterface;
@@ -34,6 +35,7 @@ import android.os.Environment;
 import android.os.SystemClock;
 import android.text.TextWatcher;
 import android.text.method.KeyListener;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
@@ -54,6 +56,7 @@ import android.widget.TextView;
  *
  */
 public class EventRecorder {
+	protected static final String			TAG = "EventRecorder";
 	public static final float				GUESS_IME_HEIGHT = 0.25F;			// guess that IME takes up this amount of the screen.
 	protected BufferedWriter 				mRecordWriter;						// to write the events to file
 	protected int 							mHashCode = 0x0;					// for fast tracking of view tree changes
@@ -94,12 +97,29 @@ public class EventRecorder {
 	}
 
 	// write a record to the output
-	public void writeRecord(String s)  {
+	public synchronized void writeRecord(String s)  {
 		try {
-			mRecordWriter.write(s + "\n");
-			mRecordWriter.flush();
+			if (mRecordWriter != null) {
+				mRecordWriter.write(s);
+				mRecordWriter.newLine();
+				mRecordWriter.flush();
+			} else {
+				Log.e(TAG, "record writer closed writing " + s);
+			}
 		} catch (IOException ioex) {
 			ioex.printStackTrace();
+		}
+	}
+	
+	/**
+	 * close the record writer.
+	 */
+	public synchronized void close() {
+		try {
+			mRecordWriter.close();
+			mRecordWriter = null;
+		} catch (IOException ioex) {
+			
 		}
 	}
 	
@@ -273,13 +293,53 @@ public class EventRecorder {
 		}
 	}
 	
+	/**
+	 * the action bar is not in the activity contentView, so it has to be handled separately
+	 * @param activity activity to intercept
+	 * @param actionBar actionBar
+	 */
+	public void intercept(Activity activity, ActionBar actionBar) {
+        if (actionBar != null) {
+        	View contentView = null;
+        	try {
+        		Class actionBarImplClass = Class.forName(Constants.Classes.ACTION_BAR_IMPL);
+        		contentView = (View) ListenerIntercept.getFieldValue(actionBar, actionBarImplClass, Constants.Fields.CONTAINER_VIEW);
+        	} catch (Exception ex) {
+        		writeRecord(Constants.EventTags.EXCEPTION, "while intercepting the action bar for " + activity.getClass().getName());
+        		ex.printStackTrace();
+        	}
+        	if (contentView != null) {
+            	intercept(contentView);
+            }
+	       	if (actionBar.getCustomView() != null) {
+	        	intercept(actionBar.getCustomView());
+	        }
+	  	}		
+	}
+	
+	/**
+	 * install recorders in the listeners for the views contained in an activity
+	 * @param a
+	 */
 	public void intercept(Activity a) {
-        View v = a.getWindow().getDecorView().findViewById(android.R.id.content);
+		
+		// get the content view for this activity
+		Window w = a.getWindow();
+        View v = w.getDecorView().findViewById(android.R.id.content);
+        
+        // create a hashcode which we can quickly test later, since we don't want to insert recorders just when
+        // the layout has changed, but only when views have been added or removed from the view hierarchy
         mHashCode = EventRecorder.viewTreeHashCode(v);
+        
+        // good stroke of luck, we can listen to layout events on the root view.
         ViewTreeObserver viewTreeObserver = v.getViewTreeObserver();
         viewTreeObserver.addOnGlobalLayoutListener(new OnLayoutInterceptListener(a));
         intercept(v);
-	}
+       
+        ActionBar actionBar = a.getActionBar();
+        intercept(a, actionBar);
+       
+ 	}
 	
 	/**
 	 * when we receive a layout event, set up the record listeners on the view hierarchy.
@@ -292,17 +352,27 @@ public class EventRecorder {
 		}
 		public void onGlobalLayout() {
 	        View contentView = mActivity.getWindow().getDecorView().findViewById(android.R.id.content);
+	        
+	        // this is a terrible hack to see if the IME has been hidden or displayed by this layout.
 	        if ((getFocusedView() != null) && isIMEDisplayed(contentView)) {
 	        	mIMEWasDisplayed = true;
 				writeRecord(Constants.EventTags.SHOW_IME, getFocusedView(), "IME displayed");
 	        } else if (mIMEWasDisplayed && !isIMEDisplayed(contentView)) {
 				writeRecord(Constants.EventTags.HIDE_IME, getFocusedView(), "IME hidden");
 	        }
+	        
+	        // recursively generate the hashcode for this view hierarchy, and re-intercept if it's changed.
 			int hashCode = EventRecorder.viewTreeHashCode(contentView);
 			if (hashCode != mHashCode) {
 				intercept(contentView);
 				mHashCode = hashCode;
 			}
+			
+			// do the action bar, since it doesn't seem to get populated until after the activity was created/resumed
+
+			ActionBar actionBar = mActivity.getActionBar();
+	        intercept(mActivity, actionBar);
+	       
 		}
 	}
 	
@@ -320,34 +390,9 @@ public class EventRecorder {
 	}
 
 	/**
-	 * intercept the listeners associated with a dialog.
-	 * We pass in a spinner, because we want to change the cancel and dismiss events for its dialog popup, and we want to suppress
-	 * click, scroll, touch events in the spinner, since it's all covered by onItemSelected()
-	 * @param dialog
+	 * intercept the contents of a popup window, which isn't in the view hierarchy of an activity.
+	 * @param popupWindow
 	 */
-	public void interceptSpinnerDialog(Dialog dialog) {
-		try {
-			DialogInterface.OnDismissListener originalDismissListener = ListenerIntercept.getOnDismissListener(dialog);
-			if ((originalDismissListener == null) || (originalDismissListener.getClass() != RecordDialogOnDismissListener.class)) {
-				RecordDialogOnDismissListener recordOnDismissListener = new RecordDialogOnDismissListener(this, originalDismissListener, Constants.EventTags.DISMISS_SPINNER_DIALOG);
-				dialog.setOnDismissListener(recordOnDismissListener);
-			}
-			DialogInterface.OnCancelListener originalCancelListener = ListenerIntercept.getOnCancelListener(dialog);
-			if ((originalCancelListener == null) || (originalCancelListener.getClass() != RecordDialogOnCancelListener.class)) {
-				RecordDialogOnCancelListener recordOnCancelListener = new RecordDialogOnCancelListener(this, originalCancelListener, Constants.EventTags.CANCEL_SPINNER_DIALOG);
-				dialog.setOnCancelListener(recordOnCancelListener);
-			}
-		} catch (Exception ex) {
-			try {
-				String description = "Intercepting spinner dialog " +  RecordListener.getDescription(dialog);
-				writeRecord(Constants.EventTags.EXCEPTION, description);
-			} catch (Exception exlog) {
-				writeRecord(Constants.EventTags.EXCEPTION,  "unknown description");
-			}
-			ex.printStackTrace();
-		}
-	}
-	
 	public void interceptPopupWindow(PopupWindow popupWindow) {
 		try {
 			PopupWindow.OnDismissListener originalDismissListener = ListenerIntercept.getOnDismissListener(popupWindow);
@@ -361,17 +406,30 @@ public class EventRecorder {
 		}
 	}
 	
+	/**
+	 * intercept the contents of a dialog.
+	 * @param dialog
+	 */
 	public void interceptDialog(Dialog dialog) {
 		try {
+			boolean fCancelAndDismissTaken = ListenerIntercept.isCancelAndDismissTaken(dialog);
 			DialogInterface.OnDismissListener originalDismissListener = ListenerIntercept.getOnDismissListener(dialog);
 			if ((originalDismissListener == null) || (originalDismissListener.getClass() != RecordDialogOnDismissListener.class)) {
 				RecordDialogOnDismissListener recordOnDismissListener = new RecordDialogOnDismissListener(this, originalDismissListener);
-				dialog.setOnDismissListener(recordOnDismissListener);
+				if (fCancelAndDismissTaken) {
+					ListenerIntercept.setOnDismissListener(dialog, recordOnDismissListener);
+				} else {
+					dialog.setOnDismissListener(recordOnDismissListener);
+				}
 			}
 			DialogInterface.OnCancelListener originalCancelListener = ListenerIntercept.getOnCancelListener(dialog);
 			if ((originalCancelListener == null) || (originalCancelListener.getClass() != RecordDialogOnCancelListener.class)) {
 				RecordDialogOnCancelListener recordOnCancelListener = new RecordDialogOnCancelListener(this, originalCancelListener);
-				dialog.setOnCancelListener(recordOnCancelListener);
+				if (fCancelAndDismissTaken) {
+					ListenerIntercept.setOnCancelListener(dialog, recordOnCancelListener);
+				} else {
+					dialog.setOnCancelListener(recordOnCancelListener);
+				}
 			}
 			Window window = dialog.getWindow();
 			intercept(window.getDecorView());
@@ -385,33 +443,4 @@ public class EventRecorder {
 			ex.printStackTrace();
 		}
 	}
-	
-	public void interceptAutoCompletePopupWindow(AutoCompleteTextView autoComplete, PopupWindow popupWindow) {
-		try {
-			// we would pick up the autoComplete onDismissListener, but that's not available until API level 17
-			PopupWindow.OnDismissListener originalDismissListener = ListenerIntercept.getOnDismissListener(popupWindow);
-			if ((originalDismissListener == null) || (originalDismissListener.getClass() != RecordPopupWindowOnDismissListener.class)) {
-				RecordPopupWindowOnDismissListener recordOnDismissListener = 
-					new RecordPopupWindowOnDismissListener(this, autoComplete, popupWindow, Constants.EventTags.DISMISS_AUTOCOMPLETE_DROPDOWN, originalDismissListener);
-				popupWindow.setOnDismissListener(recordOnDismissListener);
-			}
-			/*
-			AdapterView.OnItemClickListener originalItemClickListener = autoComplete.getOnItemClickListener();
-			if (!(originalItemClickListener instanceof RecordOnItemClickListener)) {
-				RecordOnItemClickListener recordItemClickListener = new RecordOnItemClickListener(this, originalItemClickListener);
-				autoComplete.setOnItemClickListener(recordItemClickListener);		
-			}
-			*/
-		} catch (Exception ex) {
-			try {
-				String description = "Intercepting popup for " +  RecordListener.getDescription(autoComplete);
-				writeRecord(Constants.EventTags.EXCEPTION, description);
-			} catch (Exception exlog) {
-				writeRecord(Constants.EventTags.EXCEPTION, " unknown description");
-			}
-			ex.printStackTrace();
-		}
-
-	}
-
 }

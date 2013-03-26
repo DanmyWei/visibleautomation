@@ -120,12 +120,13 @@ public class RecordListener {
 		} else {
 			View dialogView = window.getDecorView();
 			View dialogTitle = ViewExtractor.getChildByClassName(dialogView, Constants.Classes.DIALOG_TITLE_SIMPLE_NAME);
-			titleString = (String) FieldUtils.getFieldValue(dialogTitle, TextView.class, Constants.Fields.TEXT);
-			if (!StringUtils.isEmpty(titleString)) {
-				return StringUtils.massageString(titleString);
-			} else {
-				return Constants.Description.UNTITLED_DIALOG;
+			if (dialogTitle != null) {
+				titleString = (String) FieldUtils.getFieldValue(dialogTitle, TextView.class, Constants.Fields.TEXT);
+				if (!StringUtils.isEmpty(titleString)) {
+					return StringUtils.massageString(titleString);
+				} 
 			}
+			return Constants.Description.UNTITLED_DIALOG;
 		}
 	}
 	
