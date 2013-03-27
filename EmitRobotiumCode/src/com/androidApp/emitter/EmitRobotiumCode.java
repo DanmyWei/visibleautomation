@@ -501,6 +501,8 @@ public class EmitRobotiumCode {
 						writeDismissAutoCompleteDropdown(tokens, lines);
 					} else if (action.equals(Constants.Events.DISMISS_POPUP_WINDOW)) {
 						writeDismissPopupWindow(tokens, lines);
+					} else if (action.equals(Constants.Events.ROTATION)) {
+						writeRotation(tokens, lines);
 					}
 				}
 				line = nextLine;
@@ -726,6 +728,40 @@ public class EmitRobotiumCode {
 		String dismissPopupTemplate = FileUtility.readTemplate(Constants.Templates.DISMISS_POPUP_WINDOW);
 		dismissPopupTemplate = dismissPopupTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex++));
 		lines.add(new LineAndTokens(tokens, dismissPopupTemplate));
+	}
+	
+	
+	/**
+	 * rotation:81589683,90,com.example.android.apis.ApiDemos,com.example.android.apis.ApiDemos@4120f1b0
+	 * @param tokens parsed from a line in events.tt
+	 * @param lines lines output list of java instructions
+	 * @throws IOException if the template file can't be read.
+	 * @throws EmitterException
+	 */
+	public void writeRotation(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
+		String rotationTemplate = FileUtility.readTemplate(Constants.Templates.ROTATE);
+		int rotation = 0;
+		try {
+			rotation = Integer.parseInt(tokens.get(2));
+		} catch (NumberFormatException nfex) {
+			throw new EmitterException("Rotation value " + tokens.get(2) + " failed to parse");
+		}
+		String orientationConstant = "Surface.ROTATION_0";
+		if (rotation == 0) {
+			orientationConstant = "Surface.ROTATION_0";
+		} else if (rotation == 90) {
+			orientationConstant = "Surface.ROTATION_0";
+		} else if (rotation == 180) {
+			orientationConstant = "Surface.ROTATION_0";
+		} else if (rotation == 270) {
+			orientationConstant = "Surface.ROTATION_0";
+		} else {
+			throw new EmitterException("Rotation value " + rotation + " is not 0,90,180,270");
+		}
+		String fullDescription = "rotate the screen " + rotation + " degrees";
+		rotationTemplate = rotationTemplate.replace(Constants.VariableNames.ORIENTATION, orientationConstant);
+		rotationTemplate = rotationTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
+		lines.add(new LineAndTokens(tokens, rotationTemplate));
 	}
 	
 	/**

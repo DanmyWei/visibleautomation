@@ -9,6 +9,7 @@ import android.view.View;
 import java.util.ArrayList;
 import junit.framework.TestCase;
 import android.app.Activity;
+import android.view.Surface;
 
 public class %TESTCLASSNAME% extends ActivityInstrumentationTestCase2<%CLASSNAME%> {
   	private Solo solo;
