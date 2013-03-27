@@ -16,9 +16,15 @@ import android.view.Display;
 import android.view.Surface;
 
 
+/**
+ * class for intercepting activity events
+ * @author Matthew
+ *
+ */
 public class ActivityInterceptor {
 	protected static final String 	TAG = "ActivityInterceptor";
 	protected EventRecorder			mEventRecorder;						// reference to the event record
+	protected ViewInterceptor		mViewInterceptor;
 	protected ActivityMonitor		mActivityMonitor;					// returns on activity event
 	protected Stack<ActivityState>	mActivityStack;						// stack of activities and state
 	private Thread					mActivityThread;					// to track the activity monitor thread
@@ -65,12 +71,17 @@ public class ActivityInterceptor {
 		}
 	}
 	
-	public ActivityInterceptor(EventRecorder recorder) {
+	public ActivityInterceptor(EventRecorder recorder, ViewInterceptor viewInterceptor) {
 		mEventRecorder = recorder;
+		mViewInterceptor = viewInterceptor;
 	}
 	
 	public EventRecorder getRecorder() {
 		return mEventRecorder;
+	}
+	
+	public ViewInterceptor getViewInterceptor() {
+		return mViewInterceptor;
 	}
 	
 	/**
@@ -177,7 +188,7 @@ public class ActivityInterceptor {
 	 */
 	public void recordRotation(EventRecorder recorder, Activity activityA, int newRotation) {
 		Activity activityB = mActivityMonitor.waitForActivity();
-		writeRotation(activityB, newRotation);
+		recorder.writeRotation(activityB, newRotation);
 		replaceLastActivity(activityB);
 		Activity activityBAgain = mActivityMonitor.waitForActivity();
 		if (activityBAgain != activityB) {
@@ -235,23 +246,6 @@ public class ActivityInterceptor {
 		activityB.runOnUiThread(new InterceptRunnable(activityB));
 		String logMsg =  activityB.getClass().getName() + "," + activityB.toString();
 		recorder.writeRecord(Constants.EventTags.ACTIVITY_FORWARD, logMsg);
-	}
-
-
-
-	public void writeRotation(Activity activity, int rotation) {
-		int rotationValue = 0;
-		if (rotation == Surface.ROTATION_0) {
-			rotationValue = 0;
-		} else if (rotation == Surface.ROTATION_90) {
-			rotationValue = 90;
-		} else if (rotation == Surface.ROTATION_180) {
-			rotationValue = 180;
-		} else if (rotation == Surface.ROTATION_270) {
-			rotationValue = 270;
-		}
-		String logMsg = Integer.toString(rotationValue) + "," + activity.getClass().getName() + "," + activity.toString();
-		mEventRecorder.writeRecord(Constants.EventTags.ROTATION, logMsg);
 	}
 
 	/**
@@ -346,7 +340,7 @@ public class ActivityInterceptor {
 		}
 		
 		public void run() {
-			ActivityInterceptor.this.getRecorder().intercept(mActivity);
+			ActivityInterceptor.this.getViewInterceptor().intercept(mActivity);
 		}
 	}
 

@@ -54,6 +54,7 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	private static final long		POPUP_WINDOW_SYNC_TIME = 50;		// test for popups 20x second.
 	private static final long 		INTERCEPTOR_WAIT_MSEC = 1000;
 	private EventRecorder 			mRecorder;
+	private ViewInterceptor			mViewInterceptor;
 	private Dialog					mCurrentDialog = null;				// track the current dialog, so we don't re-record it.
 	private PopupWindow				mCurrentPopupWindow = null;			// current popup window, which is like the current dialog, but different
 	private boolean					mFinished = false;					// have the loops finished?
@@ -64,6 +65,7 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	// initialize the event recorder
 	public void initRecorder() throws IOException {
 		mRecorder = new EventRecorder("events.txt");
+		mViewInterceptor = new ViewInterceptor(mRecorder);
 	}
 	
 	public RecordTest(Class<T> activityClass) throws IOException {
@@ -74,15 +76,19 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	
 	// add the resource id references for id's and strings.
 	public void addRdotID(Object rdotid) {
-		mRecorder.addRdotID(rdotid);
+		getRecorder().addRdotID(rdotid);
 	}
 	
 	public void addRdotString(Object rdotstring) {
-		mRecorder.addRdotString(rdotstring);
+		getRecorder().addRdotString(rdotstring);
 	}
 	
 	public EventRecorder getRecorder() {
 		return mRecorder;
+	}
+	
+	public ViewInterceptor getViewInterceptor() {
+		return mViewInterceptor;
 	}
 	
 	/**
@@ -101,7 +107,7 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 		super.setUp();	
 		initRecorder();
 		mScanTimer = new Timer();
-		mActivityInterceptor = new ActivityInterceptor(getRecorder());
+		mActivityInterceptor = new ActivityInterceptor(getRecorder(), getViewInterceptor());
 		initializeResources();
 		setupDialogListener();
 		setupPopupWindowListener();
@@ -245,7 +251,7 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 		}
 		
 		public void run() {
-			RecordTest.this.mRecorder.interceptDialog(mDialog);
+			RecordTest.this.getViewInterceptor().interceptDialog(mDialog);
 		}
 	}
 	
@@ -260,8 +266,8 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 		}
 		
 		public void run() {
-			RecordTest.this.getRecorder().interceptPopupWindow(mPopupWindow);
-			RecordTest.this.getRecorder().intercept(mPopupWindow.getContentView());
+			RecordTest.this.getViewInterceptor().interceptPopupWindow(mPopupWindow);
+			RecordTest.this.getViewInterceptor().intercept(mPopupWindow.getContentView());
 		}
 	}
 
