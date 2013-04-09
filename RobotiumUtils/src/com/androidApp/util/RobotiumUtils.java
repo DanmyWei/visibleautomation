@@ -373,4 +373,30 @@ public class RobotiumUtils {
 		}
 		throw new TestException("failed to find popup window to dismiss");
 	}
+	
+	public static void verifyPopupWindowDimissed(Activity activity, PopupWindow dismissedPopupWindow) throws TestException {
+		verifyPopupWindowDismissed(activity, dismissedPopupWindow, VIEW_TIMEOUT_MSEC);
+	}
+
+	/**
+	 * verify that there are no popups displayed.
+	 * NOTE: What if another popup is displayed immediately?
+	 * @param activity
+	 * @param waitMsec
+	 * @return
+	 * @throws TestException
+	 */
+	public static void verifyPopupWindowDismissed(Activity activity, PopupWindow dismissedPopupWindow, long waitMsec) throws TestException {
+		while (waitMsec > 0) {
+			PopupWindow popupWindow = ViewExtractor.findPopupWindow(activity);
+			if ((popupWindow == null) || (dismissedPopupWindow != popupWindow)) {
+				return;
+			}
+			try {
+				Thread.sleep(WAIT_INCREMENT_MSEC);
+			} catch (InterruptedException iex) {}
+			waitMsec -= WAIT_INCREMENT_MSEC;
+		}
+		throw new TestException("a popup window is displayed when it shouldn't be");
+	}
 }
