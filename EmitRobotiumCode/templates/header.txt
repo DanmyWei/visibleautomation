@@ -2,6 +2,7 @@ package %CLASSPATH%Test;
 
 import %CLASSPATH%;
 import com.androidApp.util.RobotiumUtils;
+import com.androidApp.util.ViewExtractor;
 import com.androidApp.util.TestException;
 import com.jayway.android.robotium.solo.Solo;
 import android.test.ActivityInstrumentationTestCase2;
@@ -10,6 +11,7 @@ import java.util.ArrayList;
 import junit.framework.TestCase;
 import android.app.Activity;
 import android.view.Surface;
+import android.widget.PopupWindow;
 
 public class %TESTCLASSNAME% extends ActivityInstrumentationTestCase2<%CLASSNAME%> {
   	private Solo solo;

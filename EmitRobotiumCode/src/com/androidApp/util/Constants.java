@@ -31,8 +31,10 @@ public class Constants {
 		public static final String ITEM_LONG_CLICK = "item_long_click";
 		public static final String ACTIVITY_FORWARD = "activity_forward";
 		public static final String ACTIVITY_BACK = "activity_back";
+		public static final String ACTIVITY_BACK_KEY = "activity_back_key";
 		public static final String CLASS = "class";	
 		public static final String DISMISS_DIALOG = "dismiss_dialog";
+		public static final Object DISMISS_DIALOG_BACK_KEY = "dismiss_dialog_back_key";
 		public static final String CANCEL_DIALOG = "cancel_dialog";
 		public static final String ITEM_SELECTED = "item_selected";
 		public static final String SHOW_IME = "show_ime";	
@@ -40,7 +42,11 @@ public class Constants {
 		public static final String DISMISS_AUTOCOMPLETE_DROPDOWN = "dismiss_autocomplete_dropdown";
 		public static final String CREATE_POPUP_WINDOW = "create_popup_window";
 		public static final String DISMISS_POPUP_WINDOW = "dismiss_popup_window";
-		
+		public static final Object DISMISS_POPUP_WINDOW_BACK_KEY = "dismiss_popup_window_back_key";
+		public static final String ROTATION = "rotation";
+		public static final Object MENU_ITEM_CLICK = "menu_item_click";
+		public static final Object POPUP_MENU_ITEM_CLICK = "popup_menu_item_click";
+
 	}
 	public static class Templates {
 
@@ -51,6 +57,7 @@ public class Constants {
 		public static final String CLICK_IN_LIST = "click_in_list.txt";
 		public static final String SCROLL_LIST = "scroll_list.txt";
 		public static final String DIALOG_CLOSE_TEMPLATE = "dialog_close_template.txt";
+		public static final String DIALOG_BACK_KEY_CLOSE_TEMPLATE = "dialog_back_key_close_template.txt";
 		public static final String CLICK_LIST_ITEM = "click_list_item.txt";
 		public static final String CLICK_IN_VIEW_ID = "click_in_view_id.txt";
 		public static final String CLICK_IN_VIEW_CLASS_INDEX = "click_in_view_class_index.txt";
@@ -75,7 +82,9 @@ public class Constants {
 		public static final String WAIT_FOR_NEW_ACTIVITY = "wait_for_new_activity.txt";
 		public static final String ALL_TESTS = "AllTests.txt";
 		public static final String GO_BACK_TO_MATCHING_ACTIVITY = "go_back_to_matching_activity.txt";
+		public static final String WENT_BACK_TO_MATCHING_ACTIVITY = "went_back_to_matching_activity.txt";			
 		public static final String GO_BACK_WAIT_ACTIVITY = "go_back_wait_activity.txt";
+		public static final String WAIT_ACTIVITY = "wait_activity.txt";
 		public static final String SHOW_IME_ID = "show_ime_id.txt";
 		public static final String SHOW_IME_CLASS_INDEX = "show_ime_class_index.txt";
 		public static final String HIDE_IME_ID = "hide_ime_id.txt";
@@ -83,8 +92,10 @@ public class Constants {
 		public static final String DISMISS_AUTOCOMPLETE_DROPDOWN_ID = "dismiss_autocomplete_dropdown_id.txt";
 		public static final String DISMISS_AUTOCOMPLETE_DROPDOWN_CLASS_INDEX = "dismiss_autocomplete_dropdown_class_index.txt";
 		public static final String DISMISS_POPUP_WINDOW = "dismiss_popup_window.txt";
-			
+		public static final String DISMISS_POPUP_WINDOW_BACK_KEY = "dismiss_popup_window_back_key.txt";
+		public static final String ROTATE = "rotate.txt";
 	}
+	
 	// template %replace% variables
 	public static class VariableNames {
 		public static final String CLASSNAME = "%CLASSNAME%";
@@ -93,6 +104,7 @@ public class Constants {
 		public static final CharSequence CLASSPACKAGE = "%CLASSPACKAGE%";
 		public static final CharSequence ACTIVITY_CLASS = "%ACTIVITY_CLASS%";
 		public static final CharSequence VARIABLE_INDEX = "%VARIABLE_INDEX%";
+		public static final CharSequence ACTIVITY_VARIABLE_INDEX = "%ACTIVITY_VARIABLE_INDEX%";
 		public static final CharSequence ITEM_INDEX = "%ITEM_INDEX%";
 		public static final CharSequence VIEW_INDEX = "%VIEW_INDEX%";
 		public static final CharSequence ID = "%ID%";
@@ -105,6 +117,7 @@ public class Constants {
 		public static final CharSequence DESCRIPTION = "%DESCRIPTION%";
 		public static final CharSequence ACTIVITY = "%ACTIVITY%";
 		public static final CharSequence TESTCLASSNAME = "%TESTCLASSNAME%";
+		public static final CharSequence ORIENTATION = "%ORIENTATION%";
 	}
 	
 	// generic names

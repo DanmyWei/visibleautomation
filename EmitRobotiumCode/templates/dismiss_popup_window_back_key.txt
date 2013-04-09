@@ -1,0 +1,5 @@
+		// dismiss the current popup
+		Activity activity%ACTIVITY_VARIABLE_INDEX% = solo.getCurrentActivity();
+		PopupWindow popupWindow%VARIABLE_INDEX% = ViewExtractor.findPopupWindow(activity%ACTIVITY_VARIABLE_INDEX%);
+		solo.goBack();
+		RobotiumUtils.verifyPopupWindowDimissed(activity%ACTIVITY_VARIABLE_INDEX%, popupWindow%VARIABLE_INDEX%);

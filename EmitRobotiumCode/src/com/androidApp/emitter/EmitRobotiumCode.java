@@ -395,7 +395,7 @@ public class EmitRobotiumCode {
 					}
 				}
 				
-				// we peek at the next line to see if it's an activity_forward
+				// we peek at the next line to see if it's an activity_forward or an activity back, and if it matches the current activity
 				List<String> nextTokens = null;
 				if (nextLine != null) {
 					SuperTokenizer stNext = new SuperTokenizer(nextLine, "\"", ":,", '\\');
@@ -409,7 +409,7 @@ public class EmitRobotiumCode {
 							fForwardActivityMatches = false;
 						}
 					} 
-					if (nextTokens.get(0).equals(Constants.Events.ACTIVITY_BACK)) {
+					if (nextTokens.get(0).equals(Constants.Events.ACTIVITY_BACK) || nextTokens.get(0).equals(Constants.Events.ACTIVITY_BACK_KEY)) {
 						if (nextTokens.size() > 2) {
 							String previousActivityName = nextTokens.get(2);
 							fBackActivityMatches = previousActivityName.equals(currentActivityName);
@@ -462,6 +462,16 @@ public class EmitRobotiumCode {
 						writeWaitForActivity(tokens, lines);
 					}
 				} else if (action.equals(Constants.Events.ACTIVITY_BACK)) {
+					
+					// when activities are dismissed by the application.
+					if (fBackActivityMatches) {
+						previousActivityVariable = writeGetCurrentActivity(lines);
+						writeGoBackToMatchingActivity(previousActivityVariable, tokens, lines);
+					} else {
+						writeGoBack(tokens, lines);
+					}
+					mLastEventWasWaitForActivity = true;
+				} else if (action.equals(Constants.Events.ACTIVITY_BACK_KEY)) {
 					if (fBackActivityMatches) {
 						previousActivityVariable = writeGetCurrentActivity(lines);
 						writeGoBackToMatchingActivity(previousActivityVariable, tokens, lines);
@@ -472,6 +482,8 @@ public class EmitRobotiumCode {
 				} else {
 					if (action.equals(Constants.Events.ITEM_CLICK)) {
 						writeItemClick(tokens, lines);
+					} else if (action.equals(Constants.Events.POPUP_MENU_ITEM_CLICK)) {
+						writePopupMenuItemClick(tokens, lines);
 					} else if (action.equals(Constants.Events.ITEM_SELECTED)) {
 						writeItemSelected(tokens, lines);
 					} else if (action.equals(Constants.Events.SCROLL)) {
@@ -482,6 +494,8 @@ public class EmitRobotiumCode {
 						writeClick(tokens, lines);
 					} else if (action.equals(Constants.Events.DISMISS_DIALOG)) {
 						writeDismissDialog(tokens, lines);
+					} else if (action.equals(Constants.Events.DISMISS_DIALOG_BACK_KEY)) {
+						writeDismissDialogBackKey(tokens, lines);
 					} else if (action.equals(Constants.Events.CANCEL_DIALOG)) {
 						writeCancelDialog(tokens, lines);
 					} else if (action.equals(Constants.Events.SHOW_IME)) {
@@ -501,6 +515,8 @@ public class EmitRobotiumCode {
 						writeDismissAutoCompleteDropdown(tokens, lines);
 					} else if (action.equals(Constants.Events.DISMISS_POPUP_WINDOW)) {
 						writeDismissPopupWindow(tokens, lines);
+					} else if (action.equals(Constants.Events.DISMISS_POPUP_WINDOW_BACK_KEY)) {
+						writeDismissPopupWindowBackKey(tokens, lines);
 					} else if (action.equals(Constants.Events.ROTATION)) {
 						writeRotation(tokens, lines);
 					}
@@ -572,6 +588,24 @@ public class EmitRobotiumCode {
 	 * @param lines output list of java instructions
 	 * @throws IOException if the template file can't be read
 	 */
+	public void writeWentBackToMatchingActivity(String nextActivityVariable, List<String> tokens, List<LineAndTokens> lines) throws IOException {
+		String waitTemplate = FileUtility.readTemplate(Constants.Templates.WENT_BACK_TO_MATCHING_ACTIVITY);
+		String classPath = tokens.get(2);
+		String description = getDescription(tokens);
+		String fullDescription = "wait for activity " + description;
+		waitTemplate = waitTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
+		waitTemplate = waitTemplate.replace(Constants.VariableNames.ACTIVITY_CLASS, classPath);
+		waitTemplate = waitTemplate.replace(Constants.VariableNames.ACTIVITY, nextActivityVariable);
+		lines.add(new LineAndTokens(tokens, waitTemplate));
+	}
+	
+	/**
+	 * the application has finished an activity, or set of activities, so we just need to wait for the activity.
+	 * @param nextActivityVariable name of the activity variable we saved
+	 * @param tokens parsed from a line in events.txt
+	 * @param lines output list of java instructions
+	 * @throws IOException if the template file can't be read
+	 */
 	public void writeGoBackToMatchingActivity(String nextActivityVariable, List<String> tokens, List<LineAndTokens> lines) throws IOException {
 		String waitTemplate = FileUtility.readTemplate(Constants.Templates.GO_BACK_TO_MATCHING_ACTIVITY);
 		String classPath = tokens.get(2);
@@ -603,6 +637,27 @@ public class EmitRobotiumCode {
 			lines.add(new LineAndTokens(tokens, goBackTemplate));
 		}
 	}
+	
+	/**
+	 * the application has finished the current activity without the back key, so we just write the waitForActivity call
+	 * @param tokens parsed from a line in events.txt
+	 * @param lines output list of java instructions
+	 * @throws IOException if the template file can't be read
+	 */
+	public void writeWentBack(List<String> tokens, List<LineAndTokens> lines) throws IOException {
+		if (tokens.size() == 2) {
+			// TODO: need to write something which verifies that yes, the application has exited
+		} else {
+			String activityClass = tokens.get(2);
+			String description = getDescription(tokens);
+			String goBackTemplate = FileUtility.readTemplate(Constants.Templates.WAIT_ACTIVITY);
+			String fullDescription = "go back to activity " + description;
+			goBackTemplate = goBackTemplate.replace(Constants.VariableNames.ACTIVITY_CLASS, activityClass);
+			goBackTemplate = goBackTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
+			lines.add(new LineAndTokens(tokens, goBackTemplate));
+		}
+	}
+
 	
 	/**
 	 * solo.waitForActivity() when we go forward or back to an activity
@@ -648,13 +703,26 @@ public class EmitRobotiumCode {
 	 * @throws IOException if the template file can't be read
 	 */
 	public void writeDismissDialog(List<String> tokens, List<LineAndTokens> lines) throws IOException {
+		String waitForDialogCloseTemplate = FileUtility.readTemplate(Constants.Templates.DIALOG_BACK_KEY_CLOSE_TEMPLATE);
+		String description = getDescription(tokens);
+		String fullDescription = "dismiss dialog with back key" + description;
+		waitForDialogCloseTemplate = waitForDialogCloseTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
+		lines.add(new LineAndTokens(tokens, waitForDialogCloseTemplate));
+	}
+	
+	/**
+	 * write the expression for waitForDialogToClose after the user has hit the back key.
+	 * @param tokens parsed from a line in events.txt
+	 * @param lines output list of java instructions
+	 * @throws IOException if the template file can't be read
+	 */
+	public void writeDismissDialogBackKey(List<String> tokens, List<LineAndTokens> lines) throws IOException {
 		String waitForDialogCloseTemplate = FileUtility.readTemplate(Constants.Templates.DIALOG_CLOSE_TEMPLATE);
 		String description = getDescription(tokens);
 		String fullDescription = "dismiss dialog " + description;
 		waitForDialogCloseTemplate = waitForDialogCloseTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
 		lines.add(new LineAndTokens(tokens, waitForDialogCloseTemplate));
 	}
-	
 	/**
 	 * write the expression for goBack() for a dialog
 	 * @param tokens parsed from a line in events.txt
@@ -726,6 +794,20 @@ public class EmitRobotiumCode {
 	 */
 	public void writeDismissPopupWindow(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
 		String dismissPopupTemplate = FileUtility.readTemplate(Constants.Templates.DISMISS_POPUP_WINDOW);
+		dismissPopupTemplate = dismissPopupTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex++));
+		lines.add(new LineAndTokens(tokens, dismissPopupTemplate));
+	}
+	
+	/**
+	 * write out the dismiss popup window class
+	 * @param tokens
+	 * @param lines
+	 * @throws IOException
+	 * @throws EmitterException
+	 */
+	public void writeDismissPopupWindowBackKey(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
+		String dismissPopupTemplate = FileUtility.readTemplate(Constants.Templates.DISMISS_POPUP_WINDOW_BACK_KEY);
+		dismissPopupTemplate = dismissPopupTemplate.replace(Constants.VariableNames.ACTIVITY_VARIABLE_INDEX, Integer.toString(mVariableIndex++));
 		dismissPopupTemplate = dismissPopupTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex++));
 		lines.add(new LineAndTokens(tokens, dismissPopupTemplate));
 	}
@@ -903,16 +985,6 @@ public class EmitRobotiumCode {
 		ReferenceParser ref = new ReferenceParser(tokens, 3);
 		String description = getDescription(tokens);
 		String fullDescription = "click item " + description;
-		/* TODO: is this written out by the caller? verify and remove if so.
-		if (mLastEventWasWaitForActivity) {
-			if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
-				writeWaitForListIdItem(tokens, itemIndex, lines);
-			} else {
-				writeWaitForListClassIndex(tokens, itemIndex, lines);
-			}
-			mLastEventWasWaitForActivity = false;
-		} 
-		*/
 		if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
 			String itemClickTemplate = writeViewClassIndexCommand(Constants.Templates.CLICK_IN_LIST, ref, fullDescription);
 			itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
@@ -925,6 +997,34 @@ public class EmitRobotiumCode {
 			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
 		}
 	}
+	
+	/**
+	 * write the item click event for a menu popup list item
+	 * same as item_click event, but we want to differentiate.
+	 * menu_item_click:153346865,2,class_index,android.widget.ListPopupWindow$DropDownListView,0,Edit
+	 * command:time,item_index,[view reference]
+	 * @param tokens parsed from a line in events.txt
+	 * @param lines output list of java instructions
+	 * @throws IOException if the template file can't be read
+	 */
+	public void writePopupMenuItemClick(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
+		int itemIndex = Integer.parseInt(tokens.get(2)) + 1;
+		ReferenceParser ref = new ReferenceParser(tokens, 3);
+		String description = getDescription(tokens);
+		String fullDescription = "click item " + description;
+		if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
+			String itemClickTemplate = writeViewClassIndexCommand(Constants.Templates.CLICK_IN_LIST, ref, fullDescription);
+			itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
+			lines.add(new LineAndTokens(tokens, itemClickTemplate));
+		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
+			String clickListItemTemplate = writeViewIDCommand(Constants.Templates.CLICK_LIST_ITEM, ref, fullDescription);
+			clickListItemTemplate = clickListItemTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
+			lines.add(new LineAndTokens(tokens, clickListItemTemplate));
+		} else {
+			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
+		}
+	}
+
 	/**
 	 * write the item selected event for a spinner
 	 * item_click:195768219, 2,class_index,android.widget.ListView,1
