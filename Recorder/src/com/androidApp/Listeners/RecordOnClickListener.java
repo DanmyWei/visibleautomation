@@ -61,7 +61,7 @@ public class RecordOnClickListener extends RecordListener implements View.OnClic
 		}
 		if (!fReentryBlock) {
 			
-			// specifically for OnClickListeners, View tests to see if any of the listeners in the ListenerInfo have been set, and if so,
+			// specifically for OnClickListeners, View tests to see if the click listener in the ListenerInfo have been set, and if so,
 			// prevents firing the performClick() event.  Inherited views then won't fire their onClick() events.  Frankly, it's very strange,
 			// since setting an onTouch or onKey listener will prevent button clicks from getting listened to.  So, we check if the listener info
 			// is null, or all recorders with no original listeners, and if so, null out the listener and call performClick() directly.
@@ -69,7 +69,7 @@ public class RecordOnClickListener extends RecordListener implements View.OnClic
 			
 			try {
 				 Object listenerInfo = ListenerIntercept.getListenerInfo(v);
-				 if ((listenerInfo == null) || isListenerInfoOnlyRecordersOrNull(listenerInfo)) {
+				 if ((listenerInfo == null) || !hasClickListener(v)) {
 					 ListenerIntercept.setListenerInfo(v, null);
 					 v.performClick();
 					 ListenerIntercept.setListenerInfo(v, listenerInfo);
@@ -86,70 +86,20 @@ public class RecordOnClickListener extends RecordListener implements View.OnClic
 	}
 	
 	/**
-	 * examine the listener info object, and see if there were any original listeners installed
+	 * examine the listener info object, and see if there were any original listeners installed for the click listener
 	 * @param listenerInfoObject android.view.View$ListenerInfo
 	 * @return true if there was a listener installed for any listenerInfo fields
 	 * @throws NoSuchFieldException exceptions for reflection errors extracting fields
 	 * @throws IllegalAccessException
 	 * @throws ClassNotFoundException
 	 */
-	public static boolean isListenerInfoOnlyRecordersOrNull(Object listenerInfoObject) throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
-		Class listenerInfoClass = Class.forName(Constants.Classes.LISTENER_INFO);
-		OnFocusChangeListener focusChangeListener = (OnFocusChangeListener) ListenerIntercept.getFieldValue(listenerInfoObject, listenerInfoClass, Constants.Fields.FOCUS_CHANGE_LISTENER);
-		if ((focusChangeListener != null) && (focusChangeListener instanceof RecordOnFocusChangeListener)) {
-			if (((RecordOnFocusChangeListener) focusChangeListener).getOriginalListener() != null) {
-				return false;
-			}
-		}
-		// we currently don't record onLayoutChangeListeners
-		ArrayList<OnLayoutChangeListener> onLayoutChangeListeners = (ArrayList<OnLayoutChangeListener>) ListenerIntercept.getFieldValue(listenerInfoObject, listenerInfoClass, Constants.Fields.LAYOUT_CHANGE_LISTENERS);
-		if (onLayoutChangeListeners != null) {
-			return true;
-		}
-		
-		// we currrently don't record onAttachStateChangeListeners.
-		CopyOnWriteArrayList<OnAttachStateChangeListener> onAttachStatesChangeListeners = (CopyOnWriteArrayList<OnAttachStateChangeListener>) ListenerIntercept.getFieldValue(listenerInfoObject, listenerInfoClass, Constants.Fields.ATTACH_STATE_CHANGE_LISTENERS);
-		if (onAttachStatesChangeListeners != null) {
-			return true;
-		}
-		OnClickListener onClickListener = (OnClickListener) ListenerIntercept.getFieldValue(listenerInfoObject, listenerInfoClass, Constants.Fields.CLICK_LISTENER);
+	public static boolean hasClickListener(View v) throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
+		OnClickListener onClickListener = (OnClickListener) ListenerIntercept.getClickListener(v);
 		if ((onClickListener != null) && (onClickListener instanceof RecordOnClickListener)) {
 			if (((RecordOnClickListener) onClickListener).getOriginalListener() != null) {
-				return false;
+				return true;
 			}
 		}
-		OnLongClickListener onLongClickListener = (OnLongClickListener) ListenerIntercept.getFieldValue(listenerInfoObject, listenerInfoClass, Constants.Fields.LONG_CLICK_LISTENER);
-		if ((onLongClickListener != null) && (onLongClickListener instanceof RecordOnLongClickListener)) {
-			if (((RecordOnLongClickListener) onLongClickListener).getOriginalListener() != null) {
-				return false;
-			}
-		}
-		// currently we don't intercept OnCreateContextMenuListener or OnKeyListener
-		// but we do listener for Touch listeners
-		OnTouchListener onTouchListener = (OnTouchListener) ListenerIntercept.getFieldValue(listenerInfoObject, listenerInfoClass, Constants.Fields.TOUCH_LISTENER);
-		if ((onTouchListener != null) && (onTouchListener instanceof RecordOnTouchListener)) {
-			if (((RecordOnTouchListener) onTouchListener).getOriginalListener() != null) {
-				return false;
-			}
-		}
-
-		// we don't listen for hover events.  What are hover events anyway?
-		OnHoverListener onHoverListener = (OnHoverListener) ListenerIntercept.getFieldValue(listenerInfoObject, listenerInfoClass, Constants.Fields.HOVER_LISTENER);
-		if (onHoverListener != null) {
-			return false;
-		}
-		OnGenericMotionListener onGenericMotionListener = (OnGenericMotionListener) ListenerIntercept.getFieldValue(listenerInfoObject, listenerInfoClass, Constants.Fields.GENERIC_MOTION_LISTENER);
-		if (onGenericMotionListener != null) {
-			return false;
-		}
-		OnDragListener onDragListener = (OnDragListener) ListenerIntercept.getFieldValue(listenerInfoObject, listenerInfoClass, Constants.Fields.DRAG_LISTENER);
-		if (onDragListener != null) {
-			return false;
-		}
-		OnSystemUiVisibilityChangeListener onSystemUiVisibilityChangeListener = (OnSystemUiVisibilityChangeListener) ListenerIntercept.getFieldValue(listenerInfoObject, listenerInfoClass, Constants.Fields.SYSTEMUI_VISIBILITY_CHANGE_LISTENER);
-		if (onSystemUiVisibilityChangeListener != null) {
-			return false;
-		}
-		return true;
+		return false;
 	}
 }
