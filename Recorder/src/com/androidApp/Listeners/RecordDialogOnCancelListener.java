@@ -16,7 +16,7 @@ import android.widget.Spinner;
  * @author Matthew
  *
  */
-public class RecordDialogOnCancelListener extends RecordListener implements DialogInterface.OnCancelListener {
+public class RecordDialogOnCancelListener extends RecordListener implements DialogInterface.OnCancelListener, IOriginalListener {
 	protected DialogInterface.OnCancelListener 	mOriginalOnCancelListener;
 	protected String mEventTag;
 	
@@ -33,6 +33,10 @@ public class RecordDialogOnCancelListener extends RecordListener implements Dial
 		super(eventRecorder);
 		mOriginalOnCancelListener = originalCancelListener;
 		mEventTag = eventTag;
+	}
+	
+	public Object getOriginalListener() {
+		return mOriginalOnCancelListener;
 	}
 	
 	public void onCancel(DialogInterface dialog) {

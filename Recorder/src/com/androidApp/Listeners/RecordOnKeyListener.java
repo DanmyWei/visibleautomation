@@ -11,7 +11,7 @@ import android.view.MotionEvent;
 import android.view.View;
 
 // recorder for view key events.
-public class RecordOnKeyListener extends RecordListener implements View.OnKeyListener {
+public class RecordOnKeyListener extends RecordListener implements View.OnKeyListener, IOriginalListener  {
 	protected View.OnKeyListener 	mOriginalOnKeyListener;
 	
 	public RecordOnKeyListener(EventRecorder eventRecorder, View v) {
@@ -28,16 +28,9 @@ public class RecordOnKeyListener extends RecordListener implements View.OnKeyLis
 		super(eventRecorder);
 		mOriginalOnKeyListener = originalKeyListener;
 	}
-	
-	/**
-	 * we shouldn't intercept if we're already recording the click listener.
-	 */
-	public boolean shouldIntercept(View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
-		if (super.shouldIntercept(v)) {
-			View.OnKeyListener originalOnKeyListener = ListenerIntercept.getKeyListener(v);
-			return !(originalOnKeyListener instanceof RecordOnKeyListener);
-		}
-		return false;
+		
+	public Object getOriginalListener() {
+		return mOriginalOnKeyListener;
 	}
 
 	/**

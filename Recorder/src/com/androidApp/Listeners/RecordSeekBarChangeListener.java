@@ -9,7 +9,7 @@ import android.view.View;
 import android.widget.SeekBar;
 
 // record a change in a seekbar listener
-public class RecordSeekBarChangeListener extends RecordListener implements SeekBar.OnSeekBarChangeListener {
+public class RecordSeekBarChangeListener extends RecordListener implements SeekBar.OnSeekBarChangeListener, IOriginalListener  {
 	protected SeekBar.OnSeekBarChangeListener 	mOriginalOnSeekBarChangeListener;
 	
 	public RecordSeekBarChangeListener(EventRecorder eventRecorder, SeekBar seekbar) {
@@ -26,18 +26,10 @@ public class RecordSeekBarChangeListener extends RecordListener implements SeekB
 		super(eventRecorder);
 		mOriginalOnSeekBarChangeListener = originalOnSeekBarChangeListener;
 	}
-	
-	/**
-	 * we shouldn't intercept if we're already recording the seek bar change listener.
-	 */
-	public boolean shouldIntercept(View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
-		if (super.shouldIntercept(v)) {
-			SeekBar.OnSeekBarChangeListener originalSeekBarChangeListener = ListenerIntercept.getSeekBarChangeListener((SeekBar) v);
-			return !(originalSeekBarChangeListener instanceof RecordSeekBarChangeListener);
-		}
-		return false;
-	}
 
+	public Object getOriginalListener() {
+		return mOriginalOnSeekBarChangeListener;
+	}
 
 	/**
 	 * intercept on progress changed

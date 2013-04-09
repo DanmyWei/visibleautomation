@@ -3,6 +3,8 @@ package com.androidApp.EventRecorder;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Stack;
 
 import android.app.Dialog;
 import android.content.DialogInterface;
@@ -11,11 +13,14 @@ import android.os.Message;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
+import android.view.Window;
 import android.widget.AbsListView;
 import android.widget.AbsSpinner;
 import android.widget.AdapterView;
 import android.widget.AutoCompleteTextView;
 import android.widget.CompoundButton;
+import android.widget.ListPopupWindow;
+import android.widget.PopupMenu;
 import android.widget.PopupWindow;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
@@ -40,6 +45,54 @@ public class ListenerIntercept {
 			Log.i(TAG, "field name = " + field.getName());
 		}
 	}
+	
+	public static List<String> getMatchingFieldsByTypeRecursively(Object o, Class c) throws IllegalAccessException {
+		Stack<Class> breadcrumb = new Stack<Class>();
+		breadcrumb.push(o.getClass());
+		List<String> result = new ArrayList<String>();
+		getMatchingFieldsByTypeRecursively(o, o.getClass(), c, breadcrumb, result);
+		return result;
+	}
+	
+	public static String getFieldPath(Stack<Class> breadcrumb, Field field) {
+		StringBuffer sb = new StringBuffer();
+		for (int i = breadcrumb.size() - 1; i >= 0; i--) {
+			Class c = breadcrumb.get(i);
+			sb.append(c.getCanonicalName());
+			sb.append('.');
+		}
+		sb.append(field.getName());
+		return sb.toString();
+	}
+	
+	public static boolean inBreadcrumb(Stack<Class> breadcrumb, Class c) {
+		for (Class cCand : breadcrumb) {
+			if (cCand == c) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public static void getMatchingFieldsByTypeRecursively(Object o, Class objectClass, Class c, Stack<Class> breadcrumb, List<String> result) throws IllegalAccessException {
+		while ((objectClass != null) && (objectClass != Object.class)) {
+			Field fields[] = objectClass.getDeclaredFields();
+			for (Field field : fields) {
+				if (field.getType() == c) {
+					result.add(getFieldPath(breadcrumb, field));
+				} else if (!field.getType().isPrimitive() && (field.getType() != String.class)) {
+					field.setAccessible(true);
+					Object fieldValue = field.get(o);
+					if ((fieldValue != null) && !inBreadcrumb(breadcrumb, field.getType())) {
+						breadcrumb.push(field.getType());
+						getMatchingFieldsByTypeRecursively(fieldValue, field.getType(), c, breadcrumb, result);
+						breadcrumb.pop();
+					}
+				}
+			}
+			objectClass = objectClass.getSuperclass();
+		}
+	}
 
 	/**
 	 * given an object, its class, and a fieldName, return the value of that field for the object
@@ -59,6 +112,12 @@ public class ListenerIntercept {
 		return field.get(o);
 	}
 	
+	public static boolean getFieldBoolean(Object o, Class c, String fieldName) throws NoSuchFieldException, IllegalAccessException {
+		Field field = c.getDeclaredField(fieldName);
+		field.setAccessible(true);
+		return field.getBoolean(o);
+	}
+	
 	
 	/**
 	 * given an object, its class, a fieldName and a value, set the value of that field to the object
@@ -76,10 +135,67 @@ public class ListenerIntercept {
 	}
 	
 	/**
+	 * given an object, its class, a fieldName and a flag, set the value of that field to the flag
+	 * @param o our intended victim
+	 * @param c object class (proletariat, bourgeois, or plutocrat)
+	 * @param fieldName name of the field (it better match)
+	 * @param flag value to set
+	 * @throws NoSuchFieldException the field didn't match anything the class had
+	 * @throws IllegalAccessException I hope this never happens
+	 */	
+	public static void setFieldBooleanValue(Object o, Class c, String fieldName, boolean flag) throws NoSuchFieldException, IllegalAccessException {
+		Field field = c.getDeclaredField(fieldName);
+		field.setAccessible(true);
+		field.setBoolean(o, flag);
+	}
+	
+	public static AdapterView.OnItemClickListener getPopupMenuOnItemClickListener(View v) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
+		Class dropdownListViewClass = Class.forName(Constants.Classes.DROPDOWN_LISTVIEW);
+		Object menuPopupHelperObject = getFieldValue(v, AdapterView.class, Constants.Fields.ONITEM_CLICK_LISTENER);
+		Class menuPopupHelperClass = Class.forName(Constants.Classes.MENU_POPUP_HELPER);
+		Object listPopupWindowObject = getFieldValue(menuPopupHelperObject, menuPopupHelperClass, Constants.Fields.POPUP);
+		Object listenerObject = getFieldValue(listPopupWindowObject, ListPopupWindow.class, Constants.Fields.ITEM_CLICK_LISTENER);
+		return (AdapterView.OnItemClickListener) listenerObject;
+	}
+	
+	public static void setPopupMenuOnItemClickListener(View v, AdapterView.OnItemClickListener listener) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
+		Class dropdownListViewClass = Class.forName(Constants.Classes.DROPDOWN_LISTVIEW);
+		Object menuPopupHelperObject = getFieldValue(v, AdapterView.class, Constants.Fields.ONITEM_CLICK_LISTENER);
+		Class menuPopupHelperClass = Class.forName(Constants.Classes.MENU_POPUP_HELPER);
+		Object listPopupWindowObject = getFieldValue(menuPopupHelperObject, menuPopupHelperClass, Constants.Fields.POPUP);
+		setFieldValue(listPopupWindowObject, ListPopupWindow.class, Constants.Fields.ITEM_CLICK_LISTENER, listener);
+	}
+	
+	public static boolean isPopupMenu(View v) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
+		Class dropdownListViewClass = Class.forName(Constants.Classes.DROPDOWN_LISTVIEW);
+		Object clickListenerObject = getFieldValue(v, AdapterView.class, Constants.Fields.ONITEM_CLICK_LISTENER);
+		Class menuPopupHelperClass = Class.forName(Constants.Classes.MENU_POPUP_HELPER);
+		return clickListenerObject.getClass() == menuPopupHelperClass;
+	}
+	
+	public static PopupMenu.OnMenuItemClickListener getPopupMenuOnMenuItemClickListener(View v) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
+		Object clickListenerObject = getFieldValue(v, AdapterView.class, Constants.Fields.ONITEM_CLICK_LISTENER);
+		Class menuPopupHelperClass = Class.forName(Constants.Classes.MENU_POPUP_HELPER);
+		if (clickListenerObject.getClass() == menuPopupHelperClass) {
+			PopupMenu popupMenu = (PopupMenu) getFieldValue(clickListenerObject, menuPopupHelperClass, Constants.Fields.PRESENTER_CALLBACK);
+			PopupMenu.OnMenuItemClickListener listener = (PopupMenu.OnMenuItemClickListener) getFieldValue(popupMenu, PopupMenu.class, Constants.Fields.MENU_ITEM_CLICK_LISTENER);
+			return listener;
+		}
+		return null;
+	}
+	
+	public static void setPopupMenuOnMenuItemClickListener(View v, PopupMenu.OnMenuItemClickListener listener) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
+		Class dropdownListViewClass = Class.forName(Constants.Classes.DROPDOWN_LISTVIEW);
+		Object menuPopupHelperObject = getFieldValue(v, AdapterView.class, Constants.Fields.ONITEM_CLICK_LISTENER);
+		Class menuPopupHelperClass = Class.forName(Constants.Classes.MENU_POPUP_HELPER);
+		PopupMenu popupMenu = (PopupMenu) getFieldValue(menuPopupHelperObject, menuPopupHelperClass, Constants.Fields.PRESENTER_CALLBACK);
+		popupMenu.setOnMenuItemClickListener(listener);
+	}
+	/**
 	 * currently unused, because it overlaps onClickListener
 	 * @param cb
 	 * @return
-	 * @throws NoSuchFieldException
+	 * @throws NoSuchFieldExceptionc
 	 * @throws ClassNotFoundException
 	 * @throws IllegalAccessException
 	 */
@@ -148,6 +264,10 @@ public class ListenerIntercept {
 	 */
 	public static Object getListenerInfo(View v) throws NoSuchFieldException, SecurityException, IllegalAccessException {
 		return getFieldValue(v, View.class, Constants.Fields.LISTENER_INFO);
+	}
+	
+	public static void setListenerInfo(View v, Object listenerInfoObject) throws NoSuchFieldException, SecurityException, IllegalAccessException {
+		setFieldValue(v, View.class, Constants.Fields.LISTENER_INFO, listenerInfoObject);
 	}
 
 	/**
@@ -370,5 +490,27 @@ public class ListenerIntercept {
 		} else {
 			return null;
 		}
+	}
+	
+	/**
+	 * given a PhoneWindow$DecorView, get the this$0 reference to its window, and return the Window.Callback so we can intercept it.
+	 * @param v actually PhoneWindow$DecorView
+	 * @return Window.callback for containing window
+	 * @throws NoSuchFieldException
+	 * @throws SecurityException
+	 * @throws IllegalAccessException
+	 * @throws ClassNotFoundException
+	 */
+	public static Window.Callback getWindowCallbackFromDecorView(View v) throws NoSuchFieldException, SecurityException, IllegalAccessException, ClassNotFoundException {
+		Class phoneWindowDecorViewClass = Class.forName(Constants.Classes.PHONE_DECOR_VIEW);
+		Window phoneWindow = (Window) getFieldValue(v, phoneWindowDecorViewClass, Constants.Fields.ENCLOSING_CLASS);
+		Window.Callback callback = phoneWindow.getCallback();
+		return callback;
+	}
+	
+	public static void setWindowCallbackToDecorView(View v, Window.Callback callback) throws NoSuchFieldException, SecurityException, IllegalAccessException, ClassNotFoundException {
+		Class phoneWindowDecorViewClass = Class.forName(Constants.Classes.PHONE_DECOR_VIEW);
+		Window phoneWindow = (Window) getFieldValue(v, phoneWindowDecorViewClass, Constants.Fields.ENCLOSING_CLASS);
+		phoneWindow.setCallback(callback);
 	}
 }

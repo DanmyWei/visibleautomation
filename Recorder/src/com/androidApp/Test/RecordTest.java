@@ -11,26 +11,23 @@ import java.util.TimerTask;
 import android.app.Activity;
 import android.app.Dialog;
 import android.app.Instrumentation;
-import android.app.Instrumentation.ActivityMonitor;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
-import android.content.res.Configuration;
-import android.hardware.SensorManager;
-import android.os.SystemClock;
 import android.test.ActivityInstrumentationTestCase2;
 import android.util.Log;
-import android.view.OrientationEventListener;
-import android.view.Surface;
+import android.view.KeyEvent;
+import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
-import android.widget.AutoCompleteTextView;
 import android.widget.PopupWindow;
-import android.widget.Spinner;
 
 import com.androidApp.EventRecorder.EventRecorder;
+import com.androidApp.Intercept.InsertRecordWindowCallbackRunnable;
+import com.androidApp.Intercept.InterceptKeyViewMenu;
+import com.androidApp.Intercept.MagicFrame;
+import com.androidApp.Intercept.MagicFramePopup;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.FieldUtils;
 import com.androidApp.Utility.TestUtils;
@@ -55,8 +52,6 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	private static final long 		INTERCEPTOR_WAIT_MSEC = 1000;
 	private EventRecorder 			mRecorder;
 	private ViewInterceptor			mViewInterceptor;
-	private Dialog					mCurrentDialog = null;				// track the current dialog, so we don't re-record it.
-	private PopupWindow				mCurrentPopupWindow = null;			// current popup window, which is like the current dialog, but different
 	private boolean					mFinished = false;					// have the loops finished?
 	private Timer					mScanTimer = null;					// timer for scanning for new dialogs to set intercept handlers on.
 	private ActivityInterceptor		mActivityInterceptor = null;
@@ -138,6 +133,7 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	 * is that we can't intercept dialogs, like we could when we did a poll-timer based implementation
 	 * This separate poll-timer thread exists merely to see if a dialog has appeared, and if so, set up
 	 * the recording interceptors on it.
+	 * TODO: pass the event recorder to InterceptorDialogRunnable
 	 */
 	private void setupDialogListener() {
 		TimerTask scanTask = new TimerTask() {
@@ -145,12 +141,19 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 			public void run() {
 				try {
 					Activity activity = RecordTest.this.getActivityInterceptor().getCurrentActivity();
-					if (activity != null) {
+					ViewInterceptor viewInterceptor = RecordTest.this.getViewInterceptor();
+					EventRecorder recorder = RecordTest.this.getRecorder();
+					if ((activity != null) && (viewInterceptor != null)) {
 						Dialog dialog = TestUtils.findDialog(activity);
-						if ((dialog != null) && (dialog != RecordTest.this.getCurrentDialog())) {
-							activity.runOnUiThread(new InterceptDialogRunnable(dialog));
-							RecordTest.this.setCurrentDialog(dialog);
+						if ((dialog != null) && (dialog != viewInterceptor.getCurrentDialog())) {
+							activity.runOnUiThread(new InterceptDialogRunnable(dialog, recorder, viewInterceptor));
+							viewInterceptor.setCurrentDialog(dialog);
 						}
+					} else {
+						if (RecordTest.this.getActivityInterceptor().hasStarted()) {
+							this.cancel();
+						}
+						Log.i(TAG, "setupDialogListener activity = " + activity + " viewInterceptor = " + viewInterceptor);
 					}
 				} catch (Exception ex) {
 					ex.printStackTrace();
@@ -168,16 +171,38 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 			@Override
 			public void run() {
 				try {
+					EventRecorder recorder = RecordTest.this.getRecorder();
 					Activity activity = RecordTest.this.getActivityInterceptor().getCurrentActivity();
-					if (activity !=  null) {
-						PopupWindow popupWindow = TestUtils.findPopupWindow(activity);
-						if ((popupWindow != null) && (popupWindow != RecordTest.this.getCurrentPopupWindow())) {
-							RecordTest.this.getRecorder().writeRecord(Constants.EventTags.CREATE_POPUP_WINDOW, "create popup window");
-							activity.runOnUiThread(new InterceptPopupWindowRunnable(popupWindow));
-							if (popupWindow != null) {
-								RecordTest.this.setCurrentPopupWindow(popupWindow);
+					ViewInterceptor viewInterceptor = RecordTest.this.getViewInterceptor();
+					if ((recorder != null) && (activity !=  null) && (viewInterceptor != null)) {
+						View optionsMenuView = TestUtils.findOptionsMenu(activity);
+						if ((optionsMenuView != null) && (optionsMenuView != viewInterceptor.getCurrentOptionsMenuView())) {
+							if (viewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_MENU) {
+								recorder.writeRecord(Constants.EventTags.OPEN_ACTION_MENU_KEY, "open action menu from menu key");
+							} else {
+								recorder.writeRecord(Constants.EventTags.OPEN_ACTION_MENU, "open action menu");
+							}
+							activity.runOnUiThread(new InsertKeyListenerRunnable(optionsMenuView));
+							activity.runOnUiThread(new InsertRecordWindowCallbackRunnable(optionsMenuView, recorder, viewInterceptor));
+							viewInterceptor.setCurrentOptionsMenuView(optionsMenuView);
+						} else {
+							PopupWindow popupWindow = TestUtils.findPopupWindow(activity);
+							if ((popupWindow != null) && (popupWindow != viewInterceptor.getCurrentPopupWindow())) {
+								recorder.writeRecord(Constants.EventTags.CREATE_POPUP_WINDOW, "create popup window");
+								activity.runOnUiThread(new InterceptPopupWindowRunnable(popupWindow));
+								if (popupWindow != null) {
+									viewInterceptor.setCurrentPopupWindow(popupWindow);
+								}
 							}
 						}
+					} else {
+						if (activity == null) {
+							if (RecordTest.this.getActivityInterceptor().hasStarted()) {
+								this.cancel();
+							}
+						}
+						Log.i(TAG, "popupWindowListener recorder = " + mRecorder + 
+								   " activity = " + activity + " view interceptor = " + mViewInterceptor);
 					}
 				} catch (Exception ex) {
 					ex.printStackTrace();
@@ -186,45 +211,31 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 		};
 		mScanTimer.schedule(scanTask, 0, POPUP_WINDOW_SYNC_TIME);
 	}
+	
+	public void insertKeyListener(Activity a, View v) {
+		
+	}
+	
+	protected class InsertKeyListenerRunnable implements Runnable {
+		protected View mExpandedMenuView;
+		public InsertKeyListenerRunnable(View v) {
+			mExpandedMenuView = v;
+		}
+		@Override
+		public void run() {
+			InterceptKeyViewMenu interceptKeyView = new InterceptKeyViewMenu(mExpandedMenuView.getContext(), RecordTest.this.getRecorder());
+			((ViewGroup) mExpandedMenuView).addView(interceptKeyView);
+			interceptKeyView.requestFocus();
+			
+		}
+		
+	}
 	/**
 	 * shutdown the dialog scan timertask once the activity stack has been emptied
 	 */
 	public void shutdownScanTimer() {
 		mScanTimer.cancel();
-	}
-	
-	/**
-	 * set the current dialog
-	 * @param dialog
-	 */
-	public void setCurrentDialog(Dialog dialog) {
-		mCurrentDialog = dialog;
-	}
-	
-	/**
-	 * get the current dialog
-	 * @return dialog
-	 */
-	public Dialog getCurrentDialog() {
-		return mCurrentDialog;
-	}
-	
-	/**
-	 * get the current popup window
-	 * @return popup window
-	 */
-	public PopupWindow getCurrentPopupWindow() {
-		return mCurrentPopupWindow;
-	}
-	
-	/**
-	 * set the current popup window
-	 * @param popupWindow
-	 */
-	public void setCurrentPopupWindow(PopupWindow popupWindow) {
-		mCurrentPopupWindow = popupWindow;
-	}
-			
+	}			
 		
 	/**
 	 * get the package name for this activity.
@@ -244,14 +255,22 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	 *
 	 */
 	public class InterceptDialogRunnable implements Runnable {
-		protected Dialog mDialog;
+		protected Dialog 			mDialog;
+		protected EventRecorder		mRecorder;
+		protected ViewInterceptor	mViewInterceptor;
 		
-		public InterceptDialogRunnable(Dialog dialog) {
+		public InterceptDialogRunnable(Dialog dialog, EventRecorder recorder, ViewInterceptor viewInterceptor) {
 			mDialog = dialog;
+			mRecorder = recorder;
+			mViewInterceptor = viewInterceptor;
 		}
 		
 		public void run() {
-			RecordTest.this.getViewInterceptor().interceptDialog(mDialog);
+			Window window = mDialog.getWindow();
+			View decorView = window.getDecorView();
+			View contentView = ((ViewGroup) decorView).getChildAt(0);
+			MagicFrame magicFrame = new MagicFrame(decorView.getContext(), contentView, 0, mRecorder, mViewInterceptor);
+			mViewInterceptor.interceptDialog(mDialog);
 		}
 	}
 	
@@ -266,8 +285,10 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 		}
 		
 		public void run() {
+			View contentView = mPopupWindow.getContentView();
+			MagicFramePopup magicFramePopup = new MagicFramePopup(contentView.getContext(), mPopupWindow, mRecorder, mViewInterceptor);
 			RecordTest.this.getViewInterceptor().interceptPopupWindow(mPopupWindow);
-			RecordTest.this.getViewInterceptor().intercept(mPopupWindow.getContentView());
+			RecordTest.this.getViewInterceptor().intercept(contentView);
 		}
 	}
 

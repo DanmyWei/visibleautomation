@@ -2,6 +2,7 @@ package com.androidApp.Listeners;
 
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
+import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 
 import android.app.Dialog;
@@ -15,11 +16,13 @@ import android.widget.Spinner;
  * @author Matthew
  *
  */
-public class RecordOnFocusChangeListener extends RecordListener implements View.OnFocusChangeListener {
+public class RecordOnFocusChangeListener extends RecordListener implements View.OnFocusChangeListener, IOriginalListener  {
 	protected View.OnFocusChangeListener 	mOriginalOnFocusChangeListener;
+	protected ViewInterceptor				mViewInterceptor;
 	
-	public RecordOnFocusChangeListener(EventRecorder eventRecorder, View view) {
+	public RecordOnFocusChangeListener(EventRecorder eventRecorder, ViewInterceptor viewInterceptor, View view) {
 		super(eventRecorder);
+		mViewInterceptor = viewInterceptor;
 		try {
 			mOriginalOnFocusChangeListener = view.getOnFocusChangeListener();
 			view.setOnFocusChangeListener(mOriginalOnFocusChangeListener);
@@ -28,22 +31,19 @@ public class RecordOnFocusChangeListener extends RecordListener implements View.
 		}
 	}
 	
-	public RecordOnFocusChangeListener(EventRecorder eventRecorder, View.OnFocusChangeListener originalFocusChangeListener) {
+	public RecordOnFocusChangeListener(EventRecorder eventRecorder, ViewInterceptor viewInterceptor, View.OnFocusChangeListener originalFocusChangeListener) {
 		super(eventRecorder);
+		mViewInterceptor = viewInterceptor;
 		mOriginalOnFocusChangeListener = originalFocusChangeListener;
 	}
 	
 	/**
-	 * we shouldn't intercept if we're already recording the focus change listener.
+	 * retrieve the original listener
 	 */
-	public boolean shouldIntercept(View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
-		if (super.shouldIntercept(v)) {
-			View.OnFocusChangeListener originalOnFocusChangeListener = v.getOnFocusChangeListener();
-			return !(originalOnFocusChangeListener instanceof RecordOnFocusChangeListener);
-		}
-		return false;
+	public Object getOriginalListener() {
+		return mOriginalOnFocusChangeListener;
 	}
-
+	
 	/**
 	 * actual focus change record point.
 	 */
@@ -55,7 +55,7 @@ public class RecordOnFocusChangeListener extends RecordListener implements View.
 			try {
 				if (hasFocus) {
 					// save the view for IME event detection
-					mEventRecorder.setFocusedView(v);
+					mViewInterceptor.setFocusedView(v);
 					mEventRecorder.writeRecord(Constants.EventTags.GET_FOCUS, v);
 				} else {
 					mEventRecorder.writeRecord(Constants.EventTags.LOSE_FOCUS, v);

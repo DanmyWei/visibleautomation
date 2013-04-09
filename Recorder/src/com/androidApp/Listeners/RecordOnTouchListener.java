@@ -12,7 +12,7 @@ import android.view.MotionEvent;
 import android.view.View;
 
 // View.onTouchListener that listens to key events, and writes them to a file.
-public class RecordOnTouchListener extends RecordListener implements View.OnTouchListener {
+public class RecordOnTouchListener extends RecordListener implements View.OnTouchListener, IOriginalListener  {
 	protected View.OnTouchListener 	mOriginalOnTouchListener;
 	
 	public RecordOnTouchListener(EventRecorder eventRecorder, View v) {
@@ -30,17 +30,10 @@ public class RecordOnTouchListener extends RecordListener implements View.OnTouc
 		mOriginalOnTouchListener = originalTouchListener;
 	}
 	
-	/**
-	 * we shouldn't intercept if we're already recording the click listener.
-	 */
-	public boolean shouldIntercept(View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
-		if (super.shouldIntercept(v)) {
-			View.OnTouchListener originalOnTouchListener = ListenerIntercept.getTouchListener(v);
-			return !(originalOnTouchListener instanceof RecordOnTouchListener);
-		}
-		return false;
+	public Object getOriginalListener() {
+		return mOriginalOnTouchListener;
 	}
-
+	
 	/**
 	 * record the actual touch event
 	 * <touch_down/touch_up/touch_move>:time,x,y,<reference>,<description>

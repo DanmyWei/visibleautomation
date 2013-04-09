@@ -541,16 +541,60 @@ public class TestUtils {
 	}
 
 	public static boolean isDialogOrPopup(Activity a, View v) {
-		Context viewContext = v.getContext();
-		// dialogs use a context theme wrapper, not a context, so we have to extract he context from the theme wrapper's
-		// base context
-		if (viewContext instanceof ContextThemeWrapper) {
-			ContextThemeWrapper ctw = (ContextThemeWrapper) viewContext;
-			viewContext = ctw.getBaseContext();
+		if (v != null) {
+			Context viewContext = v.getContext();
+			// dialogs use a context theme wrapper, not a context, so we have to extract he context from the theme wrapper's
+			// base context
+			if (viewContext instanceof ContextThemeWrapper) {
+				ContextThemeWrapper ctw = (ContextThemeWrapper) viewContext;
+				viewContext = ctw.getBaseContext();
+			}
+			Context activityContext = a;
+			Context activityBaseContext = a.getBaseContext();
+			return (activityContext.equals(viewContext) || activityBaseContext.equals(viewContext)) && (v != a.getWindow().getDecorView());
+		} else {
+			return false;
 		}
-		Context activityContext = a;
-		return activityContext.equals(viewContext) && (v != a.getWindow().getDecorView());
 	}
+	
+	/**
+	 * v is actually a PhoneDecorView.  We're looking for its child, which is com.android.internal.view.menu.ExpandedMenuView
+	 * @param v
+	 * @return
+	 */
+	public static boolean isOptionsMenu(View v) throws ClassNotFoundException {
+		if (v instanceof ViewGroup) {
+			View vChild = ((ViewGroup) v).getChildAt(0);
+			Class menuViewClass = Class.forName(Constants.Classes.EXPANDED_MENU_VIEW);
+			return vChild.getClass() == menuViewClass; 	
+		} else {
+			return false;
+		}
+	}
+	
+	public static View findOptionsMenu(Activity activity) {
+		try {
+			ViewExtractor viewExractor = new ViewExtractor();
+			View[] views = viewExractor.getWindowDecorViews();
+			if (views != null) {
+				int numDecorViews = views.length;
+				
+				// iterate through the set of decor windows.  The dialog may already have been presented.
+				for (int iView = 0; iView < numDecorViews; iView++) {
+					View v = views[iView];
+					if (TestUtils.isDialogOrPopup(activity, v)) {	
+						if (TestUtils.isOptionsMenu(v)) {
+							return v;
+						}
+					}
+				}
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+		return null;
+	}
+	
 	/**
 	 * see if this dialog has popped up an activity.
 	 * @param activity activity to test
@@ -572,8 +616,10 @@ public class TestUtils {
 							Class phoneDecorViewClass = Class.forName(Constants.Classes.PHONE_DECOR_VIEW);
 							Window phoneWindow = (Window) ListenerIntercept.getFieldValue(v, phoneDecorViewClass, Constants.Classes.THIS);
 							Window.Callback callback = phoneWindow.getCallback();
-							Dialog dialog = (Dialog) callback;
-							return dialog;
+							if (callback instanceof Dialog) {
+								Dialog dialog = (Dialog) callback;
+								return dialog;
+							}
 						} 
 					}
 				}

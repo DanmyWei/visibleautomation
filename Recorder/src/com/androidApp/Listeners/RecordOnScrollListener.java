@@ -17,7 +17,7 @@ import android.widget.AdapterView;
  * @author Matthew
  *
  */
-public class RecordOnScrollListener extends RecordListener implements AbsListView.OnScrollListener {
+public class RecordOnScrollListener extends RecordListener implements AbsListView.OnScrollListener, IOriginalListener  {
 	private static final String 			TAG = "RecordOnScrollListener";
 	protected AbsListView.OnScrollListener 	mOriginalOnScrollListener;
 	protected int							mScrollState = AbsListView.OnScrollListener.SCROLL_STATE_IDLE;
@@ -37,15 +37,8 @@ public class RecordOnScrollListener extends RecordListener implements AbsListVie
 		}
 	}
 
-	/**
-	 * we shouldn't intercept if we're already recording the scroll listener.
-	 */
-	public boolean shouldIntercept(View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
-		if (super.shouldIntercept(v)) {
-			AbsListView.OnScrollListener originalOnScrollListener = ListenerIntercept.getScrollListener((AbsListView) v);
-			return !(originalOnScrollListener instanceof RecordOnScrollListener);
-		}
-		return false;
+	public Object getOriginalListener() {
+		return mOriginalOnScrollListener;
 	}
 
 	/**

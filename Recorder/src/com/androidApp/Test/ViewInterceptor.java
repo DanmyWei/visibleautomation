@@ -1,13 +1,16 @@
 package com.androidApp.Test;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import android.app.ActionBar;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.Display;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
@@ -15,6 +18,7 @@ import android.view.Window;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.EditText;
+import android.widget.PopupMenu;
 import android.widget.PopupWindow;
 import android.widget.SeekBar;
 import android.widget.Spinner;
@@ -30,25 +34,37 @@ import com.androidApp.Listeners.RecordOnClickListener;
 import com.androidApp.Listeners.RecordOnFocusChangeListener;
 import com.androidApp.Listeners.RecordOnItemClickListener;
 import com.androidApp.Listeners.RecordOnItemSelectedListener;
+import com.androidApp.Listeners.RecordOnKeyListener;
 import com.androidApp.Listeners.RecordOnLongClickListener;
 import com.androidApp.Listeners.RecordOnScrollListener;
 import com.androidApp.Listeners.RecordOnTouchListener;
+import com.androidApp.Listeners.RecordPopupMenuOnMenuItemClickListener;
 import com.androidApp.Listeners.RecordPopupWindowOnDismissListener;
 import com.androidApp.Listeners.RecordSeekBarChangeListener;
 import com.androidApp.Listeners.RecordTextChangedListener;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.TestUtils;
 
+/**
+ * class to install the interceptors in the view event listeners
+ */
 public class ViewInterceptor {
-	public static final float	GUESS_IME_HEIGHT = 0.25F;			// guess that IME takes up this amount of the screen.
-	protected EventRecorder 	mEventRecorder;
-	protected int				mHashCode;							// for quick view hierarchy comparison
-	protected boolean			mIMEWasDisplayed = false;			// IME was displayed in the last layout
-	protected View				mViewFocus;
+	protected static final String	TAG = "ViewInterceptor";
+	public static final float		GUESS_IME_HEIGHT = 0.25F;			// guess that IME takes up this amount of the screen.
+	protected EventRecorder 		mEventRecorder;
+	protected int					mHashCode;							// for quick view hierarchy comparison
+	protected boolean				mIMEWasDisplayed = false;			// IME was displayed in the last layout
+	protected View					mViewFocus;
+	protected int					mLastKeyAction;						// so we can track dialog/popup/ime/activity dismiss from back/menu key					
+	private Dialog					mCurrentDialog = null;				// track the current dialog, so we don't re-record it.
+	private PopupWindow				mCurrentPopupWindow = null;			// current popup window, which is like the current dialog, but different
+	private View					mCurrentOptionsMenuView = null;		// current action menu window
 	
 	public ViewInterceptor(EventRecorder eventRecorder) {
 		mEventRecorder = eventRecorder;
+		mLastKeyAction = -1;
 	}
+	
 	// accessors/mutator for focused view for IME display/remove event
 	public View getFocusedView() {
 		return mViewFocus;
@@ -56,6 +72,59 @@ public class ViewInterceptor {
 	
 	public void setFocusedView(View v) {
 		mViewFocus = v;
+	}
+	
+	/**
+	 * set the current dialog
+	 * @param dialog
+	 */
+	public void setCurrentDialog(Dialog dialog) {
+		mCurrentDialog = dialog;
+	}
+	
+	/**
+	 * get the current dialog
+	 * @return dialog
+	 */
+	public Dialog getCurrentDialog() {
+		return mCurrentDialog;
+	}
+	
+	/**
+	 * get the current popup window
+	 * @return popup window
+	 */
+	public PopupWindow getCurrentPopupWindow() {
+		return mCurrentPopupWindow;
+	}
+	
+	public View getCurrentOptionsMenuView() {
+		return mCurrentOptionsMenuView;
+	}
+	
+	public void setCurrentOptionsMenuView(View view) {
+		mCurrentOptionsMenuView = view;
+	}
+	
+	/**
+	 * set the current popup window
+	 * @param popupWindow
+	 */
+	public void setCurrentPopupWindow(PopupWindow popupWindow) {
+		mCurrentPopupWindow = popupWindow;
+	}
+			
+	
+	/**
+	 * retrieve the last key action, so when something happens, we can tell if the user did it.
+	 * @return
+	 */
+	public int getLastKeyAction() {
+		return mLastKeyAction;
+	}
+
+	public void setLastKeyAction(int keyAction) {
+		mLastKeyAction = keyAction;
 	}
 	
 	/**
@@ -103,9 +172,15 @@ public class ViewInterceptor {
 					}
 		
 					View.OnTouchListener originalTouchListener = ListenerIntercept.getTouchListener(v);
-					if ((originalTouchListener != null) && !(originalTouchListener instanceof RecordOnTouchListener)) {
+					if (!(originalTouchListener instanceof RecordOnTouchListener)) {
 						RecordOnTouchListener recordTouchListener = new RecordOnTouchListener(mEventRecorder, originalTouchListener);
 						v.setOnTouchListener(recordTouchListener);
+					}
+					
+					View.OnKeyListener originalKeyListener = ListenerIntercept.getKeyListener(v);
+					if ((originalKeyListener != null) && !(originalKeyListener instanceof RecordOnKeyListener)) {
+						RecordOnKeyListener recordKeyListener = new RecordOnKeyListener(mEventRecorder, originalKeyListener);
+						v.setOnKeyListener(recordKeyListener);
 					}
 				}
 				
@@ -120,24 +195,32 @@ public class ViewInterceptor {
 				}
 			} else {
 				if (v instanceof AbsListView) {
-					// TODO: need to support scrolling for objects which are NOT ListViews 
-					AbsListView absListView = (AbsListView) v;
-					AbsListView.OnScrollListener originalScrollListener = ListenerIntercept.getScrollListener(absListView);
-					if (!(originalScrollListener instanceof RecordOnScrollListener)) {
-						RecordOnScrollListener recordScrollListener = new RecordOnScrollListener(mEventRecorder, originalScrollListener);
-						absListView.setOnScrollListener(recordScrollListener);
-					}
-					AdapterView.OnItemClickListener itemClickListener = absListView.getOnItemClickListener();
-					if (!(itemClickListener instanceof RecordOnItemClickListener)) {
-						RecordOnItemClickListener recordItemClickListener = new RecordOnItemClickListener(mEventRecorder, absListView);
-						absListView.setOnItemClickListener(recordItemClickListener);		
-					}				
-					// special case for spinners, which receive onItemSelected, but not onItemClick events.
-					 if (v instanceof Spinner) {
-						AdapterView.OnItemSelectedListener originalSelectedItemListener = ListenerIntercept.getItemSelectedListener(absListView);
-						if (!(originalSelectedItemListener instanceof RecordOnItemSelectedListener)) {
-							RecordOnItemSelectedListener recordItemSelectedListener = new RecordOnItemSelectedListener(mEventRecorder, originalSelectedItemListener);
-							absListView.setOnItemSelectedListener(recordItemSelectedListener);
+					if (ListenerIntercept.isPopupMenu(v)) {
+						PopupMenu.OnMenuItemClickListener originalMenuItemClickListener = ListenerIntercept.getPopupMenuOnMenuItemClickListener(v);
+						AdapterView.OnItemClickListener originalItemClickListener = ListenerIntercept.getPopupMenuOnItemClickListener(v);
+						if (!(originalMenuItemClickListener instanceof RecordPopupMenuOnMenuItemClickListener)) {
+							ListenerIntercept.setPopupMenuOnMenuItemClickListener(v, new RecordPopupMenuOnMenuItemClickListener(mEventRecorder, v)); 
+						}
+					} else {
+						// TODO: need to support scrolling for objects which are NOT ListViews 
+						AbsListView absListView = (AbsListView) v;
+						AbsListView.OnScrollListener originalScrollListener = ListenerIntercept.getScrollListener(absListView);
+						if (!(originalScrollListener instanceof RecordOnScrollListener)) {
+							RecordOnScrollListener recordScrollListener = new RecordOnScrollListener(mEventRecorder, originalScrollListener);
+							absListView.setOnScrollListener(recordScrollListener);
+						}
+						AdapterView.OnItemClickListener itemClickListener = absListView.getOnItemClickListener();
+						if (!(itemClickListener instanceof RecordOnItemClickListener)) {
+							RecordOnItemClickListener recordItemClickListener = new RecordOnItemClickListener(mEventRecorder, absListView);
+							absListView.setOnItemClickListener(recordItemClickListener);		
+						}				
+						// special case for spinners, which receive onItemSelected, but not onItemClick events.
+						if (v instanceof Spinner) {
+							AdapterView.OnItemSelectedListener originalSelectedItemListener = ListenerIntercept.getItemSelectedListener(absListView);
+							if (!(originalSelectedItemListener instanceof RecordOnItemSelectedListener)) {
+								RecordOnItemSelectedListener recordItemSelectedListener = new RecordOnItemSelectedListener(mEventRecorder, originalSelectedItemListener);
+								absListView.setOnItemSelectedListener(recordItemSelectedListener);
+							}
 						}
 					}
 				}
@@ -157,7 +240,7 @@ public class ViewInterceptor {
 				// add listener for focus
 				View.OnFocusChangeListener originalFocusChangeListener = tv.getOnFocusChangeListener();
 				if (!(originalFocusChangeListener instanceof RecordOnFocusChangeListener)) {
-					View.OnFocusChangeListener recordFocusChangeListener = new RecordOnFocusChangeListener(mEventRecorder, originalFocusChangeListener);
+					View.OnFocusChangeListener recordFocusChangeListener = new RecordOnFocusChangeListener(mEventRecorder, this, originalFocusChangeListener);
 					tv.setOnFocusChangeListener(recordFocusChangeListener);
 				}
 			}
@@ -165,6 +248,7 @@ public class ViewInterceptor {
 			try {
 				String description = "Intercepting view " +  RecordListener.getDescription(v);
 				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, description);
+				ex.printStackTrace();
 			} catch (Exception exlog) {
 				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION + " unknown description");
 			}
@@ -259,7 +343,12 @@ public class ViewInterceptor {
 	        	mIMEWasDisplayed = true;
 				mEventRecorder.writeRecord(Constants.EventTags.SHOW_IME, getFocusedView(), "IME displayed");
 	        } else if (mIMEWasDisplayed && !isIMEDisplayed(contentView)) {
-	        	mEventRecorder.writeRecord(Constants.EventTags.HIDE_IME, getFocusedView(), "IME hidden");
+	        	if (getLastKeyAction() == KeyEvent.KEYCODE_BACK) {
+	        		mEventRecorder.writeRecord(Constants.EventTags.HIDE_IME_BACK_KEY, getFocusedView(), "IME hidden by back key pressed");
+	        		setLastKeyAction(-1);
+	        	} else {
+	        		mEventRecorder.writeRecord(Constants.EventTags.HIDE_IME, getFocusedView(), "IME hidden");
+	        	}
 	        }
 	        
 	        // recursively generate the hashcode for this view hierarchy, and re-intercept if it's changed.
@@ -272,8 +361,7 @@ public class ViewInterceptor {
 			// do the action bar, since it doesn't seem to get populated until after the activity was created/resumed
 
 			ActionBar actionBar = mActivity.getActionBar();
-	        intercept(mActivity, actionBar);
-	       
+	        intercept(mActivity, actionBar);   
 		}
 	}
 	
@@ -298,7 +386,7 @@ public class ViewInterceptor {
 		try {
 			PopupWindow.OnDismissListener originalDismissListener = ListenerIntercept.getOnDismissListener(popupWindow);
 			if ((originalDismissListener == null) || (originalDismissListener.getClass() != RecordDialogOnDismissListener.class)) {
-				RecordPopupWindowOnDismissListener recordOnDismissListener = new RecordPopupWindowOnDismissListener(mEventRecorder, null, popupWindow, Constants.EventTags.DISMISS_POPUP_WINDOW, originalDismissListener);
+				RecordPopupWindowOnDismissListener recordOnDismissListener = new RecordPopupWindowOnDismissListener(mEventRecorder, this, null, popupWindow, originalDismissListener);
 				popupWindow.setOnDismissListener(recordOnDismissListener);
 			}
 		} catch (Exception ex) {
@@ -317,7 +405,7 @@ public class ViewInterceptor {
 			DialogInterface.OnDismissListener originalDismissListener = ListenerIntercept.getOnDismissListener(dialog);
 			if ((originalDismissListener == null) || (originalDismissListener.getClass() != RecordDialogOnDismissListener.class)) {
 				// TODO: ?
-				RecordDialogOnDismissListener recordOnDismissListener = new RecordDialogOnDismissListener(mEventRecorder, originalDismissListener);
+				RecordDialogOnDismissListener recordOnDismissListener = new RecordDialogOnDismissListener(mEventRecorder, this, originalDismissListener);
 				if (fCancelAndDismissTaken) {
 					ListenerIntercept.setOnDismissListener(dialog, recordOnDismissListener);
 				} else {

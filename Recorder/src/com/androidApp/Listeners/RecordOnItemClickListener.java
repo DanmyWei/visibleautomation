@@ -9,7 +9,7 @@ import android.view.View;
 import android.widget.AdapterView;
 
 // record item clicks for listviews
-public class RecordOnItemClickListener extends RecordListener implements AdapterView.OnItemClickListener {
+public class RecordOnItemClickListener extends RecordListener implements AdapterView.OnItemClickListener, IOriginalListener  {
 	protected AdapterView.OnItemClickListener	mOriginalItemClickListener;
 	
 	public RecordOnItemClickListener(EventRecorder eventRecorder, AdapterView<?> adapterView) {
@@ -22,13 +22,9 @@ public class RecordOnItemClickListener extends RecordListener implements Adapter
 		super(eventRecorder);
 		mOriginalItemClickListener = originalListener;
 	}
-	
-	/**
-	 * we don't call super for intercept, since it fails on parent adapter views.
-	 */
-	public boolean shouldIntercept(View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
-		AdapterView.OnItemClickListener originalOnItemClickListener = ((AdapterView) v).getOnItemClickListener();
-		return !(originalOnItemClickListener instanceof RecordOnItemClickListener);
+		
+	public Object getOriginalListener() {
+		return mOriginalItemClickListener;
 	}
 
 	/**

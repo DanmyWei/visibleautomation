@@ -14,7 +14,7 @@ import android.view.View;
  * @author Matthew
  *
  */
-public class RecordOnLongClickListener extends RecordListener implements View.OnLongClickListener {
+public class RecordOnLongClickListener extends RecordListener implements View.OnLongClickListener, IOriginalListener {
 	protected View.OnLongClickListener 	mOriginalOnLongClickListener;
 	
 	public RecordOnLongClickListener(EventRecorder eventRecorder, View v) {
@@ -31,17 +31,10 @@ public class RecordOnLongClickListener extends RecordListener implements View.On
 		mOriginalOnLongClickListener = originalLongClickListener;
 	}
 	
-	/**
-	 * we shouldn't intercept if we're already recording the long click listener.
-	 */
-	public boolean shouldIntercept(View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
-		if (super.shouldIntercept(v)) {
-			View.OnLongClickListener originalOnLongClickListener = ListenerIntercept.getLongClickListener(v);
-			return !(originalOnLongClickListener instanceof RecordOnLongClickListener);
-		}
-		return false;
+	public Object getOriginalListener() {
+		return mOriginalOnLongClickListener;
 	}
-
+	
 	/**
 	 * record onLongClick
 	 * click:time,<view reference>,Click on <description>

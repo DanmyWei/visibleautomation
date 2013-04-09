@@ -9,7 +9,7 @@ import android.content.DialogInterface;
 import android.os.SystemClock;
 
 // log when a dialog is displayed
-public class RecordDialogOnShowListener extends RecordListener implements DialogInterface.OnShowListener {
+public class RecordDialogOnShowListener extends RecordListener implements DialogInterface.OnShowListener, IOriginalListener  {
 	protected DialogInterface.OnShowListener mOriginalOnShowListener;
 	
 	public RecordDialogOnShowListener(EventRecorder eventRecorder, DialogInterface dialog) {
@@ -19,6 +19,10 @@ public class RecordDialogOnShowListener extends RecordListener implements Dialog
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
+	}
+	
+	public Object getOriginalListener() {
+		return mOriginalOnShowListener;
 	}
 	
 	public void onShow(DialogInterface dialog) {

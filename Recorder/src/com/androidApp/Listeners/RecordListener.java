@@ -9,6 +9,7 @@ import com.androidApp.Utility.ViewExtractor;
 
 import android.app.Dialog;
 import android.content.DialogInterface;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -35,6 +36,15 @@ public class RecordListener {
 	
 	public RecordListener(EventRecorder eventRecorder) {
 		mEventRecorder = eventRecorder;
+	}
+	
+	/**
+	 * return the original listener, since we may place other interceptors.  TODO: make this abstract
+	 * and implement it in all subclasses
+	 * @return the original listener as an object.
+	 */
+	public Object getOriginalListener() {
+		return null;
 	}
 	
 	/**
@@ -66,6 +76,13 @@ public class RecordListener {
 	public static boolean getReentryBlock() {
 		return sfEventBlock;
 	}
+	
+
+	// get the description for a menu item
+	public static String getDescription(MenuItem item) {
+		return item.getTitle().toString();
+	}
+
 		
 	// get a description of a view.
 	public static String getDescription(View v) {

@@ -10,7 +10,7 @@ import android.widget.AdapterView;
 
 // record long click listener
 // TODO: this will handle the UI for waitForText() and extended record interface
-public class RecordOnItemLongClickListener extends RecordListener implements AdapterView.OnItemLongClickListener {
+public class RecordOnItemLongClickListener extends RecordListener implements AdapterView.OnItemLongClickListener, IOriginalListener  {
 	protected AdapterView.OnItemLongClickListener	mOriginalItemLongClickListener;
 	
 	public RecordOnItemLongClickListener(EventRecorder eventRecorder, AdapterView<?> adapterView) {
@@ -19,12 +19,8 @@ public class RecordOnItemLongClickListener extends RecordListener implements Ada
 		adapterView.setOnItemLongClickListener(this);
 	}
 	
-	/**
-	 * we don't call super for intercept, since it fails on parent adapter views.
-	 */
-	public boolean shouldIntercept(View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
-		AdapterView.OnItemLongClickListener originalOnItemLongClickListener = ((AdapterView) v).getOnItemLongClickListener();
-		return !(originalOnItemLongClickListener instanceof RecordOnItemLongClickListener);
+	public Object getOriginalListener() {
+		return mOriginalItemLongClickListener;
 	}
 
 	/**

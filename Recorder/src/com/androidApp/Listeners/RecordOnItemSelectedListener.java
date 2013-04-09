@@ -11,7 +11,7 @@ import android.widget.Spinner;
 
 // record item Selects for spinners, list views, etc.
 
-public class RecordOnItemSelectedListener extends RecordListener implements AdapterView.OnItemSelectedListener {
+public class RecordOnItemSelectedListener extends RecordListener implements AdapterView.OnItemSelectedListener, IOriginalListener  {
 	protected AdapterView.OnItemSelectedListener	mOriginalItemSelectedListener;
 	
 	public RecordOnItemSelectedListener(EventRecorder eventRecorder, AdapterView adapterView) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
@@ -25,14 +25,10 @@ public class RecordOnItemSelectedListener extends RecordListener implements Adap
 		super(eventRecorder);
 		mOriginalItemSelectedListener = originalItemSelectedListener;
 	}
-	/**
-	 * we don't call super for intercept, since it fails on parent adapter views.
-	 */
-	public boolean shouldIntercept(View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
-		AdapterView.OnItemSelectedListener originalOnItemSelectedListener = ((AdapterView) v).getOnItemSelectedListener();
-		return !(originalOnItemSelectedListener instanceof RecordOnItemSelectedListener);
+	
+	public Object getOriginalListener() {
+		return mOriginalItemSelectedListener;
 	}
-
 	/**
 	 * output:
 	 * item_selected:<time>,position,<reference>,<description>
