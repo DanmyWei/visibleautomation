@@ -1,0 +1,2 @@
+		// %DESCRIPTION%
+		Activity activity%VARIABLE_INDEX% = solo.getCurrentActivity();

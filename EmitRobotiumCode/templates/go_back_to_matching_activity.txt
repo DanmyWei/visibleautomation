@@ -1,0 +1,3 @@
+		// %DESCRIPTION%
+		solo.goBack();
+		TestCase.assertTrue(RobotiumUtils.waitForNewActivity(solo, %ACTIVITY%, %ACTIVITY_CLASS%.class, ACTIVITY_WAIT_MSEC));

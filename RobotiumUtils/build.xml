@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Configuration of the Ant build system to generate a Jar file --> 
+<project name="RobotiumUtils" default="install">
+  <target name="jar" description="Create Jar file">
+        <jar jarfile="robotiumutils.jar" basedir="./bin" >
+       	 	<fileset dir="./bin" includes="*.class"/>
+       	</jar>
+  </target>
+  <target name="install" description="install library" depends="jar">
+      <copy file="robotiumutils.jar" todir="../EmitRobotiumCode/templates" />
+  </target>
+</project>

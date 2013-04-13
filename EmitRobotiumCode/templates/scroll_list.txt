@@ -1,0 +1,3 @@
+		// %DESCRIPTION%
+		android.widget.ListView listView%VARIABLE_INDEX% = (android.widget.ListView) solo.getView(android.widget.ListView.class, %VIEW_INDEX%);
+		solo.scrollListToLine(listView%VARIABLE_INDEX%, %ITEM_INDEX%);

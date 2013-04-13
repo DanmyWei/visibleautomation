@@ -1,0 +1,33 @@
+package %CLASSPATH%Test;
+
+import %CLASSPATH%;
+import com.androidApp.util.RobotiumUtils;
+import com.androidApp.util.ViewExtractor;
+import com.androidApp.util.TestException;
+import com.jayway.android.robotium.solo.Solo;
+import android.test.ActivityInstrumentationTestCase2;
+import android.view.View;
+import java.util.ArrayList;
+import junit.framework.TestCase;
+import android.app.Activity;
+import android.view.Surface;
+import android.widget.PopupWindow;
+
+public class %TESTCLASSNAME% extends ActivityInstrumentationTestCase2<%CLASSNAME%> {
+  	private Solo solo;
+  	protected static final int ACTIVITY_WAIT_MSEC = 5000;		// wait 5 seconds for new activities by default
+	protected static final int DIALOG_CLOSE_TIMEOUT = 5000;		// wait 5 seconds for dialogs to close.
+ 	protected static final int VIEW_WAIT_MSEC = 5000;			// wait 5 seconds for views to appear
+  	public %TESTCLASSNAME%() {
+		super("%CLASSPACKAGE%", %CLASSNAME%.class);
+  	}
+
+  	public void setUp() throws Exception {
+		solo = new Solo(getInstrumentation(), getActivity());
+  	}
+  
+   	@Override
+   	public void tearDown() throws Exception {
+        solo.finishOpenedActivities();
+  	}
+  

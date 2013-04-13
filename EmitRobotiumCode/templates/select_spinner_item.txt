@@ -1,0 +1,2 @@
+		// %DESCRIPTION%
+		solo.pressSpinnerItem(%SPINNER_INDEX%, %ITEM_INDEX%);

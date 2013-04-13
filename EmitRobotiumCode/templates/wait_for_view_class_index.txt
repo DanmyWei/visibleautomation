@@ -1,0 +1,2 @@
+		// %DESCRIPTION%
+		TestCase.assertTrue(solo.waitForView(%CLASSPATH%.class, %VIEW_INDEX% + 1, VIEW_WAIT_MSEC));

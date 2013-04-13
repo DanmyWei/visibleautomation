@@ -1,0 +1,3 @@
+		// %DESCRIPTION%
+		%CLASSPATH% view%VARIABLE_INDEX% = (%CLASSPATH%) solo.getView(%ID%);
+		RobotiumUtils.showIME(view%VARIABLE_INDEX%);
