@@ -1,0 +1,13 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: CreateRecorderPlugin
+Bundle-SymbolicName: CreateRecorderPlugin; singleton:=true
+Bundle-Version: 1.0.0.qualifier
+Bundle-Activator: createrecorderplugin.Activator
+Require-Bundle: org.eclipse.ui,
+ org.eclipse.core.runtime,
+ org.eclipse.core.resources
+Bundle-ActivationPolicy: lazy
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Import-Package: com.android.ide.eclipse.adt,
+ org.eclipse.jdt.core

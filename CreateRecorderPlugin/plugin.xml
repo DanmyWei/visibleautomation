@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+
+   <extension
+         point="org.eclipse.ui.popupMenus">
+      <objectContribution
+            objectClass="org.eclipse.core.resources.IProject"
+            adaptable="true"
+            namefilter="*"
+            id="CreateRecorderPlugin.contribution1">
+         <menu
+               label="Robotium Recorder"
+               path="additions"
+               id="CreateRecorderPlugin.menu1">
+            <separator
+                  name="group1">
+            </separator>
+         </menu>
+         <filter
+                name="projectNature"
+                value="com.android.ide.eclipse.adt.AndroidNature">
+         </filter>
+         <action
+               label="Create Robotium Recorder"
+               class="createrecorderplugin.popup.actions.CreateRobotiumRecorder"
+               menubarPath="CreateRecorderPlugin.menu1/group1"
+               enablesFor="1"
+               id="CreateRecorderPlugin.newAction">
+         </action>
+      </objectContribution>
+   </extension>
+
+</plugin>
