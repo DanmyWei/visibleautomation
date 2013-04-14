@@ -2,6 +2,8 @@ package com.example.android.apis.test;
 
 import java.io.IOException;
 
+import android.app.Activity;
+
 import com.androidApp.Test.RecordTest;
 import com.example.android.apis.ApiDemos;
 
@@ -23,6 +25,7 @@ public class ApiDemosTest extends RecordTest<ApiDemos> {
 	}
 	
 	public void setUp() throws Exception { 
+		setActivityClass(ApiDemos.class);
 		super.setUp();
 	}
 }
