@@ -46,16 +46,16 @@ import com.androidApp.Utility.TestUtils;
  * activity, so we can't intercept them, except with methods that are highly intrusive.
  */
 public abstract class RecordTest<T extends Activity> extends ActivityInstrumentationTestCase2<T> {
-	private static final String 	TAG = "RecordTest";
-	private static final long		DIALOG_SYNC_TIME = 50;				// test for dialogs 20x second.
-	private static final long		POPUP_WINDOW_SYNC_TIME = 50;		// test for popups 20x second.
-	private static final long 		INTERCEPTOR_WAIT_MSEC = 1000;
-	private EventRecorder 			mRecorder;
-	private ViewInterceptor			mViewInterceptor;
-	private boolean					mFinished = false;					// have the loops finished?
-	private Timer					mScanTimer = null;					// timer for scanning for new dialogs to set intercept handlers on.
-	private ActivityInterceptor		mActivityInterceptor = null;
-	Stack<WeakReference<Activity>> 	mActivityStack = new Stack<WeakReference<Activity>>();
+	private static final String 			TAG = "RecordTest";
+	private static final long				DIALOG_SYNC_TIME = 50;				// test for dialogs 20x second.
+	private static final long				POPUP_WINDOW_SYNC_TIME = 50;		// test for popups 20x second.
+	private static final long 				INTERCEPTOR_WAIT_MSEC = 1000;
+	private EventRecorder 					mRecorder;
+	private ViewInterceptor					mViewInterceptor;
+	private Timer							mScanTimer = null;					// timer for scanning for new dialogs to set intercept handlers on.
+	private ActivityInterceptor				mActivityInterceptor = null;
+	private Class<? extends Activity> 		mStartActivityClass = null;			// workaround for hanging on setup
+	
 	
 	// initialize the event recorder
 	public void initRecorder() throws IOException {
@@ -86,6 +86,15 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 		return mViewInterceptor;
 	}
 	
+	public void setActivityClass(Class<? extends Activity> activityClass) {
+		mStartActivityClass = activityClass;
+	}
+	
+	// enable visual debugging
+	public void setVisualDebug(boolean f) {
+		getRecorder().setVisualDebug(f);
+	}
+	
 	/**
 	 * return the reference to the activity interceptor
 	 * @return activity interceptor reference
@@ -100,6 +109,9 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	 */
 	public void setUp() throws NameNotFoundException, IOException, Exception { 
 		super.setUp();	
+		if (mStartActivityClass == null) {
+			throw new Exception("the start activity class must be set before setUp is called");
+		}
 		initRecorder();
 		mScanTimer = new Timer();
 		mActivityInterceptor = new ActivityInterceptor(getRecorder(), getViewInterceptor());
@@ -109,6 +121,7 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 		Instrumentation instrumentation = getInstrumentation();
 		mActivityInterceptor.setupActivityStackListener(instrumentation);
 		// need to make sure the activity monitor is set up before the first activity is fired.
+		// need to throw some kind of error if the wait expires
 		try {
 			synchronized(mActivityInterceptor) {
 				mActivityInterceptor.wait(INTERCEPTOR_WAIT_MSEC);
@@ -117,10 +130,10 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 		}
 		Intent intent = new Intent(Intent.ACTION_MAIN);
 		intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-		intent.setClassName(instrumentation.getTargetContext(), getActivity().getClass().getName());			// so we can get the package name to write in the manifest and classpath
+		intent.setClassName(instrumentation.getTargetContext(), mStartActivityClass.getName());			// so we can get the package name to write in the manifest and classpath
 		String packageName = getPackageName(getActivity());
 		getRecorder().writeRecord(Constants.EventTags.PACKAGE, packageName);
-		instrumentation.startActivitySync(intent);
+		instrumentation.getTargetContext().startActivity(intent);
 	}
 
 
@@ -164,7 +177,8 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	}
 	
 	/**
-	 * similar to listener for dialogs, except that it searches for popup windows.
+	 * similar to listener for dialogs, except that it searches for popup windows used in context menus and from the
+	 * actionbar dropdown menus.
 	 */
 	private void setupPopupWindowListener() {
 		TimerTask scanTask = new TimerTask() {
@@ -212,10 +226,11 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 		mScanTimer.schedule(scanTask, 0, POPUP_WINDOW_SYNC_TIME);
 	}
 	
-	public void insertKeyListener(Activity a, View v) {
-		
-	}
-	
+	/**
+	 * for the options menu, we need to intercept the menu and back keys, so we insert a fake window
+	 * which listens for dispatchKey and preIME key events.
+	 *
+	 */
 	protected class InsertKeyListenerRunnable implements Runnable {
 		protected View mExpandedMenuView;
 		public InsertKeyListenerRunnable(View v) {
@@ -292,12 +307,14 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 		}
 	}
 
+	/**
+	 * keep looping until the activity interceptor has finished
+	 */
 	public void testRecord() {
-
 		try {
 			do {
 				Thread.sleep(100);
-			} while (!mFinished);
+			} while (!mActivityInterceptor.getFinished());
 		} catch (Exception ex) {
 		}
 		Log.i("foo", "foo");

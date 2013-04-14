@@ -11,6 +11,9 @@ import android.app.Activity;
 import android.app.Instrumentation;
 import android.app.Instrumentation.ActivityMonitor;
 import android.content.IntentFilter;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -34,6 +37,7 @@ public class ActivityInterceptor {
 	protected Stack<ActivityState>	mActivityStack;						// stack of activities and state
 	private Thread					mActivityThread;					// to track the activity monitor thread
 	protected boolean				mfHasStarted;						// the first activity has been observed.
+	protected boolean				mfHasFinished;						// last activity was finished()
 	/**
 	 * retain the activity information along with the activity.
 	 * @author Matthew
@@ -80,6 +84,7 @@ public class ActivityInterceptor {
 		mEventRecorder = recorder;
 		mViewInterceptor = viewInterceptor;
 		mfHasStarted = false;
+		mfHasFinished = false;
 	}
 	
 	public EventRecorder getRecorder() {
@@ -96,6 +101,14 @@ public class ActivityInterceptor {
 	
 	public void setStarted(boolean f) {
 		mfHasStarted = f;
+	}
+	
+	public void setFinished(boolean f) {
+		mfHasFinished = f;
+	}
+	
+	public boolean getFinished() {
+		return mfHasFinished;
 	}
 	
 	/**
@@ -121,8 +134,6 @@ public class ActivityInterceptor {
 				while (fStart || !ActivityInterceptor.this.isActivityStackEmpty()) {
 					Activity activityA = ActivityInterceptor.this.mActivityMonitor.waitForActivity();
 					if (fStart) {
-						Looper looper = activityA.getMainLooper();
-						TestHandler handler = new TestHandler(looper);
 						Log.i(TAG, "start case activity = " + activityA);
 						// tell instrumentation that it can go ahead and start the first activity.  We're ready for anything.
 						synchronized (this) {
@@ -132,11 +143,21 @@ public class ActivityInterceptor {
 						ActivityInterceptor.this.setStarted(true);
 						fStart = false;
 						currentRotation  = activityA.getWindowManager().getDefaultDisplay().getRotation();
+						
+						// write out the package so we can do the correct import for the application
+						try {
+							String packageName = getPackageName(activityA);
+							ActivityInterceptor.this.getRecorder().writeRecord(Constants.EventTags.PACKAGE, packageName);
+						} catch (Exception ex) {
+							ActivityInterceptor.this.getRecorder().writeRecord(Constants.EventTags.EXCEPTION, ex.getMessage());
+							ex.printStackTrace();
+						}
 					} else {
 						int newRotation = activityA.getWindowManager().getDefaultDisplay().getRotation();
 						if (isFinalActivityBack(activityA)) {
 							Log.i(TAG, "first activity back case activity = " + activityA);
 							ActivityInterceptor.this.recordFirstActivityBack(recorder);
+							ActivityInterceptor.this.setFinished(true);
 						} else {
 							// the device has rotated in the activity transition, where one activity is destroyed, and another created
 							// with the rotated layout.
@@ -366,6 +387,19 @@ public class ActivityInterceptor {
 			return null;
 		}
 	}
+	
+	/**
+	 * get the package name for this activity.
+	 * @param activity
+	 * @return package name 
+	 * @throws NameNotFoundException 
+	 */
+	private String getPackageName(Activity activity) throws NameNotFoundException {
+        PackageManager pm = activity.getPackageManager();
+        PackageInfo packageInfo = pm.getPackageInfo(activity.getPackageName(), 0);
+        return packageInfo.packageName;
+	}
+
 	/**
 	 * when the activity is added to the stack, walk through the view hierarchy and intercept the listeners for each view.
 	 * @author matreyno
@@ -382,15 +416,4 @@ public class ActivityInterceptor {
 			ActivityInterceptor.this.getViewInterceptor().intercept(mActivity);
 		}
 	}
-	
-	public class TestHandler extends Handler {
-		public TestHandler(Looper looper) {
-			super(looper);
-		}
-		@Override
-		public void dispatchMessage(Message msg) {
-			Log.d(TAG, "msg.what = " + msg.what);
-		}
-	}
-
 }

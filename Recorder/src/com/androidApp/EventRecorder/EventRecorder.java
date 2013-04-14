@@ -56,6 +56,7 @@ public class EventRecorder {
 	public void setVisualDebug(boolean f) {
 		mfVisualDebug = f;
 	}
+	
 	// write a record to the output
 	public synchronized void writeRecord(String s)  {
 		try {
