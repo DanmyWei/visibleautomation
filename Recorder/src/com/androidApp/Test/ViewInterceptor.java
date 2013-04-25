@@ -26,6 +26,7 @@ import android.widget.TextView;
 
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
+import com.androidApp.Intercept.InterceptActionBar;
 import com.androidApp.Listeners.FinishTextChangedListener;
 import com.androidApp.Listeners.RecordDialogOnCancelListener;
 import com.androidApp.Listeners.RecordDialogOnDismissListener;
@@ -43,6 +44,7 @@ import com.androidApp.Listeners.RecordPopupWindowOnDismissListener;
 import com.androidApp.Listeners.RecordSeekBarChangeListener;
 import com.androidApp.Listeners.RecordTextChangedListener;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.ReflectionUtils;
 import com.androidApp.Utility.TestUtils;
 
 /**
@@ -149,99 +151,175 @@ public class ViewInterceptor {
 
 	/**
 	 * replace the listeners in the view with wrapping listeners that record the events
-	 * @param v
+	 * @param v view to record events for.
 	 */
 	public void replaceListeners(View v) {
 		try {
-			
-			// adapterViews don't like click listeners, they like item click listeners.
-			if (!(v instanceof AdapterView)) {
-				// only replace the touch listener if one has been defined.
-				// replace the touch listener, but make sure that we haven't replaced it already, because that would be re-entrant 
-				AdapterView listView = TestUtils.getAdapterViewAncestor(v);
-				if (listView == null) {
-					View.OnClickListener originalClickListener = ListenerIntercept.getClickListener(v);
-					if (!(originalClickListener instanceof RecordOnClickListener)) {
-						RecordOnClickListener recordClickListener = new RecordOnClickListener(mEventRecorder, originalClickListener);
-						v.setOnClickListener(recordClickListener);
-					}
-					View.OnLongClickListener originalLongClickListener = ListenerIntercept.getLongClickListener(v);
-					if (!(originalLongClickListener instanceof RecordOnClickListener)) {
-						RecordOnLongClickListener recordLongClickListener = new RecordOnLongClickListener(mEventRecorder, originalLongClickListener);
-						v.setOnLongClickListener(recordLongClickListener);
-					}
-		
-					View.OnTouchListener originalTouchListener = ListenerIntercept.getTouchListener(v);
-					if (!(originalTouchListener instanceof RecordOnTouchListener)) {
-						RecordOnTouchListener recordTouchListener = new RecordOnTouchListener(mEventRecorder, originalTouchListener);
-						v.setOnTouchListener(recordTouchListener);
+			if (!TestUtils.isActionBarDescendant(v)) {
+				// adapterViews don't like click listeners, they like item click listeners.
+				if (!(v instanceof AdapterView)) {
+					if (!TestUtils.isAdapterViewAncestor(v)) {
+						replaceViewListeners(v);
 					}
 					
-					View.OnKeyListener originalKeyListener = ListenerIntercept.getKeyListener(v);
-					if ((originalKeyListener != null) && !(originalKeyListener instanceof RecordOnKeyListener)) {
-						RecordOnKeyListener recordKeyListener = new RecordOnKeyListener(mEventRecorder, originalKeyListener);
-						v.setOnKeyListener(recordKeyListener);
+					// specific handlers for seekbars/progress bars/etc.
+					if (v instanceof SeekBar) {
+						SeekBar seekBar = (SeekBar) v;
+						replaceSeekBarListeners(seekBar);
 					}
-				}
-				
-				// specific handlers for seekbars/progress bars/etc.
-				if (v instanceof SeekBar) {
-					SeekBar seekBar = (SeekBar) v;
-					SeekBar.OnSeekBarChangeListener originalSeekBarChangeListener = ListenerIntercept.getSeekBarChangeListener(seekBar);
-					if ((originalSeekBarChangeListener != null) && !(originalSeekBarChangeListener instanceof RecordSeekBarChangeListener)) {
-						RecordSeekBarChangeListener recordSeekbarChangeListener = new RecordSeekBarChangeListener(mEventRecorder, seekBar);
-						seekBar.setOnSeekBarChangeListener(recordSeekbarChangeListener);
-					}
-				}
-			} else {
-				if (v instanceof AbsListView) {
-					if (ListenerIntercept.isPopupMenu(v)) {
-						PopupMenu.OnMenuItemClickListener originalMenuItemClickListener = ListenerIntercept.getPopupMenuOnMenuItemClickListener(v);
-						AdapterView.OnItemClickListener originalItemClickListener = ListenerIntercept.getPopupMenuOnItemClickListener(v);
-						if (!(originalMenuItemClickListener instanceof RecordPopupMenuOnMenuItemClickListener)) {
-							ListenerIntercept.setPopupMenuOnMenuItemClickListener(v, new RecordPopupMenuOnMenuItemClickListener(mEventRecorder, v)); 
-						}
-					} else {
+				} else {
+					if (v instanceof AbsListView) {
 						// TODO: need to support scrolling for objects which are NOT ListViews 
-						AbsListView absListView = (AbsListView) v;
-						AbsListView.OnScrollListener originalScrollListener = ListenerIntercept.getScrollListener(absListView);
-						if (!(originalScrollListener instanceof RecordOnScrollListener)) {
-							RecordOnScrollListener recordScrollListener = new RecordOnScrollListener(mEventRecorder, originalScrollListener);
-							absListView.setOnScrollListener(recordScrollListener);
-						}
-						AdapterView.OnItemClickListener itemClickListener = absListView.getOnItemClickListener();
-						if (!(itemClickListener instanceof RecordOnItemClickListener)) {
-							RecordOnItemClickListener recordItemClickListener = new RecordOnItemClickListener(mEventRecorder, absListView);
-							absListView.setOnItemClickListener(recordItemClickListener);		
-						}				
-						// special case for spinners, which receive onItemSelected, but not onItemClick events.
-						if (v instanceof Spinner) {
-							AdapterView.OnItemSelectedListener originalSelectedItemListener = ListenerIntercept.getItemSelectedListener(absListView);
-							if (!(originalSelectedItemListener instanceof RecordOnItemSelectedListener)) {
-								RecordOnItemSelectedListener recordItemSelectedListener = new RecordOnItemSelectedListener(mEventRecorder, originalSelectedItemListener);
-								absListView.setOnItemSelectedListener(recordItemSelectedListener);
-							}
-						}
+						AdapterView adapterView = (AdapterView) v;
+						replaceAdapterViewListeners(adapterView);
 					}
+				}
+				if (v instanceof EditText) {
+					TextView tv = (TextView) v;
+					replaceEditTextListeners(tv);
 				}
 			}
-			if (v instanceof EditText) {
-				TextView tv = (TextView) v;
-				ArrayList<TextWatcher> textWatcherList = ListenerIntercept.getTextWatcherList((TextView) v);
-				if (textWatcherList == null) {
-					textWatcherList = new ArrayList<TextWatcher>();
-				}
-				// make sure that we haven't already added the intercepting text watcher.
-				if (!ListenerIntercept.containsTextWatcher(textWatcherList, RecordTextChangedListener.class)) {
-					textWatcherList.add(0, new RecordTextChangedListener(mEventRecorder, tv));
-					textWatcherList.add(new FinishTextChangedListener(mEventRecorder));
-					ListenerIntercept.setTextWatcherList(tv, textWatcherList);
-				}
-				// add listener for focus
-				View.OnFocusChangeListener originalFocusChangeListener = tv.getOnFocusChangeListener();
-				if (!(originalFocusChangeListener instanceof RecordOnFocusChangeListener)) {
-					View.OnFocusChangeListener recordFocusChangeListener = new RecordOnFocusChangeListener(mEventRecorder, this, originalFocusChangeListener);
-					tv.setOnFocusChangeListener(recordFocusChangeListener);
+		} catch (Exception ex) {
+			try {
+				String description = "Intercepting view " +  RecordListener.getDescription(v);
+				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, description);
+				ex.printStackTrace();
+			} catch (Exception exlog) {
+				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION + " unknown description");
+			}
+		}
+	}
+
+	/**
+	 * replace the listeners in an atomic view (like a button or a text view, and stuff like that)
+	 * @param v view to intercept
+	 * @throws IllegalAccessException ReflectionUtils exception
+	 * @throws NoSuchFieldException
+	 * @throws ClassNotFoundException
+	 */
+	public void replaceViewListeners(View v) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
+		View.OnClickListener originalClickListener = ListenerIntercept.getClickListener(v);
+		if (!(originalClickListener instanceof RecordOnClickListener)) {
+			RecordOnClickListener recordClickListener = new RecordOnClickListener(mEventRecorder, originalClickListener);
+			v.setOnClickListener(recordClickListener);
+		}
+		View.OnLongClickListener originalLongClickListener = ListenerIntercept.getLongClickListener(v);
+		if (!(originalLongClickListener instanceof RecordOnClickListener)) {
+			RecordOnLongClickListener recordLongClickListener = new RecordOnLongClickListener(mEventRecorder, originalLongClickListener);
+			v.setOnLongClickListener(recordLongClickListener);
+		}
+	
+		View.OnTouchListener originalTouchListener = ListenerIntercept.getTouchListener(v);
+		if (!(originalTouchListener instanceof RecordOnTouchListener)) {
+			RecordOnTouchListener recordTouchListener = new RecordOnTouchListener(mEventRecorder, originalTouchListener);
+			v.setOnTouchListener(recordTouchListener);
+		}
+		
+		View.OnKeyListener originalKeyListener = ListenerIntercept.getKeyListener(v);
+		if ((originalKeyListener != null) && !(originalKeyListener instanceof RecordOnKeyListener)) {
+			RecordOnKeyListener recordKeyListener = new RecordOnKeyListener(mEventRecorder, originalKeyListener);
+			v.setOnKeyListener(recordKeyListener);
+		}
+	}
+	
+	/**
+	 * replace the listeners in a PopupMenu
+	 * @param v popup menu
+	 * @throws IllegalAccessException ReflectionUtils exception
+	 * @throws NoSuchFieldException
+	 * @throws ClassNotFoundException
+	 */
+	public void replacePopupMenuListeners(View v)  throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
+		PopupMenu.OnMenuItemClickListener originalMenuItemClickListener = ListenerIntercept.getPopupMenuOnMenuItemClickListener(v);
+		AdapterView.OnItemClickListener originalItemClickListener = ListenerIntercept.getPopupMenuOnItemClickListener(v);
+		if (!(originalMenuItemClickListener instanceof RecordPopupMenuOnMenuItemClickListener)) {
+			ListenerIntercept.setPopupMenuOnMenuItemClickListener(v, new RecordPopupMenuOnMenuItemClickListener(mEventRecorder, v)); 
+		}
+	}
+
+	/**
+	 * replace the listeners in a seekbar
+	 * @param seekBar seekbar/progress listener, etc
+	 * @throws IllegalAccessException ReflectionUtils exception
+	 * @throws NoSuchFieldException
+	 * @throws ClassNotFoundException
+	 */
+	public void replaceSeekBarListeners(SeekBar seekBar) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
+		SeekBar.OnSeekBarChangeListener originalSeekBarChangeListener = ListenerIntercept.getSeekBarChangeListener(seekBar);
+		if ((originalSeekBarChangeListener != null) && !(originalSeekBarChangeListener instanceof RecordSeekBarChangeListener)) {
+			RecordSeekBarChangeListener recordSeekbarChangeListener = new RecordSeekBarChangeListener(mEventRecorder, seekBar);
+			seekBar.setOnSeekBarChangeListener(recordSeekbarChangeListener);
+		}
+	}
+
+	/**
+	 * replace the listeners for item click, list scroll, and item select if its a spinner
+	 * @param adapterView adapter to intercept
+	 * @throws IllegalAccessException ReflectionUtils exceptions
+	 * @throws NoSuchFieldException
+	 * @throws ClassNotFoundExceptions
+	 */
+	public void replaceAdapterViewListeners(AdapterView adapterView) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
+		AdapterView.OnItemClickListener itemClickListener = adapterView.getOnItemClickListener();
+		if (!(itemClickListener instanceof RecordOnItemClickListener)) {
+			RecordOnItemClickListener recordItemClickListener = new RecordOnItemClickListener(mEventRecorder, adapterView);
+			adapterView.setOnItemClickListener(recordItemClickListener);		
+		}				
+		if (adapterView instanceof AbsListView) {
+			AbsListView absListView = (AbsListView) adapterView;
+			AbsListView.OnScrollListener originalScrollListener = ListenerIntercept.getScrollListener(absListView);
+			if (!(originalScrollListener instanceof RecordOnScrollListener)) {
+				RecordOnScrollListener recordScrollListener = new RecordOnScrollListener(mEventRecorder, originalScrollListener);
+				absListView.setOnScrollListener(recordScrollListener);
+			}
+		}
+		// special case for spinners, which receive onItemSelected, but not onItemClick events.
+		if (adapterView instanceof Spinner) {
+			AdapterView.OnItemSelectedListener originalSelectedItemListener = ListenerIntercept.getItemSelectedListener(adapterView);
+			if (!(originalSelectedItemListener instanceof RecordOnItemSelectedListener)) {
+				RecordOnItemSelectedListener recordItemSelectedListener = new RecordOnItemSelectedListener(mEventRecorder, originalSelectedItemListener);
+				adapterView.setOnItemSelectedListener(recordItemSelectedListener);
+			}
+		}
+	}
+
+	/**
+	 * replace the text watcher and focus change listeners for a text view (actually EditText, but we're not picky)
+	 * @param tv TextView
+	 * @throws IllegalAccessException ReflectionUtils Exceptions
+	 * @throws NoSuchFieldException
+	 */
+	public void replaceEditTextListeners(TextView tv) throws IllegalAccessException, NoSuchFieldException {
+		ArrayList<TextWatcher> textWatcherList = ListenerIntercept.getTextWatcherList(tv);
+		if (textWatcherList == null) {
+			textWatcherList = new ArrayList<TextWatcher>();
+		}
+		// make sure that we haven't already added the intercepting text watcher.
+		if (!ListenerIntercept.containsTextWatcher(textWatcherList, RecordTextChangedListener.class)) {
+			textWatcherList.add(0, new RecordTextChangedListener(mEventRecorder, tv));
+			textWatcherList.add(new FinishTextChangedListener(mEventRecorder));
+			ListenerIntercept.setTextWatcherList(tv, textWatcherList);
+		}
+		// add listener for focus
+		View.OnFocusChangeListener originalFocusChangeListener = tv.getOnFocusChangeListener();
+		if (!(originalFocusChangeListener instanceof RecordOnFocusChangeListener)) {
+			View.OnFocusChangeListener recordFocusChangeListener = new RecordOnFocusChangeListener(mEventRecorder, this, originalFocusChangeListener);
+			tv.setOnFocusChangeListener(recordFocusChangeListener);
+		}
+	}
+	
+	/**
+	 * recursively set the intercepting listeners for touch/key/textwatcher events through the view tree
+	 * @param v view to recurse from.
+	 */
+	public void intercept(View v) {
+		replaceListeners(v);
+		try {
+			if (v instanceof ViewGroup) {
+				ViewGroup vg = (ViewGroup) v;
+				for (int iChild = 0; iChild < vg.getChildCount(); iChild++) {
+					View vChild = vg.getChildAt(iChild);
+					intercept(vChild);
 				}
 			}
 		} catch (Exception ex) {
@@ -256,41 +334,31 @@ public class ViewInterceptor {
 	}
 	
 	/**
-	 * recursively set the intercepting listeners for touch/key/textwatcher events through the view tree
-	 * @param v view to recurse from.
-	 */
-	public void intercept(View v) {
-		replaceListeners(v);
-		if (v instanceof ViewGroup) {
-			ViewGroup vg = (ViewGroup) v;
-			for (int iChild = 0; iChild < vg.getChildCount(); iChild++) {
-				View vChild = vg.getChildAt(iChild);
-				intercept(vChild);
-			}
-		}
-	}
-	
-	/**
 	 * the action bar is not in the activity contentView, so it has to be handled separately
 	 * @param activity activity to intercept
 	 * @param actionBar actionBar
 	 */
 	public void intercept(Activity activity, ActionBar actionBar) {
         if (actionBar != null) {
-        	View contentView = null;
         	try {
-        		Class actionBarImplClass = Class.forName(Constants.Classes.ACTION_BAR_IMPL);
-        		contentView = (View) ListenerIntercept.getFieldValue(actionBar, actionBarImplClass, Constants.Fields.CONTAINER_VIEW);
+	        	View contentView = null;
+	        	try {
+	        		Class actionBarImplClass = Class.forName(Constants.Classes.ACTION_BAR_IMPL);
+	        		contentView = (View) ReflectionUtils.getFieldValue(actionBar, actionBarImplClass, Constants.Fields.CONTAINER_VIEW);
+	        	} catch (Exception ex) {
+	        		mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, "while intercepting the action bar for " + activity.getClass().getName());
+	        		ex.printStackTrace();
+	        	}
+	        	if (contentView != null) {
+	            	intercept(contentView);
+	            }
+		       	if (actionBar.getCustomView() != null) {
+		       		InterceptActionBar.interceptActionBarTabListeners(mEventRecorder, actionBar);
+		        	intercept(actionBar.getCustomView());
+		        }
         	} catch (Exception ex) {
-        		mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, "while intercepting the action bar for " + activity.getClass().getName());
-        		ex.printStackTrace();
+        		mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, "while intercepting action bar");
         	}
-        	if (contentView != null) {
-            	intercept(contentView);
-            }
-	       	if (actionBar.getCustomView() != null) {
-	        	intercept(actionBar.getCustomView());
-	        }
 	  	}		
 	}
 	
@@ -389,6 +457,7 @@ public class ViewInterceptor {
 				RecordPopupWindowOnDismissListener recordOnDismissListener = new RecordPopupWindowOnDismissListener(mEventRecorder, this, null, popupWindow, originalDismissListener);
 				popupWindow.setOnDismissListener(recordOnDismissListener);
 			}
+			replacePopupMenuListeners(popupWindow.getContentView());
 		} catch (Exception ex) {
 			mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, "Intercepting popup window");
 			ex.printStackTrace();

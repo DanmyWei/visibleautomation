@@ -1,5 +1,6 @@
 package com.androidApp.EventRecorder;
 
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,6 +37,23 @@ public class ViewReference {
 		View rootView = v.getRootView();
 		int classIndex = TestUtils.classIndex(rootView, v);
 		return Constants.Reference.CLASS_INDEX + "," + v.getClass().getName() + "," + classIndex;	
+	}
+	
+	/**
+	 * return the visible superclass of this class.
+	 * @param v something derived from view.class
+	 * @return a public class
+	 */
+	public static Class getVisibleClass(View v) {
+		Class cls = v.getClass();
+		while (!cls.equals(View.class)) {
+			int modifiers = cls.getModifiers();
+			if ((modifiers & Modifier.PUBLIC) != 0x0) {
+				return cls;
+			}
+			cls = cls.getSuperclass();
+		}
+		return cls;
 	}
 
 	/**
@@ -84,7 +102,7 @@ public class ViewReference {
 				}
 			}
 		}
-		Class viewClass = v.getClass();
+		Class viewClass = getVisibleClass(v);
 		View viewParentWithId = TestUtils.findParentViewWithId(v);
 		if (viewParentWithId != null) {
 			int parentIdCount = TestUtils.idCount(rootView, viewParentWithId.getId());

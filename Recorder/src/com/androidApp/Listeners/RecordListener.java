@@ -28,7 +28,10 @@ public class RecordListener {
 	protected boolean			mfReentryBlock;
 	
 	// don't record if this event was kicked off by another event. statics are dangerous
-	protected static boolean	sfEventBlock;				
+	protected static boolean	sfEventBlock;	
+	
+	// latch to indicate that an event has been fired since the latch was reset.
+	protected static boolean	sfEventLatch;
 
 	public RecordListener() {
 		mEventRecorder = null;
@@ -48,16 +51,17 @@ public class RecordListener {
 	}
 	
 	/**
-	 * should this event be intercepted?  Default is don't install recorder for views which are children of listviews.
-	 * Also, no recorder should re-install itself.
-	 * @param v view to intercept events on
-	 * @return
+	 * reset the event latch, either to initialize it, or detect that an event has been triggered.
+	 * this needs to be synchronized, since it is set by the UI thread, and read by the activity monitor thread.
 	 */
-	public boolean shouldIntercept(View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
-		AdapterView listView = TestUtils.getAdapterViewAncestor(v);
-		return listView == null;
+	public static void setEventLatch(boolean f) {
+		sfEventLatch = f;
 	}
 	
+	public static boolean getEventLatch() {
+		return sfEventLatch;
+	}
+		
 	/**
 	 * when an event kicks off a sequence of events, we actually only want to record the first event, since the 
 	 * other events will be chained from it.  Also, some of the views actually install their own wrappers, and we
@@ -71,6 +75,7 @@ public class RecordListener {
 	public void setEventBlock(boolean f) {
 		sfEventBlock = f;
 		mfReentryBlock = f;
+		setEventLatch(true);
 	}
 	
 	public static boolean getReentryBlock() {

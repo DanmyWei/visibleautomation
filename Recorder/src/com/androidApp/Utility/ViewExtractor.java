@@ -41,7 +41,7 @@ public class ViewExtractor {
 	 * return the views hosted by the window manager.  Hidden class WindowManagerImpl.mViews is the list of decor views.
 	 * @return
 	 */
-	public View[] getWindowDecorViews() {
+	public static View[] getWindowDecorViews() {
 
 		Field viewsField;
 		Field instanceField;

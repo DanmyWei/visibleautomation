@@ -8,6 +8,7 @@ import java.util.Stack;
 import java.util.Timer;
 import java.util.TimerTask;
 
+
 import android.app.Activity;
 import android.app.Dialog;
 import android.app.Instrumentation;
@@ -24,13 +25,15 @@ import android.view.Window;
 import android.widget.PopupWindow;
 
 import com.androidApp.EventRecorder.EventRecorder;
-import com.androidApp.Intercept.InsertRecordWindowCallbackRunnable;
+import com.androidApp.EventRecorder.ListenerIntercept;
+import com.androidApp.Intercept.ViewInsertRecordWindowCallbackRunnable;
 import com.androidApp.Intercept.InterceptKeyViewMenu;
 import com.androidApp.Intercept.MagicFrame;
 import com.androidApp.Intercept.MagicFramePopup;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.FieldUtils;
 import com.androidApp.Utility.TestUtils;
+import com.androidApp.randomtest.RandTest;
 
 /**
  * record events in an activity. In short, be awesome.
@@ -55,8 +58,9 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	private Timer							mScanTimer = null;					// timer for scanning for new dialogs to set intercept handlers on.
 	private ActivityInterceptor				mActivityInterceptor = null;
 	private Class<? extends Activity> 		mStartActivityClass = null;			// workaround for hanging on setup
-	
-	
+	private boolean							mfRunRandomTest = false;
+	private int								mRandomTestIterations = 1000;
+	private float							mBackKeyPercentage = 2.0f;				// 1 in 50 operations is the back key.
 	// initialize the event recorder
 	public void initRecorder() throws IOException {
 		mRecorder = new EventRecorder("events.txt");
@@ -88,6 +92,30 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	
 	public void setActivityClass(Class<? extends Activity> activityClass) {
 		mStartActivityClass = activityClass;
+	}
+	
+	public void setRunRandomTest(boolean f) {
+		mfRunRandomTest = f;
+	}
+	
+	public boolean getRunRandomTest() {
+		return mfRunRandomTest;
+	}
+	
+	public void setRandomTestIterations(int iterations) {
+		mRandomTestIterations = iterations;
+	}
+	
+	public int getRandomTestIterations() {
+		return mRandomTestIterations;
+	}
+	
+	public void setRandomTestBackKeyPercentage(float percentage) {
+		mBackKeyPercentage = percentage;
+	}
+	
+	public float getRandomTestBackKeyPercentage() {
+		return mBackKeyPercentage;
 	}
 	
 	// enable visual debugging
@@ -128,12 +156,13 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 			}
 		} catch (InterruptedException iex) {
 		}
+		
 		Intent intent = new Intent(Intent.ACTION_MAIN);
 		intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 		intent.setClassName(instrumentation.getTargetContext(), mStartActivityClass.getName());			// so we can get the package name to write in the manifest and classpath
-		String packageName = getPackageName(getActivity());
-		getRecorder().writeRecord(Constants.EventTags.PACKAGE, packageName);
-		instrumentation.getTargetContext().startActivity(intent);
+		//instrumentation.getTargetContext().startActivity(intent);
+		instrumentation.startActivitySync(intent);
+	
 	}
 
 
@@ -156,10 +185,11 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 					Activity activity = RecordTest.this.getActivityInterceptor().getCurrentActivity();
 					ViewInterceptor viewInterceptor = RecordTest.this.getViewInterceptor();
 					EventRecorder recorder = RecordTest.this.getRecorder();
+					Instrumentation instrumentation = RecordTest.this.getInstrumentation();
 					if ((activity != null) && (viewInterceptor != null)) {
 						Dialog dialog = TestUtils.findDialog(activity);
 						if ((dialog != null) && (dialog != viewInterceptor.getCurrentDialog())) {
-							activity.runOnUiThread(new InterceptDialogRunnable(dialog, recorder, viewInterceptor));
+							instrumentation.runOnMainSync(new InterceptDialogRunnable(dialog, recorder, viewInterceptor));
 							viewInterceptor.setCurrentDialog(dialog);
 						}
 					} else {
@@ -188,25 +218,22 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 					EventRecorder recorder = RecordTest.this.getRecorder();
 					Activity activity = RecordTest.this.getActivityInterceptor().getCurrentActivity();
 					ViewInterceptor viewInterceptor = RecordTest.this.getViewInterceptor();
+					Instrumentation instrumentation = RecordTest.this.getInstrumentation();
 					if ((recorder != null) && (activity !=  null) && (viewInterceptor != null)) {
-						View optionsMenuView = TestUtils.findOptionsMenu(activity);
-						if ((optionsMenuView != null) && (optionsMenuView != viewInterceptor.getCurrentOptionsMenuView())) {
-							if (viewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_MENU) {
-								recorder.writeRecord(Constants.EventTags.OPEN_ACTION_MENU_KEY, "open action menu from menu key");
-							} else {
-								recorder.writeRecord(Constants.EventTags.OPEN_ACTION_MENU, "open action menu");
-							}
-							activity.runOnUiThread(new InsertKeyListenerRunnable(optionsMenuView));
-							activity.runOnUiThread(new InsertRecordWindowCallbackRunnable(optionsMenuView, recorder, viewInterceptor));
-							viewInterceptor.setCurrentOptionsMenuView(optionsMenuView);
-						} else {
-							PopupWindow popupWindow = TestUtils.findPopupWindow(activity);
-							if ((popupWindow != null) && (popupWindow != viewInterceptor.getCurrentPopupWindow())) {
-								recorder.writeRecord(Constants.EventTags.CREATE_POPUP_WINDOW, "create popup window");
-								activity.runOnUiThread(new InterceptPopupWindowRunnable(popupWindow));
-								if (popupWindow != null) {
-									viewInterceptor.setCurrentPopupWindow(popupWindow);
+						PopupWindow popupWindow = TestUtils.findPopupWindow(activity);
+						if ((popupWindow != null) && !TestUtils.isPopupWindowEmpty(popupWindow) && (popupWindow != viewInterceptor.getCurrentPopupWindow())) {
+							viewInterceptor.setCurrentPopupWindow(popupWindow);
+							if (TestUtils.isOptionsMenu(popupWindow)) {
+								View optionsMenuView = TestUtils.findViewForPopup(activity, popupWindow);
+								if (viewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_MENU) {
+									recorder.writeRecord(Constants.EventTags.OPEN_ACTION_MENU_KEY, "open action menu from menu key");
+								} else {
+									recorder.writeRecord(Constants.EventTags.OPEN_ACTION_MENU, "open action menu");
 								}
+								instrumentation.runOnMainSync(new InsertKeyListenerRunnable(optionsMenuView));
+							} else {
+								recorder.writeRecord(Constants.EventTags.CREATE_POPUP_WINDOW, "create popup window");
+								instrumentation.runOnMainSync(new InterceptPopupWindowRunnable(popupWindow));
 							}
 						}
 					} else {
@@ -240,10 +267,8 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 		public void run() {
 			InterceptKeyViewMenu interceptKeyView = new InterceptKeyViewMenu(mExpandedMenuView.getContext(), RecordTest.this.getRecorder());
 			((ViewGroup) mExpandedMenuView).addView(interceptKeyView);
-			interceptKeyView.requestFocus();
-			
+			interceptKeyView.requestFocus();	
 		}
-		
 	}
 	/**
 	 * shutdown the dialog scan timertask once the activity stack has been emptied
@@ -301,9 +326,10 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 		
 		public void run() {
 			View contentView = mPopupWindow.getContentView();
-			MagicFramePopup magicFramePopup = new MagicFramePopup(contentView.getContext(), mPopupWindow, mRecorder, mViewInterceptor);
-			RecordTest.this.getViewInterceptor().interceptPopupWindow(mPopupWindow);
-			RecordTest.this.getViewInterceptor().intercept(contentView);
+			if (contentView != null) {
+				MagicFramePopup magicFramePopup = new MagicFramePopup(contentView.getContext(), mPopupWindow, mRecorder, mViewInterceptor);
+				RecordTest.this.getViewInterceptor().interceptPopupWindow(mPopupWindow);
+			}
 		}
 	}
 
@@ -312,10 +338,15 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	 */
 	public void testRecord() {
 		try {
+			if (getRunRandomTest()) {
+				RandTest randTest = new RandTest(this, mActivityInterceptor);
+				randTest.randTest(getInstrumentation().getContext(), mRandomTestIterations, mBackKeyPercentage);
+			}
 			do {
 				Thread.sleep(100);
 			} while (!mActivityInterceptor.getFinished());
 		} catch (Exception ex) {
+			ex.printStackTrace();
 		}
 		Log.i("foo", "foo");
 	}

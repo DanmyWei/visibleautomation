@@ -3,6 +3,7 @@ import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.ReflectionUtils;
 
 import android.view.Menu;
 import android.view.MenuItem;
@@ -57,7 +58,7 @@ public class RecordPopupMenuOnMenuItemClickListener extends RecordListener imple
 
 	protected static int getMenuItemIndex(MenuItem menuItem) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
 		Class menuItemImplClass = Class.forName(Constants.Classes.MENU_ITEM_IMPL);
-		Menu menu = (Menu) ListenerIntercept.getFieldValue(menuItem, menuItemImplClass, Constants.Fields.MENU);
+		Menu menu = (Menu) ReflectionUtils.getFieldValue(menuItem, menuItemImplClass, Constants.Fields.MENU);
 		for (int iItem = 0; iItem < menu.size(); iItem++) {
 			if (menu.getItem(iItem) == menuItem) {
 				return iItem;

@@ -425,23 +425,35 @@ public class TestUtils {
 	}
 	
 	/**
+	 * is this view a child of the action bar?
+	 * @param v view to test
+	 * @return true if its ancestor is an action bar
+	 * @throws ClassNotFoundException
+	 */
+	public static boolean isActionBarDescendant(View v) throws ClassNotFoundException {
+   		Class actionBarImplClass = Class.forName(Constants.Classes.ACTION_BAR_CONTAINER);
+		ViewParent vp = v.getParent();
+		return isDescendentOfClass(vp, v.getRootView(), actionBarImplClass);
+	}
+	
+	public static boolean isDescendentOfClass(ViewParent vp, View rootView, Class c) {
+		if ((vp == null) || (vp == rootView)) {
+			return false;
+		} else if (vp.getClass() == c) {
+			return true;
+		} else {
+			return isDescendentOfClass(vp.getParent(), rootView, c);
+		}
+	}
+	
+	/**
 	 * is v a descendant of an AdapterView?
 	 * @param v view to test
 	 * @return true if an ancestor of v is an AdapterView
 	 */
-	public static AdapterView getAdapterViewAncestor(View v) {
+	public static boolean isAdapterViewAncestor(View v) {
 		ViewParent vp = v.getParent();
-		return getAdapterViewAncestor(vp, v.getRootView());
-	}
-	
-	public static AdapterView getAdapterViewAncestor(ViewParent vp, View rootView) {
-		if ((vp == null) || (vp == rootView)) {
-			return null;
-		} else if (vp instanceof AdapterView) {
-			return (AdapterView) vp;
-		} else {
-			return getAdapterViewAncestor(vp.getParent(), rootView);
-		}
+		return isDescendentOfClass(vp, v.getRootView(), AdapterView.class);
 	}
 	
 	/**
@@ -539,6 +551,30 @@ public class TestUtils {
 		}
 		return "0x" + Integer.toHexString(idValue);
 	}
+	
+	/**
+	 * does this view belong to activity a?
+	 * @param a activity 
+	 * @param v view
+	 * @return
+	 */
+	public static boolean isActivityView(Activity a, View v) {
+		if (v != null) {
+			Context viewContext = v.getContext();
+			// dialogs use a context theme wrapper, not a context, so we have to extract he context from the theme wrapper's
+			// base context
+			if (viewContext instanceof ContextThemeWrapper) {
+				ContextThemeWrapper ctw = (ContextThemeWrapper) viewContext;
+				viewContext = ctw.getBaseContext();
+			}
+			Context activityContext = a;
+			Context activityBaseContext = a.getBaseContext();
+			return (activityContext.equals(viewContext) || activityBaseContext.equals(viewContext));
+		} else {
+			return false;
+		}
+		
+	}
 
 	public static boolean isDialogOrPopup(Activity a, View v) {
 		if (v != null) {
@@ -602,8 +638,8 @@ public class TestUtils {
 	 */
 	public static Dialog findDialog(Activity activity) {
 		try {
-			ViewExtractor viewExractor = new ViewExtractor();
-			View[] views = viewExractor.getWindowDecorViews();
+			Class phoneDecorViewClass = Class.forName(Constants.Classes.PHONE_DECOR_VIEW);
+			View[] views = ViewExtractor.getWindowDecorViews();
 			if (views != null) {
 				int numDecorViews = views.length;
 				
@@ -611,10 +647,8 @@ public class TestUtils {
 				for (int iView = 0; iView < numDecorViews; iView++) {
 					View v = views[iView];
 					if (TestUtils.isDialogOrPopup(activity, v)) {	
-						String className = v.getClass().getCanonicalName();
-						if (TestUtils.classNameEquals(className, Constants.Classes.PHONE_DECOR_VIEW)) {
-							Class phoneDecorViewClass = Class.forName(Constants.Classes.PHONE_DECOR_VIEW);
-							Window phoneWindow = (Window) ListenerIntercept.getFieldValue(v, phoneDecorViewClass, Constants.Classes.THIS);
+						if (v.getClass() == phoneDecorViewClass) {
+							Window phoneWindow = (Window) ReflectionUtils.getFieldValue(v, phoneDecorViewClass, Constants.Classes.THIS);
 							Window.Callback callback = phoneWindow.getCallback();
 							if (callback instanceof Dialog) {
 								Dialog dialog = (Dialog) callback;
@@ -638,8 +672,8 @@ public class TestUtils {
 	 */
 	public static PopupWindow findPopupWindow(Activity activity) {
 		try {
-			ViewExtractor viewExractor = new ViewExtractor();
-			View[] views = viewExractor.getWindowDecorViews();
+			Class popupViewContainerClass = Class.forName(Constants.Classes.POPUP_VIEW_CONTAINER_CREATECLASS);
+			View[] views = ViewExtractor.getWindowDecorViews();
 			if (views != null) {
 				int numDecorViews = views.length;
 				
@@ -647,10 +681,8 @@ public class TestUtils {
 				for (int iView = 0; iView < numDecorViews; iView++) {
 					View v = views[iView];
 					if (TestUtils.isDialogOrPopup(activity, v)) {	
-						String className = v.getClass().getCanonicalName();
-						if (TestUtils.classNameEquals(className, Constants.Classes.POPUP_VIEW_CONTAINER)) {
-							Class popupViewContainerClass = Class.forName(Constants.Classes.POPUP_VIEW_CONTAINER_CREATECLASS);
-							PopupWindow popupWindow = (PopupWindow) ListenerIntercept.getFieldValue(v, popupViewContainerClass, Constants.Classes.THIS);
+						if (v.getClass() == popupViewContainerClass) {
+							PopupWindow popupWindow = (PopupWindow) ReflectionUtils.getFieldValue(v, popupViewContainerClass, Constants.Classes.THIS);
 							return popupWindow;
 						}
 					}
@@ -660,6 +692,113 @@ public class TestUtils {
 			ex.printStackTrace();
 		}
 		return null;		
+	}
+	
+	/**
+	 * find a view associated with a popup window
+	 * @param activity
+	 * @param popupWindow
+	 * @return
+	 */
+	public static View findViewForPopup(Activity activity, PopupWindow popupWindow) {
+		try {
+			Class popupViewContainerClass = Class.forName(Constants.Classes.POPUP_VIEW_CONTAINER_CREATECLASS);
+			View[] views = ViewExtractor.getWindowDecorViews();
+			if (views != null) {
+				int numDecorViews = views.length;
+				
+				// iterate through the set of decor windows.  The dialog may already have been presented.
+				for (int iView = 0; iView < numDecorViews; iView++) {
+					View v = views[iView];
+					if (TestUtils.isDialogOrPopup(activity, v)) {	
+						if (v.getClass() == popupViewContainerClass) {
+							PopupWindow candPopupWindow = (PopupWindow) ReflectionUtils.getFieldValue(v, popupViewContainerClass, Constants.Classes.THIS);
+							if (candPopupWindow == popupWindow) {
+								return v;
+							}
+						}
+					}
+				}
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+		return null;
+	}
+
+	/** 
+	 * since we're in a polling loop for popup windows, we can interrogate the window before it's actually populated, 
+	 * and we need to check the menu items for callbacks to determine if it's the options menu, if the window is empty, we blow it off
+	 * @param popupWindow
+	 * @return
+	 */
+	public static boolean isPopupWindowEmpty(PopupWindow popupWindow) {
+		View contentView = popupWindow.getContentView();
+		ViewGroup contentViewGroup = (ViewGroup) contentView;
+		return contentViewGroup.getChildCount() == 0;
+	}
+	
+	/**
+	 * from the popup window, get the content view, then iterate over its children.  Each child contains mItemData, which contains mMenu, which
+	 *  has a callback field. If that callback field is PhoneWindow, then it's an options menu, otherwise it's a popup.
+	 *  the classes are all internal, so we need to do Class.formName to extract fields.
+	 *  popupWindow.mContentView.mChildren[*].mItemData.mMenu.mCallback
+	 *  types: android.widget.PopupWindow
+	 *  android.widget.ListPopupWindow$DropDownListView
+	 *  com.android.internal.view.menu.ListMenuItemView
+	 *  com.android.internal.view.menu.MenuItemImpl
+	 *  com.android.internal.view.menu.MenuBuilder
+	 *  returns Object[] where android.widget.PopupMenu for Popup and PhoneWindow for activity option menu
+	 */
+	
+	public static List<Object> getPopupWindowCallbackList(PopupWindow popupWindow) throws ClassNotFoundException, IllegalAccessException, NoSuchFieldException {
+		List<Object> callbackList = new ArrayList();
+		View contentView = popupWindow.getContentView();
+		ViewGroup contentViewGroup = (ViewGroup) contentView;
+		Class listMenuItemViewClass = Class.forName(Constants.Classes.LIST_MENU_ITEM_VIEW);
+		Class menuItemImplClass = Class.forName(Constants.Classes.MENU_ITEM_IMPL);
+		Class menuBuilderClass = Class.forName(Constants.Classes.MENU_BUILDER);
+		if (contentViewGroup.getChildCount() == 0) {
+			Log.i(TAG, "interesting");
+		}
+		for (int i = 0; i < contentViewGroup.getChildCount(); i++) {
+			View menuItemCandView = contentViewGroup.getChildAt(i);
+			if (menuItemCandView.getClass() == listMenuItemViewClass) {
+				Object itemData = ReflectionUtils.getFieldValue(menuItemCandView, listMenuItemViewClass, Constants.Fields.ITEM_DATA);
+				if (itemData.getClass() == menuItemImplClass) {
+					Object menu = ReflectionUtils.getFieldValue(itemData, menuItemImplClass, Constants.Fields.MENU);
+					if (menu.getClass() == menuBuilderClass) {
+						Object callback = ReflectionUtils.getFieldValue(menu, menuBuilderClass, Constants.Fields.CALLBACK);
+						callbackList.add(callback);
+					}
+				}
+			}
+		}
+		return callbackList;		
+	}
+	
+	/**
+	 * is this the popup for the options menu for the activity? see getPopupWindowCallbackList() for details
+	 * @param popupWindow popup window to test
+	 * @return true if the callbacks for the menu item point back to the phone window.
+	 * 
+	 * @throws ClassNotFoundException
+	 * @throws IllegalAccessException
+	 * @throws NoSuchFieldException
+	 */
+	public static boolean isOptionsMenu(PopupWindow popupWindow) throws ClassNotFoundException, IllegalAccessException, NoSuchFieldException {
+		List<Object> callbackList = getPopupWindowCallbackList(popupWindow);
+		Class phoneWindowClass = Class.forName(Constants.Classes.PHONE_WINDOW);
+		if (callbackList.isEmpty()) {
+			return false;
+		} else {
+			for (Object callback : callbackList) {
+				if (callback.getClass() != phoneWindowClass) {
+					return false;
+				}
+			}
+		}
+		return true;
 	}
 
 	/**

@@ -4,7 +4,10 @@ import java.lang.ref.WeakReference;
 import java.util.Stack;
 
 import com.androidApp.EventRecorder.EventRecorder;
+import com.androidApp.Intercept.InsertRecordWindowCallbackRunnable;
+import com.androidApp.Intercept.ViewInsertRecordWindowCallbackRunnable;
 import com.androidApp.Intercept.MagicFrame;
+import com.androidApp.Listeners.RecordListener;
 import com.androidApp.Utility.Constants;
 
 import android.app.Activity;
@@ -33,6 +36,7 @@ public class ActivityInterceptor {
 	protected static final String 	TAG = "ActivityInterceptor";
 	protected EventRecorder			mEventRecorder;						// reference to the event record
 	protected ViewInterceptor		mViewInterceptor;
+	protected Instrumentation		mInstrumentation;					// to run things synchronized on the UI thread
 	protected ActivityMonitor		mActivityMonitor;					// returns on activity event
 	protected Stack<ActivityState>	mActivityStack;						// stack of activities and state
 	private Thread					mActivityThread;					// to track the activity monitor thread
@@ -123,6 +127,7 @@ public class ActivityInterceptor {
 		// need to initialize this before the runnable, so we don't miss the first activity
 		// the activity monitor fires twice in the transition case, once in the back from last activity case, and three times
 		// in the rotation case.
+		mInstrumentation = instrumentation;
 		mActivityMonitor = instrumentation.addMonitor(filter, null, false);
 		mActivityStack = new Stack<ActivityState>();
 		Runnable runnable = new Runnable() {
@@ -133,6 +138,9 @@ public class ActivityInterceptor {
 				int currentRotation = Surface.ROTATION_0;
 				while (fStart || !ActivityInterceptor.this.isActivityStackEmpty()) {
 					Activity activityA = ActivityInterceptor.this.mActivityMonitor.waitForActivity();
+					boolean fEventsHaveBeenFired = RecordListener.getEventLatch();
+					// no events have been recorded yet for this activity.
+					RecordListener.setEventLatch(false);
 					if (fStart) {
 						Log.i(TAG, "start case activity = " + activityA);
 						// tell instrumentation that it can go ahead and start the first activity.  We're ready for anything.
@@ -143,7 +151,7 @@ public class ActivityInterceptor {
 						ActivityInterceptor.this.setStarted(true);
 						fStart = false;
 						currentRotation  = activityA.getWindowManager().getDefaultDisplay().getRotation();
-						
+						mInstrumentation.runOnMainSync(new InsertRecordWindowCallbackRunnable(activityA.getWindow(), recorder, viewInterceptor));
 						// write out the package so we can do the correct import for the application
 						try {
 							String packageName = getPackageName(activityA);
@@ -153,6 +161,9 @@ public class ActivityInterceptor {
 							ex.printStackTrace();
 						}
 					} else {
+						if (!fEventsHaveBeenFired) {
+							Log.i(TAG, "no UI recorded were fired to cause this activity transition");
+						}
 						int newRotation = activityA.getWindowManager().getDefaultDisplay().getRotation();
 						if (isFinalActivityBack(activityA)) {
 							Log.i(TAG, "first activity back case activity = " + activityA);
@@ -167,16 +178,20 @@ public class ActivityInterceptor {
 								ActivityInterceptor.this.recordRotation(recorder, viewInterceptor, activityA, newRotation);
 							} else {
 								Activity activityB = ActivityInterceptor.this.mActivityMonitor.waitForActivity();
-								
-								// special case: if activityA == activityB, then we are going back.
-								// if activityA != activityB && activityB.rotation != currentRotation, then we are going back, but
-								// we created a new activity due to rotation
+								// if the activity was in the stack, then we are going back to it, otherwise we're
+								// going forward to a new activity.
 								if (ActivityInterceptor.this.inActivityStack(activityA)) {
 									Log.i(TAG, "normal back case activity = " + activityA);
 									ActivityInterceptor.this.recordActivityBack(recorder, activityA, activityB, currentRotation);
 								} else {
+									if (activityA.equals(activityB)) {
+										Log.i(TAG, "we cannot go forward to the same activity, this shouldn't happen");
+										recorder.writeRecord(Constants.EventTags.EXCEPTION, "activity forward monitor fail");
+									}
 									Log.i(TAG, "forward case activity = " + activityA);
 									ActivityInterceptor.this.recordActivityForward(recorder, viewInterceptor, activityB);
+									mInstrumentation.runOnMainSync(new InsertRecordWindowCallbackRunnable(activityB.getWindow(), recorder, viewInterceptor));
+
 								}
 							}
 						}
@@ -207,7 +222,7 @@ public class ActivityInterceptor {
 	public void recordInitialActivity(EventRecorder recorder, ViewInterceptor viewInterceptor, Activity activityA) {
 		pushActivityOnStack(activityA);
 		// intercept events on the newly created activity.
-		activityA.runOnUiThread(new InterceptRunnable(activityA));
+		mInstrumentation.runOnMainSync(new InterceptRunnable(activityA));
 		String logMsg = activityA.getClass().getName() + "," + activityA.toString();
 		recorder.writeRecord(Constants.EventTags.ACTIVITY_FORWARD, logMsg);
 		
@@ -216,7 +231,7 @@ public class ActivityInterceptor {
 		if (activityB != activityA) {
 			recorder.writeRecord(Constants.EventTags.EXCEPTION, "first activities did not match");
 		} else {
-			MagicFrame.insertMagicFrame(activityA, recorder, viewInterceptor);
+			MagicFrame.insertMagicFrame(mInstrumentation, activityA, recorder, viewInterceptor);
 		}
 	}
 	
@@ -235,7 +250,7 @@ public class ActivityInterceptor {
 		if (activityBAgain != activityB) {
 			recorder.writeRecord(Constants.EventTags.EXCEPTION, "rotated activities did not match");
 		}
-		MagicFrame.insertMagicFrame(activityB, recorder, viewInterceptor);
+		MagicFrame.insertMagicFrame(mInstrumentation, activityB, recorder, viewInterceptor);
 	}
 	
 	/**
@@ -272,7 +287,7 @@ public class ActivityInterceptor {
 	public void recordActivityBack(EventRecorder recorder, Activity activityA, Activity activityB, int currentRotation) {
 		popActivityFromStack();
 		ActivityState previousActivityState = peekActivityOnStack();
-		if ((activityA != activityB) && (currentRotation != previousActivityState.mRotation)) {
+		if ((activityA != activityB) && (previousActivityState != null) && (currentRotation != previousActivityState.mRotation)) {
 			Activity activityBAgain = mActivityMonitor.waitForActivity();
 			
 			// I'm not sure exactly where this activity comes from.  I need to track it down and verify it
@@ -300,10 +315,10 @@ public class ActivityInterceptor {
 	public void recordActivityForward(EventRecorder recorder, ViewInterceptor viewInterceptor, Activity activityB) {
 		pushActivityOnStack(activityB);
 		// intercept events on the newly created activity.
-		activityB.runOnUiThread(new InterceptRunnable(activityB));
+		mInstrumentation.runOnMainSync(new InterceptRunnable(activityB));
 		String logMsg =  activityB.getClass().getName() + "," + activityB.toString();
 		recorder.writeRecord(Constants.EventTags.ACTIVITY_FORWARD, logMsg);
-		MagicFrame.insertMagicFrame(activityB, recorder, viewInterceptor);
+		MagicFrame.insertMagicFrame(mInstrumentation, activityB, recorder, viewInterceptor);
 	}
 
 	/**

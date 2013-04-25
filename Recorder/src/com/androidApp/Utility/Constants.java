@@ -43,7 +43,10 @@ public class Constants {
 		public static final String LOCAL_WINDOW_MANAGER = "android.view.Window$LocalWindowManager";
 		public static final String WINDOW_MANAGER_COMPAT_MODE = "android.view.WindowManagerImpl$CompatModeWrapper";
 		public static final String WINDOW_MANAGER_IMPL = "android.view.WindowManagerImpl";
-		
+		public static final String ACTION_BAR_CONTAINER = "com.android.internal.widget.ActionBarContainer";
+		public static final String LIST_MENU_ITEM_VIEW = "com.android.internal.view.menu.ListMenuItemView";
+		public static final String MENU_BUILDER = "com.android.internal.view.menu.MenuBuilder";
+		public static final String ACTION_BAR_IMPL_TAB_IMPL = "com.android.internal.app.ActionBarImpl$TabImpl";
 	}
 	
 	// listener field names
@@ -94,6 +97,8 @@ public class Constants {
 		public static final String HOVER_LISTENER = "mOnHoverListener";
 		public static final String GENERIC_MOTION_LISTENER = "mOnGenericMotionListener";
 		public static final String SYSTEMUI_VISIBILITY_CHANGE_LISTENER = "mOnSystemUiVisibilityChangeListener";
+		public static final String ITEM_DATA = "mItemData";
+		public static final String TABS = "mTabs";
 	}
 	
 	// possible derive methods which listen for events.
@@ -160,6 +165,7 @@ public class Constants {
 		public static final String KEY_MENU = "key_menu";
 		public static final String KEY_HOME = "key_home";
 		public static final String CLOSE_OPTIONS_MENU = "close_options_menu";
+		public static final String SELECT_ACTIONBAR_TAB = "select_actionbar_tab";
 	}
 	
 	// description strings 

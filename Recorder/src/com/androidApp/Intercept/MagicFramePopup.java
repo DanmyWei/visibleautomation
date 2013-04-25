@@ -13,6 +13,7 @@ import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.ReflectionUtils;
 
 public class MagicFramePopup extends MagicFrame {
 	private static final String 		TAG = "MagicFramePopup";
@@ -32,13 +33,13 @@ public class MagicFramePopup extends MagicFrame {
 			FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.FILL_PARENT, FrameLayout.LayoutParams.FILL_PARENT);
 			this.setLayoutParams(layoutParams);
 			mContentView = popupWindow.getContentView();
-			mPopupViewContainer = (FrameLayout) ListenerIntercept.getFieldValue(popupWindow, PopupWindow.class, Constants.Fields.POPUP_VIEW);
+			mPopupViewContainer = (FrameLayout) ReflectionUtils.getFieldValue(popupWindow, PopupWindow.class, Constants.Fields.POPUP_VIEW);
 		    WindowManager windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
 		    WindowManager.LayoutParams windowManagerLayoutParams = (WindowManager.LayoutParams) mPopupViewContainer.getLayoutParams();
 			windowManager.removeView(mPopupViewContainer);
 			this.addView(mPopupViewContainer);
 			windowManager.addView(this, windowManagerLayoutParams);
-			ListenerIntercept.setFieldValue(popupWindow, PopupWindow.class, Constants.Fields.POPUP_VIEW, this);
+			ReflectionUtils.setFieldValue(popupWindow, PopupWindow.class, Constants.Fields.POPUP_VIEW, this);
 			this.requestLayout();
 		} catch (Exception ex) {
 			recorder.writeRecord(Constants.EventTags.EXCEPTION, "trying to intercept popup window");

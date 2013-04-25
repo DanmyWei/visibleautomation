@@ -62,9 +62,8 @@ public class RecordOnClickListener extends RecordListener implements View.OnClic
 		if (!fReentryBlock) {
 			
 			// specifically for OnClickListeners, View tests to see if the click listener in the ListenerInfo have been set, and if so,
-			// prevents firing the performClick() event.  Inherited views then won't fire their onClick() events.  Frankly, it's very strange,
-			// since setting an onTouch or onKey listener will prevent button clicks from getting listened to.  So, we check if the listener info
-			// is null, or all recorders with no original listeners, and if so, null out the listener and call performClick() directly.
+			// prevents firing the performClick() event.  Inherited views then won't fire their onClick() events.  So, we check if the listener info
+			// is null, or the onclick recorders with no original listeners, and if so, null out the listener and call performClick() directly.
 			// NOTE: this is a terrible hack/workaround, but there's no other option that I can see at this point.
 			
 			try {

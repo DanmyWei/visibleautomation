@@ -15,6 +15,7 @@ import android.view.Window;
 import android.view.WindowManager.LayoutParams;
 import android.view.accessibility.AccessibilityEvent;
 import android.widget.PopupWindow;
+import android.widget.Toast;
 
 public class RecordWindowCallback extends RecordListener implements Window.Callback, IOriginalListener {
 	protected static final String 	TAG = "RecordWindowCallback";
@@ -36,6 +37,19 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 	@Override
 	public boolean dispatchKeyEvent(KeyEvent event) {
 		Log.i(TAG, "dispatchKeyEvent action = " + event.getAction() + " keyCode = " + event.getKeyCode());
+		if (event.getAction() == KeyEvent.ACTION_UP){ 
+			switch (event.getKeyCode()) {
+			case KeyEvent.KEYCODE_BACK:
+				mEventRecorder.writeRecordTime(Constants.EventTags.MENU_BACK_KEY);
+				break;
+			case KeyEvent.KEYCODE_MENU:
+				mEventRecorder.writeRecordTime(Constants.EventTags.MENU_MENU_KEY);
+				break;
+			case KeyEvent.KEYCODE_HOME:
+				mEventRecorder.writeRecordTime(Constants.EventTags.MENU_MENU_KEY);
+				break;
+			} 
+		}
 		return mOriginalCallback.dispatchKeyEvent(event);
 	}
 
@@ -96,6 +110,7 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 	@Override
 	public boolean onMenuItemSelected(int featureId, MenuItem item) {
 		Log.i(TAG, "onMenuItemSelected featureId = " + featureId);
+		mEventRecorder.writeRecord(Constants.EventTags.MENU_ITEM_CLICK, Integer.toString(item.getItemId()));
 		return mOriginalCallback.onMenuItemSelected(featureId, item);
 	}
 

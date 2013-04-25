@@ -10,6 +10,7 @@ import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 
 import android.app.Activity;
+import android.app.Instrumentation;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
@@ -86,12 +87,14 @@ public class MagicFrame extends FrameLayout {
 		
 	/**
 	 * wrapper to insert the magic frame.
-	 * @param activity
-	 * @param recorder
+	 * @param instrumentation - so we can run the runnable synchronized on the UI thread
+	 * @param activity - activity to get the window for
+	 * @param viewInterceptor - for intercepting events on views.
+	 * @param recorder event recorder.
 	 */
-	public static void insertMagicFrame(Activity activity, EventRecorder recorder, ViewInterceptor viewInterceptor) {
+	public static void insertMagicFrame(Instrumentation instrumentation, Activity activity, EventRecorder recorder, ViewInterceptor viewInterceptor) {
 		InsertMagicFrameRunnable runnable = new InsertMagicFrameRunnable(activity, recorder, viewInterceptor);
-		activity.runOnUiThread(runnable);
+		instrumentation.runOnMainSync(runnable);
 	}
 
 	/**
@@ -215,7 +218,7 @@ public class MagicFrame extends FrameLayout {
 	 */
 	@Override
 	public void onDraw(Canvas c) {
-		if (mTouchPoint != null) {			
+		if ((mTouchPoint != null) && (mPaint != null)) {			
 			c.drawLine(mTouchPoint.x - mSize, mTouchPoint.y - mSize, mTouchPoint.x + mSize, mTouchPoint.y + mSize, mPaint);
 			c.drawLine(mTouchPoint.x + mSize, mTouchPoint.y - mSize, mTouchPoint.x - mSize, mTouchPoint.y + mSize, mPaint);
 		}

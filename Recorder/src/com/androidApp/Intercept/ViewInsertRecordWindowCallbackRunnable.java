@@ -9,23 +9,24 @@ import com.androidApp.Listeners.RecordWindowCallback;
 import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 
-public class InsertRecordWindowCallbackRunnable implements Runnable {
-	protected Window			mWindow;
+public class ViewInsertRecordWindowCallbackRunnable implements Runnable {
+	protected View 				mView;
 	protected EventRecorder 	mRecorder;
 	protected ViewInterceptor	mViewInterceptor;
 	
-	public InsertRecordWindowCallbackRunnable(Window window, EventRecorder recorder, ViewInterceptor viewInterceptor) {
-		mWindow = window;
+	public ViewInsertRecordWindowCallbackRunnable(View v, EventRecorder recorder, ViewInterceptor viewInterceptor) {
+		mView = v;
 		mRecorder = recorder;
 		mViewInterceptor = viewInterceptor;
 	}
 	
 	public void run() {
 		try {
-			Window.Callback originalCallback = mWindow.getCallback();
+			// got exception for this in options menu
+			Window.Callback originalCallback = ListenerIntercept.getWindowCallbackFromDecorView(mView);
 			if (!(originalCallback instanceof RecordWindowCallback)) {
 				RecordWindowCallback recordCallback = new RecordWindowCallback(mRecorder, mViewInterceptor, originalCallback);
-				mWindow.setCallback(recordCallback);
+				ListenerIntercept.setWindowCallbackToDecorView(mView, recordCallback);
 			}
 		} catch (Exception ex) {
 			mRecorder.writeRecord(Constants.EventTags.EXCEPTION, "installing window callback recorder");
