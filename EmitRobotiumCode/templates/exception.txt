@@ -1,0 +1,2 @@
+		// throw exception %DESCRIPTION%
+		throw new Exception("%DESCRIPTION%");

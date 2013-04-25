@@ -519,6 +519,10 @@ public class EmitRobotiumCode {
 						writeDismissPopupWindowBackKey(tokens, lines);
 					} else if (action.equals(Constants.Events.ROTATION)) {
 						writeRotation(tokens, lines);
+					} else if (action.equals(Constants.Events.MENU_ITEM_CLICK)) {
+						writeMenuItemClick(tokens, lines);
+					} else if (action.equals(Constants.Events.EXCEPTION)) {
+						writeException(tokens, lines);
 					}
 				}
 				line = nextLine;
@@ -537,6 +541,37 @@ public class EmitRobotiumCode {
 	 */
 	public static String getDescription(List<String> tokens) {
 		return tokens.get(tokens.size() - 1);
+	}
+	
+	/**
+	 * write the exception and its description
+	 * @param tokens
+	 * @param lines
+	 * @throws IOException
+	 */
+	public void writeException(List<String> tokens, List<LineAndTokens> lines) throws IOException {
+		String exceptionTemplate = FileUtility.readTemplate(Constants.Templates.EXCEPTION);
+		String description = tokens.get(2);
+		exceptionTemplate = exceptionTemplate.replace(Constants.VariableNames.DESCRIPTION, description);
+		lines.add(new LineAndTokens(tokens, exceptionTemplate));				
+	}
+	
+	
+
+	/**
+	 * write the invokeMenuActionSync() call
+	 * @param tokens
+	 * @param startIndex
+	 * @param lines
+	 * @throws IOException
+	 */
+	public void writeMenuItemClick(List<String> tokens, List<LineAndTokens> lines) throws IOException {
+		String menuItemClickTemplate = FileUtility.readTemplate(Constants.Templates.MENU_ITEM_CLICK);
+		String menuItemId = tokens.get(2);
+		menuItemClickTemplate = menuItemClickTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
+		menuItemClickTemplate = menuItemClickTemplate.replace(Constants.VariableNames.MENU_ITEM_ID, menuItemId);
+		mVariableIndex++;
+		lines.add(new LineAndTokens(tokens, menuItemClickTemplate));				
 	}
 
 	/**

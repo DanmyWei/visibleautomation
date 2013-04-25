@@ -34,7 +34,7 @@ public class Constants {
 		public static final String ACTIVITY_BACK_KEY = "activity_back_key";
 		public static final String CLASS = "class";	
 		public static final String DISMISS_DIALOG = "dismiss_dialog";
-		public static final Object DISMISS_DIALOG_BACK_KEY = "dismiss_dialog_back_key";
+		public static final String DISMISS_DIALOG_BACK_KEY = "dismiss_dialog_back_key";
 		public static final String CANCEL_DIALOG = "cancel_dialog";
 		public static final String ITEM_SELECTED = "item_selected";
 		public static final String SHOW_IME = "show_ime";	
@@ -42,10 +42,11 @@ public class Constants {
 		public static final String DISMISS_AUTOCOMPLETE_DROPDOWN = "dismiss_autocomplete_dropdown";
 		public static final String CREATE_POPUP_WINDOW = "create_popup_window";
 		public static final String DISMISS_POPUP_WINDOW = "dismiss_popup_window";
-		public static final Object DISMISS_POPUP_WINDOW_BACK_KEY = "dismiss_popup_window_back_key";
+		public static final String DISMISS_POPUP_WINDOW_BACK_KEY = "dismiss_popup_window_back_key";
 		public static final String ROTATION = "rotation";
-		public static final Object MENU_ITEM_CLICK = "menu_item_click";
-		public static final Object POPUP_MENU_ITEM_CLICK = "popup_menu_item_click";
+		public static final String MENU_ITEM_CLICK = "menu_item_click";
+		public static final String POPUP_MENU_ITEM_CLICK = "popup_menu_item_click";
+		public static final String EXCEPTION = "exception";
 
 	}
 	public static class Templates {
@@ -94,6 +95,8 @@ public class Constants {
 		public static final String DISMISS_POPUP_WINDOW = "dismiss_popup_window.txt";
 		public static final String DISMISS_POPUP_WINDOW_BACK_KEY = "dismiss_popup_window_back_key.txt";
 		public static final String ROTATE = "rotate.txt";
+		public static final String MENU_ITEM_CLICK = "menu_item_click.txt";
+		public static final String EXCEPTION = "exception.txt";
 	}
 	
 	// template %replace% variables
@@ -118,6 +121,7 @@ public class Constants {
 		public static final CharSequence ACTIVITY = "%ACTIVITY%";
 		public static final CharSequence TESTCLASSNAME = "%TESTCLASSNAME%";
 		public static final CharSequence ORIENTATION = "%ORIENTATION%";
+		public static final CharSequence MENU_ITEM_ID = "%MENU_ITEM_ID%";
 	}
 	
 	// generic names

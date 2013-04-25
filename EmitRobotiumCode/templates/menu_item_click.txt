@@ -1,0 +1,2 @@
+		Activity activity%VARIABLE_INDEX% = solo.getCurrentActivity();
+		getInstrumentation().invokeMenuActionSync(activity%VARIABLE_INDEX%, %MENU_ITEM_ID%, 0);
