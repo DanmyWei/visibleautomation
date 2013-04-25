@@ -218,7 +218,7 @@ public class MagicFrame extends FrameLayout {
 	 */
 	@Override
 	public void onDraw(Canvas c) {
-		if ((mTouchPoint != null) && (mPaint != null)) {			
+		if ((mTouchPoint != null) && (mPaint != null) && (c != null)) {			
 			c.drawLine(mTouchPoint.x - mSize, mTouchPoint.y - mSize, mTouchPoint.x + mSize, mTouchPoint.y + mSize, mPaint);
 			c.drawLine(mTouchPoint.x + mSize, mTouchPoint.y - mSize, mTouchPoint.x - mSize, mTouchPoint.y + mSize, mPaint);
 		}
@@ -226,6 +226,7 @@ public class MagicFrame extends FrameLayout {
 	
 	/**
 	 * for visual debugging.
+	 * The problem with this is that the timer can keep firing long after the activity is finished, and it throws a coniption fit.
 	 * @author Matthew
 	 *
 	 */
