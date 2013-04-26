@@ -35,6 +35,7 @@ public class RandTest {
 	private static final String TAG = "RandTest";
 	private final int MINISLEEP = 100;
 	private final int MAX_TEXT_LENGTH = 64;
+	private final int MAX_SECURITY_EXCEPTION = 100;
 	private final String DICTIONARY = "dictionary.txt";	
 	protected ActivityInterceptor mActivityInterceptor;
 	protected ActivityInstrumentationTestCase2<? extends Activity> mInstrumentation; 
@@ -63,6 +64,7 @@ public class RandTest {
 		Activity currentActivity = null;
 		int numIterationsInActivity = 0;
 		boolean fStart = true;
+		int securityExceptionCount = 0;
 	    for (int i = 0; i < iterations; i++) {	
 			Activity activity = mActivityInterceptor.getCurrentActivity();
 			if (activity != currentActivity) {
@@ -95,10 +97,14 @@ public class RandTest {
 						Log.i(TAG, randOperation.getName() + " view = " + randView + " activity = " + currentActivity + " event = " + numIterationsInActivity);
 						switch (randOperation) {
 						case TOUCH:
-							EventUtility.touchOnScreen(mInstrumentation.getInstrumentation(), randView);
+							if (!EventUtility.touchOnScreen(mInstrumentation.getInstrumentation(), randView)) {
+								securityExceptionCount++;
+							}
 							break;
 						case CLICK:
-							EventUtility.clickOnScreen(mInstrumentation.getInstrumentation(), randView);
+							if (!EventUtility.clickOnScreen(mInstrumentation.getInstrumentation(), randView)) {
+								securityExceptionCount++;
+							}
 							break;
 						case SCROLL:
 							Rect contentsRect = TestUtility.getContentsRect(randView);
@@ -123,12 +129,17 @@ public class RandTest {
 							clickRandomMenuItem();
 							break;
 						case LONG_CLICK:
-							EventUtility.clickLongOnScreen(mInstrumentation.getInstrumentation(), randView);
+							if (!EventUtility.clickLongOnScreen(mInstrumentation.getInstrumentation(), randView)) {
+								securityExceptionCount++;
+							}
 							break;		
 						}
 				    } else {
 				    	TestUtility.sleep();
 				    }
+				}
+				if (securityExceptionCount > MAX_SECURITY_EXCEPTION) {
+					Assert.fail("security exception count exceeded");
 				}
 				mInstrumentation.getInstrumentation().waitForIdleSync();
 			}

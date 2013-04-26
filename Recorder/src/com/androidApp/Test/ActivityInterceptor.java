@@ -186,9 +186,8 @@ public class ActivityInterceptor {
 								} else {
 									if (activityA.equals(activityB)) {
 										Log.i(TAG, "we cannot go forward to the same activity, this shouldn't happen");
-										recorder.writeRecord(Constants.EventTags.EXCEPTION, "activity forward monitor fail");
 									}
-									Log.i(TAG, "forward case activity = " + activityA);
+									Log.i(TAG, "forward case activity = " + activityB);
 									ActivityInterceptor.this.recordActivityForward(recorder, viewInterceptor, activityB);
 									mInstrumentation.runOnMainSync(new InsertRecordWindowCallbackRunnable(activityB.getWindow(), recorder, viewInterceptor));
 

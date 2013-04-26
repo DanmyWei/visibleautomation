@@ -439,7 +439,7 @@ public class TestUtils {
 	public static boolean isDescendentOfClass(ViewParent vp, View rootView, Class c) {
 		if ((vp == null) || (vp == rootView)) {
 			return false;
-		} else if (vp.getClass() == c) {
+		} else if (c.isAssignableFrom(vp.getClass())) {
 			return true;
 		} else {
 			return isDescendentOfClass(vp.getParent(), rootView, c);

@@ -214,6 +214,14 @@ public class MagicFrame extends FrameLayout {
 	}
 
 	/**
+	 * cancel the debugging draw timer if we're detatched from the window
+	 */
+	public void onDetachedFromWindow() {
+		if (mTimerTask != null) {	
+			mTimerTask.cancel();
+		}
+	}
+	/**
 	 * for visual debugging.
 	 */
 	@Override

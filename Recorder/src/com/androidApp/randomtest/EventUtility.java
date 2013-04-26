@@ -23,7 +23,7 @@ public class EventUtility {
 	 * @param x absolute location
 	 * @param y
 	 */
-	public static void clickOnScreen(Instrumentation instrumentation, float x, float y) {
+	public static boolean clickOnScreen(Instrumentation instrumentation, float x, float y) {
 		long downTime = SystemClock.uptimeMillis();
 		long eventTime = SystemClock.uptimeMillis();
 		MotionEvent event = MotionEvent.obtain(downTime, eventTime, MotionEvent.ACTION_DOWN, x, y, 0);
@@ -32,8 +32,9 @@ public class EventUtility {
 			instrumentation.sendPointerSync(event);
 			instrumentation.sendPointerSync(event2);
 			TestUtility.sleep(MINISLEEP);
-		}catch(SecurityException e){
-			Assert.assertTrue("Click can not be completed!", false);
+			return true;
+		} catch(SecurityException e){
+			return false;
 		}
 	}
 	
@@ -54,8 +55,7 @@ public class EventUtility {
 		final float x = xy[0] + (viewWidth / 2.0f);
 		float y = xy[1] + (viewHeight / 2.0f);
 		if (inParentRect(view, (int) x, (int) y)) {
-			clickOnScreen(instrumentation, x, y);
-			return true;
+			return clickOnScreen(instrumentation, x, y);
 		} else {
 			return false;
 		}
@@ -70,14 +70,14 @@ public class EventUtility {
 	 *
 	 */
 
-	public static void clickLongOnScreen(Instrumentation instrumentation, float x, float y) {
+	public static boolean clickLongOnScreen(Instrumentation instrumentation, float x, float y) {
 		long downTime = SystemClock.uptimeMillis();
 		long eventTime = SystemClock.uptimeMillis();
 		MotionEvent event = MotionEvent.obtain(downTime, eventTime, MotionEvent.ACTION_DOWN, x, y, 0);
 		try {
 			instrumentation.sendPointerSync(event);
-		} catch(SecurityException e){
-			Assert.assertTrue("Click can not be completed! Something is in the way e.g. the keyboard.", false);
+		} catch (SecurityException e){
+			return false;
 		}
 		eventTime = SystemClock.uptimeMillis();
 		event = MotionEvent.obtain(downTime, eventTime, MotionEvent.ACTION_MOVE, 
@@ -90,6 +90,7 @@ public class EventUtility {
 		event = MotionEvent.obtain(downTime, eventTime, MotionEvent.ACTION_UP, x, y, 0);
 		instrumentation.sendPointerSync(event);
 		TestUtility.sleep();
+		return true;
 	}
 	
 	public static boolean clickLongOnScreen(Instrumentation instrumentation, View view) {
@@ -103,22 +104,22 @@ public class EventUtility {
 		final float x = xy[0] + (viewWidth / 2.0f);
 		float y = xy[1] + (viewHeight / 2.0f);
 		if (inParentRect(view, (int) x, (int) y)) {
-			clickLongOnScreen(instrumentation, x, y);
-			return true;
+			return clickLongOnScreen(instrumentation, x, y);
 		} else {
 			return false;
 		}
 	}
 	
-	public static void touchOnScreen(Instrumentation instrumentation, float x, float y) {
+	public static boolean touchOnScreen(Instrumentation instrumentation, float x, float y) {
 		long downTime = SystemClock.uptimeMillis();
 		long eventTime = SystemClock.uptimeMillis();
 		MotionEvent event = MotionEvent.obtain(downTime, eventTime, MotionEvent.ACTION_DOWN, x, y, 0);
 		try{
 			instrumentation.sendPointerSync(event);
 			TestUtility.sleep(MINISLEEP);
-		}catch(SecurityException e){
-			Assert.assertTrue("touch can not be completed!", false);
+			return true;
+		} catch(SecurityException e){
+			return false;
 		}
 	}
 
@@ -133,8 +134,7 @@ public class EventUtility {
 		final float x = xy[0] + (viewWidth / 2.0f);
 		float y = xy[1] + (viewHeight / 2.0f);
 		if (inParentRect(view, (int) x, (int) y)) {
-			touchOnScreen(instrumentation, x, y);
-			return true;
+			return touchOnScreen(instrumentation, x, y);
 		} else {
 			return false;
 		}
