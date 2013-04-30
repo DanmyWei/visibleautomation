@@ -2,6 +2,7 @@ package %CLASSPATH%Test;
 
 import %CLASSPATH%;
 import com.androidApp.util.RobotiumUtils;
+import com.androidApp.util.ActivityMonitorRunnable;
 import com.androidApp.util.ViewExtractor;
 import com.androidApp.util.TestException;
 import com.jayway.android.robotium.solo.Solo;

@@ -22,7 +22,8 @@ import com.androidApp.util.SuperTokenizer;
  *
  */
 public class EmitRobotiumCode {
-	protected int mVariableIndex = 0;						// incremented for unique variable names
+	protected int mViewVariableIndex = 0;					// incremented for unique variable names
+	protected int mActivityVariableIndex = 0;					// incremented for unique variable names
 	protected static String sTargetClassPath = null;		// class path of initial activity.	
 	protected static String sTargetPackage = null;			// package name that the recorder pulled from the app
 	private boolean mLastEventWasWaitForActivity = false;	// want to do a waitForView for next event.
@@ -371,11 +372,8 @@ public class EmitRobotiumCode {
 		int scrollFirstVisibleItem = 0;						// preserve scroll values so we can apply it on the last scroll.
 		int scrollListIndex = 0;							// track the current scroll index to write on the next non-scroll instruction
 		List<String> lastTextEntryTokens = null;			// to preserve the last text entry event
-		String currentActivityName = null;					// to track the activity class name to see if it changes in transitions
 		String nextActivityVariable = null;
 		String previousActivityVariable = null;		
-		boolean fForwardActivityMatches = false;			// there was a navigation to a new activity with the same class name
-		boolean fBackActivityMatches = false;				// there was a navigation to a previous activity with the same class name
 		String line = br.readLine();
 		int lineNumber = 0;									// track line number for errors
 		do {
@@ -388,35 +386,21 @@ public class EmitRobotiumCode {
 				// syntax is event:time,arguments,separated,by,commas
 				SuperTokenizer st = new SuperTokenizer(line, "\"", ":,", '\\');
 				List<String> tokens = st.toList();
-				if (tokens.get(0).equals(Constants.Events.ACTIVITY_FORWARD)) {
-					currentActivityName = tokens.get(2);
-					if (sTargetClassPath == null) {
-						sTargetClassPath =  tokens.get(2);
-					}
-				}
 				
-				// we peek at the next line to see if it's an activity_forward or an activity back, and if it matches the current activity
+				// we peek at the next line to see if it's an activity_forward or an activity back, and save the activity name so it can be 
+				// waited for.
 				List<String> nextTokens = null;
 				if (nextLine != null) {
 					SuperTokenizer stNext = new SuperTokenizer(nextLine, "\"", ":,", '\\');
 					nextTokens = stNext.toList();
-					if ((nextTokens.size() > 2) && nextTokens.get(0).equals(Constants.Events.ACTIVITY_FORWARD)) {
-						String nextActivityName = nextTokens.get(2);
-						if (nextActivityName.equals(currentActivityName)) {
-							nextActivityVariable = writeGetCurrentActivity(lines);
-							fForwardActivityMatches = true;
-						} else {
-							fForwardActivityMatches = false;
+					if (nextTokens.size() > 2) {
+						if (nextTokens.get(0).equals(Constants.Events.ACTIVITY_FORWARD)) {
+							nextActivityVariable = writeGetCurrentActivity(nextTokens, lines);
+						} 
+						if (nextTokens.get(0).equals(Constants.Events.ACTIVITY_BACK) || nextTokens.get(0).equals(Constants.Events.ACTIVITY_BACK_KEY)) {
+							previousActivityVariable = writeGetCurrentActivity(nextTokens, lines);
 						}
-					} 
-					if (nextTokens.get(0).equals(Constants.Events.ACTIVITY_BACK) || nextTokens.get(0).equals(Constants.Events.ACTIVITY_BACK_KEY)) {
-						if (nextTokens.size() > 2) {
-							String previousActivityName = nextTokens.get(2);
-							fBackActivityMatches = previousActivityName.equals(currentActivityName);
-						} else {
-							fBackActivityMatches = false;
-						}
-					} 
+					}
 				}
 				String action = tokens.get(0);
 				
@@ -451,33 +435,20 @@ public class EmitRobotiumCode {
 				// then everything else is switched on the event name.
 				if (action.equals(Constants.Events.PACKAGE)) {
 					sTargetPackage = tokens.get(2);
-				} else if (action.equals(Constants.Events.ACTIVITY_FORWARD)) {
+				} else if (action.equals(Constants.Events.ACTIVITY_FORWARD) && (nextActivityVariable != null)) {
 					if (sTargetClassPath == null) {
-						sTargetClassPath =  tokens.get(2);
+						sTargetClassPath = tokens.get(2);
 					}
 					mLastEventWasWaitForActivity = true;
-					if (fForwardActivityMatches) {
-						writeWaitForMatchingActivity(nextActivityVariable, tokens, lines);
-					} else {
-						writeWaitForActivity(tokens, lines);
-					}
+					writeWaitForMatchingActivity(nextActivityVariable, tokens, lines);
 				} else if (action.equals(Constants.Events.ACTIVITY_BACK)) {
 					
-					// when activities are dismissed by the application.
-					if (fBackActivityMatches) {
-						previousActivityVariable = writeGetCurrentActivity(lines);
-						writeGoBackToMatchingActivity(previousActivityVariable, tokens, lines);
-					} else {
-						writeGoBack(tokens, lines);
-					}
+					// I think this is technically incorrect, since the "back" event doesn't happen from the back key
+					// but some other event like a click, and we should use a different template
+					writeGoBackToMatchingActivity(previousActivityVariable, tokens, lines);
 					mLastEventWasWaitForActivity = true;
 				} else if (action.equals(Constants.Events.ACTIVITY_BACK_KEY)) {
-					if (fBackActivityMatches) {
-						previousActivityVariable = writeGetCurrentActivity(lines);
-						writeGoBackToMatchingActivity(previousActivityVariable, tokens, lines);
-					} else {
-						writeGoBack(tokens, lines);
-					}
+					writeGoBackToMatchingActivity(previousActivityVariable, tokens, lines);
 					mLastEventWasWaitForActivity = true;
 				} else {
 					if (action.equals(Constants.Events.ITEM_CLICK)) {
@@ -568,9 +539,9 @@ public class EmitRobotiumCode {
 	public void writeMenuItemClick(List<String> tokens, List<LineAndTokens> lines) throws IOException {
 		String menuItemClickTemplate = FileUtility.readTemplate(Constants.Templates.MENU_ITEM_CLICK);
 		String menuItemId = tokens.get(2);
-		menuItemClickTemplate = menuItemClickTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
+		menuItemClickTemplate = menuItemClickTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mViewVariableIndex));
 		menuItemClickTemplate = menuItemClickTemplate.replace(Constants.VariableNames.MENU_ITEM_ID, menuItemId);
-		mVariableIndex++;
+		mViewVariableIndex++;
 		lines.add(new LineAndTokens(tokens, menuItemClickTemplate));				
 	}
 
@@ -579,14 +550,14 @@ public class EmitRobotiumCode {
 	 * @param lines
 	 * @throws IOException
 	 */
-	public String writeGetCurrentActivity(List<LineAndTokens> lines) throws IOException {
+	public String writeGetCurrentActivity(List<String> tokens, List<LineAndTokens> lines) throws IOException {
 		String getCurrentActivityTemplate = FileUtility.readTemplate(Constants.Templates.GET_CURRENT_ACTIVITY);
-		getCurrentActivityTemplate = getCurrentActivityTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
+		String activityClass = tokens.get(2);
+		getCurrentActivityTemplate = getCurrentActivityTemplate.replace(Constants.VariableNames.ACTIVITY_CLASS, activityClass);	
+		getCurrentActivityTemplate = getCurrentActivityTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mActivityVariableIndex));
 		getCurrentActivityTemplate = getCurrentActivityTemplate.replace(Constants.VariableNames.DESCRIPTION, "get the current activity, since the next one has the same class name");
-		
 		lines.add(new LineAndTokens(null, getCurrentActivityTemplate));
-		String activityName = Constants.Names.ACTIVITY + Integer.toString(mVariableIndex);
-		mVariableIndex++;
+		String activityName = Constants.Names.ACTIVITY + Integer.toString(mActivityVariableIndex);
 		return activityName;
 	}
 	
@@ -611,7 +582,7 @@ public class EmitRobotiumCode {
 			String waitForClassIndexTemplate = writeViewClassIndexCommand(Constants.Templates.WAIT_FOR_VIEW_CLASS_INDEX, ref, fullDescription);
 			lines.add(new LineAndTokens(tokens, waitForClassIndexTemplate));			
 		}
-		mVariableIndex++;
+		mViewVariableIndex++;
 	}
 	
 	/**
@@ -631,6 +602,8 @@ public class EmitRobotiumCode {
 		waitTemplate = waitTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
 		waitTemplate = waitTemplate.replace(Constants.VariableNames.ACTIVITY_CLASS, classPath);
 		waitTemplate = waitTemplate.replace(Constants.VariableNames.ACTIVITY, nextActivityVariable);
+		waitTemplate = waitTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mActivityVariableIndex));
+		mActivityVariableIndex++;
 		lines.add(new LineAndTokens(tokens, waitTemplate));
 	}
 	
@@ -649,50 +622,10 @@ public class EmitRobotiumCode {
 		waitTemplate = waitTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
 		waitTemplate = waitTemplate.replace(Constants.VariableNames.ACTIVITY_CLASS, classPath);
 		waitTemplate = waitTemplate.replace(Constants.VariableNames.ACTIVITY, nextActivityVariable);
+		waitTemplate = waitTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mActivityVariableIndex));
+		mActivityVariableIndex++;
 		lines.add(new LineAndTokens(tokens, waitTemplate));
 	}
-
-	/**
-	 * write the solo.goBack() call
-	 * @param tokens parsed from a line in events.txt
-	 * @param lines output list of java instructions
-	 * @throws IOException if the template file can't be read
-	 */
-	public void writeGoBack(List<String> tokens, List<LineAndTokens> lines) throws IOException {
-		if (tokens.size() == 2) {
-			String goBackTemplate = FileUtility.readTemplate(Constants.Templates.GO_BACK);
-			lines.add(new LineAndTokens(tokens, goBackTemplate));
-		} else {
-			String activityClass = tokens.get(2);
-			String description = getDescription(tokens);
-			String goBackTemplate = FileUtility.readTemplate(Constants.Templates.GO_BACK_WAIT_ACTIVITY);
-			String fullDescription = "go back to activity " + description;
-			goBackTemplate = goBackTemplate.replace(Constants.VariableNames.ACTIVITY_CLASS, activityClass);
-			goBackTemplate = goBackTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
-			lines.add(new LineAndTokens(tokens, goBackTemplate));
-		}
-	}
-	
-	/**
-	 * the application has finished the current activity without the back key, so we just write the waitForActivity call
-	 * @param tokens parsed from a line in events.txt
-	 * @param lines output list of java instructions
-	 * @throws IOException if the template file can't be read
-	 */
-	public void writeWentBack(List<String> tokens, List<LineAndTokens> lines) throws IOException {
-		if (tokens.size() == 2) {
-			// TODO: need to write something which verifies that yes, the application has exited
-		} else {
-			String activityClass = tokens.get(2);
-			String description = getDescription(tokens);
-			String goBackTemplate = FileUtility.readTemplate(Constants.Templates.WAIT_ACTIVITY);
-			String fullDescription = "go back to activity " + description;
-			goBackTemplate = goBackTemplate.replace(Constants.VariableNames.ACTIVITY_CLASS, activityClass);
-			goBackTemplate = goBackTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
-			lines.add(new LineAndTokens(tokens, goBackTemplate));
-		}
-	}
-
 	
 	/**
 	 * solo.waitForActivity() when we go forward or back to an activity
@@ -728,6 +661,8 @@ public class EmitRobotiumCode {
 		waitTemplate = waitTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
 		waitTemplate = waitTemplate.replace(Constants.VariableNames.ACTIVITY_CLASS, classPath);
 		waitTemplate = waitTemplate.replace(Constants.VariableNames.ACTIVITY, nextActivityVariable);
+		waitTemplate = waitTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mActivityVariableIndex));
+		mActivityVariableIndex++;
 		lines.add(new LineAndTokens(tokens, waitTemplate));
 	}
 	
@@ -829,7 +764,7 @@ public class EmitRobotiumCode {
 	 */
 	public void writeDismissPopupWindow(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
 		String dismissPopupTemplate = FileUtility.readTemplate(Constants.Templates.DISMISS_POPUP_WINDOW);
-		dismissPopupTemplate = dismissPopupTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex++));
+		dismissPopupTemplate = dismissPopupTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mViewVariableIndex++));
 		lines.add(new LineAndTokens(tokens, dismissPopupTemplate));
 	}
 	
@@ -842,8 +777,8 @@ public class EmitRobotiumCode {
 	 */
 	public void writeDismissPopupWindowBackKey(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
 		String dismissPopupTemplate = FileUtility.readTemplate(Constants.Templates.DISMISS_POPUP_WINDOW_BACK_KEY);
-		dismissPopupTemplate = dismissPopupTemplate.replace(Constants.VariableNames.ACTIVITY_VARIABLE_INDEX, Integer.toString(mVariableIndex++));
-		dismissPopupTemplate = dismissPopupTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex++));
+		dismissPopupTemplate = dismissPopupTemplate.replace(Constants.VariableNames.ACTIVITY_VARIABLE_INDEX, Integer.toString(mViewVariableIndex++));
+		dismissPopupTemplate = dismissPopupTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mViewVariableIndex++));
 		lines.add(new LineAndTokens(tokens, dismissPopupTemplate));
 	}
 	
@@ -937,10 +872,10 @@ public class EmitRobotiumCode {
 		String description = getDescription(tokens);
 		String fullDescription = "scroll down " + description;
 		scrollListTemplate = scrollListTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
-		scrollListTemplate = scrollListTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex));
+		scrollListTemplate = scrollListTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mViewVariableIndex));
 		scrollListTemplate = scrollListTemplate.replace(Constants.VariableNames.VIEW_INDEX, Integer.toString(scrollListIndex));
 		scrollListTemplate = scrollListTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(scrollFirstVisibleItem));
-		mVariableIndex++;
+		mViewVariableIndex++;
 		outputLines.add(new LineAndTokens(tokens, scrollListTemplate));
 	}
 	
@@ -1086,7 +1021,7 @@ public class EmitRobotiumCode {
 		} else {
 			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
 		}
-		mVariableIndex++;	
+		mViewVariableIndex++;	
 	}
 	
 	
@@ -1150,7 +1085,7 @@ public class EmitRobotiumCode {
 		String template = FileUtility.readTemplate(templateFile);
 		template = template.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
 		template = template.replace(Constants.VariableNames.ID, ref.getID());
-		template = template.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex++));
+		template = template.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mViewVariableIndex++));
 		template = template.replace(Constants.VariableNames.CLASSPATH, ref.getClassName());
 		return template;
 	}
@@ -1166,7 +1101,7 @@ public class EmitRobotiumCode {
 	public String writeViewClassIndexCommand(String templateFile, ReferenceParser ref, String fullDescription) throws IOException {
 		String template = FileUtility.readTemplate(templateFile);
 		template = template.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
-		template = template.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mVariableIndex++));
+		template = template.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mViewVariableIndex++));
 		template = template.replace(Constants.VariableNames.CLASSPATH, ref.getClassName());
 		template = template.replace(Constants.VariableNames.VIEW_INDEX, Integer.toString(ref.getIndex()));
 		return template;

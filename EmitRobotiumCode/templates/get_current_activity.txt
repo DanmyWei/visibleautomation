@@ -1,2 +1,2 @@
 		// %DESCRIPTION%
-		Activity activity%VARIABLE_INDEX% = solo.getCurrentActivity();
+		ActivityMonitorRunnable monitorRunnable%VARIABLE_INDEX% = RobotiumUtils.waitForNewActivity(this.getInstrumentation(), solo.getCurrentActivity(), %ACTIVITY_CLASS%.class, ACTIVITY_WAIT_MSEC);

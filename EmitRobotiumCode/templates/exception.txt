@@ -1,2 +1,2 @@
 		// throw exception %DESCRIPTION%
-		throw new Exception("%DESCRIPTION%");
+		throw new TestException("%DESCRIPTION%");
