@@ -5,6 +5,7 @@ import com.jayway.android.robotium.solo.Solo;
 
 import junit.framework.TestCase;
 import android.app.Activity;
+import android.app.Instrumentation;
 import android.content.Context;
 import android.graphics.Rect;
 import android.util.Log;
@@ -125,32 +126,22 @@ public class RobotiumUtils {
 	 * robotium only supports waitForActivity(className), which can fire on the current activity due to a race condition
 	 * before the operation which navigates to a new activity, we save the activity, and test against it with the new
 	 * activity. This was written to handle a special case in ApiDemos, where new activities had the same class as the
-	 * current a
-	 * @param solo robotium handle
+	 * current activity
 	 * @param currentActivity activity before the event
 	 * @param newActivityClass class of the new activity (which should match currentActivity.class, but we pass it anyway
 	 * @param timeoutMsec timeout in millisecond
 	 * @return true if a new activity of the specified class has been created
 	 */
-	public static boolean waitForNewActivity(Solo solo, Activity currentActivity, Class<? extends Activity> newActivityClass, int timeoutMsec) {
-		Activity newActivity = null;
-		while (timeoutMsec > 0) {
-			boolean f = solo.waitForActivity(newActivityClass.getSimpleName(), ACTIVITY_POLL_INTERVAL_MSEC);
-			newActivity = solo.getCurrentActivity();
-			if (newActivity.getClass().equals(newActivityClass) && !newActivity.equals(currentActivity)) {
-				return true;
-			}
-			timeoutMsec -= ACTIVITY_POLL_INTERVAL_MSEC;
-			
-			// if the activity class was the same, then waitForActivity returns immediately, so we do the sleep for it
-			if (newActivity.getClass().equals(newActivityClass)) {
-				try {
-					Thread.sleep(ACTIVITY_POLL_INTERVAL_MSEC);
-				} catch (InterruptedException iex) {}
-			}
-		}
-		return false;		
+	public static ActivityMonitorRunnable waitForNewActivity(Instrumentation instrumentation, Activity currentActivity, Class<? extends Activity> newActivityClass, long timeoutMsec) {
+		ActivityMonitorRunnable monitorRunnable = new ActivityMonitorRunnable(instrumentation, currentActivity, newActivityClass, timeoutMsec);
+		monitorRunnable.waitForNewActivity();
+		return monitorRunnable;
 	}
+	
+	public static boolean getNewActivity(ActivityMonitorRunnable monitorRunnable) {
+		return monitorRunnable.getNewActivity() != null;
+	}
+	
 	
 
 	/**
