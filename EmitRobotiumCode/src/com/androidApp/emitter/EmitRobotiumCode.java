@@ -435,20 +435,30 @@ public class EmitRobotiumCode {
 				// then everything else is switched on the event name.
 				if (action.equals(Constants.Events.PACKAGE)) {
 					sTargetPackage = tokens.get(2);
-				} else if (action.equals(Constants.Events.ACTIVITY_FORWARD) && (nextActivityVariable != null)) {
+				} else if (action.equals(Constants.Events.ACTIVITY_FORWARD)) {
 					if (sTargetClassPath == null) {
 						sTargetClassPath = tokens.get(2);
 					}
-					mLastEventWasWaitForActivity = true;
-					writeWaitForMatchingActivity(nextActivityVariable, tokens, lines);
+					if (nextActivityVariable != null) {
+						mLastEventWasWaitForActivity = true;
+						writeWaitForMatchingActivity(nextActivityVariable, tokens, lines);
+					}
 				} else if (action.equals(Constants.Events.ACTIVITY_BACK)) {
 					
 					// I think this is technically incorrect, since the "back" event doesn't happen from the back key
 					// but some other event like a click, and we should use a different template
-					writeGoBackToMatchingActivity(previousActivityVariable, tokens, lines);
+					if (tokens.size() > 2) {
+						writeGoBackToMatchingActivity(previousActivityVariable, tokens, lines);
+					} else {
+						writeGoBack(tokens, lines);
+					}
 					mLastEventWasWaitForActivity = true;
 				} else if (action.equals(Constants.Events.ACTIVITY_BACK_KEY)) {
-					writeGoBackToMatchingActivity(previousActivityVariable, tokens, lines);
+					if (tokens.size() > 2) {
+						writeGoBackToMatchingActivity(previousActivityVariable, tokens, lines);
+					} else {
+						writeGoBack(tokens, lines);
+					}
 					mLastEventWasWaitForActivity = true;
 				} else {
 					if (action.equals(Constants.Events.ITEM_CLICK)) {
@@ -627,6 +637,17 @@ public class EmitRobotiumCode {
 		lines.add(new LineAndTokens(tokens, waitTemplate));
 	}
 	
+	/**
+	 * write the solo.goBack() call
+	 * @param tokens parsed from a line in events.txt
+	 * @param lines output list of java instructions
+	 * @throws IOException if the template file can't be read
+	 */
+	public void writeGoBack(List<String> tokens, List<LineAndTokens> lines) throws IOException {
+		String goBackTemplate = FileUtility.readTemplate(Constants.Templates.GO_BACK);
+		lines.add(new LineAndTokens(tokens, goBackTemplate));
+	}
+
 	/**
 	 * solo.waitForActivity() when we go forward or back to an activity
 	 * @param tokens parsed from a line in events.txt
