@@ -1,2 +1,2 @@
-		Activity activity%VARIABLE_INDEX% = solo.getCurrentActivity();
+		Activity activity%VARIABLE_INDEX% = robotiumUtils.getCurrentActivity();
 		getInstrumentation().invokeMenuActionSync(activity%VARIABLE_INDEX%, %MENU_ITEM_ID%, 0);

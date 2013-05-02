@@ -1,3 +1,3 @@
 		// %DESCRIPTION%
-		TestCase.assertTrue(monitorRunnable%VARIABLE_INDEX%.getNewActivity() != null);
+		TestCase.assertTrue(robotiumUtils.getCurrentActivity() != null);
 		

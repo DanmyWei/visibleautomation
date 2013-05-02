@@ -1,6 +1,6 @@
 		// %DESCRIPTION%
 		%CLASSPATH% view%VARIABLE_INDEX% = (%CLASSPATH%) solo.getView(%CLASSPATH%.class, %VIEW_INDEX%);
 		TestCase.assertTrue(solo.waitForView(%CLASSPATH%.class, %VIEW_INDEX% + 1, VIEW_WAIT_MSEC));
-		android.view.View listViewItem%VARIABLE_INDEX%_%ITEM_INDEX% = RobotiumUtils.getListViewItem(view%VARIABLE_INDEX%, %ITEM_INDEX%);
+		android.view.View listViewItem%VARIABLE_INDEX%_%ITEM_INDEX% = robotiumUtils.getListViewItem(view%VARIABLE_INDEX%, %ITEM_INDEX%);
 		TestCase.assertTrue(solo.waitForView(listViewItem%VARIABLE_INDEX%_%ITEM_INDEX%));
 		

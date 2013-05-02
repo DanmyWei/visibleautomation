@@ -1,2 +1,2 @@
 		// %DESCRIPTION%
-		TestCase.assertTrue(solo.waitForActivity(%ACTIVITY_CLASS%.class.getSimpleName(), ACTIVITY_WAIT_MSEC));
+		TestCase.assertTrue(robotiumUtils.waitForActivity(%ACTIVITY_CLASS%.class, ACTIVITY_WAIT_MSEC));

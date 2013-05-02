@@ -1,2 +1,2 @@
 		// %DESCRIPTION%
-		RobotiumUtils.waitAndClickInListById(solo, %ID%, %ITEM_INDEX%);
+		robotiumUtils.waitAndClickInListById(solo, %ID%, %ITEM_INDEX%);
