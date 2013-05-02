@@ -374,6 +374,10 @@ public class EmitRobotiumCode {
 		List<String> lastTextEntryTokens = null;			// to preserve the last text entry event
 		String nextActivityVariable = null;
 		String previousActivityVariable = null;		
+		String currentActivityName = null;					// to track the activity class name to see if it changes in transitions
+		boolean fForwardActivityMatches = false;			// there was a navigation to a new activity with the same class name
+		boolean fBackActivityMatches = false;				// there was a navigation to a previous activity with the same class name
+		
 		String line = br.readLine();
 		int lineNumber = 0;									// track line number for errors
 		do {
@@ -393,12 +397,30 @@ public class EmitRobotiumCode {
 				if (nextLine != null) {
 					SuperTokenizer stNext = new SuperTokenizer(nextLine, "\"", ":,", '\\');
 					nextTokens = stNext.toList();
+					if (tokens.get(0).equals(Constants.Events.ACTIVITY_FORWARD)) {
+						currentActivityName = tokens.get(2);
+						if (sTargetClassPath == null) {
+							sTargetClassPath =  tokens.get(2);
+						}
+					}
 					if (nextTokens.size() > 2) {
 						if (nextTokens.get(0).equals(Constants.Events.ACTIVITY_FORWARD)) {
-							nextActivityVariable = writeGetCurrentActivity(nextTokens, lines);
+							String nextActivityName = nextTokens.get(2);
+							if (nextActivityName.equals(currentActivityName)) {
+								nextActivityVariable = writeGetCurrentActivity(tokens, lines);
+								fForwardActivityMatches = true;
+							} else {
+								fForwardActivityMatches = false;
+							}
 						} 
 						if (nextTokens.get(0).equals(Constants.Events.ACTIVITY_BACK) || nextTokens.get(0).equals(Constants.Events.ACTIVITY_BACK_KEY)) {
-							previousActivityVariable = writeGetCurrentActivity(nextTokens, lines);
+							String previousActivityName = nextTokens.get(2);
+							if (previousActivityName.equals(currentActivityName)) {
+								previousActivityVariable = writeGetCurrentActivity(tokens, lines);
+								fBackActivityMatches = true;
+							} else {
+								fBackActivityMatches = false;
+							}
 						}
 					}
 				}
@@ -441,13 +463,16 @@ public class EmitRobotiumCode {
 					}
 					if (nextActivityVariable != null) {
 						mLastEventWasWaitForActivity = true;
+						if (fForwardActivityMatches) {
+							writeWaitForActivity(tokens, lines);
+						}
 						writeWaitForMatchingActivity(nextActivityVariable, tokens, lines);
 					}
 				} else if (action.equals(Constants.Events.ACTIVITY_BACK)) {
 					
 					// I think this is technically incorrect, since the "back" event doesn't happen from the back key
 					// but some other event like a click, and we should use a different template
-					if (tokens.size() > 2) {
+					if ((tokens.size() > 2) && fBackActivityMatches) {
 						writeGoBackToMatchingActivity(previousActivityVariable, tokens, lines);
 					} else {
 						writeGoBack(tokens, lines);
@@ -563,7 +588,6 @@ public class EmitRobotiumCode {
 	public String writeGetCurrentActivity(List<String> tokens, List<LineAndTokens> lines) throws IOException {
 		String getCurrentActivityTemplate = FileUtility.readTemplate(Constants.Templates.GET_CURRENT_ACTIVITY);
 		String activityClass = tokens.get(2);
-		getCurrentActivityTemplate = getCurrentActivityTemplate.replace(Constants.VariableNames.ACTIVITY_CLASS, activityClass);	
 		getCurrentActivityTemplate = getCurrentActivityTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mActivityVariableIndex));
 		getCurrentActivityTemplate = getCurrentActivityTemplate.replace(Constants.VariableNames.DESCRIPTION, "get the current activity, since the next one has the same class name");
 		lines.add(new LineAndTokens(null, getCurrentActivityTemplate));

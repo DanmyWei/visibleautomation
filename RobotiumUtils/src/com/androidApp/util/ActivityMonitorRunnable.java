@@ -1,100 +1,151 @@
 package com.androidApp.util;
 
+import java.lang.ref.WeakReference;
+import java.util.Stack;
+
 import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.IntentFilter;
 import android.util.Log;
 
+/**
+ * the activity monitor currently used 
+ * @author Matthew
+ *
+ */
 public class ActivityMonitorRunnable implements Runnable {
-	private static final String 				TAG = "ActivityMonitorRunnable";
-	private static final int 					MINISLEEP = 100;			
-	protected Object 							mWaitObject;					// wait object to notify the main thread
-	protected Activity							mCurrentActivity;				// current activity at time monitor was instantiated.
-	protected Activity							mNewActivity;					// activity returned from monitor.
-	protected Class								mNewActivityClass;				// class of the new activity that we're waiting for
-	protected long								mTimeoutMsec;
-	protected Instrumentation.ActivityMonitor	mActivityMonitor;
-	protected boolean							mfWaiting;						// to prevent deadlock
+	 private static final String 				TAG = "ActivityMonitorRunnable";
+	 public static final int 					MINISLEEP = 100;			
+	 protected Instrumentation.ActivityMonitor	mActivityMonitor;
+	 protected Stack<WeakReference<Activity>>	mActivityStack;					// stack of activities.
 	
-	public ActivityMonitorRunnable(Instrumentation instrumentation, Activity currentActivity, Class newActivityClass, long timeoutMsec) {
-		init(instrumentation, currentActivity, newActivityClass, timeoutMsec);
+	 public ActivityMonitorRunnable(Instrumentation instrumentation) {
+		init(instrumentation);
 	}
 	
-	public ActivityMonitorRunnable(Instrumentation instrumentation, Activity currentActivity, Class newActivityClass) {
-		init(instrumentation, currentActivity, newActivityClass, -1);
-	}
-	
-	public void init(Instrumentation instrumentation, Activity currentActivity, Class newActivityClass, long timeoutMsec) {
-		mWaitObject = new Object();
-		mCurrentActivity = currentActivity;
-		mNewActivityClass = newActivityClass;
+	public void init(Instrumentation instrumentation) {
+		mActivityStack = new Stack<WeakReference<Activity>>();
 		IntentFilter intentFilter = null;
 		mActivityMonitor = new Instrumentation.ActivityMonitor(intentFilter, null, false);
 		instrumentation.addMonitor(mActivityMonitor);
-		mTimeoutMsec = timeoutMsec;
-		mNewActivity = null;
-		mfWaiting = false;
 	}
-	
-	/**
-	 * wait for a notification.
-	 */
-	public void lockAndWait() {
+
+	// sleep utility
+	public static void sleep(long msec) {
 		try {
-			Log.d(TAG, "entering synchronized");
-			synchronized(mWaitObject) {
-				Log.d(TAG, "entering wait");
-				mfWaiting = true;
-				mWaitObject.wait(mTimeoutMsec);
-			}
+			Thread.sleep(msec);
 		} catch (InterruptedException iex) {
+			
 		}
-		Log.d(TAG, "wait has been notified");
+	}
+	
+	public Activity waitForActivity(String activityName, long timeout) {
+		while (timeout >= 0) {
+			Activity a = getCurrentActivity();
+			if ((a != null) && a.getClass().getName().equals(activityName)) {
+				return a;
+			}
+			timeout -= MINISLEEP;
+			sleep(MINISLEEP);
+		}
+		return null;
+	}
+	
+	public Activity waitForActivity(Class<? extends Activity> cls, long timeout) {
+		while (timeout >= 0) {
+			Activity a = getCurrentActivity();
+			if ((a != null) && cls.isAssignableFrom(a.getClass())) {
+				return a;
+			}
+			timeout -= MINISLEEP;
+			sleep(MINISLEEP);
+		}
+		return null;
 	}
 	
 	/**
-	 * start the thread which runs the activity monitor, then send a notification
+	 * get the activity at the top of the stack
 	 * @return
 	 */
-	public void waitForNewActivity() {
-		Thread thread = new Thread(this);
-		thread.start();
+	public Activity getCurrentActivity() {
+		synchronized(mActivityStack) {
+			if (!mActivityStack.isEmpty()) {
+				WeakReference<Activity> ref = mActivityStack.peek();
+				if (ref != null) {
+					return ref.get();
+				}
+			}
+		}
+		return null;
 	}
 	
-	public Activity getNewActivity() {
-		lockAndWait();
-		return mNewActivity;
+	/**
+	 * scan the activity stack to see if the activity is in it.
+	 * @param activity activity to search for
+	 * @return if there is a reference to the activity
+	 */
+	protected boolean inActivityStack(Activity activity) {
+		synchronized(mActivityStack) {
+			for (WeakReference<Activity> ref : mActivityStack) {
+				if (ref.get() == activity) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	
+	/**
+	 * add the specified activity to the stack
+	 * @param activity activity to be pushed on the stack
+	 */
+	protected void addActivityToStack(Activity activity) {
+		synchronized (mActivityStack) {
+			WeakReference<Activity> ref = new WeakReference<Activity>(activity);
+			mActivityStack.push(ref);
+		}
+	}
+	
+	/**
+	 * remove the specified activity from the stack (not necessarily popping it)
+	 * @param activity activity to be removed.
+	 */
+	protected void removeActivityFromStack(Activity activity) {
+		WeakReference<Activity> ref = null;
+		synchronized(mActivityStack) {
+			for (WeakReference<Activity> candRef : mActivityStack) {
+				if (candRef.get() == activity) {
+					ref = candRef;
+					break;
+				}
+			}
+			if (ref != null) {
+				mActivityStack.remove(ref);
+			}
+		}
 	}
 
 	public void run() {
 		while (true) {
-			if (mTimeoutMsec > 0) {
-				//mNewActivity = mActivityMonitor.waitForActivityWithTimeout(mTimeoutMsec);
-				mNewActivity = mActivityMonitor.waitForActivity();
-			} else {
-				mNewActivity = mActivityMonitor.waitForActivity();
+			// the activity monitor (like the postman) always rings twice. Except for the very first activity.
+			// Once for the activity being paused and once for the activity being started.  This may be the same 
+			// activity semantically, due to rotation, but it will always be the same object.  I'm not as sure 
+			// about this as I should be, but the monitor can return activities in a different order than
+			// pause, create.
+			Activity activityA = mActivityMonitor.waitForActivity();
+			Activity activityB = null;
+			if (!mActivityStack.isEmpty()) {
+				activityB = mActivityMonitor.waitForActivity();
 			}
-			
-			// in the activity forward case, the wait() call in getNewActivity() happens first.  In the activity back
-			// case, the activity monitor fires first.  We can't send a notify until getNewActivity() is waiting 
-			// for it. We sleep for some period until the "waiting" flag is set, then send the notify
-			//if ((mNewActivity == null) || (mNewActivity.getClass().equals(mNewActivityClass) && (mNewActivity != mCurrentActivity))) {
-			if ((mNewActivity == null) || mNewActivity.getClass().equals(mNewActivityClass)) {
-				long timeoutMsec = mTimeoutMsec;
-				while (!mfWaiting && (timeoutMsec > 0)) {
-					try {
-						Thread.sleep(MINISLEEP);
-						timeoutMsec -= MINISLEEP;
-					} catch (InterruptedException iex) {
-					}
-				}
-				synchronized(mWaitObject) {
-					Log.d(TAG, "sending notification of new activity = " + mNewActivity);
-					mWaitObject.notify();
+			if (!inActivityStack(activityA)) {
+				addActivityToStack(activityA);
+			} else if (!inActivityStack(activityB)) {
+				addActivityToStack(activityB);
+			} else {
+				mActivityStack.pop();
+				if (mActivityStack.empty()) {
 					break;
 				}
-			} else {
-				Log.d(TAG, "activity returned from monitor = " + mNewActivity);
 			}
 		}
 	}	

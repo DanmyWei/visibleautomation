@@ -8,6 +8,7 @@ import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Context;
 import android.graphics.Rect;
+import android.os.SystemClock;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -24,13 +25,18 @@ public class RobotiumUtils {
 	protected static int VIEW_TIMEOUT_MSEC = 5000;						// time to wait for view to be visible
 	protected static int VIEW_POLL_INTERVAL_MSEC = 1000;				// poll interval for view existence
 	protected static int WAIT_INCREMENT_MSEC = 100;
-	protected static RobotiumUtils sRobotiumUtils = null;
-	
-	public static RobotiumUtils getInstance() {
-		if (sRobotiumUtils == null) {
-			sRobotiumUtils = new RobotiumUtils();
-		}
-		return sRobotiumUtils;
+	protected static ActivityMonitorRunnable	sActivityMonitorRunnable = null;
+	protected Instrumentation					mInstrumentation;
+
+	/**
+	 * This has to be called before getActivity(), so it can intercept the first activity.
+	 * @param instrumentation
+	 */
+	public RobotiumUtils(Instrumentation instrumentation) {
+		mInstrumentation = instrumentation;
+		sActivityMonitorRunnable = new ActivityMonitorRunnable(instrumentation);
+		Thread activityMonitorThread = new Thread(sActivityMonitorRunnable);
+		activityMonitorThread.start();
 	}
 	
 	// get a list view item.  
@@ -132,14 +138,26 @@ public class RobotiumUtils {
 	 * @param timeoutMsec timeout in millisecond
 	 * @return true if a new activity of the specified class has been created
 	 */
-	public static ActivityMonitorRunnable waitForNewActivity(Instrumentation instrumentation, Activity currentActivity, Class<? extends Activity> newActivityClass, long timeoutMsec) {
-		ActivityMonitorRunnable monitorRunnable = new ActivityMonitorRunnable(instrumentation, currentActivity, newActivityClass, timeoutMsec);
-		monitorRunnable.waitForNewActivity();
-		return monitorRunnable;
+	public static boolean waitForNewActivity(Activity currentActivity, Class<? extends Activity> newActivityClass, long timeoutMsec) {
+		long startTimeMillis = SystemClock.uptimeMillis();
+		long currentTimeMillis = startTimeMillis;
+		do {
+			Activity newActivity = sActivityMonitorRunnable.waitForActivity(newActivityClass, timeoutMsec);
+			if (newActivity != currentActivity) {
+				return true;
+			}
+			ActivityMonitorRunnable.sleep(ActivityMonitorRunnable.MINISLEEP);
+			currentTimeMillis = SystemClock.uptimeMillis();
+		} while (currentTimeMillis - startTimeMillis < timeoutMsec);
+		return false;
 	}
 	
-	public static boolean getNewActivity(ActivityMonitorRunnable monitorRunnable) {
-		return monitorRunnable.getNewActivity() != null;
+	public static boolean waitForActivity(Class<? extends Activity> newActivityClass, long timeoutMsec) {
+		return sActivityMonitorRunnable.waitForActivity(newActivityClass, timeoutMsec) != null;
+	}
+	
+	public static Activity getCurrentActivity() {
+		return sActivityMonitorRunnable.getCurrentActivity();
 	}
 	
 	
@@ -200,7 +218,7 @@ public class RobotiumUtils {
 	 * scroll the ancestor of the view until the view is fully visible.
 	 * @param v view to scroll into view.
 	 */
-	public static void scrollToViewVisible(Solo solo, View v) {
+	public void scrollToViewVisible(Solo solo, View v) {
 		ScrollView scrollingContainer = RobotiumUtils.getScrollingContainer(v);
 		if (scrollingContainer != null) {
 			Rect r = RobotiumUtils.getRelativeRect(scrollingContainer, v);
@@ -217,52 +235,8 @@ public class RobotiumUtils {
 				scrollHorizontal = r.right - scrollingContainer.getMeasuredWidth();
 			}
 			if ((scrollVertical != 0) || (scrollHorizontal != 0)) {
-				RobotiumUtils utils = new RobotiumUtils();
-				Runnable runnable = utils.new ScrollViewRunnable(scrollingContainer, scrollHorizontal, scrollVertical);
-				RobotiumUtils.blockOnRunOnUiThread(solo.getCurrentActivity(), runnable, VIEW_TIMEOUT_MSEC);
-			}
-		}
-	}
-	
-	/**
-	 * if we want to run anything in the application, we have to use Activity.runOnUiThread(), but it returns immediately, and we then
-	 * probably send/expect something with the application immediately after, creating a recipe for a race condition.  Instead, we create
-	 * a wrapper around the runnable, which does a wait object, then a notify when the runnable has completed
-	 * @param activity to call runOnUiThread() 
-	 * @param runnable our intended victim
-	 * @param timeoutMsec time to wait before giving up
-	 */
-	public static void blockOnRunOnUiThread(Activity activity, Runnable runnable, long timeoutMsec) {
-		Object waitObject = new Object();
-		RobotiumUtils utils = new RobotiumUtils();
-		Runnable waitRunnable = utils.new BlockOnRunnable(activity, runnable, waitObject);
-		activity.runOnUiThread(waitRunnable);
-		try {
-			synchronized(waitObject) {
-				waitObject.wait(timeoutMsec);
-			}
-		} catch (InterruptedException iex) {	
-		}
-	}
-	
-	/**
-	 * wrapper for runnable which sends a notify() on completion
-	 */
-	public class BlockOnRunnable implements Runnable {
-		protected Activity  mActivity;
-		protected Runnable 	mRunnable;
-		protected Object	mWaitObject;
-		
-		public BlockOnRunnable(Activity activity, Runnable runnable, Object waitObject) {
-			mActivity = activity;
-			mRunnable = runnable;
-			mWaitObject = waitObject;
-		}
-		
-		public void run() {
-			mRunnable.run();
-			synchronized(mWaitObject) {
-				mWaitObject.notify();
+				Runnable runnable = new ScrollViewRunnable(scrollingContainer, scrollHorizontal, scrollVertical);
+				mInstrumentation.runOnMainSync(runnable);
 			}
 		}
 	}
@@ -273,8 +247,8 @@ public class RobotiumUtils {
 	 * @param solo handle to robotium
 	 * @param v view to click on
 	 */
-	public static void clickOnViewAndScrollIfNeeded(Solo solo, View v) {
-		RobotiumUtils.scrollToViewVisible(solo, v);
+	public void clickOnViewAndScrollIfNeeded(Solo solo, View v) {
+		scrollToViewVisible(solo, v);
 		solo.clickOnView(v, true);
 	}
 	
@@ -307,9 +281,8 @@ public class RobotiumUtils {
 	 * @param solo
 	 * @param autoCompleteTextView
 	 */
-	public static void dismissAutoCompleteDialog(Solo solo, AutoCompleteTextView autoCompleteTextView) {
-		Activity activity = solo.getCurrentActivity();
-		activity.runOnUiThread(RobotiumUtils.getInstance().new DismissAutoCompleteRunnable(autoCompleteTextView));
+	public void dismissAutoCompleteDialog(AutoCompleteTextView autoCompleteTextView) {
+		mInstrumentation.runOnMainSync(new DismissAutoCompleteRunnable(autoCompleteTextView));
 	}
 	
 	public class DismissAutoCompleteRunnable implements Runnable {
@@ -343,18 +316,18 @@ public class RobotiumUtils {
 		}
 	}
 	
-	public static void dismissPopupWindow(Activity activity) throws TestException {
+	public void dismissPopupWindow(Activity activity) throws TestException {
 		dismissPopupWindow(activity, VIEW_TIMEOUT_MSEC);
 	}
 	/**
 	 * dismiss a popup window, like a menu popup, autocomplete dropdown, etc.  I hope there is only one popup.
 	 * @param activity
 	 */
-	public static void dismissPopupWindow(Activity activity, long waitMsec) throws TestException {
+	public void dismissPopupWindow(Activity activity, long waitMsec) throws TestException {
 		while (waitMsec > 0) {
 			PopupWindow popupWindow = ViewExtractor.findPopupWindow(activity);
 			if (popupWindow != null) {
-				activity.runOnUiThread(RobotiumUtils.getInstance().new DismissPopupWindowRunnable(popupWindow));
+				mInstrumentation.runOnMainSync(new DismissPopupWindowRunnable(popupWindow));
 				return;
 			}
 			try {
