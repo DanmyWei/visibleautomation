@@ -479,7 +479,7 @@ public class EmitRobotiumCode {
 					}
 					mLastEventWasWaitForActivity = true;
 				} else if (action.equals(Constants.Events.ACTIVITY_BACK_KEY)) {
-					if (tokens.size() > 2) {
+					if ((tokens.size() > 2) && fBackActivityMatches) {
 						writeGoBackToMatchingActivity(previousActivityVariable, tokens, lines);
 					} else {
 						writeGoBack(tokens, lines);
