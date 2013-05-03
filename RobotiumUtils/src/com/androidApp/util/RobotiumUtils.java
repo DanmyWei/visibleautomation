@@ -19,7 +19,11 @@ import android.widget.ListView;
 import android.widget.PopupWindow;
 import android.widget.ScrollView;
 
-
+/**
+ * utility class for monitoring activities and sending events to views.
+ * @author Matthew
+ *
+ */
 public class RobotiumUtils {
 	protected static int ACTIVITY_POLL_INTERVAL_MSEC = 1000;			// interval for activity existence polling
 	protected static int VIEW_TIMEOUT_MSEC = 5000;						// time to wait for view to be visible
@@ -152,10 +156,20 @@ public class RobotiumUtils {
 		return false;
 	}
 	
+	/**
+	 * public function to wait for an activity from the activity monitor background thread.
+	 * @param newActivityClass activity class to match.
+	 * @param timeoutMsec timeout in milliseconds
+	 * @return true if matching activity was found, false otherwise.
+	 */
 	public static boolean waitForActivity(Class<? extends Activity> newActivityClass, long timeoutMsec) {
 		return sActivityMonitorRunnable.waitForActivity(newActivityClass, timeoutMsec) != null;
 	}
 	
+	/**
+	 * public function to return the current activity from the activity monitor background thread.
+	 * @return
+	 */
 	public static Activity getCurrentActivity() {
 		return sActivityMonitorRunnable.getCurrentActivity();
 	}
