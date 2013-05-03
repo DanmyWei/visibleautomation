@@ -20,10 +20,12 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
+import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.widget.AbsListView;
 import android.widget.Adapter;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 /**
@@ -48,9 +50,11 @@ public class RandTest {
 	 * @param instrumentation
 	 * @param activityInterceptor
 	 */
-	public RandTest(ActivityInstrumentationTestCase2<? extends Activity> instrumentation, ActivityInterceptor activityInterceptor) {
+	public RandTest(ActivityInstrumentationTestCase2<? extends Activity> instrumentation, ActivityInterceptor activityInterceptor) throws IOException {
 		mInstrumentation = instrumentation;
 		mActivityInterceptor = activityInterceptor;
+		mDictionary = new RandomDictionary(instrumentation.getInstrumentation().getContext(), DICTIONARY);
+
 	}
 	
 	/**
@@ -60,7 +64,7 @@ public class RandTest {
 	 * @throws IOException
 	 */
 	
-	public void randTest(Context context, int iterations, float backKeyPercentage) throws IOException, ClassNotFoundException {
+	public void randTest(Context context, int iterations, float backKeyPercentage) throws ClassNotFoundException {
 		Activity currentActivity = null;
 		int numIterationsInActivity = 0;
 		boolean fStart = true;
@@ -68,9 +72,7 @@ public class RandTest {
 	    for (int i = 0; i < iterations; i++) {	
 			Activity activity = mActivityInterceptor.getCurrentActivity();
 			if (activity != currentActivity) {
-				if (currentActivity == null) {
-					mDictionary = new RandomDictionary(context, DICTIONARY);
-				} else {
+				if (currentActivity != null) {
 					fStart = false;
 				}
 				numIterationsInActivity = 0;
@@ -78,15 +80,19 @@ public class RandTest {
 			} else {
 				numIterationsInActivity++;
 			}
-			float backKeyRoll = (float) (100*Math.random());
-			boolean fBackKey = (backKeyRoll < backKeyPercentage);
-			boolean firstActivityComplete = (numIterationsInActivity > iterations/10) || !fStart;
-			if (fBackKey && firstActivityComplete) {
-				mInstrumentation.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
-			} else {
-				if ((activity != null) && (activity.getWindow() != null)) {
-					View rootView = activity.getWindow().getDecorView();
-					View[] views = ViewExtractor.getWindowDecorViews();
+			if ((activity != null) && (activity.getWindow() != null)) {
+				View rootView = activity.getWindow().getDecorView();
+				View[] views = ViewExtractor.getWindowDecorViews();
+				float backKeyRoll = (float) (100*Math.random());
+				boolean fBackKey = (backKeyRoll < backKeyPercentage);
+				boolean firstActivityComplete = (numIterationsInActivity > iterations/10) || !fStart;
+				boolean fHasMagicFrames = verifyMagicFrames(rootView);
+
+				if (fBackKey && firstActivityComplete && fHasMagicFrames) {
+					// there is a race condition where if the activity has just been created, and we send the back key,
+					// the "magic frames" have not been inserted, and we 'back' the activity before the key event is intercepted.
+					mInstrumentation.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
+				} else {
 					List<View> viewList = TestUtility.getAllViews(activity, views);
 					int randViewIndex = (int) (Math.random()*viewList.size());
 					View randView = viewList.get(randViewIndex);
@@ -115,15 +121,9 @@ public class RandTest {
 						case SCROLL_LIST:
 							break;
 						case ENTER_TEXT:
-							int numTexts = TestUtility.numViewsOfClass(viewList, EditText.class);
-							if (numTexts > 0) {
-								View v = TestUtility.selectRandomView(viewList, EditText.class, numTexts);
-								if (v != null) {
-									EditText et = (EditText) v;
-									String s = mDictionary.randWords(MAX_TEXT_LENGTH);
-									mInstrumentation.getInstrumentation().runOnMainSync(new SetTextRunnable(et, s));
-								}
-							}
+							EditText et = (EditText) randView;
+							String s = mDictionary.randWords(MAX_TEXT_LENGTH);
+							mInstrumentation.getInstrumentation().runOnMainSync(new SetTextRunnable(et, s));
 							break;
 						case OPTION_MENU_SELECT:
 							clickRandomMenuItem();
@@ -133,6 +133,10 @@ public class RandTest {
 								securityExceptionCount++;
 							}
 							break;		
+						case LIST_SELECT:
+							AbsListView listView = (AbsListView) randView;
+							randomSelectList(activity, listView);
+							break;
 						}
 				    } else {
 				    	TestUtility.sleep();
@@ -167,13 +171,22 @@ public class RandTest {
 		int itemHeight = vChild.getMeasuredHeight();
 		int scrollPosition = itemHeight*randItem;
 		mInstrumentation.getInstrumentation().runOnMainSync(new ScrollToPositionRunnable(absListView, scrollPosition));
-		mInstrumentation.getInstrumentation().runOnMainSync(new PerformItemClickRunnable(absListView, scrollPosition));
+		mInstrumentation.getInstrumentation().runOnMainSync(new PerformItemClickRunnable(absListView, randItem));
 	}
 	
+	/**
+	 * runnable to click an item in a list.
+	 * @author Matthew
+	 */
 	public class PerformItemClickRunnable implements Runnable {
 		protected AbsListView 	mListView;
 		protected int			mPosition;
 		
+		/**
+		 * constructor
+		 * @param listView listview to click
+		 * @param position position to click it in.
+		 */
 		public PerformItemClickRunnable(AbsListView listView, int position) {
 			mListView = listView;
 			mPosition = position;
@@ -185,12 +198,23 @@ public class RandTest {
 		}
 	}
 	
+	/**
+	 * retrieve the indexed view of a list item.
+	 * @param absListView
+	 * @param itemIndex
+	 * @return
+	 */
 	public View getListViewItem(AbsListView absListView, int itemIndex) {
 		int firstPosition = absListView.getFirstVisiblePosition();
 		int actualIndex = itemIndex - firstPosition;
 		return absListView.getChildAt(actualIndex);
 	}
 	
+	/**
+	 * runnable to set the text in a textview or edit text.
+	 * @author Matthew
+	 *
+	 */
 	public class SetTextRunnable implements Runnable {
 		protected EditText		mEditText;
 		protected String		mText;
@@ -205,6 +229,11 @@ public class RandTest {
 		}
 	}
 	
+	/**
+	 * runnable to scroll to a specified position in a list view.
+	 * @author Matthew
+	 *
+	 */
 	public class ScrollToPositionRunnable implements Runnable {
 		protected AbsListView 	mListView;
 		protected int			mPosition;
@@ -219,6 +248,11 @@ public class RandTest {
 		}
 	}
 	
+	/**
+	 * randomly scroll a scrollable view relative to its contents
+	 * @param v scrollable view
+	 * @param contentsRect extents of contents.
+	 */
 	public void randScroll(View v, Rect contentsRect) {
 		int minScrollX = contentsRect.left;
 		int maxScrollX = contentsRect.right - v.getMeasuredWidth();
@@ -229,6 +263,11 @@ public class RandTest {
 		mInstrumentation.getInstrumentation().runOnMainSync(new ScrollRunnable(v, scrollX, scrollY));
 	}
 	
+	/**
+	 * runnable to scroll a view.
+	 * @author Matthew
+	 *
+	 */
 	public class ScrollRunnable implements Runnable {
 		protected View 	mView;
 		protected int 	mScrollX;
@@ -245,6 +284,11 @@ public class RandTest {
 		}
 	}
 
+	/**
+	 * click a random menu item (currently doesn't work)
+	 * @return
+	 * @throws ClassNotFoundException
+	 */
 	public boolean clickRandomMenuItem() throws ClassNotFoundException {
 		mInstrumentation.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_MENU);
 		Activity activity = mActivityInterceptor.getCurrentActivity();
@@ -256,5 +300,29 @@ public class RandTest {
 			return true;
 		}
 		return false;
+	}
+	
+	/**
+	 * are all of the frames magic frames? i.e. can we send a back-key event?
+	 * @param rootView
+	 * @return
+	 */
+	public boolean verifyMagicFrames(View rootView) {
+		boolean fMagic = false;
+		ViewGroup vgRootView = (ViewGroup) rootView;
+		if (vgRootView.getChildCount() == 1) {
+			View layoutView = vgRootView.getChildAt(0);
+			if (layoutView instanceof LinearLayout) {
+				LinearLayout linearLayout = (LinearLayout) layoutView;
+				for (int iChild = 0; iChild < linearLayout.getChildCount(); iChild++) {
+					View child = linearLayout.getChildAt(iChild);
+					if (!(child instanceof MagicFrame)) {
+						return false;
+					}	
+					fMagic = true;
+				}
+			}
+		}
+		return fMagic;
 	}
 }
