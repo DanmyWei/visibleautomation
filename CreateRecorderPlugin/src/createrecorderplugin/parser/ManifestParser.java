@@ -43,8 +43,19 @@ public class ManifestParser extends Parser {
 		return mPackage;
 	}
 	
+	/**
+	 * sometimes the activity is specified as activity name="foo", sometimes it's activity name=".foo"
+	 * and sometimes it's activity name "com.bar.foo"
+	 * TODO: do we need to create a new package if it's com.bar.foo?
+	 * @return a reasonable activity name
+	 */
 	public String getStartActivity() {
-		return mStartActivity;
+		int ichDot = mStartActivity.lastIndexOf('.');
+		if (ichDot == -1) {
+			return mStartActivity;
+		} else {
+			return mStartActivity.substring(ichDot + 1);
+		}
 	}
 	
 	public String getMinSDKVersion() {

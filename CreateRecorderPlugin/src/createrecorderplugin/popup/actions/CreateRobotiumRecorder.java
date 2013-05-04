@@ -46,6 +46,7 @@ import createrecorderplugin.parser.ProjectPropertiesScan;
 
 
 public class CreateRobotiumRecorder implements IObjectActionDelegate {
+	private static final String ALLTESTS_FILE = "AllTests.java";
 	protected final String PROJECT_FILENAME = ".project";
 	protected final String CLASSPATH_TEMPLATE = "classpath_template.txt";
 	protected final String CLASSPATH_FILENAME = ".classpath";
@@ -55,6 +56,7 @@ public class CreateRobotiumRecorder implements IObjectActionDelegate {
 	protected final String PROJECT_PROPERTIES_FILENAME = "project.properties";
 	protected final String PROJECT_TEMPLATE = "project_template.txt";
 	protected final String TESTCLASS_TEMPLATE = "testclass_template.txt";
+	protected final String ALLTESTS_TEMPLATE = "AllTests.txt";
 	protected final String CLASSPATH_VARIABLE = "%CLASSPATH%";
 	protected final String CLASSPACKAGE_VARIABLE = "%CLASSPACKAGE%";
 	protected final String CLASSNAME_VARIABLE = "%CLASSNAME%";
@@ -125,6 +127,7 @@ public class CreateRobotiumRecorder implements IObjectActionDelegate {
 				createProjectProperties(testProject, projectParser, projectPropertiesScan);
 				IJavaProject javaProject = createJavaNature(testProject);
 				createTestClass(testProject, javaProject, projectParser, manifestParser);
+				createAllTests(testProject, javaProject, manifestParser);
 				addLibrary(testProject);
 			} catch (Exception ex) {
 				MessageDialog.openInformation(
@@ -239,10 +242,32 @@ public class CreateRobotiumRecorder implements IObjectActionDelegate {
 	 * @return reference to the folder
 	 * @throws CoreException
 	 */
-	public static IFolder createFolder(IProject project, String folderName) throws CoreException {
+	public static IFolder createFolder(IProject project, String folderName) {
 		IFolder folder = project.getFolder(folderName);
-		folder.create(true, true, null);
+		try {
+			folder.create(true, true, null);
+		} catch (CoreException cex) {
+		}
 		return folder;
+	}
+	
+	/**
+	 * create the AllTests.java file, which iterates through the test files and runs them
+	 * @param testProject project 
+	 * @param javaProject java reference to the project so we can create packages and stuff
+	 * @param manifestParser parsed data from AndroidManifest.xml file
+	 * @throws CoreException
+	 * @throws IOException
+	 */
+	public void createAllTests(IProject 		testProject,
+							   IJavaProject 	javaProject, 
+							   ManifestParser	manifestParser) throws CoreException, IOException {
+		String allTests = FileUtility.readTemplate(ALLTESTS_TEMPLATE);
+		allTests = allTests.replace(CLASSPACKAGE_VARIABLE, manifestParser.getPackage());
+		IFolder sourceFolder = testProject.getFolder(SRC_FOLDER);
+		String packagePath = manifestParser.getPackage() + TEST_EXTENSION;
+		IPackageFragment pack = javaProject.getPackageFragmentRoot(sourceFolder).createPackageFragment(packagePath, false, null);
+		ICompilationUnit classFile = pack.createCompilationUnit(ALLTESTS_FILE, allTests, true, null);	
 	}
 	
 	/**
@@ -258,16 +283,17 @@ public class CreateRobotiumRecorder implements IObjectActionDelegate {
 								IJavaProject 	javaProject, 
 								ProjectParser 	projectParser,
 								ManifestParser 	manifestParser) throws CoreException, IOException {
-		String project = FileUtility.readTemplate(TESTCLASS_TEMPLATE);
-		project = project.replace(CLASSPACKAGE_VARIABLE, manifestParser.getPackage());
-		project = project.replace(CLASSNAME_VARIABLE, manifestParser.getStartActivity());
+		String testClass = FileUtility.readTemplate(TESTCLASS_TEMPLATE);
+		testClass = testClass.replace(CLASSPACKAGE_VARIABLE, manifestParser.getPackage());
+		testClass = testClass.replace(CLASSNAME_VARIABLE, manifestParser.getStartActivity());
 		// write to the fully qualified path
 		IFolder sourceFolder = CreateRobotiumRecorder.createFolder(testProject, SRC_FOLDER);
 		IFolder genFolder = CreateRobotiumRecorder.createFolder(testProject, GEN_FOLDER);
 		IFolder resFolder = CreateRobotiumRecorder.createFolder(testProject, RES_FOLDER);
 		String packagePath = manifestParser.getPackage() + TEST_EXTENSION;
 		IPackageFragment pack = javaProject.getPackageFragmentRoot(sourceFolder).createPackageFragment(packagePath, false, null);
-		ICompilationUnit classFile = pack.createCompilationUnit(manifestParser.getStartActivity()  + RECORDER_SUFFIX + ".java", project, true, null);
+		String startActivity = manifestParser.getStartActivity();
+		ICompilationUnit classFile = pack.createCompilationUnit(startActivity + RECORDER_SUFFIX + ".java", testClass, true, null);
  	}
 	
 	/**
@@ -276,9 +302,8 @@ public class CreateRobotiumRecorder implements IObjectActionDelegate {
 	 * @throws CoreException
 	 */
 	public void addLibrary(IProject testProject) throws CoreException {
-		
+	
 		IFolder libFolder = CreateRobotiumRecorder.createFolder(testProject, LIBS_FOLDER);
-		libFolder.create(true, true, null);
 		IFile file = testProject.getFile(LIBS_FOLDER + '/' + RECORDER_JAR);
 		InputStream fis = CreateRobotiumRecorder.class.getResourceAsStream(TEMPLATES_SOURCE_FOLDER + RECORDER_JAR);
 		file.create(fis, IFile.FORCE, null);	
