@@ -5,6 +5,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -67,12 +68,23 @@ public class FileUtility {
 	 * @throws IOException
 	 */
 	public static String readTemplate(String templateName) throws IOException {
-		InputStream fis = EmitRobotiumCode.class.getResourceAsStream("/" + templateName);
+		return readTemplate(EmitRobotiumCode.class, templateName);
+	}
+	
+	/**
+	 * read a template file into a string variant with the 
+	 * @param templateName template file from templates directory
+	 * @return file read to string
+	 * @throws IOException
+	 */	
+	public static String readTemplate(Class cls, String templateName) throws IOException {
+		InputStream fis = cls.getResourceAsStream("/" + templateName);
 		if (fis == null) {
 			throw new IOException("failed to open resource " + templateName);
 		}
 		return FileUtility.readToString(fis);
 	}
+	
 	/**
 	 * read a template file into a bytearray
 	 * @param templateName template file from templates directory
@@ -152,11 +164,15 @@ public class FileUtility {
 	 * directory was not found.
 	 */
 	public static int uniqueFileIndex(String directory, String templateFilename) {
+		
+		// strip the extension. We want foo2.java, not foo.java2
 		int ichDot = templateFilename.lastIndexOf('.');
 		String name = templateFilename;
 		if (ichDot != -1) {
 			name = templateFilename.substring(0, ichDot);
-	}
+		}
+		
+		// check if we need to ever bother
 		File dir = new File(directory);
 		if (!dir.exists()) {
 			return 0;
@@ -167,6 +183,9 @@ public class FileUtility {
 		}
 		File[] filesInDir = dir.listFiles();
 		int maxFileNumber = 0;
+		
+		// iterate over the matching files in the directory, strip their extensions, and strip out the numeric suffix if
+		// there is one
 		for (File candFile : filesInDir) {
 			if (candFile.getName().startsWith(name)) {
 				String candFileName = candFile.getName();
@@ -210,5 +229,17 @@ public class FileUtility {
 			uniqueFileName += "." + extension;
 		}
 		return uniqueFileName;
+	}
+	
+	/**
+	 * write a string to a file
+	 * @param file filename to write to
+	 * @param s string to write.
+	 * @throws IOException
+	 */
+	public static void writeString(String file, String s) throws IOException {	
+		BufferedWriter bw = new BufferedWriter(new FileWriter(file));
+		bw.write(s);
+		bw.close();
 	}
 }
