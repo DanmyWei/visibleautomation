@@ -1,4 +1,4 @@
-package %CLASSPATH%Test;
+package %TESTPACKAGE%;
 
 import %CLASSPATH%;
 import com.androidApp.util.RobotiumUtils;
@@ -20,7 +20,7 @@ public class %TESTCLASSNAME% extends ActivityInstrumentationTestCase2<%CLASSNAME
 	protected static final int DIALOG_CLOSE_TIMEOUT = 5000;		// wait 5 seconds for dialogs to close.
  	protected static final int VIEW_WAIT_MSEC = 5000;			// wait 5 seconds for views to appear
   	public %TESTCLASSNAME%() {
-		super("%CLASSPACKAGE%", %CLASSNAME%.class);
+		super("%CLASSPATH%", %CLASSNAME%.class);
   	}
 
   	public void setUp() throws Exception {
