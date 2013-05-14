@@ -1,4 +1,4 @@
-package %CLASSPATH%Test;
+package %CLASSPACKAGE%.test;
 
 import android.test.suitebuilder.TestSuiteBuilder;
 import android.util.Log;

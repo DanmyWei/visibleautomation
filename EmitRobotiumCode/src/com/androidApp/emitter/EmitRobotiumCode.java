@@ -10,7 +10,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
+import com.androidApp.parser.ProjectPropertiesScan;
 import com.androidApp.util.Constants;
 import com.androidApp.util.FileUtility;
 import com.androidApp.util.StringUtils;
@@ -94,30 +96,19 @@ public class EmitRobotiumCode {
 		Options options = emitter.processOptions(args);
 		
 		File robotiumFile = new File(robotiumJarPath);
-		List<LineAndTokens> lines = new ArrayList<LineAndTokens>();
 		String robotiumJar = robotiumFile.getName();
-		
-		// if he specified device, use adb to pull the events file off the device.
-		if (eventsFileName.equals(Constants.Names.DEVICE)) {
-	       Process proc = null;
-	       String cmd = "adb pull /sdcard/events.txt";
-	       try {
-	            proc = Runtime.getRuntime().exec(cmd);
-	        } catch (IOException e) {
-	            System.err.println("failed to execute " + cmd + " " + e.getMessage());
-	            System.exit(-1);
-	        }
-	        try {
-	            int result = proc.waitFor();
-	        } catch (InterruptedException e) {
-	            System.err.println("interrupted executing " + cmd + " " + e.getMessage());
-	            System.exit(-1);
-	        }
-	        eventsFileName = "events.txt";
+		File projectPropertiesFile = new File(targetProject,  Constants.Filenames.PROJECT_PROPERTIES_FILENAME);
+		ProjectPropertiesScan projectPropertiesScan = null;
+		try {
+				projectPropertiesScan = new ProjectPropertiesScan(projectPropertiesFile);
+		} catch (Exception ex) {
+			ex.printStackTrace();
 		}
-		BufferedReader br = new BufferedReader(new FileReader(eventsFileName));
-		BufferedWriter bw = new BufferedWriter(new FileWriter(outputCodeFileName));
-		emitter.emit(br, lines);
+
+		eventsFileName = EmitRobotiumCode.getEventsFile(eventsFileName);
+
+		List<LineAndTokens> lines = EmitRobotiumCode.generateTestCode(emitter, eventsFileName);
+
 		if (emitter.getApplicationClassPath() == null) {
 			System.err.println("unable to generate output code, no activity reference");
 			System.exit(-1);
@@ -134,7 +125,10 @@ public class EmitRobotiumCode {
 			testClassPath += Integer.toString(uniqueFileIndex);
 			testClassName += Integer.toString(uniqueFileIndex) ;
 		}
-		writeHeader(emitter.getApplicationClassPath(), testClassName, emitter.getApplicationClassName(), bw);
+		
+		// write the header template, the emitter output, and the trailer temoplate.
+		BufferedWriter bw = new BufferedWriter(new FileWriter(outputCodeFileName));
+		writeHeader(emitter.getApplicationClassPath(), testClassPath, testClassName, emitter.getApplicationClassName(), bw);
 		if (options.mfWriteFunctions) {
 			SplitFunction splitter = new SplitFunction(options.mMinLines);
 			splitter.writeFunctions(bw, "test" + targetProject, 0, lines);
@@ -147,14 +141,13 @@ public class EmitRobotiumCode {
 		}
 		
 		bw.close();
-		br.close();
 		if (emitter.getApplicationClassPath() != null) {
 			if (uniqueFileIndex == 0) {
 				Dirs dirs = emitter.createDirectories(testClassName, packageFilePath);
-				generateBuildXML(testClassName, emitter.getApplicationClassPath());
-				copyBuildFiles(testClassName);
+				writeBuildXML(testClassName, emitter.getApplicationClassPath());
+				copyBuildFiles(testClassName, projectPropertiesScan.getTarget());
 				copyLibrary(dirs.mLibDir);
-				generateManifest(testClassName, testClassName, testClassPath, emitter.getApplicationPackage());
+				writeManifest(testClassName, testClassName, testClassPath, emitter.getApplicationPackage());
 				copyTestDriverFile(packageFilePath, emitter.getApplicationClassPath());
 				writeResources(dirs, testClassName);
 				writeClasspath(testClassName, targetProject, robotiumJar);
@@ -258,6 +251,7 @@ public class EmitRobotiumCode {
 		}
 	}
 	
+	
 	/**
 	 * generate the .classpath file for building the project.  We  add the target project name
 	 * for eclipse/ant, and the robotium jar in the libs directory.
@@ -266,14 +260,16 @@ public class EmitRobotiumCode {
 	 * @param name of the robotium-solo-X.XX.jar
 	 * @throws IOException if the file can't be written
 	 */
-	public static void writeClasspath(String dirname, String projectName, String robotiumJar) throws IOException {
+	protected static void writeClasspath(String dirname, String projectName, String robotiumJar) throws IOException {
+		String classpath = createClasspath(projectName, robotiumJar);
+		FileUtility.writeString(dirname + File.separator + Constants.Filenames.CLASSPATH, classpath);
+	}
+	
+	public static String createClasspath(String projectName, String robotiumJar) throws IOException {
 		String classpath = FileUtility.readTemplate(Constants.Templates.CLASSPATH);
 		classpath = classpath.replace(Constants.VariableNames.TARGET_PROJECT, projectName);
 		classpath = classpath.replace(Constants.VariableNames.ROBOTIUM_JAR, robotiumJar);
-		String path = dirname + File.separator + Constants.Filenames.CLASSPATH;
-		BufferedWriter bw = new BufferedWriter(new FileWriter(path));
-		bw.write(classpath);
-		bw.close();
+		return classpath;
 	}
 	
 	/** 
@@ -294,14 +290,17 @@ public class EmitRobotiumCode {
 	 * @param targetPackage package of test class
 	 * @throws IOException
 	 */
-	public static void generateManifest(String dirname, String testClassName, String testClassPath, String targetPackage)throws IOException {
+	public static void writeManifest(String dirname, String testClassName, String testClassPath, String targetPackage) throws IOException {
+		String manifest = createManifest(testClassName, testClassPath, targetPackage); 
+		FileUtility.writeString(dirname + File.separator + Constants.Filenames.ANDROID_MANIFEST_XML, manifest);
+	}
+	
+	public static String createManifest(String testClassName, String testClassPath, String targetPackage)throws IOException {
 		String manifest = FileUtility.readTemplate(Constants.Templates.ANDROID_MANIFEST_XML); 
 		manifest = manifest.replace(Constants.VariableNames.CLASSPATH, testClassPath);
 		manifest = manifest.replace(Constants.VariableNames.TARGETPACKAGE, sTargetPackage);
 		manifest = manifest.replace(Constants.VariableNames.CLASSNAME, testClassName);
-		BufferedWriter bw = new BufferedWriter(new FileWriter(dirname + File.separator + Constants.Filenames.ANDROID_MANIFEST_XML));
-		bw.write(manifest);
-		bw.close();
+		return manifest;
 	}
 	
 	/**
@@ -310,13 +309,16 @@ public class EmitRobotiumCode {
 	 * @param targetClassPath full class name of application class being tested.
 	 * @throws IOException
 	 */
-	public static void generateBuildXML(String dirname, String targetClassPath) throws IOException {
+	public static void writeBuildXML(String dirname, String targetClassPath) throws IOException {
+		String buildXML = createBuildXML(targetClassPath);
+		FileUtility.writeString(dirname + File.separator + Constants.Filenames.BUILD_XML, buildXML);
+	}
+	
+	public static String createBuildXML(String targetClassPath) throws IOException {
 		String buildXML = FileUtility.readTemplate(Constants.Templates.BUILD_XML);
 		String className = StringUtils.getNameFromClassPath(targetClassPath);
 		buildXML = buildXML.replace(Constants.VariableNames.CLASSNAME, className);
-		BufferedWriter bw = new BufferedWriter(new FileWriter(dirname + File.separator + Constants.Filenames.BUILD_XML));
-		bw.write(buildXML);
-		bw.close();
+		return buildXML;
 	}
 	
 	/**
@@ -324,11 +326,15 @@ public class EmitRobotiumCode {
 	 * @param dirname project directory
 	 * @throws IOException
 	 */
-	public static void copyBuildFiles(String dirname) throws IOException {
+	public static void copyBuildFiles(String dirname, String target) throws IOException {
+		String projectProperties = createProjectProperties(target);
+		FileUtility.writeString(dirname + File.separator + Constants.Filenames.PROJECT_PROPERTIES_FILENAME, projectProperties);
+	}
+	
+	public static String createProjectProperties(String target) throws IOException {
 		String projectProperties = FileUtility.readTemplate(Constants.Templates.PROJECT_PROPERTIES);
-		BufferedWriter bw = new BufferedWriter(new FileWriter(dirname + File.separator + Constants.Filenames.PROJECT_PROPERTIES));
-		bw.write(projectProperties);
-		bw.close();
+		projectProperties = projectProperties.replace(Constants.VariableNames.TARGET, target);
+		return projectProperties;
 	}
 	
 	/**
@@ -340,9 +346,7 @@ public class EmitRobotiumCode {
 	public static void copyTestDriverFile(String packagePathName, String applicationClassPath) throws IOException {
 		String allTests = FileUtility.readTemplate(Constants.Templates.ALL_TESTS);
 		allTests = allTests.replace(Constants.VariableNames.CLASSPATH, applicationClassPath);
-		BufferedWriter bw = new BufferedWriter(new FileWriter(packagePathName + File.separator + Constants.Filenames.ALL_TESTS));
-		bw.write(allTests);
-		bw.close();
+		FileUtility.writeString(packagePathName + File.separator + Constants.Filenames.ALL_TESTS, allTests);
 		
 	}
 	
@@ -358,6 +362,49 @@ public class EmitRobotiumCode {
 		fos.close();		
 	}
 	
+	/**
+	 * pull the events file from /sdcard/events.txt if eventsFileName is "device"
+	 * @param eventsFileName
+	 * @return
+	 */
+	public static String getEventsFile(String eventsFileName) {
+		// if he specified device, use adb to pull the events file off the device.
+		if (eventsFileName.equals(Constants.Names.DEVICE)) {
+	       Process proc = null;
+	       String cmd = "adb pull /sdcard/events.txt";
+	       try {
+	            proc = Runtime.getRuntime().exec(cmd);
+	        } catch (IOException e) {
+	            System.err.println("failed to execute " + cmd + " " + e.getMessage());
+	            System.exit(-1);
+	        }
+	        try {
+	            int result = proc.waitFor();
+	        } catch (InterruptedException e) {
+	            System.err.println("interrupted executing " + cmd + " " + e.getMessage());
+	            System.exit(-1);
+	        }        
+		}
+		return Constants.Filenames.EVENTS;
+	}
+
+	/**
+	 * take the events file name (which may be the reserved word "device", and emit the test code into
+	 * an array list of the output code with its associated source tokens
+	 * @param emitter the emitter
+	 * @param eventsFileName source events file, or device if we pull it from the device.
+	 * @return list of test code and source tokens.
+	 * @throws FileNotFoundException
+	 * @throws IOException
+	 * @throws EmitterException
+	 */
+	public static List<LineAndTokens> generateTestCode(EmitRobotiumCode emitter, String eventsFileName) throws FileNotFoundException, IOException, EmitterException {
+		List<LineAndTokens> lines = new ArrayList<LineAndTokens>();
+		BufferedReader br = new BufferedReader(new FileReader(eventsFileName));
+		emitter.emit(br, lines);
+		return lines;
+	}
+
 	
 	/**
 	 * actually emit robotium code from a recorded file
@@ -1072,16 +1119,16 @@ public class EmitRobotiumCode {
 	
 	/**
 	 * write the header on the first activity
-	 * @param classPath com.package.name for the test application
+	 * @param testPackage com.package.name for the test application
 	 * @param testClassName classNameTest<index>
 	 * @param className name of the test application
 	 * @param bw output BufferedWriter
 	 * @throws IOException
 	 */
-	public static void writeHeader(String classPath, String testClassName, String className, BufferedWriter bw) throws IOException {
+	public static void writeHeader(String classPath, String testPackage, String testClassName, String className, BufferedWriter bw) throws IOException {
 		String header = FileUtility.readTemplate(Constants.Templates.HEADER);
+		header = header.replace(Constants.VariableNames.TESTPACKAGE, testPackage);
 		header = header.replace(Constants.VariableNames.CLASSPATH, classPath);
-		header = header.replace(Constants.VariableNames.CLASSPACKAGE, classPath);
 		header = header.replace(Constants.VariableNames.CLASSNAME, className);
 		header = header.replace(Constants.VariableNames.TESTCLASSNAME, testClassName);
 		bw.write(header);
