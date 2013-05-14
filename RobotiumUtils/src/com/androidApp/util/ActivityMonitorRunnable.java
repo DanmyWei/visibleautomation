@@ -6,19 +6,33 @@ import java.util.Stack;
 import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.IntentFilter;
+import android.view.View;
+import android.view.ViewTreeObserver;
+import android.view.Window;
 
 /**
  * This runnable runs in a background thread and maintains a stack of activities, which can be 
  * waited for and queried from the testing thread.  We use WeakReference<> so we don't hold onto 
  * the activity, which would interfere with the application under test
- * @author Matthew
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  *
  */
 public class ActivityMonitorRunnable implements Runnable {
-	 private static final String 				TAG = "ActivityMonitorRunnable";
-	 public static final int 					MINISLEEP = 100;			
-	 protected Instrumentation.ActivityMonitor	mActivityMonitor;				// activity monitor
-	 protected Stack<WeakReference<Activity>>	mActivityStack;					// stack of activities.
+	 private static final String 					TAG = "ActivityMonitorRunnable";
+	 public static final int 						MINISLEEP = 100;			
+	 protected Instrumentation.ActivityMonitor		mActivityMonitor;				// activity monitor
+	 protected Stack<ActivityInfo>					mActivityStack;					// stack of activities.
+	 
+	 /**
+	  * so we can retain information associated with the activity
+	  * @author mattrey
+	  *
+	  */
+	 protected class ActivityInfo {
+		 WeakReference<Activity> 					mRefActivity;
+		 WeakReference<OnLayoutInterceptListener> 	mRefLayoutListener;
+	 }
 	
 	 /**
 	  * constructor
@@ -34,7 +48,7 @@ public class ActivityMonitorRunnable implements Runnable {
 	  * @param instrumentation
 	  */
 	protected void init(Instrumentation instrumentation) {
-		mActivityStack = new Stack<WeakReference<Activity>>();
+		mActivityStack = new Stack<ActivityInfo>();
 		IntentFilter intentFilter = null;
 		mActivityMonitor = new Instrumentation.ActivityMonitor(intentFilter, null, false);
 		instrumentation.addMonitor(mActivityMonitor);
@@ -71,6 +85,20 @@ public class ActivityMonitorRunnable implements Runnable {
 			}
 		}
 	}	
+	
+	/** 
+	 * we insert a global layout listener, so we can wait for new layouts, for example, when the IME is displayed
+	 * @param a activity to get the window.view content from.
+	 */
+	public void interceptLayout(Activity a) {
+		Window w = a.getWindow();
+	    View v = w.getDecorView().findViewById(android.R.id.content);
+	    
+	    // good stroke of luck, we can listen to layout events on the root view.
+	    ViewTreeObserver viewTreeObserver = v.getViewTreeObserver();
+	    viewTreeObserver.addOnGlobalLayoutListener(new OnLayoutInterceptListener());
+	}
+
 
 	/**
 	 * public function to wait for an activity by the "short" class name.
@@ -116,10 +144,27 @@ public class ActivityMonitorRunnable implements Runnable {
 	public Activity getCurrentActivity() {
 		synchronized(mActivityStack) {
 			if (!mActivityStack.isEmpty()) {
-				WeakReference<Activity> ref = mActivityStack.peek();
+				ActivityInfo activityInfo = mActivityStack.peek();
+				WeakReference<Activity> ref = activityInfo.mRefActivity;
 				if (ref != null) {
 					return ref.get();
 				}
+			}
+		}
+		return null;
+	}
+	
+	/**
+	 * retrieve the layout listener associated with the current activity.
+	 * @return
+	 */
+	
+	public OnLayoutInterceptListener getCurrentLayoutListener() {
+		if (!mActivityStack.isEmpty()) {
+			ActivityInfo activityInfo = mActivityStack.peek();
+			WeakReference<OnLayoutInterceptListener> ref = activityInfo.mRefLayoutListener;
+			if (ref != null) {
+				return ref.get();
 			}
 		}
 		return null;
@@ -132,7 +177,8 @@ public class ActivityMonitorRunnable implements Runnable {
 	 */
 	protected boolean inActivityStack(Activity activity) {
 		synchronized(mActivityStack) {
-			for (WeakReference<Activity> ref : mActivityStack) {
+			for (ActivityInfo activityInfo : mActivityStack) {
+				WeakReference<Activity> ref = activityInfo.mRefActivity;
 				if (ref.get() == activity) {
 					return true;
 				}
@@ -147,26 +193,48 @@ public class ActivityMonitorRunnable implements Runnable {
 	 */
 	protected void addActivityToStack(Activity activity) {
 		synchronized (mActivityStack) {
-			WeakReference<Activity> ref = new WeakReference<Activity>(activity);
-			mActivityStack.push(ref);
+			ActivityInfo activityInfo = new ActivityInfo();
+			activityInfo.mRefActivity = new WeakReference<Activity>(activity);
+			OnLayoutInterceptListener listener = addLayoutObserver(activity);
+			activityInfo.mRefLayoutListener = new WeakReference<OnLayoutInterceptListener>(listener);
+			mActivityStack.push(activityInfo);
 		}
 	}
+	
+	/**
+	 * when we add an activity to the stack, we also add a layout observer, which can signal to instrumentation
+	 * that a layout has completed.  Handy for stuff like waiting for the keyboard to appear/disappear
+	 * @param a
+	 * @return
+	 */
+	protected OnLayoutInterceptListener addLayoutObserver(Activity a) {
+		Window w = a.getWindow();
+	    View v = w.getDecorView().findViewById(android.R.id.content);
+	        
+	    // good stroke of luck, we can listen to layout events on the root view.
+	    ViewTreeObserver viewTreeObserver = v.getViewTreeObserver();
+	    OnLayoutInterceptListener listener = new OnLayoutInterceptListener();
+	    viewTreeObserver.addOnGlobalLayoutListener(listener);
+	    return listener;
+	}
+
 	
 	/**
 	 * remove the specified activity from the stack (not necessarily popping it)
 	 * @param activity activity to be removed.
 	 */
 	protected void removeActivityFromStack(Activity activity) {
-		WeakReference<Activity> ref = null;
+		ActivityInfo activityInfo = null;
 		synchronized(mActivityStack) {
-			for (WeakReference<Activity> candRef : mActivityStack) {
+			for (ActivityInfo candActivityInfo : mActivityStack) {
+				WeakReference<Activity> candRef = candActivityInfo.mRefActivity;
 				if (candRef.get() == activity) {
-					ref = candRef;
+					activityInfo = candActivityInfo;
 					break;
 				}
 			}
-			if (ref != null) {
-				mActivityStack.remove(ref);
+			if (activityInfo != null) {
+				mActivityStack.remove(activityInfo);
 			}
 		}
 	}

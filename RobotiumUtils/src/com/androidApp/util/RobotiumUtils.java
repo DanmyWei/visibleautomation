@@ -21,14 +21,16 @@ import android.widget.ScrollView;
 
 /**
  * utility class for monitoring activities and sending events to views.
- * @author Matthew
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  *
  */
 public class RobotiumUtils {
 	protected static int ACTIVITY_POLL_INTERVAL_MSEC = 1000;			// interval for activity existence polling
 	protected static int VIEW_TIMEOUT_MSEC = 5000;						// time to wait for view to be visible
 	protected static int VIEW_POLL_INTERVAL_MSEC = 1000;				// poll interval for view existence
-	protected static int WAIT_INCREMENT_MSEC = 100;
+	protected static int WAIT_INCREMENT_MSEC = 100;						// poll interval for wait timers.
+	protected static int WAIT_SCROLL_MSEC = 2000;						// wait at most this long for a scroll to complete
 	protected static ActivityMonitorRunnable	sActivityMonitorRunnable = null;
 	protected Instrumentation					mInstrumentation;
 
@@ -174,7 +176,9 @@ public class RobotiumUtils {
 		return sActivityMonitorRunnable.getCurrentActivity();
 	}
 	
-	
+	public static void waitForLayout() {
+		
+	}
 
 	/**
 	 * get the leastmost scrolling container for this view: NOTE: this may not be the container we're looking for,
@@ -249,8 +253,20 @@ public class RobotiumUtils {
 				scrollHorizontal = r.right - scrollingContainer.getMeasuredWidth();
 			}
 			if ((scrollVertical != 0) || (scrollHorizontal != 0)) {
+				int originalScrollX = scrollingContainer.getScrollX();
+				int originalScrollY = scrollingContainer.getScrollY();
 				Runnable runnable = new ScrollViewRunnable(scrollingContainer, scrollHorizontal, scrollVertical);
 				mInstrumentation.runOnMainSync(runnable);
+				int timeout = WAIT_SCROLL_MSEC;
+				while (timeout > 0) {
+					int currentScrollX = scrollingContainer.getScrollX();
+					int currentScrollY = scrollingContainer.getScrollY();
+					if ((currentScrollX == originalScrollX + scrollHorizontal) && (currentScrollY == originalScrollY + scrollVertical)) {
+						break;
+					}
+					sleep(WAIT_INCREMENT_MSEC);
+					timeout -= WAIT_INCREMENT_MSEC;
+				}
 			}
 		}
 	}
@@ -276,6 +292,9 @@ public class RobotiumUtils {
 		if (v != null) {
 	        InputMethodManager imm = (InputMethodManager)v.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
 	        imm.showSoftInput(v, 0);
+	        // displaying and hiding the input method manager causes a re-layout that we need to wait for, since later events
+	        // may get sent with view dimensions before the layout, but after the layout has occurred.
+	        sActivityMonitorRunnable.getCurrentLayoutListener().waitForLayout(VIEW_TIMEOUT_MSEC);
 		}
 	}
 	
@@ -287,6 +306,7 @@ public class RobotiumUtils {
 		if (v != null) {
 	        InputMethodManager imm = (InputMethodManager)v.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
 	        imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
+	        sActivityMonitorRunnable.getCurrentLayoutListener().waitForLayout(VIEW_TIMEOUT_MSEC);
 		}
 	}
 	

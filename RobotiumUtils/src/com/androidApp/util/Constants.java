@@ -1,5 +1,11 @@
 package com.androidApp.util;
 
+/**
+ * constants  organized by purpose
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ *
+ */
 public class Constants {
 	public static class Fields {
 		public static final String WINDOW_MANAGER_FIELD = "mWindowManager";
