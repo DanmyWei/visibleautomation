@@ -11,3 +11,5 @@ Bundle-ActivationPolicy: lazy
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Import-Package: com.android.ide.eclipse.adt,
  org.eclipse.jdt.core
+Bundle-ClassPath: .,
+ libs/emitrobotiumcode.jar

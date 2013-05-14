@@ -28,6 +28,13 @@
                enablesFor="1"
                id="CreateRecorderPlugin.newAction">
          </action>
+        <action
+               label="Generate Robotium Test"
+               class="createrecorderplugin.popup.actions.GenerateRobotiumTestCode"
+               menubarPath="CreateRecorderPlugin.menu1/group1"
+               enablesFor="1"
+               id="GenerateRobotiumTest.newAction">
+         </action>
       </objectContribution>
    </extension>
 
