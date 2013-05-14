@@ -8,6 +8,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 
+// TODO: defunct: remove this class
 public class InterceptScrollView extends View {
 	private static final String TAG = "InterceptScrollView";
 	protected int				mTop;

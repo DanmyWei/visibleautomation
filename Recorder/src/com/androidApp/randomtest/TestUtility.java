@@ -12,6 +12,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AbsListView;
 
+/**
+ * grab bag of utility functions to support the random test framework
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ *
+ */
 public class TestUtility {
 	private final static int PAUSE = 500;
 

@@ -9,6 +9,12 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
 
+/**
+ * this edit text is added to popup menus so we can intercept key events.  TODO:We may be able to
+ * supersede this class with RecordWindowCallback
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ */
 public class InterceptKeyViewMenu extends EditText {
 	EventRecorder mRecorder;
 	

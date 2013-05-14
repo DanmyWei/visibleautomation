@@ -13,7 +13,8 @@ import android.view.View;
  * recorder wrapper to intercept popupWindow dismiss events
  * We have an exception case for popupWindows created by spinners, so the emitter can generate
  * autocomplete and other custom widget-specific code.
- * @author Matthew
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  *
  */
 

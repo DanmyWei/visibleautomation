@@ -13,7 +13,8 @@ import android.widget.Spinner;
 
 /**
  * wrapper class to receive focus change events.
- * @author Matthew
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  *
  */
 public class RecordOnFocusChangeListener extends RecordListener implements View.OnFocusChangeListener, IOriginalListener  {

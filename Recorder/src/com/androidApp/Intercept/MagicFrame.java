@@ -29,9 +29,9 @@ import android.widget.PopupWindow;
 import android.widget.Toast;
 
 /**
- * frame which directs key input to an intercepting EditText, so we can intercept preImeKey events.
- * @author Matthew
- *
+ * frame which intercepts the key events, so we can intercept interesting keys like home and back
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  */
 public class MagicFrame extends FrameLayout {
 	private static final String 		TAG = "MagicFrame";

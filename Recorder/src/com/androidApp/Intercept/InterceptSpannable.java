@@ -5,6 +5,13 @@ import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.util.Log;
 
+/**
+ * so we can intercept operations on text controls
+ * TODO: defunct: this was only used for testing.
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ *
+ */
 public class InterceptSpannable extends SpannableStringBuilder {
 	private static final String TAG = "InterceptSpannable";
 

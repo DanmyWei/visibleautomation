@@ -10,6 +10,11 @@ import android.app.ActionBar.Tab;
 import android.app.FragmentTransaction;
 import android.view.View;
 
+/**
+ * class for listening to action bar tab events
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ */
 public class RecordActionBarTabListener extends RecordListener implements ActionBar.TabListener, IOriginalListener {
 	protected ActionBar.TabListener mOriginalTabListener;
 	protected int 					mTabIndex;

@@ -8,7 +8,11 @@ import android.os.SystemClock;
 import android.view.View;
 import android.widget.AdapterView;
 
-// record item clicks for listviews
+/**
+ *  record item clicks for listviews
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ */
 public class RecordOnItemClickListener extends RecordListener implements AdapterView.OnItemClickListener, IOriginalListener  {
 	protected AdapterView.OnItemClickListener	mOriginalItemClickListener;
 	

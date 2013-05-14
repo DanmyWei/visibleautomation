@@ -17,7 +17,12 @@ import android.widget.AdapterView;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-// base class for all listeners, implements common functions, retains reference to event recorder.
+/**
+ * base class for all listeners, implements common functions, retains reference to event recorder.
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ *
+ */
 public class RecordListener {
 	
 	// handle to the recorder 

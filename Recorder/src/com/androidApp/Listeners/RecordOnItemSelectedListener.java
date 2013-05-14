@@ -9,8 +9,11 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Spinner;
 
-// record item Selects for spinners, list views, etc.
-
+/**
+ * record item select for spinners and other adapter views
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ */
 public class RecordOnItemSelectedListener extends RecordListener implements AdapterView.OnItemSelectedListener, IOriginalListener  {
 	protected AdapterView.OnItemSelectedListener	mOriginalItemSelectedListener;
 	

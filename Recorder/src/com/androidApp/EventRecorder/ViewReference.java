@@ -11,6 +11,13 @@ import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.StringUtils;
 import com.androidApp.Utility.TestUtils;
 
+/**
+ * code to generate view references, either by unique id's or by class name and index within the list of views
+ * on the screen
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ *
+ */
 public class ViewReference {
 	private List<Object>		mRIDList;							// list of R.id classes used in the application
 	private List<Object>		mRStringList;						// list of R.string classes used in the application.

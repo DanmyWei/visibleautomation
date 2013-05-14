@@ -3,6 +3,7 @@ import android.view.View;
 import android.view.View.OnFocusChangeListener;
 import android.widget.EditText;
 
+// TODO: defunct: remove this class
 public class InterceptFocusChangeListener implements OnFocusChangeListener {
 	protected EditText		mInterceptKeyView;
 	

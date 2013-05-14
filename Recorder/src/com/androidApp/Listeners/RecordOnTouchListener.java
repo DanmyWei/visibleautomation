@@ -11,7 +11,12 @@ import com.androidApp.Utility.Constants;
 import android.view.MotionEvent;
 import android.view.View;
 
-// View.onTouchListener that listens to key events, and writes them to a file.
+/**
+ *  View.onTouchListener that listens to key events, and writes them to a file.
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ *
+ */
 public class RecordOnTouchListener extends RecordListener implements View.OnTouchListener, IOriginalListener  {
 	protected View.OnTouchListener 	mOriginalOnTouchListener;
 	

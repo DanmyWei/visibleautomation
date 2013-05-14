@@ -15,6 +15,12 @@ import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.ReflectionUtils;
 
+/**
+ * same as magic frame, except for popup windows
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ *
+ */
 public class MagicFramePopup extends MagicFrame {
 	private static final String 		TAG = "MagicFramePopup";
 	protected FrameLayout 				mPopupViewContainer;

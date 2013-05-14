@@ -11,6 +11,7 @@ import android.content.res.AssetManager;
 
 /**
  * generate random words for text entry.
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  */
 public class RandomDictionary {
 	String[] mWords;

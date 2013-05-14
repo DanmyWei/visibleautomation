@@ -8,8 +8,13 @@ import android.os.SystemClock;
 import android.view.View;
 import android.widget.AdapterView;
 
-// record long click listener
-// TODO: this will handle the UI for waitForText() and extended record interface
+/**
+ *  record long click listener
+ *  TODO: this will handle the UI for waitForText() and extended record interface
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ *
+ */ 
 public class RecordOnItemLongClickListener extends RecordListener implements AdapterView.OnItemLongClickListener, IOriginalListener  {
 	protected AdapterView.OnItemLongClickListener	mOriginalItemLongClickListener;
 	

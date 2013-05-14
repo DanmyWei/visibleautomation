@@ -21,7 +21,13 @@ import android.view.View.OnLongClickListener;
 import android.view.View.OnSystemUiVisibilityChangeListener;
 import android.view.View.OnTouchListener;
 
-// recorder for view click events.
+/**
+ * recorder for view click events. This is probably called more than anything else in the world
+ * TODO: This may be the cause of errors with toggle buttons
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ *
+ */
 public class RecordOnClickListener extends RecordListener implements View.OnClickListener, IOriginalListener  {
 	protected View.OnClickListener 	mOriginalOnClickListener;
 	

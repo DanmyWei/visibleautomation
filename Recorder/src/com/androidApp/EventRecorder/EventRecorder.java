@@ -1,40 +1,40 @@
 package com.androidApp.EventRecorder;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 
+import com.androidApp.LogService.LogService;
 import com.androidApp.Utility.Constants;
 import android.app.Activity;
-import android.os.Environment;
+import android.content.Context;
+import android.content.Intent;
 import android.os.SystemClock;
 import android.util.Log;
 import android.view.Surface;
 import android.view.View;
 
 /**
- * install the interception listeners in the view tree using some pretty cool reflection trickery.
- * @author matreyno
+ * interface to the log service, since instrumentation can't do its own permissions
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  *
  */
 public class EventRecorder {
-	protected static final String			TAG = "EventRecorder";
-	public static final float				GUESS_IME_HEIGHT = 0.25F;			// guess that IME takes up this amount of the screen.
-	protected BufferedWriter 				mRecordWriter;						// to write the events to file
-	protected int 							mHashCode = 0x0;					// for fast tracking of view tree changes
-	protected ViewReference					mViewReference;
-	protected boolean						mIMEWasDisplayed = false;			// IME was displayed in the last layout
-	protected boolean						mfVisualDebug = true;				// enable visual debugging.
-
+	protected static final String	TAG = "EventRecorder";
+	public static final float		GUESS_IME_HEIGHT = 0.25F;						// guess that IME takes up this amount of the screen.
+	protected int 					mHashCode = 0x0;								// for fast tracking of view tree changes
+	protected ViewReference			mViewReference;
+	protected boolean				mfVisualDebug = true;							// enable visual debugging.
+	protected Context				mContext;										// to send requests to service
+	protected String				mRecordFileName;								// name of the file in the sdcard
+	
 	// constructor which opens the recording file, which is stashed somewhere on the sdcard.
-	public EventRecorder(String recordFileName) throws IOException {				
-		File extDir = Environment.getExternalStorageDirectory();
-		File path = new File(extDir, recordFileName);
-		path.delete();
-		FileWriter fw = new FileWriter(path, true);
-		mRecordWriter = new BufferedWriter(fw);
+	public EventRecorder(Context context, String recordFileName) throws IOException {	
+		mContext = context;
 		mViewReference = new ViewReference();
+		mRecordFileName = recordFileName;
+        Intent i = new Intent(LogService.INITIALIZE);
+        i.putExtra(LogService.FILENAME, mRecordFileName);
+        mContext.startService(i);
 	}
 	
 	public void addRdotID(Object rdotid) {
@@ -57,33 +57,23 @@ public class EventRecorder {
 		mfVisualDebug = f;
 	}
 	
+    public void writeLog(String filename, String s) {
+        if (mContext != null) {
+            Intent i = new Intent(LogService.LOG);
+            i.putExtra(LogService.FILENAME, filename);
+            i.putExtra(LogService.MESSAGE, s);
+            mContext.startService(i);
+        } else {
+        	Log.e(TAG, "writeLog: context must be initialized");
+        }
+    }
+
+	
 	// write a record to the output
 	public synchronized void writeRecord(String s)  {
-		try {
-			if (mRecordWriter != null) {
-				mRecordWriter.write(s);
-				mRecordWriter.newLine();
-				mRecordWriter.flush();
-			} else {
-				Log.e(TAG, "record writer closed writing " + s);
-			}
-		} catch (IOException ioex) {
-			ioex.printStackTrace();
-		}
+		writeLog(mRecordFileName, s);
 	}
-	
-	/**
-	 * close the record writer.
-	 */
-	public synchronized void close() {
-		try {
-			mRecordWriter.close();
-			mRecordWriter = null;
-		} catch (IOException ioex) {
-			
-		}
-	}
-	
+		
 	/**
 	 * write an event with time in milliseconds <event>:<time>
 	 * @param event event to write out (from Constants.EventTags)

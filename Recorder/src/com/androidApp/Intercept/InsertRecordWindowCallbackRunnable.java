@@ -9,6 +9,13 @@ import com.androidApp.Listeners.RecordWindowCallback;
 import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 
+/**
+ * actually replace the window.callback (which is usually an activity) with our nefarious little recorder,
+ * so we can record the forbidden hom and back key events, which Diane Hackborn said we couldn't dos
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ *
+ */
 public class InsertRecordWindowCallbackRunnable implements Runnable {
 	protected Window			mWindow;
 	protected EventRecorder 	mRecorder;

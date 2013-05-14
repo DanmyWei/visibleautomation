@@ -11,7 +11,8 @@ import android.view.ViewParent;
 
 /**
  * event functions used in the random test suite to send key, touch, scroll, select, click, etc. events.
- * @author Matthew
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  *
  */
 public class EventUtility {

@@ -9,6 +9,12 @@ import com.androidApp.Listeners.RecordWindowCallback;
 import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 
+/**
+ * runnable to insert window.callback, so we can intercept window-level events like back and home
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ *
+ */
 public class ViewInsertRecordWindowCallbackRunnable implements Runnable {
 	protected View 				mView;
 	protected EventRecorder 	mRecorder;

@@ -37,7 +37,8 @@ import com.androidApp.randomtest.RandTest;
 
 /**
  * record events in an activity. In short, be awesome.
- * @author matreyno
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  *
  * @param <T> activity being subjected to recording
  * This uses a thread which waits on events from an activity monitor to track activity forward and back events.  
@@ -63,7 +64,7 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	private float							mBackKeyPercentage = 2.0f;				// 1 in 50 operations is the back key.
 	// initialize the event recorder
 	public void initRecorder() throws IOException {
-		mRecorder = new EventRecorder("events.txt");
+		mRecorder = new EventRecorder(this.getInstrumentation().getContext(), "events.txt");
 		mViewInterceptor = new ViewInterceptor(mRecorder);
 	}
 	

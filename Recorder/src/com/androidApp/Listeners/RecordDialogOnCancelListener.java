@@ -13,7 +13,8 @@ import android.widget.Spinner;
 /**
  * wrapper class to intercept and record dialog cancel events.
  * event tag is so we can write out specific dialog types like autocomplete and spinner
- * @author Matthew
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  *
  */
 public class RecordDialogOnCancelListener extends RecordListener implements DialogInterface.OnCancelListener, IOriginalListener {

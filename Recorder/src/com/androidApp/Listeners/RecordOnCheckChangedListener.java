@@ -11,6 +11,7 @@ import android.widget.CompoundButton;
 
 // recorder for toggle buttons OnCheckedChangeListener (onClick really does this)
 // NOTE: currently unused
+// Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
 public class RecordOnCheckChangedListener extends RecordListener implements CompoundButton.OnCheckedChangeListener, IOriginalListener  {
 	protected CompoundButton.OnCheckedChangeListener 	mOriginalOnCheckedChangeListener;
 	

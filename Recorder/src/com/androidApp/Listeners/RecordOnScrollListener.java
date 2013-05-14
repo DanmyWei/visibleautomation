@@ -14,7 +14,8 @@ import android.widget.AdapterView;
  * listen to scroll events and record them.  But only record ones from the user.
  * NOTE: This is specific to ListView, ScrollViews will have to be handled differently, unfortunately we'll have to 
  * handle the touch events, and scroll by hand, since there's no OnScrollListener for scroll views.
- * @author Matthew
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  *
  */
 public class RecordOnScrollListener extends RecordListener implements AbsListView.OnScrollListener, IOriginalListener  {

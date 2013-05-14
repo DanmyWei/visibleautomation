@@ -8,7 +8,12 @@ import android.app.Dialog;
 import android.content.DialogInterface;
 import android.os.SystemClock;
 
-// log when a dialog is displayed
+/**
+ *  log when a dialog is displayed.  We need to add waitForDialogToAppear() in Robotium
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ *
+ */
 public class RecordDialogOnShowListener extends RecordListener implements DialogInterface.OnShowListener, IOriginalListener  {
 	protected DialogInterface.OnShowListener mOriginalOnShowListener;
 	

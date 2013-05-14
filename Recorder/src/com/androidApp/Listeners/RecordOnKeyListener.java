@@ -10,7 +10,12 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 
-// recorder for view key events.
+/**
+ *  recorder for view key events.
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ *
+ */
 public class RecordOnKeyListener extends RecordListener implements View.OnKeyListener, IOriginalListener  {
 	protected View.OnKeyListener 	mOriginalOnKeyListener;
 	

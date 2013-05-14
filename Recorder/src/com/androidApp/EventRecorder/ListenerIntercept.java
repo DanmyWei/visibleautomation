@@ -26,7 +26,8 @@ import com.androidApp.Utility.ReflectionUtils;
 /**
  * class which contains static functions used to obtain and set various listeners for android views, like
  * the onClickListener, onItemClickListener, etc).
- * @author Matthew
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  *
  */
 public class ListenerIntercept {

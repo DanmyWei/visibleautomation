@@ -10,6 +10,12 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.PopupMenu;
 
+/**
+ * recorder for popup menus menu item click
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ *
+ */
 public class RecordPopupMenuOnMenuItemClickListener extends RecordListener implements PopupMenu.OnMenuItemClickListener, IOriginalListener  {
 	protected PopupMenu.OnMenuItemClickListener	mOriginalMenuItemClickListener;
 	protected View mMenuView;

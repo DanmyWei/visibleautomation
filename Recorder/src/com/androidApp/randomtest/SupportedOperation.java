@@ -8,6 +8,12 @@ import android.widget.AbsListView;
 import android.widget.EditText;
 import android.widget.Spinner;
 
+/**
+ * supported operations in the random test
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ *
+ */
 public class SupportedOperation {
 
 	/**
