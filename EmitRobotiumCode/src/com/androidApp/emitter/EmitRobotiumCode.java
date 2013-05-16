@@ -148,7 +148,7 @@ public class EmitRobotiumCode {
 				copyBuildFiles(testClassName, projectPropertiesScan.getTarget());
 				copyLibrary(dirs.mLibDir);
 				writeManifest(testClassName, testClassName, testClassPath, emitter.getApplicationPackage());
-				copyTestDriverFile(packageFilePath, emitter.getApplicationClassPath());
+				copyTestDriverFile(packageFilePath, emitter.getApplicationClassPath() + Constants.Extensions.TEST);
 				writeResources(dirs, testClassName);
 				writeClasspath(testClassName, targetProject, robotiumJar);
 				FileUtility.copyFile(robotiumFile.getPath(), testClassName + File.separator + Constants.Dirs.LIBS + File.separator + robotiumJar);
@@ -344,8 +344,8 @@ public class EmitRobotiumCode {
 	 * @throws IOException if the template can't be found
 	 */
 	public static void copyTestDriverFile(String packagePathName, String applicationClassPath) throws IOException {
-		String allTests = FileUtility.readTemplate(Constants.Templates.ALL_TESTS);
-		allTests = allTests.replace(Constants.VariableNames.CLASSPATH, applicationClassPath);
+		String allTests = FileUtility.readTemplate(Constants.Templates.ALL_TESTS_CREATETEST);
+		allTests = allTests.replace(Constants.VariableNames.CLASSPACKAGE, applicationClassPath);
 		FileUtility.writeString(packagePathName + File.separator + Constants.Filenames.ALL_TESTS, allTests);
 		
 	}
