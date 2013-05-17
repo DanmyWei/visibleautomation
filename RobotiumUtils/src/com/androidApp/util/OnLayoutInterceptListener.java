@@ -31,11 +31,16 @@ public class OnLayoutInterceptListener implements ViewTreeObserver.OnGlobalLayou
 	 * @param timeoutMsec
 	 */
 	public void waitForLayout(long timeoutMsec) {
+		boolean fNotified = false;
 		synchronized (mWaitObject) {
 			try {
 				mWaitObject.wait(timeoutMsec);
 			} catch (InterruptedException iex) {
+				fNotified = true;
 			}
+		}
+		if (!fNotified) {
+			Log.i(TAG, "timer expired before a layout notification was received");
 		}
 	}
 }

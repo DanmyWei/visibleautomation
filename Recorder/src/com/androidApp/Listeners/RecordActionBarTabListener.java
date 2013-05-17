@@ -33,7 +33,8 @@ public class RecordActionBarTabListener extends RecordListener implements Action
 	
 	@Override
 	public void onTabSelected(Tab tab, FragmentTransaction ft) {
-		mEventRecorder.writeRecord(Constants.EventTags.SELECT_ACTIONBAR_TAB, Integer.toString(mTabIndex));
+		String message = Integer.toString(mTabIndex) + "," + "select tab " + tab.getText();
+		mEventRecorder.writeRecord(Constants.EventTags.SELECT_ACTIONBAR_TAB, message);
 		if (mOriginalTabListener != null) {
 			mOriginalTabListener.onTabSelected(tab, ft);
 		}

@@ -99,6 +99,7 @@ public class Constants {
 		public static final String SYSTEMUI_VISIBILITY_CHANGE_LISTENER = "mOnSystemUiVisibilityChangeListener";
 		public static final String ITEM_DATA = "mItemData";
 		public static final String TABS = "mTabs";
+		public static final String ANCHOR = "mAnchor";
 	}
 	
 	// possible derive methods which listen for events.
@@ -152,6 +153,7 @@ public class Constants {
 		public static final String DISMISS_POPUP_WINDOW = "dismiss_popup_window";
 		public static final String DISMISS_POPUP_WINDOW_BACK_KEY = "dismiss_popup_window_back_key";
 		public static final String CREATE_POPUP_WINDOW = "create_popup_window";
+		public static final String CREATE_SPINNER_POPUP_WINDOW = "create_spinner_popup_window";
 		public static final String ROTATION = "rotation";
 		public static final String MENU_ITEM_CLICK = "menu_item_click";
 		public static final String POPUP_MENU_ITEM_CLICK = "popup_menu_item_click";

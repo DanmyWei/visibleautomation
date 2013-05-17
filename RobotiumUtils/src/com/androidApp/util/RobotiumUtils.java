@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import com.jayway.android.robotium.solo.Solo;
 
 import junit.framework.TestCase;
+import android.app.ActionBar;
 import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Context;
@@ -59,6 +60,28 @@ public class RobotiumUtils {
 		}
 	}
 	
+	
+	/**
+	 * wait for a list view item to become visible.
+	 * @param listView list view containing item
+	 * @param itemIndex index of item
+	 * @param waitMsec max wait time in milliseconds
+	 * @return
+	 */
+	public boolean waitForListViewItem(Solo solo, ListView listView, int itemIndex, int waitMsec) {
+		android.view.View listViewItem = null; 
+		while ((listViewItem == null) && (waitMsec > 0)) {
+			listViewItem = RobotiumUtils.getListViewItem(listView, itemIndex);
+			if (listViewItem != null) {
+				if (solo.waitForView(listViewItem)) {
+					return true;
+				}
+			} 
+			RobotiumUtils.sleep(VIEW_POLL_INTERVAL_MSEC);
+			waitMsec -= VIEW_POLL_INTERVAL_MSEC;
+		}	
+		return false;
+	}
 	/**
 	 * wait for the list, then wait for the specified view, then click on it.
 	 * @param solo robotium handle
@@ -66,13 +89,14 @@ public class RobotiumUtils {
 	 * @param itemIndex absolute index of the item 
 	 * @return list of TextViews in the list
 	 */
-	public static ArrayList<android.widget.TextView> waitAndClickInListByClassIndex(Solo solo, int listViewIndex, int itemIndex) {
+	public ArrayList<android.widget.TextView> waitAndClickInListByClassIndex(Solo solo, int listViewIndex, int itemIndex) {
 		boolean foundView = solo.waitForView(android.widget.ListView.class, listViewIndex + 1, VIEW_TIMEOUT_MSEC);
 		if (!foundView) {
 			Log.e("test", "test");
 			TestCase.assertTrue(foundView);
 		}
 		android.widget.ListView listView = (android.widget.ListView) solo.getView(android.widget.ListView.class, listViewIndex);
+		scrollToViewVisible(solo, listView);
 		int waitMsec = VIEW_TIMEOUT_MSEC;
 		android.view.View listViewItem = null; 
 		while ((listViewItem == null) && (waitMsec > 0)) {
@@ -396,5 +420,39 @@ public class RobotiumUtils {
 			waitMsec -= WAIT_INCREMENT_MSEC;
 		}
 		throw new TestException("a popup window is displayed when it shouldn't be");
+	}
+	
+	/**
+	 * select the indexed tab on the action bar
+	 * @param activity activity to get the action bar from
+	 * @param tabIndex index of the tab to select
+	 * @throws TestException if there is no action bar to select a tab from
+	 */
+	public void selectActionBarTab(Activity activity, int tabIndex) throws TestException {
+		ActionBar actionBar = activity.getActionBar();
+		if (actionBar == null) {
+			throw new TestException("selectActionBarTab: activity has no action bar");
+		}
+		mInstrumentation.runOnMainSync(new SetActionBarTabRunnable(actionBar, tabIndex));
+	}
+	
+	/**
+	 * runnable to select an action bar tab.
+	 * @author Matthew
+	 *
+	 */
+	public class SetActionBarTabRunnable implements Runnable {
+		public ActionBar 	mActionBar;
+		public int 			mIndex;
+		
+		public SetActionBarTabRunnable(ActionBar actionBar, int index) {
+			mActionBar = actionBar;
+			mIndex = index;
+		}
+		
+		public void run() {
+			ActionBar.Tab tab = mActionBar.getTabAt(mIndex);
+			tab.select();
+		}
 	}
 }

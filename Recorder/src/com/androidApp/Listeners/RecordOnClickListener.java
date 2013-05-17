@@ -71,7 +71,9 @@ public class RecordOnClickListener extends RecordListener implements View.OnClic
 			// prevents firing the performClick() event.  Inherited views then won't fire their onClick() events.  So, we check if the listener info
 			// is null, or the onclick recorders with no original listeners, and if so, null out the listener and call performClick() directly.
 			// NOTE: this is a terrible hack/workaround, but there's no other option that I can see at this point.
-			
+			// NOTE: THIS DOESN'T WORK: the performClick gets sent to the toggle button twice.
+			// NOTE: The semantics of View.OnClick changed between Android-14 and Android-17
+			/*
 			try {
 				 Object listenerInfo = ListenerIntercept.getListenerInfo(v);
 				 if ((listenerInfo == null) || !hasClickListener(v)) {
@@ -83,6 +85,7 @@ public class RecordOnClickListener extends RecordListener implements View.OnClic
 				 mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, v, "on click");
 				 ex.printStackTrace();
 			 }
+			 */
 			if (mOriginalOnClickListener != null) {
 				 mOriginalOnClickListener.onClick(v);
 			}

@@ -27,6 +27,7 @@ import android.widget.TextView;
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.Intercept.InterceptActionBar;
+import com.androidApp.Intercept.MagicFrame;
 import com.androidApp.Listeners.FinishTextChangedListener;
 import com.androidApp.Listeners.RecordDialogOnCancelListener;
 import com.androidApp.Listeners.RecordDialogOnDismissListener;
@@ -49,7 +50,6 @@ import com.androidApp.Utility.TestUtils;
 
 /**
  * class to install the interceptors in the view event listeners
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  */
 public class ViewInterceptor {
 	protected static final String	TAG = "ViewInterceptor";
@@ -169,10 +169,14 @@ public class ViewInterceptor {
 						replaceSeekBarListeners(seekBar);
 					}
 				} else {
-					if (v instanceof AbsListView) {
-						// TODO: need to support scrolling for objects which are NOT ListViews 
-						AdapterView adapterView = (AdapterView) v;
-						replaceAdapterViewListeners(adapterView);
+					if (v instanceof AdapterView) {
+						if (v instanceof Spinner) {
+							Spinner spinner = (Spinner) v;
+							replaceSpinnerListeners(spinner);
+						} else {
+							AbsListView absListView = (AbsListView) v;
+							replaceAdapterViewListeners(absListView);
+						}
 					}
 				}
 				if (v instanceof EditText) {
@@ -232,7 +236,6 @@ public class ViewInterceptor {
 	 */
 	public void replacePopupMenuListeners(View v)  throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
 		PopupMenu.OnMenuItemClickListener originalMenuItemClickListener = ListenerIntercept.getPopupMenuOnMenuItemClickListener(v);
-		AdapterView.OnItemClickListener originalItemClickListener = ListenerIntercept.getPopupMenuOnItemClickListener(v);
 		if (!(originalMenuItemClickListener instanceof RecordPopupMenuOnMenuItemClickListener)) {
 			ListenerIntercept.setPopupMenuOnMenuItemClickListener(v, new RecordPopupMenuOnMenuItemClickListener(mEventRecorder, v)); 
 		}
@@ -252,35 +255,36 @@ public class ViewInterceptor {
 			seekBar.setOnSeekBarChangeListener(recordSeekbarChangeListener);
 		}
 	}
+	
+	/**
+	 * replace the listeners for click and item selected for a spinner.
+	 * @param spinner
+	 */
+	public void replaceSpinnerListeners(Spinner spinner) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
+		AdapterView.OnItemSelectedListener originalSelectedItemListener = ListenerIntercept.getItemSelectedListener(spinner);
+		if (!(originalSelectedItemListener instanceof RecordOnItemSelectedListener)) {
+			RecordOnItemSelectedListener recordItemSelectedListener = new RecordOnItemSelectedListener(mEventRecorder, originalSelectedItemListener);
+			spinner.setOnItemSelectedListener(recordItemSelectedListener);
+		}
+	}
 
 	/**
 	 * replace the listeners for item click, list scroll, and item select if its a spinner
-	 * @param adapterView adapter to intercept
+	 * @param absListView list view to intercept
 	 * @throws IllegalAccessException ReflectionUtils exceptions
 	 * @throws NoSuchFieldException
 	 * @throws ClassNotFoundExceptions
 	 */
-	public void replaceAdapterViewListeners(AdapterView adapterView) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
-		AdapterView.OnItemClickListener itemClickListener = adapterView.getOnItemClickListener();
+	public void replaceAdapterViewListeners(AbsListView absListView) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
+		AdapterView.OnItemClickListener itemClickListener = absListView.getOnItemClickListener();
 		if (!(itemClickListener instanceof RecordOnItemClickListener)) {
-			RecordOnItemClickListener recordItemClickListener = new RecordOnItemClickListener(mEventRecorder, adapterView);
-			adapterView.setOnItemClickListener(recordItemClickListener);		
-		}				
-		if (adapterView instanceof AbsListView) {
-			AbsListView absListView = (AbsListView) adapterView;
-			AbsListView.OnScrollListener originalScrollListener = ListenerIntercept.getScrollListener(absListView);
-			if (!(originalScrollListener instanceof RecordOnScrollListener)) {
-				RecordOnScrollListener recordScrollListener = new RecordOnScrollListener(mEventRecorder, originalScrollListener);
-				absListView.setOnScrollListener(recordScrollListener);
-			}
-		}
-		// special case for spinners, which receive onItemSelected, but not onItemClick events.
-		if (adapterView instanceof Spinner) {
-			AdapterView.OnItemSelectedListener originalSelectedItemListener = ListenerIntercept.getItemSelectedListener(adapterView);
-			if (!(originalSelectedItemListener instanceof RecordOnItemSelectedListener)) {
-				RecordOnItemSelectedListener recordItemSelectedListener = new RecordOnItemSelectedListener(mEventRecorder, originalSelectedItemListener);
-				adapterView.setOnItemSelectedListener(recordItemSelectedListener);
-			}
+			RecordOnItemClickListener recordItemClickListener = new RecordOnItemClickListener(mEventRecorder, absListView);
+			absListView.setOnItemClickListener(recordItemClickListener);		
+		}	
+		AbsListView.OnScrollListener originalScrollListener = ListenerIntercept.getScrollListener(absListView);
+		if (!(originalScrollListener instanceof RecordOnScrollListener)) {
+			RecordOnScrollListener recordScrollListener = new RecordOnScrollListener(mEventRecorder, originalScrollListener);
+			absListView.setOnScrollListener(recordScrollListener);
 		}
 	}
 
@@ -353,8 +357,8 @@ public class ViewInterceptor {
 	        	if (contentView != null) {
 	            	intercept(contentView);
 	            }
+	       		InterceptActionBar.interceptActionBarTabListeners(mEventRecorder, actionBar);
 		       	if (actionBar.getCustomView() != null) {
-		       		InterceptActionBar.interceptActionBarTabListeners(mEventRecorder, actionBar);
 		        	intercept(actionBar.getCustomView());
 		        }
         	} catch (Exception ex) {
@@ -400,7 +404,9 @@ public class ViewInterceptor {
 		}
 		
 		public void onGlobalLayout() {
-	        View contentView = mActivity.getWindow().getDecorView().findViewById(android.R.id.content);
+			
+			// this actually returns our magic frame, which doesn't resize when the IME is displayed
+	        View magicFrameView = mActivity.getWindow().getDecorView().findViewById(android.R.id.content);
 			Display display = mActivity.getWindowManager().getDefaultDisplay();
 			int newRotation = display.getRotation();
 			if (newRotation != mCurrentRotation) {
@@ -408,10 +414,10 @@ public class ViewInterceptor {
 				mCurrentRotation = newRotation;
 			}
 	        // this is a terrible hack to see if the IME has been hidden or displayed by this layout.
-	        if ((getFocusedView() != null) && isIMEDisplayed(contentView)) {
+	        if ((getFocusedView() != null) && isIMEDisplayed(magicFrameView)) {
 	        	mIMEWasDisplayed = true;
 				mEventRecorder.writeRecord(Constants.EventTags.SHOW_IME, getFocusedView(), "IME displayed");
-	        } else if (mIMEWasDisplayed && !isIMEDisplayed(contentView)) {
+	        } else if (mIMEWasDisplayed && !isIMEDisplayed(magicFrameView)) {
 	        	if (getLastKeyAction() == KeyEvent.KEYCODE_BACK) {
 	        		mEventRecorder.writeRecord(Constants.EventTags.HIDE_IME_BACK_KEY, getFocusedView(), "IME hidden by back key pressed");
 	        		setLastKeyAction(-1);
@@ -421,9 +427,9 @@ public class ViewInterceptor {
 	        }
 	        
 	        // recursively generate the hashcode for this view hierarchy, and re-intercept if it's changed.
-			int hashCode = viewTreeHashCode(contentView);
+			int hashCode = viewTreeHashCode(magicFrameView);
 			if (hashCode != mHashCode) {
-				intercept(contentView);
+				intercept(magicFrameView);
 				mHashCode = hashCode;
 			}
 			
@@ -441,10 +447,15 @@ public class ViewInterceptor {
 	 * @param contentView android.R.id.content from the activity's window.
 	 * @return true if the IME is probably up, false if it's certainly down.
 	 */
-	public static boolean isIMEDisplayed(View contentView) {
-		View contentParent = (View) contentView.getParent();
-		int imeHeight = contentParent.getMeasuredHeight() - contentView.getMeasuredHeight();
-		return imeHeight > ((int) (contentParent.getMeasuredHeight()*GUESS_IME_HEIGHT));
+	public static boolean isIMEDisplayed(View magicFrameView) {
+		if (magicFrameView instanceof MagicFrame) {
+			MagicFrame magicFrame = (MagicFrame) magicFrameView;
+			View actualContent = magicFrame.getChildAt(0).findViewById(android.R.id.content);
+			int imeHeight = magicFrameView.getMeasuredHeight() - actualContent.getMeasuredHeight();
+			return imeHeight > ((int) (magicFrameView.getMeasuredHeight()*GUESS_IME_HEIGHT));
+		} else {
+			return false;
+		}
 	}
 
 	/**
@@ -458,7 +469,14 @@ public class ViewInterceptor {
 				RecordPopupWindowOnDismissListener recordOnDismissListener = new RecordPopupWindowOnDismissListener(mEventRecorder, this, null, popupWindow, originalDismissListener);
 				popupWindow.setOnDismissListener(recordOnDismissListener);
 			}
-			replacePopupMenuListeners(popupWindow.getContentView());
+			Class menuPopupHelperClass = Class.forName(Constants.Classes.MENU_POPUP_HELPER);
+			Class listWindowPopupDropdownClass = Class.forName(Constants.Classes.LIST_WINDOW_POPUP_DROPDOWN_LIST_VIEW);			
+			View contentView = popupWindow.getContentView();
+			if (contentView.getClass() == menuPopupHelperClass) {
+				replacePopupMenuListeners(popupWindow.getContentView());
+			} else if (contentView.getClass() == listWindowPopupDropdownClass) {
+				// we are assuming this is a spinner, which is probably not the best thing.
+			}
 		} catch (Exception ex) {
 			mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, "Intercepting popup window");
 			ex.printStackTrace();

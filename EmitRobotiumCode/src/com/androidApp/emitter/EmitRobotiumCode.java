@@ -122,7 +122,6 @@ public class EmitRobotiumCode {
 		String templateFileName = testClassName + "." + Constants.Extensions.JAVA;
 		int uniqueFileIndex = FileUtility.uniqueFileIndex(packageFilePath, templateFileName);
 		if (uniqueFileIndex != 0) {
-			testClassPath += Integer.toString(uniqueFileIndex);
 			testClassName += Integer.toString(uniqueFileIndex) ;
 		}
 		
@@ -426,12 +425,13 @@ public class EmitRobotiumCode {
 		boolean fBackActivityMatches = false;				// there was a navigation to a previous activity with the same class name
 		
 		String line = br.readLine();
+		String nextLine = br.readLine();
 		int lineNumber = 0;									// track line number for errors
 		do {
-			String nextLine = br.readLine();
 			if (line == null) {
 				break;
 			}
+			String nextNextLine = br.readLine();
 			lineNumber++;
 			try {
 				// syntax is event:time,arguments,separated,by,commas
@@ -566,6 +566,15 @@ public class EmitRobotiumCode {
 						lastTextEntryTokens = tokens;
 					} else if (action.equals(Constants.Events.DISMISS_AUTOCOMPLETE_DROPDOWN)) {
 						writeDismissAutoCompleteDropdown(tokens, lines);
+					} else if (action.equals(Constants.Events.CREATE_SPINNER_POPUP_WINDOW)) {
+						SuperTokenizer stNextNext = new SuperTokenizer(nextNextLine, "\"", ":,", '\\');
+						List<String> nextNextTokens = stNextNext.toList();
+						String nextNextAction = nextNextTokens.get(0);
+						// he opened the spinner window, but didn't select anything, so we just click on
+						// the spinner button, then dismiss the dropdown.
+						if (!nextNextAction.equals(Constants.Events.ITEM_SELECTED)) {
+							writeClick(tokens, lines);
+						}
 					} else if (action.equals(Constants.Events.DISMISS_POPUP_WINDOW)) {
 						writeDismissPopupWindow(tokens, lines);
 					} else if (action.equals(Constants.Events.DISMISS_POPUP_WINDOW_BACK_KEY)) {
@@ -576,9 +585,12 @@ public class EmitRobotiumCode {
 						writeMenuItemClick(tokens, lines);
 					} else if (action.equals(Constants.Events.EXCEPTION)) {
 						writeException(tokens, lines);
+					} else if (action.equals(Constants.Events.SELECT_ACTIONBAR_TAB)) {
+						selectActionBarTab(tokens, lines);
 					}
 				}
 				line = nextLine;
+				nextLine = nextNextLine;
 			} catch (Exception ex) {
 				System.err.println("error parsing line " + lineNumber);
 				System.err.println("line = " + line);
@@ -609,7 +621,22 @@ public class EmitRobotiumCode {
 		lines.add(new LineAndTokens(tokens, exceptionTemplate));				
 	}
 	
-	
+	/**
+	 * write the select action bar event select_actionbar_tab:90167820,0,Select tab earth
+	 * @param tokens
+	 * @param lines
+	 * @throws IOException
+	 */
+	public void selectActionBarTab(List<String> tokens, List<LineAndTokens> lines) throws IOException {
+		String selectActionBarTabTemplate = FileUtility.readTemplate(Constants.Templates.SELECT_ACTIONBAR_TAB);
+		String tabIndex = tokens.get(2);
+		String description = tokens.get(3);
+		selectActionBarTabTemplate = selectActionBarTabTemplate.replace(Constants.VariableNames.DESCRIPTION, description);
+		selectActionBarTabTemplate = selectActionBarTabTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mActivityVariableIndex));
+		selectActionBarTabTemplate = selectActionBarTabTemplate.replace(Constants.VariableNames.TAB_INDEX, tabIndex);
+		mActivityVariableIndex++;
+		lines.add(new LineAndTokens(tokens, selectActionBarTabTemplate));
+	}
 
 	/**
 	 * write the invokeMenuActionSync() call
@@ -634,7 +661,6 @@ public class EmitRobotiumCode {
 	 */
 	public String writeGetCurrentActivity(List<String> tokens, List<LineAndTokens> lines) throws IOException {
 		String getCurrentActivityTemplate = FileUtility.readTemplate(Constants.Templates.GET_CURRENT_ACTIVITY);
-		String activityClass = tokens.get(2);
 		getCurrentActivityTemplate = getCurrentActivityTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mActivityVariableIndex));
 		getCurrentActivityTemplate = getCurrentActivityTemplate.replace(Constants.VariableNames.DESCRIPTION, "get the current activity, since the next one has the same class name");
 		lines.add(new LineAndTokens(null, getCurrentActivityTemplate));

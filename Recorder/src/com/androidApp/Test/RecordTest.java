@@ -12,6 +12,7 @@ import java.util.TimerTask;
 import android.app.Activity;
 import android.app.Dialog;
 import android.app.Instrumentation;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -23,6 +24,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.PopupWindow;
+import android.widget.Spinner;
 
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
@@ -32,13 +34,13 @@ import com.androidApp.Intercept.MagicFrame;
 import com.androidApp.Intercept.MagicFramePopup;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.FieldUtils;
+import com.androidApp.Utility.ReflectionUtils;
 import com.androidApp.Utility.TestUtils;
 import com.androidApp.randomtest.RandTest;
 
 /**
  * record events in an activity. In short, be awesome.
- * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * @author matreyno
  *
  * @param <T> activity being subjected to recording
  * This uses a thread which waits on events from an activity monitor to track activity forward and back events.  
@@ -61,10 +63,14 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	private Class<? extends Activity> 		mStartActivityClass = null;			// workaround for hanging on setup
 	private boolean							mfRunRandomTest = false;
 	private int								mRandomTestIterations = 1000;
-	private float							mBackKeyPercentage = 2.0f;				// 1 in 50 operations is the back key.
+	private float							mBackKeyPercentage = 2.0f;			// 1 in 50 operations is the back key.
+	private float							mRotationPercentage = 2.0f;			// 1 in 50 operations is device rotation.
+	private float							mMenuPercentage = 10.0f;			// 1 in 50 operations is device rotation.
+	protected Context						mContext;							// to communicate with the log service
 	// initialize the event recorder
-	public void initRecorder() throws IOException {
-		mRecorder = new EventRecorder(this.getInstrumentation().getContext(), "events.txt");
+	public void initRecorder(Context context) throws IOException {
+		mContext = context;
+		mRecorder = new EventRecorder(mContext, "events.txt");
 		mViewInterceptor = new ViewInterceptor(mRecorder);
 	}
 	
@@ -119,6 +125,14 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 		return mBackKeyPercentage;
 	}
 	
+	public void setBackKeyPercentage(float percentage) {
+		mRotationPercentage = percentage;
+	}
+	
+	public void setOptionMenuPercentage(float percentage) {
+		mMenuPercentage = percentage;
+	}
+	
 	// enable visual debugging
 	public void setVisualDebug(boolean f) {
 		getRecorder().setVisualDebug(f);
@@ -141,7 +155,7 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 		if (mStartActivityClass == null) {
 			throw new Exception("the start activity class must be set before setUp is called");
 		}
-		initRecorder();
+		initRecorder(getInstrumentation().getContext());
 		mScanTimer = new Timer();
 		mActivityInterceptor = new ActivityInterceptor(getRecorder(), getViewInterceptor());
 		initializeResources();
@@ -233,7 +247,13 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 								}
 								instrumentation.runOnMainSync(new InsertKeyListenerRunnable(optionsMenuView));
 							} else {
-								recorder.writeRecord(Constants.EventTags.CREATE_POPUP_WINDOW, "create popup window");
+								// the popup window might have an anchor which changes the generated code.
+								View anchorView = getPopupWindowAnchor(popupWindow);
+								if (anchorView instanceof Spinner) {
+									recorder.writeRecord(Constants.EventTags.CREATE_SPINNER_POPUP_WINDOW, anchorView, "create spinner popup window");
+								} else {
+									recorder.writeRecord(Constants.EventTags.CREATE_POPUP_WINDOW, "create popup window");
+								}
 								instrumentation.runOnMainSync(new InterceptPopupWindowRunnable(popupWindow));
 							}
 						}
@@ -252,6 +272,21 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 			}	
 		};
 		mScanTimer.schedule(scanTask, 0, POPUP_WINDOW_SYNC_TIME);
+	}
+	
+	/**
+	 * some popup windows have anchors, like the overflow menu button in the action bar, or the button in a spinner
+	 * @param popupWindow the potentially anchored popup window
+	 * @return anchor view or null.
+	 * @throws IllegalAccessException
+	 * @throws NoSuchFieldException
+	 */
+	public View getPopupWindowAnchor(PopupWindow popupWindow) throws IllegalAccessException, NoSuchFieldException {
+		WeakReference<View> anchorRef = (WeakReference<View>) ReflectionUtils.getFieldValue(popupWindow, PopupWindow.class, Constants.Fields.ANCHOR);
+		if (anchorRef != null) {
+			return anchorRef.get();
+		}
+		return null;
 	}
 	
 	/**
@@ -327,7 +362,7 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 		
 		public void run() {
 			View contentView = mPopupWindow.getContentView();
-			if (contentView != null) {
+			if (contentView != null && !(contentView instanceof MagicFrame)) {
 				MagicFramePopup magicFramePopup = new MagicFramePopup(contentView.getContext(), mPopupWindow, mRecorder, mViewInterceptor);
 				RecordTest.this.getViewInterceptor().interceptPopupWindow(mPopupWindow);
 			}
@@ -341,7 +376,7 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 		try {
 			if (getRunRandomTest()) {
 				RandTest randTest = new RandTest(this, mActivityInterceptor);
-				randTest.randTest(getInstrumentation().getContext(), mRandomTestIterations, mBackKeyPercentage);
+				randTest.randTest(getInstrumentation().getContext(), mRandomTestIterations, mBackKeyPercentage, mRotationPercentage, mMenuPercentage);
 			}
 			do {
 				Thread.sleep(100);

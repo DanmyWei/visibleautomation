@@ -51,8 +51,10 @@ public class Constants {
 		public static final String MENU_ITEM_CLICK = "menu_item_click";
 		public static final String POPUP_MENU_ITEM_CLICK = "popup_menu_item_click";
 		public static final String EXCEPTION = "exception";
-
+		public static final Object SELECT_ACTIONBAR_TAB = "select_actionbar_tab";
+		public static final String CREATE_SPINNER_POPUP_WINDOW = "create_spinner_popup_window";
 	}
+	
 	public static class Templates {
 
 		// template file names
@@ -101,6 +103,8 @@ public class Constants {
 		public static final String ROTATE = "rotate.txt";
 		public static final String MENU_ITEM_CLICK = "menu_item_click.txt";
 		public static final String EXCEPTION = "exception.txt";
+		public static final String ALL_TESTS_CREATETEST = "AllTests_createtest.txt";
+		public static final String SELECT_ACTIONBAR_TAB = "select_actionbar_tab.txt";
 	}
 	
 	// template %replace% variables
@@ -130,6 +134,7 @@ public class Constants {
 		public static final String MIN_SDK_VERSION = "%MIN_SDK_VERSION%";
 		public static final String MODE = "%MODE%";
 		public static final String TESTPACKAGE = "%TESTPACKAGE%";
+		public static final CharSequence TAB_INDEX = "%TAB_INDEX%";
 
 	}
 	

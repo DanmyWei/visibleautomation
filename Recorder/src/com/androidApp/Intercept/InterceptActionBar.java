@@ -15,9 +15,9 @@ import android.app.ActionBar;
 public class InterceptActionBar {
 
 	public static ActionBar.TabListener getTabListener(ActionBar actionBar, int index) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
-		Object[] tabs = (Object[]) ReflectionUtils.getFieldValue(actionBar, ActionBar.class, Constants.Fields.TABS);
+		ActionBar.Tab tab = actionBar.getTabAt(index);
 		Class tabImplClass = Class.forName(Constants.Classes.ACTION_BAR_IMPL_TAB_IMPL);
-		return (ActionBar.TabListener) ReflectionUtils.getFieldValue(tabs[index], tabImplClass, Constants.Fields.CALLBACK);		
+		return (ActionBar.TabListener) ReflectionUtils.getFieldValue(tab, tabImplClass, Constants.Fields.CALLBACK);		
 	}
 	
 	/**

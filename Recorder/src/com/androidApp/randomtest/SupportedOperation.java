@@ -8,12 +8,6 @@ import android.widget.AbsListView;
 import android.widget.EditText;
 import android.widget.Spinner;
 
-/**
- * supported operations in the random test
- * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
- *
- */
 public class SupportedOperation {
 
 	/**
@@ -26,7 +20,6 @@ public class SupportedOperation {
 		SCROLL(0x3, "scroll"),						// scroll a view
 		SCROLL_LIST(0x4, "scroll list"),			// scroll a list
 		ENTER_TEXT(0x5, "enter text"),				// enter text in an EditText
-		OPTION_MENU_SELECT(0x6, "menu select"),		// select something from the options menu
 		LONG_CLICK(0x7, "long click"),				// long click
 		LIST_SELECT(0x8, "list select");			// select an item from a list.
 		

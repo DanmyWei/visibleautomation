@@ -12,6 +12,7 @@ import junit.framework.Assert;
 import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Context;
+import android.content.pm.ActivityInfo;
 import android.graphics.Rect;
 import android.os.SystemClock;
 import android.test.ActivityInstrumentationTestCase2;
@@ -30,8 +31,7 @@ import android.widget.TextView;
 
 /**
  * random test generator, because I'm just way too lazy to sit there and poke at my device.
- * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * @author Matthew
  *
  */
 public class RandTest {
@@ -61,11 +61,17 @@ public class RandTest {
 	/**
 	 * random test driver
 	 * @param iterations how many iterations total
-	 * @param backKeyPercentage
+	 * @param backKeyPercentage percentage of events should be back key events
+	 * @param rotationPercentage percentage of events should be rotation events
+	 * @param menuPercentage percenta of events should be option menu events
 	 * @throws IOException
 	 */
 	
-	public void randTest(Context context, int iterations, float backKeyPercentage) throws ClassNotFoundException {
+	public void randTest(Context context, 
+						 int iterations, 
+						 float backKeyPercentage,
+						 float rotationPercentage,
+						 float menuPercentage) throws ClassNotFoundException {
 		Activity currentActivity = null;
 		int numIterationsInActivity = 0;
 		boolean fStart = true;
@@ -88,11 +94,23 @@ public class RandTest {
 				boolean fBackKey = (backKeyRoll < backKeyPercentage);
 				boolean firstActivityComplete = (numIterationsInActivity > iterations/10) || !fStart;
 				boolean fHasMagicFrames = verifyMagicFrames(rootView);
+				float rotationRoll = (float) (100*Math.random());
+				boolean fRotation = (rotationRoll < rotationPercentage);
+				float menuRoll = (float) (100*Math.random());
+				boolean fMenu = (menuRoll < menuPercentage);
 
 				if (fBackKey && firstActivityComplete && fHasMagicFrames) {
 					// there is a race condition where if the activity has just been created, and we send the back key,
 					// the "magic frames" have not been inserted, and we 'back' the activity before the key event is intercepted.
 					mInstrumentation.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
+				} else if (fRotation) {
+					if (activity.getRequestedOrientation() == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) { 
+						activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+					} else {
+						activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+					}
+				} else if (fMenu) {
+					clickRandomMenuItem();
 				} else {
 					List<View> viewList = TestUtility.getAllViews(activity, views);
 					int randViewIndex = (int) (Math.random()*viewList.size());
@@ -125,9 +143,6 @@ public class RandTest {
 							EditText et = (EditText) randView;
 							String s = mDictionary.randWords(MAX_TEXT_LENGTH);
 							mInstrumentation.getInstrumentation().runOnMainSync(new SetTextRunnable(et, s));
-							break;
-						case OPTION_MENU_SELECT:
-							clickRandomMenuItem();
 							break;
 						case LONG_CLICK:
 							if (!EventUtility.clickLongOnScreen(mInstrumentation.getInstrumentation(), randView)) {
@@ -168,10 +183,8 @@ public class RandTest {
 		Adapter adapter = absListView.getAdapter();
 		int numItems = adapter.getCount();
 		int randItem = (int) (Math.random()*numItems);
-		View vChild = absListView.getChildAt(0);
-		int itemHeight = vChild.getMeasuredHeight();
-		int scrollPosition = itemHeight*randItem;
-		mInstrumentation.getInstrumentation().runOnMainSync(new ScrollToPositionRunnable(absListView, scrollPosition));
+		mInstrumentation.getInstrumentation().runOnMainSync(new ScrollToPositionRunnable(absListView, randItem));
+		mInstrumentation.getInstrumentation().waitForIdleSync();
 		mInstrumentation.getInstrumentation().runOnMainSync(new PerformItemClickRunnable(absListView, randItem));
 	}
 	

@@ -15,18 +15,14 @@ import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.ReflectionUtils;
 
-/**
- * same as magic frame, except for popup windows
- * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
- *
- */
 public class MagicFramePopup extends MagicFrame {
 	private static final String 		TAG = "MagicFramePopup";
 	protected FrameLayout 				mPopupViewContainer;
 	
 	/**
 	 * variant for popup window contents
+	 * TODO: When we detect the dismiss, we have to bring up the popup menu in the first place, otherwise the generated code dismisses a non-existent
+	 * popup menu. 
 	 * @param context
 	 * @param popupWindow
 	 * @param recorder
@@ -46,6 +42,9 @@ public class MagicFramePopup extends MagicFrame {
 			this.addView(mPopupViewContainer);
 			windowManager.addView(this, windowManagerLayoutParams);
 			ReflectionUtils.setFieldValue(popupWindow, PopupWindow.class, Constants.Fields.POPUP_VIEW, this);
+			
+			// we have to bypass setContentView() because it does nothing if the window is already showing, which it is.
+			ReflectionUtils.setFieldValue(popupWindow, PopupWindow.class, Constants.Fields.CONTENT_VIEW, mPopupViewContainer);
 			this.requestLayout();
 		} catch (Exception ex) {
 			recorder.writeRecord(Constants.EventTags.EXCEPTION, "trying to intercept popup window");

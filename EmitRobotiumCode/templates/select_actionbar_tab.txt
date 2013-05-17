@@ -1,0 +1,3 @@
+		// %DESCRIPTION%
+		Activity activity%VARIABLE_INDEX% = robotiumUtils.getCurrentActivity();
+		robotiumUtils.selectActionBarTab(activity%VARIABLE_INDEX%, %TAB_INDEX%);
