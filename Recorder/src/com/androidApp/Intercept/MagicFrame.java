@@ -76,10 +76,9 @@ public class MagicFrame extends FrameLayout {
 	 */
 	public MagicFrame(Context context, View contentView, int index, EventRecorder recorder, ViewInterceptor viewInterceptor) {
 		super(context);
-		/*
 		this.setFocusable(true);
 		this.setFocusableInTouchMode(true);
-		*/
+		this.requestFocus();
 		mRecorder = recorder;
 		mContentView = contentView;
 		mViewInterceptor = viewInterceptor;
@@ -104,7 +103,7 @@ public class MagicFrame extends FrameLayout {
 	 */
 
 	@Override 
-	public boolean dispatchKeyEvent(KeyEvent event) {
+	public boolean dispatchKeyEventPreIme(KeyEvent event) {
 		if (event.getAction() == KeyEvent.ACTION_UP){ 
 			if ((mRecorder != null) && mRecorder.getVisualDebug()) {
 				Log.i(TAG, "dispatch pre IME intercepted key event " + MagicFrame.keyEventToString(event));
@@ -163,12 +162,7 @@ public class MagicFrame extends FrameLayout {
 			Toast.makeText(this.getContext(),  "onFocusChanged gainFocus = " + gainFocus, Toast.LENGTH_SHORT).show();
 		}
     }
-   
-	/**
-	 * if the user has clicked on an EditText, then reset the focus.
-	 */
-
-    /*
+  
 	@Override
 	public boolean onInterceptTouchEvent(MotionEvent event) {
 		if (event.getAction() == MotionEvent.ACTION_DOWN) {			
@@ -181,7 +175,6 @@ public class MagicFrame extends FrameLayout {
 		}
 		return false;
 	}
-	*/
 
     /**
      *  for debugging purposes
