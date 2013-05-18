@@ -47,6 +47,7 @@ public class Constants {
 		public static final String LIST_MENU_ITEM_VIEW = "com.android.internal.view.menu.ListMenuItemView";
 		public static final String MENU_BUILDER = "com.android.internal.view.menu.MenuBuilder";
 		public static final String ACTION_BAR_IMPL_TAB_IMPL = "com.android.internal.app.ActionBarImpl$TabImpl";
+		public static final String SPINNER_ADAPTER = "android.widget.Spinner$DropDownAdapter";;
 	}
 	
 	// listener field names
@@ -168,6 +169,7 @@ public class Constants {
 		public static final String KEY_HOME = "key_home";
 		public static final String CLOSE_OPTIONS_MENU = "close_options_menu";
 		public static final String SELECT_ACTIONBAR_TAB = "select_actionbar_tab";
+		public static final String DISMISS_SPINNER_DIALOG_BACK_KEY = "dismiss_spinner_dialog_back_key";
 	}
 	
 	// description strings 

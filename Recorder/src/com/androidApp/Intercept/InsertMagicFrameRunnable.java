@@ -35,18 +35,13 @@ public class InsertMagicFrameRunnable implements Runnable {
 		try {
 			Window window = mActivity.getWindow();
 			ViewGroup decorView = (ViewGroup) window.getDecorView();
-			ViewGroup contentView = (ViewGroup) decorView.getChildAt(0);
-			MagicFrame magicFrame = new MagicFrame(mActivity, contentView, 0, mRecorder, mViewInterceptor);
-			/*
-			if (contentView instanceof LinearLayout) {
+			ViewGroup contentView = (ViewGroup) decorView.getChildAt(0);		
+			if (contentView instanceof ViewGroup) {
 				for (int iChild = 0; iChild < contentView.getChildCount(); iChild++) {
 					View realContentView = (View) contentView.getChildAt(iChild);
-					if (realContentView instanceof ViewGroup) {
-						MagicFrame magicFrame = new MagicFrame(mActivity, realContentView, iChild, mRecorder, mViewInterceptor);
-					}
+					MagicFrame magicFrame = new MagicFrame(mActivity, realContentView, iChild, mRecorder, mViewInterceptor);
 				} 
 			}
-			*/
 		} catch (Exception ex) {
 			mRecorder.writeRecord(Constants.EventTags.EXCEPTION, "attempting to insert magic frame");
 			ex.printStackTrace();

@@ -105,6 +105,7 @@ public class Constants {
 		public static final String EXCEPTION = "exception.txt";
 		public static final String ALL_TESTS_CREATETEST = "AllTests_createtest.txt";
 		public static final String SELECT_ACTIONBAR_TAB = "select_actionbar_tab.txt";
+		public static final String GET_PREVIOUS_ACTIVITY = "get_previous_activity.txt";
 	}
 	
 	// template %replace% variables

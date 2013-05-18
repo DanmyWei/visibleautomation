@@ -16,6 +16,7 @@ import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.view.Window;
 import android.widget.AbsListView;
+import android.widget.Adapter;
 import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.PopupMenu;
@@ -43,10 +44,12 @@ import com.androidApp.Listeners.RecordOnTouchListener;
 import com.androidApp.Listeners.RecordPopupMenuOnMenuItemClickListener;
 import com.androidApp.Listeners.RecordPopupWindowOnDismissListener;
 import com.androidApp.Listeners.RecordSeekBarChangeListener;
+import com.androidApp.Listeners.RecordSpinnerDialogOnDismissListener;
 import com.androidApp.Listeners.RecordTextChangedListener;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.ReflectionUtils;
 import com.androidApp.Utility.TestUtils;
+import com.androidApp.Utility.ViewExtractor;
 
 /**
  * class to install the interceptors in the view event listeners
@@ -175,7 +178,9 @@ public class ViewInterceptor {
 							replaceSpinnerListeners(spinner);
 						} else {
 							AbsListView absListView = (AbsListView) v;
-							replaceAdapterViewListeners(absListView);
+							if (!isSpinnerDropdownList(absListView)) {
+								replaceAdapterViewListeners(absListView);
+							}
 						}
 					}
 				}
@@ -193,6 +198,18 @@ public class ViewInterceptor {
 				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION + " unknown description");
 			}
 		}
+	}
+	
+	/**
+	 * the spinner popup is actually a list view, but we've already intercepted the item selected event for the spinner
+	 * and we don't want to also get the list item click
+	 * @param absListView list view to test
+	 * @return true if the list view's adapter is a spinner adapter.
+	 */
+	public static boolean isSpinnerDropdownList(AbsListView absListView) throws ClassNotFoundException {
+		Adapter adapter = absListView.getAdapter();
+		Class spinnerAdapterClass = Class.forName(Constants.Classes.SPINNER_ADAPTER);
+		return (adapter.getClass() == spinnerAdapterClass);
 	}
 
 	/**
@@ -403,21 +420,23 @@ public class ViewInterceptor {
 			mCurrentRotation = display.getRotation();
 		}
 		
+		
+		
 		public void onGlobalLayout() {
-			
+			List<View> magicFrameList = ViewExtractor.getChildrenByClass(mActivity.getWindow().getDecorView(), MagicFrame.class);
 			// this actually returns our magic frame, which doesn't resize when the IME is displayed
-	        View magicFrameView = mActivity.getWindow().getDecorView().findViewById(android.R.id.content);
 			Display display = mActivity.getWindowManager().getDefaultDisplay();
 			int newRotation = display.getRotation();
 			if (newRotation != mCurrentRotation) {
 				mEventRecorder.writeRotation(mActivity, newRotation);
 				mCurrentRotation = newRotation;
 			}
+			boolean fIMEDisplayed = isIMEDisplayed(mActivity.getWindow().getDecorView(), magicFrameList);
 	        // this is a terrible hack to see if the IME has been hidden or displayed by this layout.
-	        if ((getFocusedView() != null) && isIMEDisplayed(magicFrameView)) {
+	        if ((getFocusedView() != null) && fIMEDisplayed) {
 	        	mIMEWasDisplayed = true;
 				mEventRecorder.writeRecord(Constants.EventTags.SHOW_IME, getFocusedView(), "IME displayed");
-	        } else if (mIMEWasDisplayed && !isIMEDisplayed(magicFrameView)) {
+	        } else if (mIMEWasDisplayed && !fIMEDisplayed) {
 	        	if (getLastKeyAction() == KeyEvent.KEYCODE_BACK) {
 	        		mEventRecorder.writeRecord(Constants.EventTags.HIDE_IME_BACK_KEY, getFocusedView(), "IME hidden by back key pressed");
 	        		setLastKeyAction(-1);
@@ -427,9 +446,9 @@ public class ViewInterceptor {
 	        }
 	        
 	        // recursively generate the hashcode for this view hierarchy, and re-intercept if it's changed.
-			int hashCode = viewTreeHashCode(magicFrameView);
+			int hashCode = viewTreeHashCode(mActivity.getWindow().getDecorView());
 			if (hashCode != mHashCode) {
-				intercept(magicFrameView);
+				intercept(mActivity.getWindow().getDecorView());
 				mHashCode = hashCode;
 			}
 			
@@ -447,15 +466,14 @@ public class ViewInterceptor {
 	 * @param contentView android.R.id.content from the activity's window.
 	 * @return true if the IME is probably up, false if it's certainly down.
 	 */
-	public static boolean isIMEDisplayed(View magicFrameView) {
-		if (magicFrameView instanceof MagicFrame) {
-			MagicFrame magicFrame = (MagicFrame) magicFrameView;
-			View actualContent = magicFrame.getChildAt(0).findViewById(android.R.id.content);
-			int imeHeight = magicFrameView.getMeasuredHeight() - actualContent.getMeasuredHeight();
-			return imeHeight > ((int) (magicFrameView.getMeasuredHeight()*GUESS_IME_HEIGHT));
-		} else {
-			return false;
+	public static boolean isIMEDisplayed(View decorView, List<View> magicFrameList) {
+		// not quite.
+		int contentHeight = 0;
+		for (View magicFrame : magicFrameList) {
+			contentHeight += magicFrame.getHeight();
 		}
+		int imeHeight = decorView.getHeight() - contentHeight;
+		return imeHeight > ((int) (decorView.getHeight()*GUESS_IME_HEIGHT));
 	}
 
 	/**
@@ -512,6 +530,37 @@ public class ViewInterceptor {
 			}
 			Window window = dialog.getWindow();
 			intercept(window.getDecorView());
+		} catch (Exception ex) {
+			try {
+				String description = "Intercepting dialog " +  RecordListener.getDescription(dialog);
+				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, description);
+			} catch (Exception exlog) {
+				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, " unknown description");
+			}
+			ex.printStackTrace();
+		}
+	}
+	
+	/**
+	 * intercept a spinner dialog, which is different from a normal dialog, in that we want to record a different
+	 * event in the dismiss case.  Note we also have to pick up the key event from the last magic frame, so we
+	 * can tell if the dialog was dismissed by the "back" key or from a selection in the spinner (in which case
+	 * it's ignored)
+	 * @param dialog dialog containing a spinner adapter.
+	 */
+	public void interceptSpinnerDialog(Dialog dialog) {
+		try {
+			boolean fCancelAndDismissTaken = ListenerIntercept.isCancelAndDismissTaken(dialog);
+			DialogInterface.OnDismissListener originalDismissListener = ListenerIntercept.getOnDismissListener(dialog);
+			if ((originalDismissListener == null) || (originalDismissListener.getClass() != RecordDialogOnDismissListener.class)) {
+				// TODO: ?
+				RecordSpinnerDialogOnDismissListener recordSpinnerOnDismissListener = new RecordSpinnerDialogOnDismissListener(mEventRecorder, this, originalDismissListener);
+				if (fCancelAndDismissTaken) {
+					ListenerIntercept.setOnDismissListener(dialog, recordSpinnerOnDismissListener);
+				} else {
+					dialog.setOnDismissListener(recordSpinnerOnDismissListener);
+				}
+			}
 		} catch (Exception ex) {
 			try {
 				String description = "Intercepting dialog " +  RecordListener.getDescription(dialog);

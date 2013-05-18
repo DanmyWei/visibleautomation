@@ -459,15 +459,17 @@ public class EmitRobotiumCode {
 							} else {
 								fForwardActivityMatches = false;
 							}
+							currentActivityName = nextActivityName;
 						} 
 						if (nextTokens.get(0).equals(Constants.Events.ACTIVITY_BACK) || nextTokens.get(0).equals(Constants.Events.ACTIVITY_BACK_KEY)) {
 							String previousActivityName = nextTokens.get(2);
 							if (previousActivityName.equals(currentActivityName)) {
-								previousActivityVariable = writeGetCurrentActivity(tokens, lines);
+								previousActivityVariable = writeGetPreviousActivity(tokens, lines);
 								fBackActivityMatches = true;
 							} else {
 								fBackActivityMatches = false;
 							}
+							currentActivityName = previousActivityName;
 						}
 					}
 				}
@@ -511,13 +513,14 @@ public class EmitRobotiumCode {
 					if (nextActivityVariable != null) {
 						mLastEventWasWaitForActivity = true;
 						if (fForwardActivityMatches) {
+							writeWaitForMatchingActivity(nextActivityVariable, tokens, lines);
+						} else {
 							writeWaitForActivity(tokens, lines);
 						}
-						writeWaitForMatchingActivity(nextActivityVariable, tokens, lines);
 					}
 				} else if (action.equals(Constants.Events.ACTIVITY_BACK)) {
 					
-					// I think this is technically incorrect, since the "back" event doesn't happen from the back key
+					// I think this is technically incorrect, since the "back" event doesn't always happen from the back key
 					// but some other event like a click, and we should use a different template
 					if ((tokens.size() > 2) && fBackActivityMatches) {
 						writeGoBackToMatchingActivity(previousActivityVariable, tokens, lines);
@@ -632,9 +635,7 @@ public class EmitRobotiumCode {
 		String tabIndex = tokens.get(2);
 		String description = tokens.get(3);
 		selectActionBarTabTemplate = selectActionBarTabTemplate.replace(Constants.VariableNames.DESCRIPTION, description);
-		selectActionBarTabTemplate = selectActionBarTabTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mActivityVariableIndex));
 		selectActionBarTabTemplate = selectActionBarTabTemplate.replace(Constants.VariableNames.TAB_INDEX, tabIndex);
-		mActivityVariableIndex++;
 		lines.add(new LineAndTokens(tokens, selectActionBarTabTemplate));
 	}
 
@@ -664,6 +665,20 @@ public class EmitRobotiumCode {
 		getCurrentActivityTemplate = getCurrentActivityTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mActivityVariableIndex));
 		getCurrentActivityTemplate = getCurrentActivityTemplate.replace(Constants.VariableNames.DESCRIPTION, "get the current activity, since the next one has the same class name");
 		lines.add(new LineAndTokens(null, getCurrentActivityTemplate));
+		String activityName = Constants.Names.ACTIVITY + Integer.toString(mActivityVariableIndex);
+		return activityName;
+	}
+
+	/**
+	 * write the getPreviousActivity() call
+	 * @param lines
+	 * @throws IOException
+	 */
+	public String writeGetPreviousActivity(List<String> tokens, List<LineAndTokens> lines) throws IOException {
+		String getPreviousActivityTemplate = FileUtility.readTemplate(Constants.Templates.GET_PREVIOUS_ACTIVITY);
+		getPreviousActivityTemplate = getPreviousActivityTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mActivityVariableIndex));
+		getPreviousActivityTemplate = getPreviousActivityTemplate.replace(Constants.VariableNames.DESCRIPTION, "get the previous activity, since the next one has the same class name");
+		lines.add(new LineAndTokens(null, getPreviousActivityTemplate));
 		String activityName = Constants.Names.ACTIVITY + Integer.toString(mActivityVariableIndex);
 		return activityName;
 	}

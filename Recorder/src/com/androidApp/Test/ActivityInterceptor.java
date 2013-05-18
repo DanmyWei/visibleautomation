@@ -181,7 +181,7 @@ public class ActivityInterceptor {
 								Activity activityB = ActivityInterceptor.this.mActivityMonitor.waitForActivity();
 								// if the activity was in the stack, then we are going back to it, otherwise we're
 								// going forward to a new activity.
-								if (ActivityInterceptor.this.inActivityStack(activityA)) {
+								if (ActivityInterceptor.this.inActivityStack(activityA)  && ActivityInterceptor.this.inActivityStack(activityB)) {
 									Log.i(TAG, "normal back case activity = " + activityA);
 									ActivityInterceptor.this.recordActivityBack(recorder, activityA, activityB, currentRotation);
 								} else {

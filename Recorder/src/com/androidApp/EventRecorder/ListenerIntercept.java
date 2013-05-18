@@ -315,6 +315,15 @@ public class ListenerIntercept {
 		} 
 	}
 	
+	/**
+	 * There is literally a field called "mCancelAndDismissTaken", which means that the calling cancel and
+	 * dismiss listeners are taken by the dialog's owner
+	 * @param dialog
+	 * @return
+	 * @throws NoSuchFieldException
+	 * @throws SecurityException
+	 * @throws IllegalAccessException
+	 */
 	public static boolean isCancelAndDismissTaken(Dialog dialog) throws NoSuchFieldException, SecurityException, IllegalAccessException  {
 		String sOwner = (String) ReflectionUtils.getFieldValue(dialog, Dialog.class, Constants.Fields.CANCEL_AND_DISMISS_TAKEN);
 		return sOwner != null;

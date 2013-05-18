@@ -7,6 +7,8 @@ import java.util.List;
 import android.app.Activity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Adapter;
+import android.widget.AdapterView;
 
 /**
  * class to extract views from the android view hierarchy.
@@ -110,4 +112,54 @@ public class ViewExtractor {
 		}
 		return null;
 	}
+	
+	/**
+	 * private function to find all of the children of a view matching class cls
+	 * @param v
+	 * @param cls
+	 * @param viewList
+	 */
+	protected static void getChildrenByClassName(View v, Class cls, List<View> viewList) {
+		if (cls.isAssignableFrom(v.getClass())) {
+			viewList.add(v);
+		} 
+		if (v instanceof ViewGroup) {
+			ViewGroup vg = (ViewGroup) v;
+			for (int iChild = 0; iChild < vg.getChildCount(); iChild++) {
+				View vChild = vg.getChildAt(iChild);
+				getChildrenByClassName(vChild, cls, viewList);
+			}
+		}
+	}
+	
+	/**
+	 * find all the children of class cls.
+	 * @param v root view
+	 * @param cls class to match
+	 * @return list of matching views
+	 */
+	public static List<View> getChildrenByClass(View v, Class cls) {
+		List<View> viewList = new ArrayList<View>();
+		getChildrenByClassName(v, cls, viewList);
+		return viewList;
+	}	
+	
+	/**
+	 * spinner dialogs have to be handled differently.  We search for an adapter of the spinner dropdown type.
+	 * @param contentView
+	 * @return
+	 */
+	public static boolean isSpinnerDialog(View contentView)  throws ClassNotFoundException {
+		List<View> listList = ViewExtractor.getChildrenByClass(contentView, AdapterView.class);
+		Class spinnerAdapterClass = Class.forName(Constants.Classes.SPINNER_ADAPTER);
+		for (View v : listList) {
+			AdapterView adapterView = (AdapterView) v;
+			Adapter adapter = adapterView.getAdapter();
+			if (adapter.getClass() == spinnerAdapterClass) {
+				return true;
+			}
+		}
+		return false;		
+	}
+
 }

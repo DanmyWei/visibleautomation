@@ -23,6 +23,8 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.widget.Adapter;
+import android.widget.AdapterView;
 import android.widget.PopupWindow;
 import android.widget.Spinner;
 
@@ -36,6 +38,7 @@ import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.FieldUtils;
 import com.androidApp.Utility.ReflectionUtils;
 import com.androidApp.Utility.TestUtils;
+import com.androidApp.Utility.ViewExtractor;
 import com.androidApp.randomtest.RandTest;
 
 /**
@@ -346,7 +349,16 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 			View decorView = window.getDecorView();
 			View contentView = ((ViewGroup) decorView).getChildAt(0);
 			MagicFrame magicFrame = new MagicFrame(decorView.getContext(), contentView, 0, mRecorder, mViewInterceptor);
-			mViewInterceptor.interceptDialog(mDialog);
+			try {
+				// spinner dialogs have their own dismiss.
+				if (ViewExtractor.isSpinnerDialog(contentView)) {
+					mViewInterceptor.interceptSpinnerDialog(mDialog);
+				} else {
+					mViewInterceptor.interceptDialog(mDialog);
+				}
+			} catch (Exception ex) {
+				mRecorder.writeRecord(Constants.EventTags.EXCEPTION, "Intercepting dialog " + ex.getMessage());
+			}
 		}
 	}
 	

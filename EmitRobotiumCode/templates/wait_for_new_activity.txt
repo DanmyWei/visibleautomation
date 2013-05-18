@@ -1,3 +1,2 @@
 		// %DESCRIPTION%
-		TestCase.assertTrue(robotiumUtils.getCurrentActivity() != null);
-		
+		TestCase.assertTrue(robotiumUtils.waitForNewActivity(%ACTIVITY%, %ACTIVITY_CLASS%.class, ACTIVITY_WAIT_MSEC));
