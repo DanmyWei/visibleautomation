@@ -303,11 +303,22 @@ public class ActivityInterceptor {
 		// activity was finished by the user hitting the back key
 		if (mViewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_BACK) {
 			mViewInterceptor.setLastKeyAction(-1);
-			String logMsg = previousActivityState.getActivityClass().getName() + "," + previousActivityState.getActivityUniqueName();
-			recorder.writeRecord(Constants.EventTags.ACTIVITY_BACK_KEY, logMsg);
+			if (previousActivityState != null) {
+				String logMsg = previousActivityState.getActivityClass().getName() + "," + previousActivityState.getActivityUniqueName();
+				recorder.writeRecord(Constants.EventTags.ACTIVITY_BACK_KEY, logMsg);
+			} else {
+				String logMsg = previousActivityState.getActivityClass().getName() + "," + "no previous activity";
+				recorder.writeRecord(Constants.EventTags.ACTIVITY_BACK_KEY, logMsg);		
+			}
 		} else {
-			String logMsg = previousActivityState.getActivityClass().getName() + "," + previousActivityState.getActivityUniqueName();
-			recorder.writeRecord(Constants.EventTags.ACTIVITY_BACK, logMsg);
+			// activity was finished by some other method
+			if (previousActivityState != null) {
+				String logMsg = previousActivityState.getActivityClass().getName() + "," + previousActivityState.getActivityUniqueName();
+				recorder.writeRecord(Constants.EventTags.ACTIVITY_BACK, logMsg);
+			} else {
+				String logMsg = previousActivityState.getActivityClass().getName() + "," + "no previous activity";
+				recorder.writeRecord(Constants.EventTags.ACTIVITY_BACK, logMsg);
+			}
 		}
 	}
 	

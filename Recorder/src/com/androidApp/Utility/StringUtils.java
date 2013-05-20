@@ -9,6 +9,11 @@ import java.io.InputStreamReader;
 import android.content.Context;
 import android.content.res.AssetManager;
 
+/**
+ * grab bag of string utilties
+ * @author Matthew
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ */
 public class StringUtils {
 	
 	

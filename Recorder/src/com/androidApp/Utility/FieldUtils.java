@@ -4,6 +4,12 @@ import java.lang.reflect.Field;
 
 import android.util.Log;
 
+/**
+ * this should be folded into ReflectionUtils
+ * @author Matthew
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ *
+ */
 public class FieldUtils {
 	protected final static String TAG = "FieldUtils";
 	

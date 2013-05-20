@@ -1,0 +1,3 @@
+		// %DESCRIPTION%
+		%CLASSPATH% webView%VARIABLE_INDEX% = (%CLASSPATH%) solo.getView(%ID%);
+		robotiumUtils.waitForPageToLoad(webView%VARIABLE_INDEX%, %URL%, WEBVIEW_WAIT_MSEC);

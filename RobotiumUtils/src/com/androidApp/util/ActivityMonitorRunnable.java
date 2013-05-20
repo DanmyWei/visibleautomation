@@ -6,6 +6,7 @@ import java.util.Stack;
 import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.IntentFilter;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.view.Window;
@@ -50,8 +51,7 @@ public class ActivityMonitorRunnable implements Runnable {
 	protected void init(Instrumentation instrumentation) {
 		mActivityStack = new Stack<ActivityInfo>();
 		IntentFilter intentFilter = null;
-		mActivityMonitor = new Instrumentation.ActivityMonitor(intentFilter, null, false);
-		instrumentation.addMonitor(mActivityMonitor);
+		mActivityMonitor = instrumentation.addMonitor(intentFilter, null, false);
 	}
 	
 	/**
@@ -69,18 +69,28 @@ public class ActivityMonitorRunnable implements Runnable {
 			// TODO: handle the activity.isFinishing() case explicitly, since the operating system can
 			// finish activities lower in the stack.
 			Activity activityA = mActivityMonitor.waitForActivity();
-			Activity activityB = null;
-			if (!mActivityStack.isEmpty()) {
-				activityB = mActivityMonitor.waitForActivity();
-			}
-			if (!inActivityStack(activityA)) {
-				addActivityToStack(activityA);
-			} else if (!inActivityStack(activityB)) {
-				addActivityToStack(activityB);
-			} else {
+			if (activityA.isFinishing()) {
+				Log.i(TAG, "interesting");
 				mActivityStack.pop();
 				if (mActivityStack.empty()) {
 					break;
+				}
+			} else {
+	 			Activity activityB = null;
+				
+				// OK, now this is very very strange
+				if (!mActivityStack.isEmpty()) {
+					activityB = mActivityMonitor.waitForActivity();
+				}
+				if (!inActivityStack(activityA)) {
+					addActivityToStack(activityA);
+				} else if (!inActivityStack(activityB)) {
+					addActivityToStack(activityB);
+				} else {
+					mActivityStack.pop();
+					if (mActivityStack.empty()) {
+						break;
+					}
 				}
 			}
 		}
@@ -145,6 +155,23 @@ public class ActivityMonitorRunnable implements Runnable {
 		synchronized(mActivityStack) {
 			if (!mActivityStack.isEmpty()) {
 				ActivityInfo activityInfo = mActivityStack.peek();
+				WeakReference<Activity> ref = activityInfo.mRefActivity;
+				if (ref != null) {
+					return ref.get();
+				}
+			}
+		}
+		return null;
+	}
+	
+	/**
+	 * return the previous activity from the stack
+	 * @return previous activity or null if the stack does not have 2 elements.
+	 */
+	public Activity getPreviousActivity() {
+		synchronized(mActivityStack) {
+			if (mActivityStack.size() >= 2) {
+				ActivityInfo activityInfo = mActivityStack.get(mActivityStack.size() - 2);
 				WeakReference<Activity> ref = activityInfo.mRefActivity;
 				if (ref != null) {
 					return ref.get();

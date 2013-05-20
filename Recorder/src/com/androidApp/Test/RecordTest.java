@@ -351,7 +351,7 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 			MagicFrame magicFrame = new MagicFrame(decorView.getContext(), contentView, 0, mRecorder, mViewInterceptor);
 			try {
 				// spinner dialogs have their own dismiss.
-				if (ViewExtractor.isSpinnerDialog(contentView)) {
+				if (TestUtils.isSpinnerDialog(contentView)) {
 					mViewInterceptor.interceptSpinnerDialog(mDialog);
 				} else {
 					mViewInterceptor.interceptDialog(mDialog);

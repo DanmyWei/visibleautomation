@@ -1,4 +1,4 @@
-package com.androidApp.Utility;
+package com.androidApp.util;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -8,7 +8,7 @@ import java.util.Stack;
 import android.util.Log;
 
 /**
- * utilities to access and set fields in objects via reflection
+ * utility functions to extract and set fields in objects using java reflection
  * @author Matthew
  * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  */

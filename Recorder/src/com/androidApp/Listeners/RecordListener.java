@@ -130,7 +130,11 @@ public class RecordListener {
 					sb.append(getDescription(vChild));
 				}
 			}
-			return StringUtils.massageString(sb.toString());
+			if (sb.length() == 0) {
+				return v.getClass().getSimpleName();
+			} else {
+				return StringUtils.massageString(sb.toString());
+			}
 		} else {
 			return v.getClass().getSimpleName();
 		}
@@ -146,7 +150,7 @@ public class RecordListener {
 			return StringUtils.massageString(titleString);
 		} else {
 			View dialogView = window.getDecorView();
-			View dialogTitle = ViewExtractor.getChildByClassName(dialogView, Constants.Classes.DIALOG_TITLE_SIMPLE_NAME);
+			View dialogTitle = TestUtils.getChildByClassName(dialogView, Constants.Classes.DIALOG_TITLE_SIMPLE_NAME);
 			if (dialogTitle != null) {
 				titleString = (String) FieldUtils.getFieldValue(dialogTitle, TextView.class, Constants.Fields.TEXT);
 				if (!StringUtils.isEmpty(titleString)) {

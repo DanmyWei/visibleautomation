@@ -1,8 +1,16 @@
 package com.androidApp.Utility;
 
+/**
+ * constants used in the recorder, categorized by use
+ * @author Matthew
+ *  * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+
+ *
+ */
 public class Constants {
 	// view listener references.
 	public static final String ACTIVITY = "activity";
+	public static final String UTF_8 = "UTF-8";
 	public static class Packages {
 		public static final String ANDROID_VIEW = "android.view";
 		public static final String ANDROID_WIDGET = "android.widget";
@@ -19,6 +27,7 @@ public class Constants {
 		public static final String CLASS_INDEX = "class_index";
 	}
 	
+	// classes used in reflection
 	public static class Classes {
 		public static final String LISTENER_INFO = "android.view.View$ListenerInfo";
 		public static final String PHONE_DECOR_VIEW = "com.android.internal.policy.impl.PhoneWindow$DecorView";
@@ -47,7 +56,8 @@ public class Constants {
 		public static final String LIST_MENU_ITEM_VIEW = "com.android.internal.view.menu.ListMenuItemView";
 		public static final String MENU_BUILDER = "com.android.internal.view.menu.MenuBuilder";
 		public static final String ACTION_BAR_IMPL_TAB_IMPL = "com.android.internal.app.ActionBarImpl$TabImpl";
-		public static final String SPINNER_ADAPTER = "android.widget.Spinner$DropDownAdapter";;
+		public static final String SPINNER_ADAPTER = "android.widget.Spinner$DropDownAdapter";
+		public static final String WEBKIT_CALLBACK_PROXY = "android.webkit.CallbackProxy";
 	}
 	
 	// listener field names
@@ -101,6 +111,8 @@ public class Constants {
 		public static final String ITEM_DATA = "mItemData";
 		public static final String TABS = "mTabs";
 		public static final String ANCHOR = "mAnchor";
+		public static final String CALLBACK_PROXY = "mCallbackProxy";
+		public static final String WEBVIEW_CLIENT = "mWebViewClient";
 	}
 	
 	// possible derive methods which listen for events.
@@ -170,6 +182,10 @@ public class Constants {
 		public static final String CLOSE_OPTIONS_MENU = "close_options_menu";
 		public static final String SELECT_ACTIONBAR_TAB = "select_actionbar_tab";
 		public static final String DISMISS_SPINNER_DIALOG_BACK_KEY = "dismiss_spinner_dialog_back_key";
+		public static final String ON_PAGE_FINISHED = "on_page_finished";
+		public static final String ON_PAGE_STARTED = "on_page_started";
+		public static final String ON_RECEIVED_ERROR = "on_received_error";
+		public static final String ON_SCALE_CHANGED = "on_scale_changed";
 	}
 	
 	// description strings 

@@ -1,6 +1,7 @@
 package com.androidApp.util;
 
 import java.util.ArrayList;
+
 import com.jayway.android.robotium.solo.Solo;
 
 import junit.framework.TestCase;
@@ -15,6 +16,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.view.inputmethod.InputMethodManager;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.AutoCompleteTextView;
 import android.widget.ListView;
 import android.widget.PopupWindow;
@@ -191,18 +194,23 @@ public class RobotiumUtils {
 	public static boolean waitForActivity(Class<? extends Activity> newActivityClass, long timeoutMsec) {
 		return sActivityMonitorRunnable.waitForActivity(newActivityClass, timeoutMsec) != null;
 	}
-	
+
 	/**
 	 * public function to return the current activity from the activity monitor background thread.
-	 * @return
+	 * @return current activity
 	 */
 	public static Activity getCurrentActivity() {
 		return sActivityMonitorRunnable.getCurrentActivity();
 	}
 	
-	public static void waitForLayout() {
-		
+	/**
+	 * public function to return the previous activity from the activity monitor background thread
+	 * @return previos activity
+	 */
+	public static Activity getPreviousActivity() {
+		return sActivityMonitorRunnable.getPreviousActivity();
 	}
+	
 
 	/**
 	 * get the leastmost scrolling container for this view: NOTE: this may not be the container we're looking for,
@@ -334,6 +342,14 @@ public class RobotiumUtils {
 		}
 	}
 	
+	
+	/**
+	 * TODO: fill this in
+	 */
+	public static void waitForLayout() {
+		
+	}
+
 	/**
 	 * create a runnable which dismisses the auto complete dropdown
 	 * @param solo
@@ -453,6 +469,37 @@ public class RobotiumUtils {
 		public void run() {
 			ActionBar.Tab tab = mActionBar.getTabAt(mIndex);
 			tab.select();
+		}
+	}
+	
+	/**
+	 * extract the WebViewClient from WebView.mCallbackProxy.mWebViewClient
+	 * @param webView
+	 * @return
+	 * @throws NoSuchFieldException
+	 * @throws SecurityException
+	 * @throws IllegalAccessException
+	 * @throws ClassNotFoundException
+	 */
+	protected static WebViewClient getWebViewClient(WebView webView) throws NoSuchFieldException, SecurityException, IllegalAccessException, ClassNotFoundException {
+		Class callbackProxyClass = Class.forName(Constants.Classes.WEBKIT_CALLBACK_PROXY);
+		Object callbackProxy = ReflectionUtils.getFieldValue(webView, WebView.class, Constants.Fields.CALLBACK_PROXY);
+		WebViewClient webViewClient = (WebViewClient) ReflectionUtils.getFieldValue(callbackProxy, callbackProxyClass, Constants.Fields.WEBVIEW_CLIENT);
+		return webViewClient;
+	}	
+	
+	public static void waitForPageToLoad(WebView webView, String url, long timeoutMsec) throws TestException {
+		try {
+			if (webView.getProgress() < 100) {
+				WebViewClient originalWebViewClient = RobotiumUtils.getWebViewClient(webView);
+				if (!(originalWebViewClient instanceof InterceptWebViewClient)) {
+					InterceptWebViewClient interceptWebViewClient = new InterceptWebViewClient(originalWebViewClient);
+					webView.setWebViewClient(interceptWebViewClient);
+					interceptWebViewClient.waitForPageLoad(url, timeoutMsec);
+				}
+			}
+		} catch (Exception ex) {
+			throw new TestException(ex.getMessage());
 		}
 	}
 }

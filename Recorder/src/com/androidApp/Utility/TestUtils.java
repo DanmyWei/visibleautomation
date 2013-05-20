@@ -25,7 +25,7 @@ import android.widget.TextView;
 /**
  * grab-bag of utilities to extract views from the android view tree.
  * @author Matthew
- *
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  */
 public class TestUtils {
 	private static final String TAG = "TestUtils";
@@ -810,4 +810,72 @@ public class TestUtils {
 	public static boolean classNameEquals(String a, String b) {
 		return a.replace('$', '.').equals(b.replace('$', '.'));
 	}
+	
+	// find a view by a matching class name.
+	public static View getChildByClassName(View v, String simpleClassName) {
+		if (v.getClass().getSimpleName().equals(simpleClassName)) {
+			return v;
+		}
+		if (v instanceof ViewGroup) {
+			ViewGroup vg = (ViewGroup) v;
+			for (int iChild = 0; iChild < vg.getChildCount(); iChild++) {
+				View vChild = vg.getChildAt(iChild);
+				View vMatch = getChildByClassName(vChild, simpleClassName);
+				if (vMatch != null) {
+					return vMatch;
+				}				
+			}
+		}
+		return null;
+	}
+	
+	/**
+	 * private function to find all of the children of a view matching class cls
+	 * @param v
+	 * @param cls
+	 * @param viewList
+	 */
+	protected static void getChildrenByClassName(View v, Class cls, List<View> viewList) {
+		if (cls.isAssignableFrom(v.getClass())) {
+			viewList.add(v);
+		} 
+		if (v instanceof ViewGroup) {
+			ViewGroup vg = (ViewGroup) v;
+			for (int iChild = 0; iChild < vg.getChildCount(); iChild++) {
+				View vChild = vg.getChildAt(iChild);
+				getChildrenByClassName(vChild, cls, viewList);
+			}
+		}
+	}
+	
+	/**
+	 * find all the children of class cls.
+	 * @param v root view
+	 * @param cls class to match
+	 * @return list of matching views
+	 */
+	public static List<View> getChildrenByClass(View v, Class cls) {
+		List<View> viewList = new ArrayList<View>();
+		getChildrenByClassName(v, cls, viewList);
+		return viewList;
+	}	
+	
+	/**
+	 * spinner dialogs have to be handled differently.  We search for an adapter of the spinner dropdown type.
+	 * @param contentView
+	 * @return
+	 */
+	public static boolean isSpinnerDialog(View contentView)  throws ClassNotFoundException {
+		List<View> listList = TestUtils.getChildrenByClass(contentView, AdapterView.class);
+		Class spinnerAdapterClass = Class.forName(Constants.Classes.SPINNER_ADAPTER);
+		for (View v : listList) {
+			AdapterView adapterView = (AdapterView) v;
+			Adapter adapter = adapterView.getAdapter();
+			if (adapter.getClass() == spinnerAdapterClass) {
+				return true;
+			}
+		}
+		return false;		
+	}
+
 }

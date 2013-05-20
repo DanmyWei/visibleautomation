@@ -15,6 +15,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.view.Window;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.AbsListView;
 import android.widget.Adapter;
 import android.widget.AdapterView;
@@ -46,6 +48,7 @@ import com.androidApp.Listeners.RecordPopupWindowOnDismissListener;
 import com.androidApp.Listeners.RecordSeekBarChangeListener;
 import com.androidApp.Listeners.RecordSpinnerDialogOnDismissListener;
 import com.androidApp.Listeners.RecordTextChangedListener;
+import com.androidApp.Listeners.RecordWebViewClient;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.ReflectionUtils;
 import com.androidApp.Utility.TestUtils;
@@ -162,8 +165,12 @@ public class ViewInterceptor {
 			if (!TestUtils.isActionBarDescendant(v)) {
 				// adapterViews don't like click listeners, they like item click listeners.
 				if (!(v instanceof AdapterView)) {
-					if (!TestUtils.isAdapterViewAncestor(v)) {
-						replaceViewListeners(v);
+					if (v instanceof WebView) {
+						replaceWebViewListeners(v);
+					} else {
+						if (!TestUtils.isAdapterViewAncestor(v)) {
+							replaceViewListeners(v);
+						}
 					}
 					
 					// specific handlers for seekbars/progress bars/etc.
@@ -212,6 +219,22 @@ public class ViewInterceptor {
 		return (adapter.getClass() == spinnerAdapterClass);
 	}
 
+	/**
+	 * replace the webView client with our recorder
+	 * @param v a webview, actually
+	 * @throws IllegalAccessException
+	 * @throws NoSuchFieldException
+	 * @throws ClassNotFoundException
+	 */
+	public void replaceWebViewListeners(View v) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
+		WebView webView = (WebView) v;
+		WebViewClient originalWebViewClient = ListenerIntercept.getWebViewClient(webView);
+		if (!(originalWebViewClient instanceof RecordWebViewClient)) {
+			RecordWebViewClient recordWebViewClient = new RecordWebViewClient(mEventRecorder, originalWebViewClient);
+			webView.setWebViewClient(recordWebViewClient);
+		}
+	}
+	
 	/**
 	 * replace the listeners in an atomic view (like a button or a text view, and stuff like that)
 	 * @param v view to intercept
@@ -423,7 +446,7 @@ public class ViewInterceptor {
 		
 		
 		public void onGlobalLayout() {
-			List<View> magicFrameList = ViewExtractor.getChildrenByClass(mActivity.getWindow().getDecorView(), MagicFrame.class);
+			List<View> magicFrameList = TestUtils.getChildrenByClass(mActivity.getWindow().getDecorView(), MagicFrame.class);
 			// this actually returns our magic frame, which doesn't resize when the IME is displayed
 			Display display = mActivity.getWindowManager().getDefaultDisplay();
 			int newRotation = display.getRotation();
@@ -433,10 +456,12 @@ public class ViewInterceptor {
 			}
 			boolean fIMEDisplayed = isIMEDisplayed(mActivity.getWindow().getDecorView(), magicFrameList);
 	        // this is a terrible hack to see if the IME has been hidden or displayed by this layout.
-	        if ((getFocusedView() != null) && fIMEDisplayed) {
+			// NOTE: we have to track state, so we don't constantly say "IME Displayed/Hidden" on each layout
+	        if (!mIMEWasDisplayed && (getFocusedView() != null) && fIMEDisplayed) {
 	        	mIMEWasDisplayed = true;
 				mEventRecorder.writeRecord(Constants.EventTags.SHOW_IME, getFocusedView(), "IME displayed");
 	        } else if (mIMEWasDisplayed && !fIMEDisplayed) {
+	        	mIMEWasDisplayed = false;
 	        	if (getLastKeyAction() == KeyEvent.KEYCODE_BACK) {
 	        		mEventRecorder.writeRecord(Constants.EventTags.HIDE_IME_BACK_KEY, getFocusedView(), "IME hidden by back key pressed");
 	        		setLastKeyAction(-1);

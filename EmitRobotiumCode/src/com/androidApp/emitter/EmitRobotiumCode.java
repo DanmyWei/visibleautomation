@@ -590,6 +590,8 @@ public class EmitRobotiumCode {
 						writeException(tokens, lines);
 					} else if (action.equals(Constants.Events.SELECT_ACTIONBAR_TAB)) {
 						selectActionBarTab(tokens, lines);
+					} else if (action.equals(Constants.Events.ON_PAGE_FINISHED)) {
+						waitForPageToLoad(tokens, lines);
 					}
 				}
 				line = nextLine;
@@ -1240,6 +1242,24 @@ public class EmitRobotiumCode {
 		return template;
 	}
 	
-
+	/**
+	 * on_page_finshed:56051503,id,com.example.android.apis.R$id.wv10,android.webkit.WebView,WebView,url
+	 */
+	public void waitForPageToLoad(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
+		String template = "";
+		String url = tokens.get(6);
+		String fullDescription = "wait for URL " + url;
+		ReferenceParser ref = new ReferenceParser(tokens, 2);
+		if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
+			int classIndex = ref.getIndex();
+			template = writeViewClassIndexCommand(Constants.Templates.WAIT_FOR_WEBVIEW_PAGE_CLASS_INDEX, ref, fullDescription);
+		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
+			template = writeViewIDCommand(Constants.Templates.WAIT_FOR_WEBVIEW_PAGE_ID, ref, fullDescription);
+		} else {
+			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
+		}
+		template = template.replace(Constants.VariableNames.URL, url);
+		lines.add(new LineAndTokens(tokens, template));
+	}
 
 }
