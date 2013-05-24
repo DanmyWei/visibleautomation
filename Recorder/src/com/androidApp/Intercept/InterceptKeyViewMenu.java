@@ -37,7 +37,6 @@ public class InterceptKeyViewMenu extends EditText {
 	@Override 
 	public boolean dispatchKeyEventPreIme(KeyEvent event) {
 		if (event.getAction() == KeyEvent.ACTION_UP){ 
-			Toast.makeText(this.getContext(), "dispatch intercepted key event " + event.getKeyCode(), Toast.LENGTH_SHORT).show();
 			switch (event.getKeyCode()) {
 			case KeyEvent.KEYCODE_BACK:
 				mRecorder.writeRecordTime(Constants.EventTags.MENU_BACK_KEY);
@@ -56,7 +55,6 @@ public class InterceptKeyViewMenu extends EditText {
 	@Override 
 	public boolean onKeyPreIme (int keyCode, KeyEvent event) {
 		if (event.getAction() == KeyEvent.ACTION_UP) {
-			Toast.makeText(this.getContext(), "prekey intercepted key event " + event.getKeyCode(), Toast.LENGTH_SHORT).show();
 		}
 		return false;
 	}

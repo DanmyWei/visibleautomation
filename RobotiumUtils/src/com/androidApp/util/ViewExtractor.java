@@ -4,12 +4,13 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
-
 import android.app.Activity;
+import android.app.Dialog;
 import android.content.Context;
 import android.view.ContextThemeWrapper;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.PopupWindow;
 
 /**
@@ -46,7 +47,7 @@ public class ViewExtractor {
 	 * return the views hosted by the window manager.  Hidden class WindowManagerImpl.mViews is the list of decor views.
 	 * @return
 	 */
-	public View[] getWindowDecorViews() {
+	public static View[] getWindowDecorViews() {
 
 		Field viewsField;
 		Field instanceField;
@@ -123,21 +124,20 @@ public class ViewExtractor {
 	 * @return true if v is a popup of a
 	 */
 	public static boolean isDialogOrPopup(Activity a, View v) {
-		Context c = v.getContext();
-		// dialogs use a context theme wrapper, not a context, so we have to extract he context from the theme wrapper's
-		// base context
-		if (c instanceof ContextThemeWrapper) {
-			ContextThemeWrapper ctw = (ContextThemeWrapper) c;
-			c = ctw.getBaseContext();
-		}
-		// if the view has the same context (i.e. is owned by the application), and it's not the application's 
-		// decor view, then a dialog is up.
-		if (c.equals(a.getBaseContext())) {
-			if (v != a.getWindow().getDecorView()) {
-				return true;
+		if (v != null) {
+			Context viewContext = v.getContext();
+			// dialogs use a context theme wrapper, not a context, so we have to extract he context from the theme wrapper's
+			// base context
+			if (viewContext instanceof ContextThemeWrapper) {
+				ContextThemeWrapper ctw = (ContextThemeWrapper) viewContext;
+				viewContext = ctw.getBaseContext();
 			}
+			Context activityContext = a;
+			Context activityBaseContext = a.getBaseContext();
+			return (activityContext.equals(viewContext) || activityBaseContext.equals(viewContext)) && (v != a.getWindow().getDecorView());
+		} else {
+			return false;
 		}
-		return false;
 	}
 
 	/**
@@ -163,6 +163,39 @@ public class ViewExtractor {
 							PopupWindow popupWindow = (PopupWindow) ListenerIntercept.getFieldValue(v, popupViewContainerClass, Constants.Classes.THIS);
 							return popupWindow;
 						}
+					}
+				}
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+		return null;		
+	}
+	
+	/**
+	 * see if this dialog has popped up an activity.
+	 * @param activity activity to test
+	 * @return Dialog or null
+	 */
+	public static Dialog findDialog(Activity activity) {
+		try {
+			Class phoneDecorViewClass = Class.forName(Constants.Classes.PHONE_DECOR_VIEW);
+			View[] views = ViewExtractor.getWindowDecorViews();
+			if (views != null) {
+				int numDecorViews = views.length;
+				
+				// iterate through the set of decor windows.  The dialog may already have been presented.
+				for (int iView = 0; iView < numDecorViews; iView++) {
+					View v = views[iView];
+					if (ViewExtractor.isDialogOrPopup(activity, v)) {	
+						if (v.getClass() == phoneDecorViewClass) {
+							Window phoneWindow = (Window) ReflectionUtils.getFieldValue(v, phoneDecorViewClass, Constants.Classes.THIS);
+							Window.Callback callback = phoneWindow.getCallback();
+							if (callback instanceof Dialog) {
+								Dialog dialog = (Dialog) callback;
+								return dialog;
+							}
+						} 
 					}
 				}
 			}

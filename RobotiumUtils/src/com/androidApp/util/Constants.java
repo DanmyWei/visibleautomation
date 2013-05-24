@@ -22,5 +22,6 @@ public class Constants {
 		public static final String POPUP_VIEW_CONTAINER_CREATECLASS = "android.widget.PopupWindow$PopupViewContainer";
 		public static final String THIS = "this$0";
 		public static final String WEBKIT_CALLBACK_PROXY = "android.webkit.CallbackProxy";
+		public static final String PHONE_DECOR_VIEW = "com.android.internal.policy.impl.PhoneWindow$DecorView";
 	}
 }

@@ -31,8 +31,7 @@ public class Constants {
 	public static class Classes {
 		public static final String LISTENER_INFO = "android.view.View$ListenerInfo";
 		public static final String PHONE_DECOR_VIEW = "com.android.internal.policy.impl.PhoneWindow$DecorView";
-		public static final String POPUP_VIEW_CONTAINER = "android.widget.PopupWindow.PopupViewContainer";
-		public static final String POPUP_VIEW_CONTAINER_CREATECLASS = "android.widget.PopupWindow$PopupViewContainer";
+		public static final String POPUP_VIEW_CONTAINER = "android.widget.PopupWindow$PopupViewContainer";
 		public static final String DIALOG_TITLE_SIMPLE_NAME = "DialogTitle";
 		public static final String DIALOG_TITLE = "com.android.internal.widget.DialogTitle";
 		public static final String PHONE_WINDOW = "com.android.internal.policy.impl.PhoneWindow";
@@ -40,7 +39,7 @@ public class Constants {
 		public static final String SPINNER_DIALOG_POPUP = "android.widget.Spinner$DialogPopup";
 		public static final String AUTOCOMPLETE_DIALOG_POPUP = "android.widget.PopupWindow$PopupViewContainer";
 		public static final String LIST_WINDOW_POPUP = "android.widget.ListPopupWindow";
-		public static final String LIST_WINDOW_POPUP_DROPDOWN_LIST_VIEW = "android.widget.ListPopupWindow.DropDownListView";
+		public static final String LIST_WINDOW_POPUP_DROPDOWN_LIST_VIEW = "android.widget.ListPopupWindow$DropDownListView";
 		public static final String THIS = "this$0";
 		public static final String ACTION_BAR_IMPL = "com.android.internal.app.ActionBarImpl";
 		public static final String DROPDOWN_LISTVIEW = "android.widget.ListPopupWindow$DropDownListView";
@@ -142,6 +141,7 @@ public class Constants {
 		public static final String PROGRESS_CHANGED = "progress_changed";
 		public static final String START_TRACKING = "start_tracking";
 		public static final String STOP_TRACKING = "stop_tracking";
+		public static final String CREATE_DIALOG = "create_dialog";
 		public static final String DISMISS_DIALOG = "dismiss_dialog";
 		public static final String DISMISS_DIALOG_BACK_KEY = "dismiss_dialog_back_key";
 		public static final String SHOW_DIALOG = "show_dialog";

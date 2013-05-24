@@ -21,6 +21,7 @@ import android.widget.AbsListView;
 import android.widget.Adapter;
 import android.widget.AdapterView;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.PopupWindow;
 import android.widget.SeekBar;
@@ -424,6 +425,7 @@ public class ViewInterceptor {
         // good stroke of luck, we can listen to layout events on the root view.
         ViewTreeObserver viewTreeObserver = v.getViewTreeObserver();
         viewTreeObserver.addOnGlobalLayoutListener(new OnLayoutInterceptListener(a));
+        setFocusedView(null);
         intercept(v);     
         ActionBar actionBar = a.getActionBar();
         intercept(a, actionBar);
@@ -436,17 +438,36 @@ public class ViewInterceptor {
 	public class OnLayoutInterceptListener implements ViewTreeObserver.OnGlobalLayoutListener {
 		protected Activity mActivity;
 		protected int mCurrentRotation;
+		protected int mPreviousContentHeight = 0;
 		
 		public OnLayoutInterceptListener(Activity activity) {
 			mActivity = activity;
 			Display display = mActivity.getWindowManager().getDefaultDisplay();
 			mCurrentRotation = display.getRotation();
 		}
-		
+		/**
+		 * unfortunately, there isn't an event for IME display/hide, so we have to guess by examining the content view
+		 * and seeing if it's enough smaller than its parent that the IME could probably fit in there.  This is called
+		 * in the global layout listener, so we at least know that the layout has changed, but not why.
+		 * @param contentView android.R.id.content from the activity's window.
+		 * @return true if the IME is probably up, false if it's certainly down.
+		 */
+		public boolean isIMEDisplayed(View decorView) {
+			// not quite.
+			int contentHeight = getContentHeight(decorView);
+			int distanceFromBottom = decorView.getHeight() - contentHeight;
+			int imeHeight = (int) (decorView.getHeight()*GUESS_IME_HEIGHT);
+			boolean fIMEDisplayed = (distanceFromBottom > imeHeight) && (decorView.getHeight() - mPreviousContentHeight < imeHeight);
+			if (fIMEDisplayed) {
+				Log.d(TAG, "fIMEDisplayed");
+			}
+			mPreviousContentHeight = contentHeight;
+			return fIMEDisplayed;
+		}
+	
 		
 		
 		public void onGlobalLayout() {
-			List<View> magicFrameList = TestUtils.getChildrenByClass(mActivity.getWindow().getDecorView(), MagicFrame.class);
 			// this actually returns our magic frame, which doesn't resize when the IME is displayed
 			Display display = mActivity.getWindowManager().getDefaultDisplay();
 			int newRotation = display.getRotation();
@@ -454,7 +475,7 @@ public class ViewInterceptor {
 				mEventRecorder.writeRotation(mActivity, newRotation);
 				mCurrentRotation = newRotation;
 			}
-			boolean fIMEDisplayed = isIMEDisplayed(mActivity.getWindow().getDecorView(), magicFrameList);
+			boolean fIMEDisplayed = isIMEDisplayed(mActivity.getWindow().getDecorView());
 	        // this is a terrible hack to see if the IME has been hidden or displayed by this layout.
 			// NOTE: we have to track state, so we don't constantly say "IME Displayed/Hidden" on each layout
 	        if (!mIMEWasDisplayed && (getFocusedView() != null) && fIMEDisplayed) {
@@ -484,21 +505,14 @@ public class ViewInterceptor {
 		}
 	}
 	
-	/**
-	 * unfortunately, there isn't an event for IME display/hide, so we have to guess by examining the content view
-	 * and seeing if it's enough smaller than its parent that the IME could probably fit in there.  This is called
-	 * in the global layout listener, so we at least know that the layout has changed, but not why.
-	 * @param contentView android.R.id.content from the activity's window.
-	 * @return true if the IME is probably up, false if it's certainly down.
-	 */
-	public static boolean isIMEDisplayed(View decorView, List<View> magicFrameList) {
-		// not quite.
+	public static int getContentHeight(View decorView) {
+		ViewGroup vg = (ViewGroup) decorView;
+		LinearLayout linearLayout = (LinearLayout) vg.getChildAt(0);
 		int contentHeight = 0;
-		for (View magicFrame : magicFrameList) {
-			contentHeight += magicFrame.getHeight();
+		for (int iChild = 0; iChild < vg.getChildCount(); iChild++) {
+			contentHeight += vg.getChildAt(iChild).getMeasuredHeight();
 		}
-		int imeHeight = decorView.getHeight() - contentHeight;
-		return imeHeight > ((int) (decorView.getHeight()*GUESS_IME_HEIGHT));
+		return contentHeight;
 	}
 
 	/**
@@ -508,20 +522,18 @@ public class ViewInterceptor {
 	public void interceptPopupWindow(PopupWindow popupWindow) {
 		try {
 			PopupWindow.OnDismissListener originalDismissListener = ListenerIntercept.getOnDismissListener(popupWindow);
-			if ((originalDismissListener == null) || (originalDismissListener.getClass() != RecordDialogOnDismissListener.class)) {
+			if ((originalDismissListener == null) || (originalDismissListener.getClass() != RecordPopupWindowOnDismissListener.class)) {
 				RecordPopupWindowOnDismissListener recordOnDismissListener = new RecordPopupWindowOnDismissListener(mEventRecorder, this, null, popupWindow, originalDismissListener);
 				popupWindow.setOnDismissListener(recordOnDismissListener);
 			}
-			Class menuPopupHelperClass = Class.forName(Constants.Classes.MENU_POPUP_HELPER);
-			Class listWindowPopupDropdownClass = Class.forName(Constants.Classes.LIST_WINDOW_POPUP_DROPDOWN_LIST_VIEW);			
 			View contentView = popupWindow.getContentView();
-			if (contentView.getClass() == menuPopupHelperClass) {
-				replacePopupMenuListeners(popupWindow.getContentView());
-			} else if (contentView.getClass() == listWindowPopupDropdownClass) {
+			if (ListenerIntercept.isPopupMenu(contentView)) {
+				replacePopupMenuListeners(contentView);
+			} else {
 				// we are assuming this is a spinner, which is probably not the best thing.
 			}
 		} catch (Exception ex) {
-			mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, "Intercepting popup window");
+			mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, "Intercepting popup window " + ex.getMessage());
 			ex.printStackTrace();
 		}
 	}
@@ -533,16 +545,16 @@ public class ViewInterceptor {
 	public void interceptDialog(Dialog dialog) {
 		try {
 			boolean fCancelAndDismissTaken = ListenerIntercept.isCancelAndDismissTaken(dialog);
-			DialogInterface.OnDismissListener originalDismissListener = ListenerIntercept.getOnDismissListener(dialog);
-			if ((originalDismissListener == null) || (originalDismissListener.getClass() != RecordDialogOnDismissListener.class)) {
-				// TODO: ?
-				RecordDialogOnDismissListener recordOnDismissListener = new RecordDialogOnDismissListener(mEventRecorder, this, originalDismissListener);
-				if (fCancelAndDismissTaken) {
-					ListenerIntercept.setOnDismissListener(dialog, recordOnDismissListener);
-				} else {
-					dialog.setOnDismissListener(recordOnDismissListener);
-				}
-			}
+	           DialogInterface.OnDismissListener originalDismissListener = ListenerIntercept.getOnDismissListener(dialog);
+	            if ((originalDismissListener == null) || (originalDismissListener.getClass() != RecordDialogOnDismissListener.class)) {
+	                // TODO: ?
+	                RecordDialogOnDismissListener recordOnDismissListener = new RecordDialogOnDismissListener(mEventRecorder, this, originalDismissListener);
+	                if (fCancelAndDismissTaken) {
+	                    ListenerIntercept.setOnDismissListener(dialog, recordOnDismissListener);
+	                } else {
+	                    dialog.setOnDismissListener(recordOnDismissListener);
+	                }
+	            }
 			DialogInterface.OnCancelListener originalCancelListener = ListenerIntercept.getOnCancelListener(dialog);
 			if ((originalCancelListener == null) || (originalCancelListener.getClass() != RecordDialogOnCancelListener.class)) {
 				RecordDialogOnCancelListener recordOnCancelListener = new RecordDialogOnCancelListener(mEventRecorder, originalCancelListener);

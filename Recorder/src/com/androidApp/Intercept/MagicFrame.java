@@ -107,7 +107,6 @@ public class MagicFrame extends FrameLayout {
 		if (event.getAction() == KeyEvent.ACTION_UP){ 
 			if ((mRecorder != null) && mRecorder.getVisualDebug()) {
 				Log.i(TAG, "dispatch pre IME intercepted key event " + MagicFrame.keyEventToString(event));
-				Toast.makeText(this.getContext(), "dispatch intercepted key event code = " + event.getKeyCode(), Toast.LENGTH_SHORT).show();
 			}
 			try {
 				if ((mRecorder != null) && (mViewInterceptor != null)) {
@@ -126,7 +125,6 @@ public class MagicFrame extends FrameLayout {
 		if (event.getAction() == KeyEvent.ACTION_UP){ 
 			if ((mRecorder != null) && mRecorder.getVisualDebug()) {
 				Log.i(TAG, "onkey pre IME intercepted key event " + MagicFrame.keyEventToString(event));
-				Toast.makeText(this.getContext(), "prekey intercepted key event " + MagicFrame.keyEventToString(event), Toast.LENGTH_SHORT).show();
 			}
 		}
 		return false;
@@ -159,7 +157,6 @@ public class MagicFrame extends FrameLayout {
     protected void onFocusChanged(boolean gainFocus, int direction, Rect previouslyFocusedRect) {
 		if ((mRecorder != null) && mRecorder.getVisualDebug()) {
 			Log.i(TAG, "onFocusChanged gainFocus = " + gainFocus);
-			Toast.makeText(this.getContext(),  "onFocusChanged gainFocus = " + gainFocus, Toast.LENGTH_SHORT).show();
 		}
     }
   
@@ -229,6 +226,11 @@ public class MagicFrame extends FrameLayout {
 			c.drawLine(mTouchPoint.x - mSize, mTouchPoint.y - mSize, mTouchPoint.x + mSize, mTouchPoint.y + mSize, mPaint);
 			c.drawLine(mTouchPoint.x + mSize, mTouchPoint.y - mSize, mTouchPoint.x - mSize, mTouchPoint.y + mSize, mPaint);
 		}
+	}
+	
+	@Override
+	protected void onLayout (boolean changed, int left, int top, int right, int bottom) {
+		super.onLayout(changed, left, top, right, bottom);
 	}
 	
 	/**

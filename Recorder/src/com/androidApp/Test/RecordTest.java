@@ -209,6 +209,11 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 						if ((dialog != null) && (dialog != viewInterceptor.getCurrentDialog())) {
 							instrumentation.runOnMainSync(new InterceptDialogRunnable(dialog, recorder, viewInterceptor));
 							viewInterceptor.setCurrentDialog(dialog);
+							// TODO: placeholder until I can put together a description for dialogs
+							View contentView = TestUtils.getDialogContentView(dialog);
+							if (!TestUtils.isSpinnerDialog(contentView)) {
+								RecordTest.this.mRecorder.writeRecord(Constants.EventTags.CREATE_DIALOG, "dialog");
+							}
 						}
 					} else {
 						if (RecordTest.this.getActivityInterceptor().hasStarted()) {
@@ -345,10 +350,8 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 		}
 		
 		public void run() {
-			Window window = mDialog.getWindow();
-			View decorView = window.getDecorView();
-			View contentView = ((ViewGroup) decorView).getChildAt(0);
-			MagicFrame magicFrame = new MagicFrame(decorView.getContext(), contentView, 0, mRecorder, mViewInterceptor);
+			View contentView = TestUtils.getDialogContentView(mDialog);
+			MagicFrame magicFrame = new MagicFrame(contentView.getContext(), contentView, 0, mRecorder, mViewInterceptor);
 			try {
 				// spinner dialogs have their own dismiss.
 				if (TestUtils.isSpinnerDialog(contentView)) {

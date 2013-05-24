@@ -672,7 +672,7 @@ public class TestUtils {
 	 */
 	public static PopupWindow findPopupWindow(Activity activity) {
 		try {
-			Class popupViewContainerClass = Class.forName(Constants.Classes.POPUP_VIEW_CONTAINER_CREATECLASS);
+			Class popupViewContainerClass = Class.forName(Constants.Classes.POPUP_VIEW_CONTAINER);
 			View[] views = ViewExtractor.getWindowDecorViews();
 			if (views != null) {
 				int numDecorViews = views.length;
@@ -702,7 +702,7 @@ public class TestUtils {
 	 */
 	public static View findViewForPopup(Activity activity, PopupWindow popupWindow) {
 		try {
-			Class popupViewContainerClass = Class.forName(Constants.Classes.POPUP_VIEW_CONTAINER_CREATECLASS);
+			Class popupViewContainerClass = Class.forName(Constants.Classes.POPUP_VIEW_CONTAINER);
 			View[] views = ViewExtractor.getWindowDecorViews();
 			if (views != null) {
 				int numDecorViews = views.length;
@@ -876,6 +876,13 @@ public class TestUtils {
 			}
 		}
 		return false;		
+	}
+	
+	public static View getDialogContentView(Dialog dialog) {
+		Window window = dialog.getWindow();
+		View decorView = window.getDecorView();
+		View contentView = ((ViewGroup) decorView).getChildAt(0);
+		return contentView;
 	}
 
 }

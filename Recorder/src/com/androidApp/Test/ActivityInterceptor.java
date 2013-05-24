@@ -187,16 +187,16 @@ public class ActivityInterceptor {
 								} else {
 									if (activityA.equals(activityB)) {
 										Log.i(TAG, "we cannot go forward to the same activity, this shouldn't happen");
-										
 									}
 									Activity newActivity = activityB;
 									if (ActivityInterceptor.this.inActivityStack(activityB)) {
 										newActivity = activityA;
 									}
-									Log.i(TAG, "forward case activity = " + newActivity);
-									ActivityInterceptor.this.recordActivityForward(recorder, viewInterceptor, newActivity);
-									mInstrumentation.runOnMainSync(new InsertRecordWindowCallbackRunnable(newActivity.getWindow(), recorder, viewInterceptor));
-
+									if (!activityA.isFinishing() && !activityB.isFinishing()) {
+										Log.i(TAG, "forward case activity = " + newActivity);
+										ActivityInterceptor.this.recordActivityForward(recorder, viewInterceptor, newActivity);
+										mInstrumentation.runOnMainSync(new InsertRecordWindowCallbackRunnable(newActivity.getWindow(), recorder, viewInterceptor));
+									}
 								}
 							}
 						}

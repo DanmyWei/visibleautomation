@@ -52,30 +52,88 @@ public class ListenerIntercept {
 		ReflectionUtils.setFieldValue(listPopupWindowObject, ListPopupWindow.class, Constants.Fields.ITEM_CLICK_LISTENER, listener);
 	}
 	
-	public static boolean isPopupMenu(View v) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
-		Class dropdownListViewClass = Class.forName(Constants.Classes.DROPDOWN_LISTVIEW);
-		Object clickListenerObject = ReflectionUtils.getFieldValue(v, AdapterView.class, Constants.Fields.ONITEM_CLICK_LISTENER);
-		Class menuPopupHelperClass = Class.forName(Constants.Classes.MENU_POPUP_HELPER);
-		return clickListenerObject.getClass() == menuPopupHelperClass;
+	/**
+	 * is this a popup menu: as defined by a PopupViewContainer containing a ListWindowDropdownListView, with a MenuPopupHelper as the item click listener class.
+	 * @param contentView content of the PopupWindow
+	 * @return true if we think it's a popup menu.
+	 * @throws NoSuchFieldException thrown by the reflection utilities
+	 * @throws ClassNotFoundException
+	 * @throws IllegalAccessException
+	 */
+	public static boolean isPopupMenu(View contentView) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
+		Class popupViewContainerClass = Class.forName(Constants.Classes.POPUP_VIEW_CONTAINER);
+		if (contentView.getClass() == popupViewContainerClass) {
+			ViewGroup vg = (ViewGroup) contentView;
+			if (vg.getChildCount() > 0) {
+				View vChild = vg.getChildAt(0);
+				Class listWindowPopupDropdownClass = Class.forName(Constants.Classes.LIST_WINDOW_POPUP_DROPDOWN_LIST_VIEW);			
+				if (vChild.getClass() == listWindowPopupDropdownClass) {
+					Object clickListenerObject = ReflectionUtils.getFieldValue(vChild, AdapterView.class, Constants.Fields.ONITEM_CLICK_LISTENER);
+					Class menuPopupHelperClass = Class.forName(Constants.Classes.MENU_POPUP_HELPER);
+					if (clickListenerObject.getClass() == menuPopupHelperClass) {
+						Object popupMenuObject = ReflectionUtils.getFieldValue(clickListenerObject, menuPopupHelperClass, Constants.Fields.PRESENTER_CALLBACK);
+						return popupMenuObject instanceof PopupMenu;
+					}
+				}
+			}
+		}
+		return false;
 	}
-	
-	public static PopupMenu.OnMenuItemClickListener getPopupMenuOnMenuItemClickListener(View v) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
-		Object clickListenerObject = ReflectionUtils.getFieldValue(v, AdapterView.class, Constants.Fields.ONITEM_CLICK_LISTENER);
-		Class menuPopupHelperClass = Class.forName(Constants.Classes.MENU_POPUP_HELPER);
-		if (clickListenerObject.getClass() == menuPopupHelperClass) {
-			PopupMenu popupMenu = (PopupMenu) ReflectionUtils.getFieldValue(clickListenerObject, menuPopupHelperClass, Constants.Fields.PRESENTER_CALLBACK);
-			PopupMenu.OnMenuItemClickListener listener = (PopupMenu.OnMenuItemClickListener) ReflectionUtils.getFieldValue(popupMenu, PopupMenu.class, Constants.Fields.MENU_ITEM_CLICK_LISTENER);
-			return listener;
+	/**
+	 * return the popup menu click listener as defined by a PopupViewContainer containing a ListWindowDropdownListView, with a MenuPopupHelper as the itemclick listener class.
+	 * @param contentView content of the PopupWindow
+	 * @return the popup menu click listener if we think it's a popup menu, otherwise null.
+	 * @throws NoSuchFieldException thrown by the reflection utilities
+	 * @throws ClassNotFoundException
+	 * @throws IllegalAccessException
+	 */
+
+	public static PopupMenu.OnMenuItemClickListener getPopupMenuOnMenuItemClickListener(View contentView) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
+		Class popupViewContainerClass = Class.forName(Constants.Classes.POPUP_VIEW_CONTAINER);
+		if (contentView.getClass() == popupViewContainerClass) {
+			ViewGroup vg = (ViewGroup) contentView;
+			if (vg.getChildCount() > 0) {
+				View vChild = vg.getChildAt(0);
+				Class listWindowPopupDropdownClass = Class.forName(Constants.Classes.LIST_WINDOW_POPUP_DROPDOWN_LIST_VIEW);			
+				if (vChild.getClass() == listWindowPopupDropdownClass) {
+					Object clickListenerObject = ReflectionUtils.getFieldValue(vChild, AdapterView.class, Constants.Fields.ONITEM_CLICK_LISTENER);
+					Class menuPopupHelperClass = Class.forName(Constants.Classes.MENU_POPUP_HELPER);
+					if (clickListenerObject.getClass() == menuPopupHelperClass) {
+						PopupMenu popupMenu = (PopupMenu) ReflectionUtils.getFieldValue(clickListenerObject, menuPopupHelperClass, Constants.Fields.PRESENTER_CALLBACK);
+						return (PopupMenu.OnMenuItemClickListener) ReflectionUtils.getFieldValue(popupMenu, PopupMenu.class, Constants.Fields.MENU_ITEM_CLICK_LISTENER);
+					}
+				}
+			}
 		}
 		return null;
 	}
-	
-	public static void setPopupMenuOnMenuItemClickListener(View v, PopupMenu.OnMenuItemClickListener listener) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
-		Class dropdownListViewClass = Class.forName(Constants.Classes.DROPDOWN_LISTVIEW);
-		Object menuPopupHelperObject = ReflectionUtils.getFieldValue(v, AdapterView.class, Constants.Fields.ONITEM_CLICK_LISTENER);
-		Class menuPopupHelperClass = Class.forName(Constants.Classes.MENU_POPUP_HELPER);
-		PopupMenu popupMenu = (PopupMenu) ReflectionUtils.getFieldValue(menuPopupHelperObject, menuPopupHelperClass, Constants.Fields.PRESENTER_CALLBACK);
-		popupMenu.setOnMenuItemClickListener(listener);
+	/**
+	 * set the popup menu click listener as defined by a PopupViewContainer containing a ListWindowDropdownListView, with a MenuPopupHelper as the itemclick listener class.
+	 * @param contentView content of the PopupWindow
+	 * @throws NoSuchFieldException thrown by the reflection utilities
+	 * @throws ClassNotFoundException
+	 * @throws IllegalAccessException
+	 */
+
+	public static boolean setPopupMenuOnMenuItemClickListener(View contentView, PopupMenu.OnMenuItemClickListener listener) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
+		Class popupViewContainerClass = Class.forName(Constants.Classes.POPUP_VIEW_CONTAINER);
+		if (contentView.getClass() == popupViewContainerClass) {
+			ViewGroup vg = (ViewGroup) contentView;
+			if (vg.getChildCount() > 0) {
+				View vChild = vg.getChildAt(0);
+				Class listWindowPopupDropdownClass = Class.forName(Constants.Classes.LIST_WINDOW_POPUP_DROPDOWN_LIST_VIEW);			
+				if (vChild.getClass() == listWindowPopupDropdownClass) {
+					Object clickListenerObject = ReflectionUtils.getFieldValue(vChild, AdapterView.class, Constants.Fields.ONITEM_CLICK_LISTENER);
+					Class menuPopupHelperClass = Class.forName(Constants.Classes.MENU_POPUP_HELPER);
+					if (clickListenerObject.getClass() == menuPopupHelperClass) {
+						PopupMenu popupMenu = (PopupMenu) ReflectionUtils.getFieldValue(clickListenerObject, menuPopupHelperClass, Constants.Fields.PRESENTER_CALLBACK);
+						popupMenu.setOnMenuItemClickListener(listener);
+						return true;
+					}
+				}
+			}
+		}
+		return false;
 	}
 	/**
 	 * currently unused, because it overlaps onClickListener

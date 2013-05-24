@@ -9,9 +9,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.androidApp.emitter.EmitRobotiumCode.Dirs;
 import com.androidApp.emitter.EmitRobotiumCode.LineAndTokens;
-import com.androidApp.emitter.EmitRobotiumCode.Options;
 import com.androidApp.util.Constants;
 import com.androidApp.util.FileUtility;
 import com.androidApp.util.StringUtils;
@@ -55,33 +53,6 @@ public class SetupRobotiumProject {
 		return options;
 	}
 	
-	/**
-	 * return the fully qualified class path of the application under test
-	 * @return
-	 */
-	public String getApplicationClassPath() {
-		return sTargetClassPath;
-	}
-	
-	/**
-	 * return the class name of the application under test
-	 * @return
-	 */
-	public String getApplicationClassName() {
-		if (sTargetClassPath != null) {
-			return StringUtils.getNameFromClassPath(sTargetClassPath);
-		} else {
-			return null;
-		}
-	}
-	
-	/**
-	 * return the package name of the application under test.
-	 * @return
-	 */
-	public String getApplicationPackage() {
-		return sTargetPackage;
-	}
 	
 	/**
 	 * create the directories required by the test project
@@ -263,23 +234,4 @@ public class SetupRobotiumProject {
 		}
 		return Constants.Filenames.EVENTS;
 	}
-
-	/**
-	 * take the events file name (which may be the reserved word "device", and emit the test code into
-	 * an array list of the output code with its associated source tokens
-	 * @param emitter the emitter
-	 * @param eventsFileName source events file, or device if we pull it from the device.
-	 * @return list of test code and source tokens.
-	 * @throws FileNotFoundException
-	 * @throws IOException
-	 * @throws EmitterException
-	 */
-	public static List<LineAndTokens> generateTestCode(EmitRobotiumCode emitter, String eventsFileName) throws FileNotFoundException, IOException, EmitterException {
-		List<LineAndTokens> lines = new ArrayList<LineAndTokens>();
-		BufferedReader br = new BufferedReader(new FileReader(eventsFileName));
-		emitter.emit(br, lines);
-		return lines;
-	}
-
-
 }

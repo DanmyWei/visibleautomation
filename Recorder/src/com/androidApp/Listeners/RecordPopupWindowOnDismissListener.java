@@ -14,8 +14,7 @@ import android.view.View;
  * We have an exception case for popupWindows created by spinners, so the emitter can generate
  * autocomplete and other custom widget-specific code.
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
- *
+ *Copyright (c) 2013 Matthew Reynods.  All Rights Reserved.
  */
 
 public class RecordPopupWindowOnDismissListener extends RecordListener implements PopupWindow.OnDismissListener, IOriginalListener  {

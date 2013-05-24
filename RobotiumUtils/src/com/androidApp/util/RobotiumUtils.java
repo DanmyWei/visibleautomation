@@ -7,6 +7,7 @@ import com.jayway.android.robotium.solo.Solo;
 import junit.framework.TestCase;
 import android.app.ActionBar;
 import android.app.Activity;
+import android.app.Dialog;
 import android.app.Instrumentation;
 import android.content.Context;
 import android.graphics.Rect;
@@ -15,6 +16,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
+import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -25,6 +27,11 @@ import android.widget.ScrollView;
 
 /**
  * utility class for monitoring activities and sending events to views.
+ * TODO: we need to change the wait routines so they're instantiated before the events that they depend on are fired.
+ * All the wait objects need to be created on a background thread, which will fire a callback when the waitObject is 
+ * notified.  The API thread will have an external wait call, which will return immediately if the callback has been 
+ * fired, or wait for a notification if it hasn't been fired yet. This will improve the performance of the tests, and their 
+ * roboustness.
  * @author mattrey
  * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  *
@@ -344,10 +351,13 @@ public class RobotiumUtils {
 	
 	
 	/**
-	 * TODO: fill this in
+	 * wait for a layout
+	 * @param timeoutMsec - time to wait for a layout.
+	 * 
 	 */
-	public static void waitForLayout() {
-		
+	public static void waitForLayout(long timeoutMsec) {
+		OnLayoutInterceptListener currentLayoutListener = sActivityMonitorRunnable.getCurrentLayoutListener();
+		currentLayoutListener.waitForLayout(timeoutMsec);
 	}
 
 	/**
@@ -393,23 +403,37 @@ public class RobotiumUtils {
 	public void dismissPopupWindow(Activity activity) throws TestException {
 		dismissPopupWindow(activity, VIEW_TIMEOUT_MSEC);
 	}
-	/**
-	 * dismiss a popup window, like a menu popup, autocomplete dropdown, etc.  I hope there is only one popup.
-	 * @param activity
-	 */
-	public void dismissPopupWindow(Activity activity, long waitMsec) throws TestException {
+	
+	public boolean waitForPopupWindow(Activity activity, long waitMsec) {
 		while (waitMsec > 0) {
 			PopupWindow popupWindow = ViewExtractor.findPopupWindow(activity);
 			if (popupWindow != null) {
-				mInstrumentation.runOnMainSync(new DismissPopupWindowRunnable(popupWindow));
-				return;
+				return true;
 			}
 			try {
 				Thread.sleep(WAIT_INCREMENT_MSEC);
 			} catch (InterruptedException iex) {}
 			waitMsec -= WAIT_INCREMENT_MSEC;
 		}
-		throw new TestException("failed to find popup window to dismiss");
+		return false;
+	}
+	/**
+	 * dismiss a popup window, like a menu popup, autocomplete dropdown, etc.  I hope there is only one popup.
+	 * @param activity
+	 */
+	public boolean dismissPopupWindow(Activity activity, long waitMsec) throws TestException {
+		while (waitMsec > 0) {
+			PopupWindow popupWindow = ViewExtractor.findPopupWindow(activity);
+			if (popupWindow != null) {
+				mInstrumentation.runOnMainSync(new DismissPopupWindowRunnable(popupWindow));
+				return true;
+			}
+			try {
+				Thread.sleep(WAIT_INCREMENT_MSEC);
+			} catch (InterruptedException iex) {}
+			waitMsec -= WAIT_INCREMENT_MSEC;
+		}
+		return false;
 	}
 	
 	public static void verifyPopupWindowDimissed(Activity activity, PopupWindow dismissedPopupWindow) throws TestException {
@@ -424,18 +448,18 @@ public class RobotiumUtils {
 	 * @return
 	 * @throws TestException
 	 */
-	public static void verifyPopupWindowDismissed(Activity activity, PopupWindow dismissedPopupWindow, long waitMsec) throws TestException {
+	public static boolean verifyPopupWindowDismissed(Activity activity, PopupWindow dismissedPopupWindow, long waitMsec) {
 		while (waitMsec > 0) {
 			PopupWindow popupWindow = ViewExtractor.findPopupWindow(activity);
 			if ((popupWindow == null) || (dismissedPopupWindow != popupWindow)) {
-				return;
+				return true;
 			}
 			try {
 				Thread.sleep(WAIT_INCREMENT_MSEC);
 			} catch (InterruptedException iex) {}
 			waitMsec -= WAIT_INCREMENT_MSEC;
 		}
-		throw new TestException("a popup window is displayed when it shouldn't be");
+		return false;
 	}
 	
 	/**
@@ -501,5 +525,27 @@ public class RobotiumUtils {
 		} catch (Exception ex) {
 			throw new TestException(ex.getMessage());
 		}
+	}
+	
+	/** 
+	 * wait for a dialog to appear.
+	 * @param activity
+	 * @param timeoutMsec
+	 * @return
+	 */
+	public static Dialog waitForDialogToOpen(Activity activity, long timeoutMsec) {
+		long startTimeMillis = SystemClock.uptimeMillis();
+		long currentTimeMillis = startTimeMillis;
+		while (timeoutMsec > 0) {
+			Dialog dialog = ViewExtractor.findDialog(activity);
+			if (dialog != null) {
+				return dialog;
+			}
+			try {
+				Thread.sleep(WAIT_INCREMENT_MSEC);
+			} catch (InterruptedException iex) {}
+			timeoutMsec -= WAIT_INCREMENT_MSEC;
+		}
+		return null;
 	}
 }

@@ -53,6 +53,8 @@ public class Constants {
 		public static final String EXCEPTION = "exception";
 		public static final Object SELECT_ACTIONBAR_TAB = "select_actionbar_tab";
 		public static final String CREATE_SPINNER_POPUP_WINDOW = "create_spinner_popup_window";
+		public static final Object ON_PAGE_FINISHED = "on_page_finished";
+		public static final Object CREATE_DIALOG = "create_dialog";
 	}
 	
 	public static class Templates {
@@ -106,6 +108,10 @@ public class Constants {
 		public static final String ALL_TESTS_CREATETEST = "AllTests_createtest.txt";
 		public static final String SELECT_ACTIONBAR_TAB = "select_actionbar_tab.txt";
 		public static final String GET_PREVIOUS_ACTIVITY = "get_previous_activity.txt";
+		public static final String WAIT_FOR_WEBVIEW_PAGE_CLASS_INDEX = "wait_for_webview_page_class_index.txt";
+		public static final String WAIT_FOR_WEBVIEW_PAGE_ID = "wait_for_webview_page_id.txt";
+		public static final String WAIT_FOR_DIALOG_TO_OPEN = "wait_for_dialog_to_open.txt";
+		public static final String CANCEL_DIALOG_TEMPLATE = "dialog_cancel_template.txt";
 	}
 	
 	// template %replace% variables
@@ -136,6 +142,7 @@ public class Constants {
 		public static final String MODE = "%MODE%";
 		public static final String TESTPACKAGE = "%TESTPACKAGE%";
 		public static final CharSequence TAB_INDEX = "%TAB_INDEX%";
+		public static final CharSequence URL = "%URL%";
 
 	}
 	

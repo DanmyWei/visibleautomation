@@ -19,7 +19,6 @@ import android.widget.Spinner;
  */
 public class RecordDialogOnCancelListener extends RecordListener implements DialogInterface.OnCancelListener, IOriginalListener {
 	protected DialogInterface.OnCancelListener 	mOriginalOnCancelListener;
-	protected String mEventTag;
 	
 	public RecordDialogOnCancelListener() {
 	}
@@ -27,14 +26,8 @@ public class RecordDialogOnCancelListener extends RecordListener implements Dial
 	public RecordDialogOnCancelListener(EventRecorder eventRecorder, DialogInterface.OnCancelListener originalCancelListener) {
 		super(eventRecorder);
 		mOriginalOnCancelListener = originalCancelListener;
-		mEventTag = Constants.EventTags.CANCEL_DIALOG;
 	}
 	
-	public RecordDialogOnCancelListener(EventRecorder eventRecorder, DialogInterface.OnCancelListener originalCancelListener, String eventTag) {
-		super(eventRecorder);
-		mOriginalOnCancelListener = originalCancelListener;
-		mEventTag = eventTag;
-	}
 	
 	public Object getOriginalListener() {
 		return mOriginalOnCancelListener;
@@ -46,7 +39,7 @@ public class RecordDialogOnCancelListener extends RecordListener implements Dial
 			setEventBlock(true);
 			try {
 				String description = getDescription(dialog);
-				mEventRecorder.writeRecord(mEventTag, description);
+				mEventRecorder.writeRecord(Constants.EventTags.CANCEL_DIALOG, description);
 			} catch (Exception ex) {
 				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, "on cancel dialog");
 				ex.printStackTrace();
