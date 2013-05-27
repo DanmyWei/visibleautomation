@@ -71,7 +71,7 @@ public class ActivityMonitorRunnable implements Runnable {
 			Activity activityA = mActivityMonitor.waitForActivity();
 			if (activityA.isFinishing()) {
 				Log.i(TAG, "interesting");
-				mActivityStack.pop();
+				removeActivityFromStack(activityA);
 				if (mActivityStack.empty()) {
 					break;
 				}
@@ -87,7 +87,7 @@ public class ActivityMonitorRunnable implements Runnable {
 				} else if (!inActivityStack(activityB)) {
 					addActivityToStack(activityB);
 				} else {
-					mActivityStack.pop();
+					removeActivityFromStack(activityA);
 					if (mActivityStack.empty()) {
 						break;
 					}
@@ -227,7 +227,7 @@ public class ActivityMonitorRunnable implements Runnable {
 			mActivityStack.push(activityInfo);
 		}
 	}
-	
+		
 	/**
 	 * when we add an activity to the stack, we also add a layout observer, which can signal to instrumentation
 	 * that a layout has completed.  Handy for stuff like waiting for the keyboard to appear/disappear
@@ -250,7 +250,7 @@ public class ActivityMonitorRunnable implements Runnable {
 	 * remove the specified activity from the stack (not necessarily popping it)
 	 * @param activity activity to be removed.
 	 */
-	protected void removeActivityFromStack(Activity activity) {
+	protected boolean removeActivityFromStack(Activity activity) {
 		ActivityInfo activityInfo = null;
 		synchronized(mActivityStack) {
 			for (ActivityInfo candActivityInfo : mActivityStack) {
@@ -262,7 +262,9 @@ public class ActivityMonitorRunnable implements Runnable {
 			}
 			if (activityInfo != null) {
 				mActivityStack.remove(activityInfo);
+				return true;
 			}
+			return false;
 		}
 	}
 

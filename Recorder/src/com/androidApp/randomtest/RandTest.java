@@ -41,7 +41,7 @@ public class RandTest {
 	private final int MAX_SECURITY_EXCEPTION = 100;
 	private final String DICTIONARY = "dictionary.txt";	
 	protected ActivityInterceptor mActivityInterceptor;
-	protected ActivityInstrumentationTestCase2<? extends Activity> mInstrumentation; 
+	protected Instrumentation mInstrumentation; 
 	
 	// this may be somewhat overkill, but I like text with real words, not random gibberish
 	protected RandomDictionary mDictionary;		
@@ -51,10 +51,10 @@ public class RandTest {
 	 * @param instrumentation
 	 * @param activityInterceptor
 	 */
-	public RandTest(ActivityInstrumentationTestCase2<? extends Activity> instrumentation, ActivityInterceptor activityInterceptor) throws IOException {
+	public RandTest(Instrumentation instrumentation, ActivityInterceptor activityInterceptor) throws IOException {
 		mInstrumentation = instrumentation;
 		mActivityInterceptor = activityInterceptor;
-		mDictionary = new RandomDictionary(instrumentation.getInstrumentation().getContext(), DICTIONARY);
+		mDictionary = new RandomDictionary(mInstrumentation.getContext(), DICTIONARY);
 
 	}
 	
@@ -102,7 +102,7 @@ public class RandTest {
 				if (fBackKey && firstActivityComplete && fHasMagicFrames) {
 					// there is a race condition where if the activity has just been created, and we send the back key,
 					// the "magic frames" have not been inserted, and we 'back' the activity before the key event is intercepted.
-					mInstrumentation.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
+					mInstrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);
 				} else if (fRotation) {
 					if (activity.getRequestedOrientation() == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) { 
 						activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
@@ -122,12 +122,12 @@ public class RandTest {
 						Log.i(TAG, randOperation.getName() + " view = " + randView + " activity = " + currentActivity + " event = " + numIterationsInActivity);
 						switch (randOperation) {
 						case TOUCH:
-							if (!EventUtility.touchOnScreen(mInstrumentation.getInstrumentation(), randView)) {
+							if (!EventUtility.touchOnScreen(mInstrumentation, randView)) {
 								securityExceptionCount++;
 							}
 							break;
 						case CLICK:
-							if (!EventUtility.clickOnScreen(mInstrumentation.getInstrumentation(), randView)) {
+							if (!EventUtility.clickOnScreen(mInstrumentation, randView)) {
 								securityExceptionCount++;
 							}
 							break;
@@ -142,10 +142,10 @@ public class RandTest {
 						case ENTER_TEXT:
 							EditText et = (EditText) randView;
 							String s = mDictionary.randWords(MAX_TEXT_LENGTH);
-							mInstrumentation.getInstrumentation().runOnMainSync(new SetTextRunnable(et, s));
+							mInstrumentation.runOnMainSync(new SetTextRunnable(et, s));
 							break;
 						case LONG_CLICK:
-							if (!EventUtility.clickLongOnScreen(mInstrumentation.getInstrumentation(), randView)) {
+							if (!EventUtility.clickLongOnScreen(mInstrumentation, randView)) {
 								securityExceptionCount++;
 							}
 							break;		
@@ -161,11 +161,11 @@ public class RandTest {
 				if (securityExceptionCount > MAX_SECURITY_EXCEPTION) {
 					Assert.fail("security exception count exceeded");
 				}
-				mInstrumentation.getInstrumentation().waitForIdleSync();
+				mInstrumentation.waitForIdleSync();
 			}
 	    }
 	    // terminate
-		mInstrumentation.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_HOME);
+		mInstrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_HOME);
 	}
 	
 	boolean isViewGood(View view) {
@@ -183,9 +183,9 @@ public class RandTest {
 		Adapter adapter = absListView.getAdapter();
 		int numItems = adapter.getCount();
 		int randItem = (int) (Math.random()*numItems);
-		mInstrumentation.getInstrumentation().runOnMainSync(new ScrollToPositionRunnable(absListView, randItem));
-		mInstrumentation.getInstrumentation().waitForIdleSync();
-		mInstrumentation.getInstrumentation().runOnMainSync(new PerformItemClickRunnable(absListView, randItem));
+		mInstrumentation.runOnMainSync(new ScrollToPositionRunnable(absListView, randItem));
+		mInstrumentation.waitForIdleSync();
+		mInstrumentation.runOnMainSync(new PerformItemClickRunnable(absListView, randItem));
 	}
 	
 	/**
@@ -274,7 +274,7 @@ public class RandTest {
 		int maxScrollY = contentsRect.bottom - v.getMeasuredHeight();
 		int scrollX = minScrollX*(int)((maxScrollX - minScrollX)*Math.random());
 		int scrollY = minScrollY*(int)((maxScrollY - minScrollY)*Math.random());
-		mInstrumentation.getInstrumentation().runOnMainSync(new ScrollRunnable(v, scrollX, scrollY));
+		mInstrumentation.runOnMainSync(new ScrollRunnable(v, scrollX, scrollY));
 	}
 	
 	/**
@@ -304,13 +304,13 @@ public class RandTest {
 	 * @throws ClassNotFoundException
 	 */
 	public boolean clickRandomMenuItem() throws ClassNotFoundException {
-		mInstrumentation.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_MENU);
+		mInstrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_MENU);
 		Activity activity = mActivityInterceptor.getCurrentActivity();
 		View menuView = TestUtils.findOptionsMenu(activity);
 		if (menuView != null) {
 			List<View> textViews = TestUtility.getViewList(menuView, TextView.class);
 			int itemIndex = (int) (Math.random()*textViews.size());
-			EventUtility.clickOnScreen(mInstrumentation.getInstrumentation(), textViews.get(itemIndex));
+			EventUtility.clickOnScreen(mInstrumentation, textViews.get(itemIndex));
 			return true;
 		}
 		return false;

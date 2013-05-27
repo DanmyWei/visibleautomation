@@ -183,7 +183,7 @@ public class RobotiumUtils {
 		long currentTimeMillis = startTimeMillis;
 		do {
 			Activity newActivity = sActivityMonitorRunnable.waitForActivity(newActivityClass, timeoutMsec);
-			if (newActivity != currentActivity) {
+			if ((newActivity != currentActivity) || (currentActivity == null)) {
 				return true;
 			}
 			ActivityMonitorRunnable.sleep(ActivityMonitorRunnable.MINISLEEP);
