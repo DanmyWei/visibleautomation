@@ -1,0 +1,2 @@
+	// %DESCRIPTION%
+	TestCase.assertTrue(robotiumUtils.waitForDialogToOpen(robotiumUtils.getCurrentActivity(), DIALOG_OPEN_TIMEOUT) != null);

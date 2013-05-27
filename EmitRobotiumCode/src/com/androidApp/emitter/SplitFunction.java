@@ -41,7 +41,7 @@ public class SplitFunction {
 	 * @param lineAndTokens output line and source tokens
 	 * @return unique function name based on the activity class
 	 */
-	public String getFunctionName(EmitRobotiumCode.LineAndTokens lineAndTokens) {
+	public String getFunctionName(EmitRobotiumCodeSource.LineAndTokens lineAndTokens) {
 		String activityName = lineAndTokens.mTokens.get(2);
 		String functionName = mClassTable.getVariableName(activityName);
 		return functionName;
@@ -53,7 +53,7 @@ public class SplitFunction {
 	 * @param lineAndTokens
 	 * @throws IOException
 	 */
-	public void writeFunctionHeader(BufferedWriter bw, String functionName, EmitRobotiumCode.LineAndTokens lineAndTokens) throws IOException {
+	public void writeFunctionHeader(BufferedWriter bw, String functionName, EmitRobotiumCodeSource.LineAndTokens lineAndTokens) throws IOException {
 		String functionHeader = FileUtility.readTemplate(Constants.Templates.FUNCTION_HEADER);
 		functionHeader = functionHeader.replace(Constants.VariableNames.FUNCTION_NAME, functionName);
 		bw.write(functionHeader);
@@ -66,7 +66,7 @@ public class SplitFunction {
 	 * @param lineAndTokens
 	 * @throws IOException
 	 */
-	public void writeFunctionCall(BufferedWriter bw, String functionName, EmitRobotiumCode.LineAndTokens lineAndTokens) throws IOException {
+	public void writeFunctionCall(BufferedWriter bw, String functionName, EmitRobotiumCodeSource.LineAndTokens lineAndTokens) throws IOException {
 		String functionCall = FileUtility.readTemplate(Constants.Templates.FUNCTION_CALL);
 		functionCall = functionCall.replace(Constants.VariableNames.FUNCTION_NAME, functionName);
 		bw.write(functionCall);
@@ -88,12 +88,12 @@ public class SplitFunction {
 	public void writeFunctions(BufferedWriter bw, 
 							   String functionName, 
 							   int startIndex, 
-							   List<EmitRobotiumCode.LineAndTokens> lines) throws IOException {
+							   List<EmitRobotiumCodeSource.LineAndTokens> lines) throws IOException {
 		List<FunctionIndex> nestedFunctions = new ArrayList<FunctionIndex>();
 		int depth = 0;
 		boolean fFoundStart = false;
 		for (int index = startIndex; index < lines.size(); index++) {
-			EmitRobotiumCode.LineAndTokens line = lines.get(index);
+			EmitRobotiumCodeSource.LineAndTokens line = lines.get(index);
 			boolean fLineIsInCalledFunction = false;
 			if (line.mOutputLine.contains(Constants.SoloFunctions.WAIT_FOR_ACTIVITY)) {
 				if (fFoundStart) {

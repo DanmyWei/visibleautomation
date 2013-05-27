@@ -1,22 +1,14 @@
 package com.androidApp.emitter;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
-import com.androidApp.emitter.EmitRobotiumCode.LineAndTokens;
 import com.androidApp.util.Constants;
 import com.androidApp.util.FileUtility;
 import com.androidApp.util.StringUtils;
 
 public class SetupRobotiumProject {
-	protected static String sTargetClassPath = null;		// class path of initial activity.	
-	protected static String sTargetPackage = null;			// package name that the recorder pulled from the app
 	/**
 	 * retains parsed options
 	 * @author Matthew
@@ -111,10 +103,41 @@ public class SetupRobotiumProject {
 		String classpath = createClasspath(projectName, robotiumJar);
 		FileUtility.writeString(dirname + File.separator + Constants.Filenames.CLASSPATH, classpath);
 	}
+	/**
+	 * generate the .classpath file for building the binary-only target project.  
+	 * for eclipse/ant, and the robotium jar in the libs directory.
+	 * @param dirname directory that the .classpath file is written into
+	 * @param projectName name of the target project
+	 * @param name of the robotium-solo-X.XX.jar
+	 * @throws IOException if the file can't be written
+	 */
+	protected static void writeClasspathBinary(String dirname, String robotiumJar) throws IOException {
+		String classpath = createClasspathBinary(robotiumJar);
+		FileUtility.writeString(dirname + File.separator + Constants.Filenames.CLASSPATH, classpath);
+	}
 	
+	/**
+	 * create the classpath file with references to the target project and robotium jar file
+	 * @param projectName target project
+	 * @param robotiumJar robotium jar from templates folder
+	 * @return
+	 * @throws IOException
+	 */
 	public static String createClasspath(String projectName, String robotiumJar) throws IOException {
 		String classpath = FileUtility.readTemplate(Constants.Templates.CLASSPATH);
 		classpath = classpath.replace(Constants.VariableNames.TARGET_PROJECT, projectName);
+		classpath = classpath.replace(Constants.VariableNames.ROBOTIUM_JAR, robotiumJar);
+		return classpath;
+	}
+	
+	/**
+	 * binary-only projects: create the classpath file with references  robotium jar file
+	 * @param robotiumJar robotium jar from templates folder
+	 * @return
+	 * @throws IOException
+	 */
+	public static String createClasspathBinary(String robotiumJar) throws IOException {
+		String classpath = FileUtility.readTemplate(Constants.Templates.BINARY_CLASSPATH);
 		classpath = classpath.replace(Constants.VariableNames.ROBOTIUM_JAR, robotiumJar);
 		return classpath;
 	}
@@ -142,10 +165,10 @@ public class SetupRobotiumProject {
 		FileUtility.writeString(dirname + File.separator + Constants.Filenames.ANDROID_MANIFEST_XML, manifest);
 	}
 	
-	public static String createManifest(String testClassName, String testClassPath, String targetPackage)throws IOException {
+	public static String createManifest(String testClassName, String testClassPath, String targetPackage) throws IOException {
 		String manifest = FileUtility.readTemplate(Constants.Templates.ANDROID_MANIFEST_XML); 
 		manifest = manifest.replace(Constants.VariableNames.CLASSPATH, testClassPath);
-		manifest = manifest.replace(Constants.VariableNames.TARGETPACKAGE, sTargetPackage);
+		manifest = manifest.replace(Constants.VariableNames.TARGETPACKAGE, targetPackage);
 		manifest = manifest.replace(Constants.VariableNames.CLASSNAME, testClassName);
 		return manifest;
 	}
@@ -198,13 +221,17 @@ public class SetupRobotiumProject {
 	}
 	
 	/**
-	 * copy support library to the output directory
+	 * copy robotium jar and support library to the output directory
 	 * @param libraryDir libs directory
 	 * @throws IOException if the template can't be found
 	 */
-	public static void copyLibrary(String libraryDir) throws IOException {
+	public static void copyLibraries(String libraryDir) throws IOException {
 		byte[] jarData = FileUtility.readBinaryTemplate(Constants.Filenames.UTILITY_JAR);
 		FileOutputStream fos = new FileOutputStream(libraryDir + File.separator + Constants.Filenames.UTILITY_JAR);
+		fos.write(jarData, 0, jarData.length);
+		fos.close();		
+		jarData = FileUtility.readBinaryTemplate(Constants.Filenames.ROBOTIUM_JAR);
+		fos = new FileOutputStream(libraryDir + File.separator + Constants.Filenames.ROBOTIUM_JAR);
 		fos.write(jarData, 0, jarData.length);
 		fos.close();		
 	}

@@ -1,0 +1,2 @@
+		// %DESCRIPTION%
+		TestCase.assertTrue(robotiumUtils.waitForNewActivity(%ACTIVITY%, (Class<? extends Activity>) Class.forName("%ACTIVITY_CLASS%"), ACTIVITY_WAIT_MSEC));

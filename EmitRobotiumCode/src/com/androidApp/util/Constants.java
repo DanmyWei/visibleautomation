@@ -61,8 +61,11 @@ public class Constants {
 
 		// template file names
 		public static final String HEADER = "header.txt";
+		public static final String BINARY_HEADER = "binary_header.txt";
 		public static final String TEST_FUNCTION = "test_function.txt";
+		public static final String BINARY_TEST_FUNCTION = "binary_test_function.txt";
 		public static final String WAIT_FOR_ACTIVITY = "wait_for_activity.txt";
+		public static final String BINARY_WAIT_FOR_ACTIVITY = "binary_wait_for_activity.txt";;
 		public static final String CLICK_IN_LIST = "click_in_list.txt";
 		public static final String SCROLL_LIST = "scroll_list.txt";
 		public static final String DIALOG_CLOSE_TEMPLATE = "dialog_close_template.txt";
@@ -75,6 +78,7 @@ public class Constants {
 		public static final String PROJECT_PROPERTIES = "project.properties";
 		public static final String ANDROID_MANIFEST_XML = "AndroidManifest.xml";
 		public static final String CLASSPATH = "classpath.txt";
+		public static final String BINARY_CLASSPATH = "binary_classpath.txt";
 		public static final String GO_BACK = "go_back.txt";
 		public static final String EDIT_TEXT_ID = "edit_text_id.txt";
 		public static final String EDIT_TEXT_CLASS_INDEX = "edit_text_class_index.txt";
@@ -89,9 +93,12 @@ public class Constants {
 		public static final String WAIT_FOR_LIST_CLASS_INDEX = "wait_for_list_class_index.txt";
 		public static final String GET_CURRENT_ACTIVITY = "get_current_activity.txt";
 		public static final String WAIT_FOR_NEW_ACTIVITY = "wait_for_new_activity.txt";
+		public static final String BINARY_WAIT_FOR_NEW_ACTIVITY = "binary_wait_for_new_activity.txt";;
 		public static final String ALL_TESTS = "AllTests.txt";
 		public static final String GO_BACK_TO_MATCHING_ACTIVITY = "go_back_to_matching_activity.txt";
+		public static final String BINARY_GO_BACK_TO_MATCHING_ACTIVITY = "binary_go_back_to_matching_activity.txt";
 		public static final String WENT_BACK_TO_MATCHING_ACTIVITY = "went_back_to_matching_activity.txt";			
+		public static final String BINARY_WENT_BACK_TO_MATCHING_ACTIVITY = "binary_went_back_to_matching_activity.txt";
 		public static final String GO_BACK_WAIT_ACTIVITY = "go_back_wait_activity.txt";
 		public static final String WAIT_ACTIVITY = "wait_activity.txt";
 		public static final String SHOW_IME_ID = "show_ime_id.txt";
@@ -167,6 +174,7 @@ public class Constants {
 		public static final String EVENTS = "events.txt";
 		public static final String PROJECT_PROPERTIES_FILENAME = "project.properties";
 		public static final String PROJECT_FILENAME = ".project";
+		public static final String ROBOTIUM_JAR = "robotium-solo-4.1.1-SNAPSHOT.jar";
 	}
 	
 	// output directories
