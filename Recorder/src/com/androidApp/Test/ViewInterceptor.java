@@ -444,6 +444,7 @@ public class ViewInterceptor {
 			mActivity = activity;
 			Display display = mActivity.getWindowManager().getDefaultDisplay();
 			mCurrentRotation = display.getRotation();
+			mPreviousContentHeight = getContentHeight(mActivity.getWindow().getDecorView());
 		}
 		/**
 		 * unfortunately, there isn't an event for IME display/hide, so we have to guess by examining the content view
@@ -509,8 +510,8 @@ public class ViewInterceptor {
 		ViewGroup vg = (ViewGroup) decorView;
 		LinearLayout linearLayout = (LinearLayout) vg.getChildAt(0);
 		int contentHeight = 0;
-		for (int iChild = 0; iChild < vg.getChildCount(); iChild++) {
-			contentHeight += vg.getChildAt(iChild).getMeasuredHeight();
+		for (int iChild = 0; iChild < linearLayout.getChildCount(); iChild++) {
+			contentHeight += linearLayout.getChildAt(iChild).getMeasuredHeight();
 		}
 		return contentHeight;
 	}
