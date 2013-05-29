@@ -8,8 +8,6 @@ import java.io.StringBufferInputStream;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.IWorkspace;
-import org.eclipse.core.resources.IWorkspaceRoot;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
@@ -69,8 +67,6 @@ public class CreateRobotiumRecorder implements IObjectActionDelegate {
 		if (mSelection != null) {
 			try {
 				IProject project = (IProject) mSelection.getFirstElement();
-				IWorkspace workspace = project.getWorkspace();
-				IWorkspaceRoot workspaceRoot = workspace.getRoot();
 				IPath projectPath = project.getLocation();
 				File projectDir = projectPath.toFile();
 				
@@ -93,17 +89,17 @@ public class CreateRobotiumRecorder implements IObjectActionDelegate {
 				IProject testProject = EclipseUtility.createBaseProject(newProjectName);
 				
 				// create the .classpath, AndroidManifest.xml, .project, and project.properties files
-				createProjectProperties(testProject, projectParser, projectPropertiesScan);
-				createProject(testProject, projectParser);
-				createClasspath(testProject, projectParser);
-				createManifest(testProject, projectPropertiesScan, manifestParser);
+				createProjectProperties(testProject, projectPropertiesScan.getTarget());
+				createProject(testProject,  projectParser.getProjectName());
+				createClasspath(testProject, projectParser.getProjectName());
+				createManifest(testProject, projectPropertiesScan.getTarget(), manifestParser.getPackage(), manifestParser.getMinSDKVersion());
 
 				// create the java project, the test class output, and the "AllTests" driver which
 				// iterates over all the test cases in the folder, so we can run with a single-click
 				IJavaProject javaProject = EclipseUtility.createJavaNature(testProject);
 				createFolders(testProject);
-				createTestClass(testProject, javaProject, projectParser, manifestParser);
-				createAllTests(testProject, javaProject, manifestParser);
+				createTestClass(testProject, javaProject, manifestParser.getPackage(), manifestParser.getStartActivity());
+				createAllTests(testProject, javaProject, manifestParser.getPackage());
 				addLibrary(testProject);
 			} catch (Exception ex) {
 				MessageDialog.openInformation(
@@ -130,9 +126,24 @@ public class CreateRobotiumRecorder implements IObjectActionDelegate {
 	 * @throws CoreException
 	 * @throws IOException
 	 */
-	public void createClasspath(IProject testProject, ProjectParser projectParser) throws CoreException, IOException {
+	public static void createClasspath(IProject testProject, String projectName) throws CoreException, IOException {
 		String classpath = FileUtility.readTemplate(RecorderConstants.CLASSPATH_TEMPLATE);
-		classpath = classpath.replace(Constants.VariableNames.CLASSNAME, projectParser.getProjectName());
+		classpath = classpath.replace(Constants.VariableNames.CLASSNAME, projectName);
+		IFile file = testProject.getFile(Constants.Filenames.CLASSPATH);
+		InputStream is = new StringBufferInputStream(classpath);
+		file.create(is, IFile.FORCE, null);
+	}
+	
+	/**
+	 * add the project under test to the template .classpath file (binary APK version)
+	 * @param testProject selected android project that we want to create a recording for
+	 * @param projectParser parser for .project file.
+	 * @throws CoreException
+	 * @throws IOException
+	 */
+	public static void createBinaryClasspath(IProject testProject, String projectName) throws CoreException, IOException {
+		String classpath = FileUtility.readTemplate(Constants.Templates.BINARY_CLASSPATH_CREATERECORDER);
+		classpath = classpath.replace(Constants.VariableNames.CLASSNAME, projectName);
 		IFile file = testProject.getFile(Constants.Filenames.CLASSPATH);
 		InputStream is = new StringBufferInputStream(classpath);
 		file.create(is, IFile.FORCE, null);
@@ -141,18 +152,19 @@ public class CreateRobotiumRecorder implements IObjectActionDelegate {
 	/**
 	 * populate the template for the AndroidManifest.xml file
 	 * @param testProject android project under test.
-	 * @param projectPropertiesScan properties file, so we can get the android version if it's not specified in the manifest
-	 * @param manifestParser parser for the AndroidManifest.xml file under test.
+	 * @param android target
+	 * @param packageName from the manifest
+	 * @param minSDKVersion min-sdk-version from the manifest
 	 * @throws CoreException
 	 * @throws IOException
+	 * TODO: add target-sdk-version into manifest
 	 */
-	public void createManifest(IProject testProject, ProjectPropertiesScan projectPropertiesScan, ManifestParser manifestParser) throws CoreException, IOException, EmitterException {
+	public static void createManifest(IProject testProject, String target, String packageName, String minSDKVersion) throws CoreException, IOException, EmitterException {
 		String manifest = FileUtility.readTemplate(RecorderConstants.MANIFEST_TEMPLATE);
-		manifest = manifest.replace(Constants.VariableNames.CLASSPACKAGE, manifestParser.getPackage());
-		if (manifestParser.getMinSDKVersion() != null) {
-			manifest = manifest.replace(Constants.VariableNames.MIN_SDK_VERSION, manifestParser.getMinSDKVersion());
+		manifest = manifest.replace(Constants.VariableNames.CLASSPACKAGE, packageName);
+		if (minSDKVersion != null) {
+			manifest = manifest.replace(Constants.VariableNames.MIN_SDK_VERSION, minSDKVersion);
 		} else {
-			String target = projectPropertiesScan.getTarget();
 			int ichDash = target.indexOf('-');
 			if (ichDash == -1) {
 				throw new EmitterException("failed to find SDK target in project.properties or AndroidManifest.xml");
@@ -175,9 +187,9 @@ public class CreateRobotiumRecorder implements IObjectActionDelegate {
 	 * @throws CoreException
 	 * @throws IOException
 	 */
-	public void createProject(IProject testProject, ProjectParser projectParser) throws CoreException, IOException {
+	public static void createProject(IProject testProject, String projectName) throws CoreException, IOException {
 		String project = FileUtility.readTemplate(RecorderConstants.PROJECT_TEMPLATE);
-		project = project.replace(Constants.VariableNames.CLASSNAME, projectParser.getProjectName());
+		project = project.replace(Constants.VariableNames.CLASSNAME, projectName);
 		project = project.replace(Constants.VariableNames.MODE, Constants.Names.RECORDER);
 		IFile file = testProject.getFile(Constants.Filenames.PROJECT_FILENAME);
 		file.delete(false, null);
@@ -188,14 +200,13 @@ public class CreateRobotiumRecorder implements IObjectActionDelegate {
 	/**
 	 * create the project.properties file
 	 * @param testProject reference to the project
-	 * @param projectParser parsed information from .properties
-	 * @param propertiesScan scanned information from project.properties
+	 * @param target platform from project.properties
 	 * @throws CoreException
 	 * @throws IOException
 	 */
-	public void createProjectProperties(IProject testProject, ProjectParser projectParser, ProjectPropertiesScan propertiesScan) throws CoreException, IOException {
+	public static void createProjectProperties(IProject testProject, String target) throws CoreException, IOException {
 		String projectProperties = FileUtility.readTemplate(RecorderConstants.PROJECT_PROPERTIES_TEMPLATE);
-		projectProperties = projectProperties.replace(Constants.VariableNames.TARGET, propertiesScan.getTarget());
+		projectProperties = projectProperties.replace(Constants.VariableNames.TARGET, target);
 		EclipseUtility.writeString(testProject, Constants.Filenames.PROJECT_PROPERTIES_FILENAME, projectProperties);
 	}
 	
@@ -208,13 +219,13 @@ public class CreateRobotiumRecorder implements IObjectActionDelegate {
 	 * @throws CoreException
 	 * @throws IOException
 	 */
-	public void createAllTests(IProject 		testProject,
-							   IJavaProject 	javaProject, 
-							   ManifestParser	manifestParser) throws CoreException, IOException {
+	public static void createAllTests(IProject 			testProject,
+								      IJavaProject 		javaProject, 
+								      String 			packageName) throws CoreException, IOException {
 		String allTests = FileUtility.readTemplate(RecorderConstants.ALLTESTS_TEMPLATE);
-		allTests = allTests.replace(Constants.VariableNames.CLASSPACKAGE, manifestParser.getPackage());
+		allTests = allTests.replace(Constants.VariableNames.CLASSPACKAGE, packageName);
 		IFolder sourceFolder = testProject.getFolder(Constants.Dirs.SRC);
-		String packagePath = manifestParser.getPackage() + RecorderConstants.TEST_EXTENSION;
+		String packagePath = packageName + RecorderConstants.TEST_EXTENSION;
 		IPackageFragment pack = javaProject.getPackageFragmentRoot(sourceFolder).createPackageFragment(packagePath, false, null);
 		ICompilationUnit classFile = pack.createCompilationUnit(RecorderConstants.ALLTESTS_FILE, allTests, true, null);	
 	}
@@ -223,7 +234,7 @@ public class CreateRobotiumRecorder implements IObjectActionDelegate {
 	 * create the src, gen, and res folders
 	 * @param testProject
 	 */
-	public void createFolders(IProject testProject) {
+	public static void createFolders(IProject testProject) {
 		IFolder sourceFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.SRC);
 		IFolder resFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.RES);
 	}
@@ -232,34 +243,56 @@ public class CreateRobotiumRecorder implements IObjectActionDelegate {
 	 * create the java file which drives the test
 	 * @param testProject project 
 	 * @param javaProject java reference to the project so we can create packages and stuff
-	 * @param projectParser parsed data from .project file
-	 * @param manifestParser parsed data from AndroidManifest.xml file
+	 * @param packageName package name from manifest
+	 * @param startActivity start activity from manifest
 	 * @throws CoreException
 	 * @throws IOException
 	 */
-	public void createTestClass(IProject 		testProject, 
-								IJavaProject 	javaProject, 
-								ProjectParser 	projectParser,
-								ManifestParser 	manifestParser) throws CoreException, IOException {
+	public static void createTestClass(IProject 		testProject, 
+									   IJavaProject 	javaProject, 
+									   String			packageName,
+									   String			startActivity) throws CoreException, IOException {
 		String testClass = FileUtility.readTemplate(RecorderConstants.TESTCLASS_TEMPLATE);
-		testClass = testClass.replace(Constants.VariableNames.CLASSPACKAGE, manifestParser.getPackage());
-		testClass = testClass.replace(Constants.VariableNames.CLASSNAME, manifestParser.getStartActivity());
+		testClass = testClass.replace(Constants.VariableNames.CLASSPACKAGE, packageName);
+		testClass = testClass.replace(Constants.VariableNames.CLASSNAME, startActivity);
 		// write to the fully qualified path
 		IFolder sourceFolder = testProject.getFolder(Constants.Dirs.SRC);
-		String packagePath = manifestParser.getPackage() + RecorderConstants.TEST_EXTENSION;
+		String packagePath = packageName + RecorderConstants.TEST_EXTENSION;
 		IPackageFragment pack = javaProject.getPackageFragmentRoot(sourceFolder).createPackageFragment(packagePath, false, null);
-		String startActivity = manifestParser.getStartActivity();
 		String javaFile = startActivity + RecorderConstants.RECORDER_SUFFIX + "." + Constants.Extensions.JAVA;
 		ICompilationUnit classFile = pack.createCompilationUnit(javaFile, testClass, true, null);
  	}
+	/**
+	 * create the java file which drives the test
+	 * @param testProject project 
+	 * @param javaProject java reference to the project so we can create packages and stuff
+	 * @param packageName package name from manifest
+	 * @param startActivity start activity from manifest
+	 * @throws CoreException
+	 * @throws IOException
+	 */
+	public static void createBinaryTestClass(IProject 		testProject, 
+										     IJavaProject 	javaProject, 
+										     String			packageName,
+										     String			startActivity) throws CoreException, IOException {
+		String testClass = FileUtility.readTemplate(RecorderConstants.BINARY_TESTCLASS_TEMPLATE);
+		testClass = testClass.replace(Constants.VariableNames.CLASSPACKAGE, packageName);
+		testClass = testClass.replace(Constants.VariableNames.CLASSNAME, startActivity);
+		// write to the fully qualified path
+		IFolder sourceFolder = testProject.getFolder(Constants.Dirs.SRC);
+		String packagePath = packageName + RecorderConstants.TEST_EXTENSION;
+		IPackageFragment pack = javaProject.getPackageFragmentRoot(sourceFolder).createPackageFragment(packagePath, false, null);
+		String javaFile = startActivity + RecorderConstants.RECORDER_SUFFIX + "." + Constants.Extensions.JAVA;
+		ICompilationUnit classFile = pack.createCompilationUnit(javaFile, testClass, true, null);
+ 	}
+	
 	
 	/**
 	 * create the libs directory and put the recorder.jar file in it
 	 * @param testProject
 	 * @throws CoreException
 	 */
-	public void addLibrary(IProject testProject) throws CoreException {
-	
+	public static void addLibrary(IProject testProject) throws CoreException {
 		IFolder libFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.LIBS);
 		IFile file = libFolder.getFile(RecorderConstants.RECORDER_JAR);
 		InputStream fis = EmitRobotiumCode.class.getResourceAsStream("/" + RecorderConstants.RECORDER_JAR);

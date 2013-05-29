@@ -78,7 +78,7 @@ public class Constants {
 		public static final String PROJECT_PROPERTIES = "project.properties";
 		public static final String ANDROID_MANIFEST_XML = "AndroidManifest.xml";
 		public static final String CLASSPATH = "classpath.txt";
-		public static final String BINARY_CLASSPATH = "binary_classpath.txt";
+		public static final String BINARY_CLASSPATH_CREATERECORDER = "binary_classpath_createrecorder.txt";
 		public static final String GO_BACK = "go_back.txt";
 		public static final String EDIT_TEXT_ID = "edit_text_id.txt";
 		public static final String EDIT_TEXT_CLASS_INDEX = "edit_text_class_index.txt";
@@ -119,6 +119,7 @@ public class Constants {
 		public static final String WAIT_FOR_WEBVIEW_PAGE_ID = "wait_for_webview_page_id.txt";
 		public static final String WAIT_FOR_DIALOG_TO_OPEN = "wait_for_dialog_to_open.txt";
 		public static final String CANCEL_DIALOG_TEMPLATE = "dialog_cancel_template.txt";
+		public static final String BINARY_CLASSPATH = "binary_classpath.txt";
 	}
 	
 	// template %replace% variables
@@ -190,6 +191,7 @@ public class Constants {
 	// executables
 	public static class Executables {
 		public static final String ADB = "adb";
+		public static final String AAPT = "aapt";
 	}
 	// outfile file extension
 	public static class Extensions {

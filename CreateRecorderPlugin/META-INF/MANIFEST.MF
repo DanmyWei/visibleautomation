@@ -12,3 +12,7 @@ Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Import-Package: com.android.ide.eclipse.adt,
  org.eclipse.jdt.core
 Class-Path: ./libs/emitrobotiumcode.jar
+Export-Package: com.androidApp.emitter,
+ com.androidApp.util
+Bundle-ClassPath: libs/emitrobotiumcode.jar,
+ .

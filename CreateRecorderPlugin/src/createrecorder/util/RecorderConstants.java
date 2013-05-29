@@ -16,5 +16,8 @@ public class RecorderConstants {
 	public static final String ANDROID_SDK = ECLIPSE_ADT + ".sdk";
 	public static final String ADB = "adb";
 	public static final String DEVICE_EVENTS = "/sdcard/events";
+	public static final String ALL_TESTS_CREATETEST = "AllTests_createtest.txt";
+	public static final String BINARY_TESTCLASS_TEMPLATE = "binary_testclass_template_createrecorder.txt";
+	public static final String TEST_SUFFIX = "Test";
 
 }

@@ -23,7 +23,7 @@ import org.eclipse.jdt.core.JavaCore;
 import com.android.ide.eclipse.adt.AdtConstants;
 import com.androidApp.emitter.EmitRobotiumCode;
 import com.androidApp.emitter.EmitterException;
-import com.androidApp.emitter.EmitRobotiumCode.LineAndTokens;
+import com.androidApp.emitter.EmitRobotiumCodeSource.LineAndTokens;
 import com.androidApp.util.Constants;
 import com.androidApp.util.StringUtils;
 
