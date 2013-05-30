@@ -871,7 +871,7 @@ public class EmitRobotiumCodeSource {
 	 * @param bw output BufferedWriter
 	 * @throws IOException
 	 */
-	public static void writeHeader(String classPath, String testPackage, String testClassName, String className, BufferedWriter bw) throws IOException {
+	public void writeHeader(String classPath, String testPackage, String testClassName, String className, BufferedWriter bw) throws IOException {
 		String header = FileUtility.readTemplate(Constants.Templates.HEADER);
 		header = header.replace(Constants.VariableNames.TESTPACKAGE, testPackage);
 		header = header.replace(Constants.VariableNames.CLASSPATH, classPath);
@@ -879,24 +879,7 @@ public class EmitRobotiumCodeSource {
 		header = header.replace(Constants.VariableNames.TESTCLASSNAME, testClassName);
 		bw.write(header);
 	}
-	
-	/**
-	 * write the header on the first activity (binary APK case
-	 * @param testPackage com.package.name for the test application
-	 * @param testClassName classNameTest<index>
-	 * @param className name of the test application
-	 * @param bw output BufferedWriter
-	 * @throws IOException
-	 */
-	public static void writeBinaryHeader(String classPath, String testPackage, String testClassName, String className, BufferedWriter bw) throws IOException {
-		String header = FileUtility.readTemplate(Constants.Templates.BINARY_HEADER);
-		header = header.replace(Constants.VariableNames.TESTPACKAGE, testPackage);
-		header = header.replace(Constants.VariableNames.CLASSPATH, classPath);
-		header = header.replace(Constants.VariableNames.CLASSNAME, className);
-		header = header.replace(Constants.VariableNames.TESTCLASSNAME, testClassName);
-		bw.write(header);
-	}
-	
+		
 	/**
 	 * write the trailer on completion.
 	 * @param bw output BufferedWriter

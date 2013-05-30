@@ -97,11 +97,7 @@ public class EmitRobotiumCode {
 		
 		// write the header template, the emitter output, and the trailer temoplate.
 		BufferedWriter bw = new BufferedWriter(new FileWriter(outputCodeFileName));
-		if (fBinary) {
-			EmitRobotiumCodeSource.writeBinaryHeader(emitter.getApplicationClassPath(), testClassPath, testClassName, emitter.getApplicationClassName(), bw);
-		} else {
-			EmitRobotiumCodeSource.writeHeader(emitter.getApplicationClassPath(), testClassPath, testClassName, emitter.getApplicationClassName(), bw);
-		}
+		emitter.writeHeader(emitter.getApplicationClassPath(), testClassPath, testClassName, emitter.getApplicationClassName(), bw);
 		if (options.mfWriteFunctions) {
 			SplitFunction splitter = new SplitFunction(options.mMinLines);
 			splitter.writeFunctions(bw, "test" + targetProject, 0, lines);
