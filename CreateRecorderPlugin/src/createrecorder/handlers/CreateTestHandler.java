@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.util.List;
 
+import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.resources.IFolder;
@@ -38,7 +39,12 @@ import createrecorder.util.RecorderConstants;
 import createrecorder.util.TestClassDialog;
 import createrecorderplugin.popup.actions.GenerateRobotiumTestCode;
 
-public class CreateTestHandler {
+/**
+ * eclipse plugin handler to create the test project.
+ * @author Matthew
+ *
+ */
+public class CreateTestHandler extends AbstractHandler {
 	public Object execute(ExecutionEvent event) throws ExecutionException {
 		IWorkbenchWindow window = HandlerUtil.getActiveWorkbenchWindowChecked(event);
 		Shell shell = window.getShell();
@@ -104,7 +110,7 @@ public class CreateTestHandler {
 				GenerateRobotiumTestCode.writeBuildXML(testProject, emitter.getApplicationClassPath());
 				GenerateRobotiumTestCode.writeManifest(testProject, testClassName, testClassPath, emitter.getApplicationPackage());
 				GenerateRobotiumTestCode.writeResources(testProject);				
-				GenerateRobotiumTestCode.writeClasspath(testProject,  manifestInformation.mApplicationName, Constants.Filenames.ROBOTIUM_JAR);
+				GenerateRobotiumTestCode.writeBinaryClasspath(testProject, Constants.Filenames.ROBOTIUM_JAR);
 				GenerateRobotiumTestCode.copyJarToLibs(testProject, Constants.Filenames.UTILITY_JAR);
 				GenerateRobotiumTestCode.copyJarToLibs(testProject, Constants.Filenames.ROBOTIUM_JAR);
 
@@ -115,7 +121,7 @@ public class CreateTestHandler {
 				pack.close();
 			}
 			// write out the test code, first to a temporary file, then to the actual project file.
-			GenerateRobotiumTestCode.writeTestCode(emitter, lines, packagePath, testClassName, outputCodeFileName);
+			GenerateRobotiumTestCode.writeTestCodeBinary(emitter, lines, packagePath, testClassName, outputCodeFileName);
 			IJavaProject javaProject = JavaCore.create(testProject);
 			IPackageFragmentRoot packRoot = javaProject.getPackageFragmentRoot(srcFolder);
 			packRoot.open(null);

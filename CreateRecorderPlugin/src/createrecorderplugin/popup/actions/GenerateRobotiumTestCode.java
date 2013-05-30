@@ -37,6 +37,7 @@ import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.preferences.ScopedPreferenceStore;
 
 import com.androidApp.emitter.EmitRobotiumCode;
+import com.androidApp.emitter.EmitRobotiumCodeBinary;
 import com.androidApp.emitter.EmitRobotiumCodeSource;
 import com.androidApp.emitter.EmitRobotiumCodeSource.LineAndTokens;
 import com.androidApp.emitter.SetupRobotiumProject;
@@ -277,6 +278,19 @@ public class GenerateRobotiumTestCode implements IObjectActionDelegate {
 		String classpath = SetupRobotiumProject.createClasspath(projectName, robotiumJar);
 		EclipseUtility.writeString(project, Constants.Filenames.CLASSPATH, classpath);
 	}
+	
+	/**
+	 * generate the .classpath file for building the project.  Just use the robotum jar, since we
+	 * pick up the binary application name
+	 * for eclipse/ant, and the robotium jar in the libs directory.
+	 * @param projectName name of the target project
+	 * @param name of the robotium-solo-X.XX.jar
+	 * @throws IOException if the file can't be written
+	 */
+	public static void writeBinaryClasspath(IProject project, String robotiumJar) throws IOException, CoreException {
+		String classpath = SetupRobotiumProject.createClasspathBinary(robotiumJar);
+		EclipseUtility.writeString(project, Constants.Filenames.CLASSPATH, classpath);
+	}
 
 	/**
 	 * write out the AllTests.java to the output class directory src\foo\bar\path
@@ -347,12 +361,23 @@ public class GenerateRobotiumTestCode implements IObjectActionDelegate {
 	public static void writeTestCode(EmitRobotiumCodeSource emitter, List<LineAndTokens> lines, String packagePath, String testClassName, String outputCodeFileName) throws IOException {
 		// write the header template, the emitter output, and the trailer temoplate.
 		BufferedWriter bw = new BufferedWriter(new FileWriter(outputCodeFileName));
-		EmitRobotiumCodeSource.writeHeader(emitter.getApplicationClassPath(), packagePath, testClassName, emitter.getApplicationClassName(), bw);
+		emitter.writeHeader(emitter.getApplicationClassPath(), packagePath, testClassName, emitter.getApplicationClassName(), bw);
 		String testFunction = FileUtility.readTemplate(Constants.Templates.TEST_FUNCTION);
 		bw.write(testFunction);
 		EmitRobotiumCodeSource.writeLines(bw, lines);
 		EmitRobotiumCodeSource.writeTrailer(bw);
 		bw.close();
-
+	}	
+	
+	public static void writeTestCodeBinary(EmitRobotiumCodeBinary emitter, List<LineAndTokens> lines, String packagePath, String testClassName, String outputCodeFileName) throws IOException {
+		// write the header template, the emitter output, and the trailer temoplate.
+		BufferedWriter bw = new BufferedWriter(new FileWriter(outputCodeFileName));
+		emitter.writeHeader(emitter.getApplicationClassPath(), packagePath, testClassName, emitter.getApplicationClassName(), bw);
+		String testFunction = FileUtility.readTemplate(Constants.Templates.BINARY_TEST_FUNCTION);
+		bw.write(testFunction);
+		EmitRobotiumCodeSource.writeLines(bw, lines);
+		EmitRobotiumCodeSource.writeTrailer(bw);
+		bw.close();
 	}			
+
 }
