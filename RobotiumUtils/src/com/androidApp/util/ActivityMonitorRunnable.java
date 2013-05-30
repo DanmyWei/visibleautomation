@@ -82,9 +82,9 @@ public class ActivityMonitorRunnable implements Runnable {
 				if (!mActivityStack.isEmpty()) {
 					activityB = mActivityMonitor.waitForActivity();
 				}
-				if (!inActivityStack(activityA)) {
+				if (!atTopOfActivityStack(activityA)) {
 					addActivityToStack(activityA);
-				} else if (!inActivityStack(activityB)) {
+				} else if (!atTopOfActivityStack(activityB)) {
 					addActivityToStack(activityB);
 				} else {
 					removeActivityFromStack(activityA);
@@ -195,6 +195,24 @@ public class ActivityMonitorRunnable implements Runnable {
 			}
 		}
 		return null;
+	}
+	
+	/**
+	 * is the specified activity at the top of the activity stack?
+	 * @param activity
+	 * @return
+	 */
+	public boolean atTopOfActivityStack(Activity activity) {
+		synchronized(mActivityStack) {
+			if ((mActivityStack != null) && !mActivityStack.isEmpty()) {
+				ActivityInfo topInfo = mActivityStack.peek();
+				WeakReference<Activity> ref = topInfo.mRefActivity;
+				if (ref.get() == activity) {
+					return true;
+				}
+			}
+		}
+		return false;		
 	}
 	
 	/**
