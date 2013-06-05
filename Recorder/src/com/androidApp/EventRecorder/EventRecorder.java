@@ -2,8 +2,9 @@ package com.androidApp.EventRecorder;
 
 import java.io.IOException;
 
-import com.androidApp.LogService.LogService;
 import com.androidApp.Utility.Constants;
+import com.androidApp.recorderInterface.EventRecorderInterface;
+
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -18,25 +19,24 @@ import android.view.View;
  * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  *
  */
-public class EventRecorder {
+public class EventRecorder extends EventRecorderInterface {
 	protected static final String	TAG = "EventRecorder";
 	public static final float		GUESS_IME_HEIGHT = 0.25F;						// guess that IME takes up this amount of the screen.
 	protected int 					mHashCode = 0x0;								// for fast tracking of view tree changes
 	protected ViewReference			mViewReference;
 	protected boolean				mfVisualDebug = true;							// enable visual debugging.
 	protected Context				mContext;										// to send requests to service
-	protected String				mRecordFileName;								// name of the file in the sdcard
-	
 	// constructor which opens the recording file, which is stashed somewhere on the sdcard.
-	public EventRecorder(Context context, String recordFileName) throws IOException {	
+	public EventRecorder(Context context, String recordFileName) throws IOException {
+		super(context, recordFileName);
 		mContext = context;
 		mViewReference = new ViewReference();
-		mRecordFileName = recordFileName;
-        Intent i = new Intent(LogService.INITIALIZE);
-        i.putExtra(LogService.FILENAME, mRecordFileName);
-        mContext.startService(i);
 	}
 	
+	/**
+	 * wrapper functions to add references for id's and strings.
+	 * @param rdotid
+	 */
 	public void addRdotID(Object rdotid) {
 		mViewReference.addRdotID(rdotid);
 	}
@@ -49,6 +49,10 @@ public class EventRecorder {
 		return mViewReference;
 	}
 	
+	/**
+	 * enable/disable visual debugging
+	 * @return
+	 */
 	public boolean getVisualDebug() {
 		return mfVisualDebug;
 	}
@@ -56,38 +60,12 @@ public class EventRecorder {
 	public void setVisualDebug(boolean f) {
 		mfVisualDebug = f;
 	}
-	
-    public void writeLog(String filename, String s) {
-        if (mContext != null) {
-            Intent i = new Intent(LogService.LOG);
-            i.putExtra(LogService.FILENAME, filename);
-            i.putExtra(LogService.MESSAGE, s);
-            mContext.startService(i);
-        } else {
-        	Log.e(TAG, "writeLog: context must be initialized");
-        }
-    }
-
-	
+		
 	// write a record to the output
 	public synchronized void writeRecord(String s)  {
 		writeLog(mRecordFileName, s);
 	}
 		
-	/**
-	 * write an event with time in milliseconds <event>:<time>
-	 * @param event event to write out (from Constants.EventTags)
-	 */
-	public void writeRecordTime(String event) {
-		long time = SystemClock.uptimeMillis();
-		writeRecord(event + ":" + time);
-	}
-	
-	// wrapper to write a record with an event, time and message to the system	
-	public void writeRecord(String event, String message) {
-		long time = SystemClock.uptimeMillis();
-		writeRecord(event + ":" + time + "," + message);
-	}
 	
 	// wrapper for wrapper to write a record with an event, time view description, and message to the system	
 	public void writeRecord(String event, View v, String message) {

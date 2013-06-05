@@ -476,21 +476,6 @@ public class ViewInterceptor {
 				mEventRecorder.writeRotation(mActivity, newRotation);
 				mCurrentRotation = newRotation;
 			}
-			boolean fIMEDisplayed = isIMEDisplayed(mActivity.getWindow().getDecorView());
-	        // this is a terrible hack to see if the IME has been hidden or displayed by this layout.
-			// NOTE: we have to track state, so we don't constantly say "IME Displayed/Hidden" on each layout
-	        if (!mIMEWasDisplayed && (getFocusedView() != null) && fIMEDisplayed) {
-	        	mIMEWasDisplayed = true;
-				mEventRecorder.writeRecord(Constants.EventTags.SHOW_IME, getFocusedView(), "IME displayed");
-	        } else if (mIMEWasDisplayed && !fIMEDisplayed) {
-	        	mIMEWasDisplayed = false;
-	        	if (getLastKeyAction() == KeyEvent.KEYCODE_BACK) {
-	        		mEventRecorder.writeRecord(Constants.EventTags.HIDE_IME_BACK_KEY, getFocusedView(), "IME hidden by back key pressed");
-	        		setLastKeyAction(-1);
-	        	} else {
-	        		mEventRecorder.writeRecord(Constants.EventTags.HIDE_IME, getFocusedView(), "IME hidden");
-	        	}
-	        }
 	        
 	        // recursively generate the hashcode for this view hierarchy, and re-intercept if it's changed.
 			int hashCode = viewTreeHashCode(mActivity.getWindow().getDecorView());

@@ -185,6 +185,7 @@ public class Constants {
 		public static final String DRAWABLE = "drawable";
 		public static final String LIBS = "libs";
 		public static final String PLATFORM_TOOLS = "platform-tools";
+		public static final String PLATFORM_TOOLS_22 = "build-tools/17.0.0";
 		public static final String GEN = "gen";
 	}
 	

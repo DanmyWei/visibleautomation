@@ -4,6 +4,7 @@ package com.androidApp.Test;
 import java.io.IOException;
 
 import android.app.Activity;
+import android.content.IntentFilter;
 import android.test.ActivityInstrumentationTestCase2;
 import android.util.Log;
 

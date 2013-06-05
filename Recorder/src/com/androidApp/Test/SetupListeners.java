@@ -18,6 +18,7 @@ import android.widget.PopupWindow;
 import android.widget.Spinner;
 
 import com.androidApp.EventRecorder.EventRecorder;
+import com.androidApp.Intercept.IMEMessageListener;
 import com.androidApp.Intercept.InterceptKeyViewMenu;
 import com.androidApp.Intercept.MagicFrame;
 import com.androidApp.Intercept.MagicFramePopup;
@@ -43,6 +44,7 @@ public class SetupListeners {
 	protected Context						mContext;							// to communicate with the log service
 	protected Instrumentation				mInstrumentation;
 	protected String						mActivityName;
+	protected IMEMessageListener			mIMEMessageListener;
 
 	public SetupListeners(Instrumentation instrumentation, Class<? extends Activity> activityClass) throws Exception {
 		mInstrumentation = instrumentation;
@@ -54,6 +56,9 @@ public class SetupListeners {
 		mContext = context;
 		mRecorder = new EventRecorder(mContext, "events.txt");
 		mViewInterceptor = new ViewInterceptor(mRecorder);
+		mIMEMessageListener = new IMEMessageListener(mViewInterceptor, mRecorder);
+		Thread thread = new Thread(mIMEMessageListener);
+		thread.start();
 	}
 	
 	/**

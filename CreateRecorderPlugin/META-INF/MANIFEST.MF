@@ -1,18 +1,18 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: CreateRecorderPlugin
-Bundle-SymbolicName: CreateRecorderPlugin; singleton:=true
+Bundle-SymbolicName: CreateRecorderPlugin;singleton:=true
 Bundle-Version: 1.0.0.qualifier
+Bundle-ClassPath: libs/emitrobotiumcode.jar,
+ CreateRecorderPlugin
 Bundle-Activator: createrecorderplugin.Activator
+Export-Package: com.androidApp.emitter,
+ com.androidApp.util
 Require-Bundle: org.eclipse.ui,
  org.eclipse.core.runtime,
  org.eclipse.core.resources
-Bundle-ActivationPolicy: lazy
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Bundle-ActivationPolicy: lazy
 Import-Package: com.android.ide.eclipse.adt,
  org.eclipse.jdt.core
 Class-Path: ./libs/emitrobotiumcode.jar
-Export-Package: com.androidApp.emitter,
- com.androidApp.util
-Bundle-ClassPath: libs/emitrobotiumcode.jar,
- .

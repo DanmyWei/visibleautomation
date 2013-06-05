@@ -19,5 +19,8 @@ public class RecorderConstants {
 	public static final String ALL_TESTS_CREATETEST = "AllTests_createtest.txt";
 	public static final String BINARY_TESTCLASS_TEMPLATE = "binary_testclass_template_createrecorder.txt";
 	public static final String TEST_SUFFIX = "Test";
-
+	public static final String KEYBOARD_APK = "ImePreferences.apk";
+	public static final String KEYBOARD_PACKAGE = "com.example.android.softkeyboard";
+	public static final String LOGSERVICE_APK = "LogService.apk";
+	public static final String LOGSERVICE_PACKAGE = "com.androidApp.logService";
 }

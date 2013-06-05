@@ -33,6 +33,7 @@ import com.androidApp.parser.ProjectParser;
 import com.androidApp.parser.ProjectPropertiesScan;
 import com.androidApp.util.Constants;
 
+import createproject.CreateRobotiumRecorderBinary;
 import createrecorder.util.EclipseUtility;
 import createrecorder.util.Exec;
 import createrecorder.util.ManifestInformation;
@@ -40,7 +41,7 @@ import createrecorder.util.PackageUtils;
 import createrecorder.util.Pair;
 import createrecorder.util.RecorderConstants;
 import createrecorder.util.TestClassDialog;
-import createrecorderplugin.popup.actions.CreateRobotiumRecorder;
+import createrecorderplugin.popup.actions.CreateRobotiumRecorderAction;
 
 /**
  * Our sample handler extends AbstractHandler, an IHandler base class.
@@ -59,7 +60,7 @@ public class CreateRecorderHandler extends AbstractHandler {
 	 * @return
 	 */
 	String[] getDevicePackages() {
-		return Exec.getAdbCommandOutput("shell pm list -3");
+		return Exec.getAdbCommandOutput("shell pm list packages -3");
 	}
 	
 	/**
@@ -72,18 +73,33 @@ public class CreateRecorderHandler extends AbstractHandler {
 		if (packagePath != null) {	
 			IPreferencesService service = Platform.getPreferencesService();
 			String androidSDK = service.getString(RecorderConstants.ECLIPSE_ADT, RecorderConstants.ANDROID_SDK, null, null);
+			
+			// aapt has moved from android-sdks/platform-tools to android-sdks/build-tools/17.0.0 in version 21.
 			String aaptPath = androidSDK + File.separator + Constants.Dirs.PLATFORM_TOOLS + File.separator + Constants.Executables.AAPT;
-			String[] manifestLines = Exec.getShellCommandOutput(aaptPath + " dump --values xmltree " + PackageUtils.getPackageName(packagePath) + " AndroidManifest.xml");
-			ManifestInformation manifestInformation = new ManifestInformation(manifestLines);
-			if (!manifestInformation.verify()) {
+			File aaptFile = new File(aaptPath);
+			if (!aaptFile.exists()) {
+				aaptPath = androidSDK + File.separator + Constants.Dirs.PLATFORM_TOOLS_22 + File.separator + Constants.Executables.AAPT;
+			}
+			aaptFile = new File(aaptPath);
+			if (!aaptFile.exists()) {
 				MessageDialog.openInformation(
 						shell,
 						"CreateRecorderPlugin",
-						"failed to parse AndroidManifest.xml " + manifestInformation.errorMessage());
-			
+						"could not find aapt in " + aaptPath);
+				
 			} else {
-				// extract the packge so we can get the AndroidManifest.xml file.
-				createProject(shell, manifestInformation);
+				String[] manifestLines = Exec.getShellCommandOutput(aaptPath + " dump --values xmltree " + PackageUtils.getPackageName(packagePath) + " AndroidManifest.xml");
+				ManifestInformation manifestInformation = new ManifestInformation(manifestLines);
+				if (!manifestInformation.verify()) {
+					MessageDialog.openInformation(
+							shell,
+							"CreateRecorderPlugin",
+							"failed to parse AndroidManifest.xml " + manifestInformation.errorMessage());
+				
+				} else {
+					// extract the packge so we can get the AndroidManifest.xml file.
+					createProject(shell, manifestInformation);
+				}
 			}
 		}
 		return null;
@@ -101,21 +117,22 @@ public class CreateRecorderHandler extends AbstractHandler {
 			// create the new project
 			String newProjectName = projectName + RecorderConstants.RECORDER_SUFFIX;
 			IProject testProject = EclipseUtility.createBaseProject(newProjectName);
+			CreateRobotiumRecorderBinary createRecorder = new CreateRobotiumRecorderBinary();
 			
 			// create the .classpath, AndroidManifest.xml, .project, and project.properties files
 			String target = "target=android-" + Integer.toString(manifestInformation.mTargetSDKVersion);
-			CreateRobotiumRecorder.createProjectProperties(testProject, target);
-			CreateRobotiumRecorder.createProject(testProject, manifestInformation.mApplicationName);
-			CreateRobotiumRecorder.createBinaryClasspath(testProject, manifestInformation.mApplicationName);
-			CreateRobotiumRecorder.createManifest(testProject, target, manifestInformation.mPackage, Integer.toString(manifestInformation.mMinSDKVersion));
+			createRecorder.createProjectProperties(testProject, target);
+			createRecorder.createProject(testProject, manifestInformation.mApplicationName);
+			createRecorder.createClasspath(testProject, manifestInformation.mApplicationName);
+			createRecorder.createManifest(testProject, target, manifestInformation.mPackage, Integer.toString(manifestInformation.mMinSDKVersion));
 
 			// create the java project, the test class output, and the "AllTests" driver which
 			// iterates over all the test cases in the folder, so we can run with a single-click
 			IJavaProject javaProject = EclipseUtility.createJavaNature(testProject);
-			CreateRobotiumRecorder.createFolders(testProject);
-			CreateRobotiumRecorder.createBinaryTestClass(testProject, javaProject, manifestInformation.mPackage, manifestInformation.mStartActivityName);
-			CreateRobotiumRecorder.createAllTests(testProject, javaProject, manifestInformation.mPackage);
-			CreateRobotiumRecorder.addLibrary(testProject);
+			createRecorder.createFolders(testProject);
+			createRecorder.createTestClass(testProject, javaProject, manifestInformation.mPackage, manifestInformation.mStartActivityName);
+			createRecorder.createAllTests(testProject, javaProject, manifestInformation.mPackage);
+			createRecorder.addLibrary(testProject);
 		} catch (Exception ex) {
 			MessageDialog.openInformation(
 					shell,

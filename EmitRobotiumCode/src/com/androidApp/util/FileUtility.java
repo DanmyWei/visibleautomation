@@ -117,6 +117,25 @@ public class FileUtility {
 	}
 
 	/**
+	 * write a resource out as a file.
+	 * @param resourceName name of file 
+	 * @throws IOException
+	 */
+	public static void writeResource(String resourceName) throws IOException {
+		InputStream fis = EmitRobotiumCode.class.getResourceAsStream("/" + resourceName);
+		int size = fis.available();
+		byte[] data = new byte[size];
+		int nbytesRead = fis.read(data);
+		if (nbytesRead != size) {
+			throw new IOException("size not equal " + size + " !=" + nbytesRead);
+		}
+		fis.close();
+		FileOutputStream fos = new FileOutputStream(resourceName);
+		fos.write(data, 0,nbytesRead);
+		fos.close();
+	}
+
+	/**
 	 * copy a file from sourcePath to destPath
 	 * @param sourcePath
 	 * @param destPath

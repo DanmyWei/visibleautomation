@@ -55,7 +55,7 @@ public class EmitRobotiumCode {
 			fBinary = args[2].equals("binary");
 		}
 		String outputCodeFileName = Constants.Filenames.OUTPUT;
-		EmitRobotiumCodeSource emitter = null;
+		IEmitCode emitter = null;
 		if (fBinary) {
 			emitter = new EmitRobotiumCodeBinary();
 		} else {
@@ -77,7 +77,7 @@ public class EmitRobotiumCode {
 		eventsFileName = SetupRobotiumProject.getEventsFile(eventsFileName);
 
 		// generate the test code.
-		List<EmitRobotiumCodeSource.LineAndTokens> lines = EmitRobotiumCodeSource.generateTestCode(emitter, eventsFileName);
+		List<EmitRobotiumCodeSource.LineAndTokens> lines = emitter.generateTestCode(emitter, eventsFileName);
 
 		if (emitter.getApplicationClassPath() == null) {
 			System.err.println("unable to generate output code, no activity reference");
@@ -101,11 +101,11 @@ public class EmitRobotiumCode {
 		if (options.mfWriteFunctions) {
 			SplitFunction splitter = new SplitFunction(options.mMinLines);
 			splitter.writeFunctions(bw, "test" + targetProject, 0, lines);
-			EmitRobotiumCodeSource.writeClassTrailer(bw);
+			emitter.writeClassTrailer(bw);
 		} else {
 			emitter.writeFunctionHeader(bw);
-			EmitRobotiumCodeSource.writeLines(bw, lines);
-			EmitRobotiumCodeSource.writeTrailer(bw);
+			emitter.writeLines(bw, lines);
+			emitter.writeTrailer(bw);
 		}
 		
 		bw.close();

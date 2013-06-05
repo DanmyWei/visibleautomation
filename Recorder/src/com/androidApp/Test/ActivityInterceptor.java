@@ -13,6 +13,7 @@ import com.androidApp.Utility.Constants;
 import android.app.Activity;
 import android.app.Instrumentation;
 import android.app.Instrumentation.ActivityMonitor;
+import android.content.Context;
 import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
@@ -143,6 +144,7 @@ public class ActivityInterceptor {
 					// no events have been recorded yet for this activity.
 					RecordListener.setEventLatch(false);
 					if (fStart) {
+
 						Log.i(TAG, "start case activity = " + activityA);
 						// tell instrumentation that it can go ahead and start the first activity.  We're ready for anything.
 						synchronized (this) {
@@ -447,3 +449,4 @@ public class ActivityInterceptor {
 		}
 	}
 }
+
