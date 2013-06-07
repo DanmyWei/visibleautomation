@@ -24,6 +24,10 @@ import com.android.ide.eclipse.adt.AdtConstants;
 import com.androidApp.emitter.EmitRobotiumCode;
 import com.androidApp.util.StringUtils;
 
+/**
+ * Utility functions for the eclipse plugin
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ */
 public class EclipseUtility {
 
 	/**

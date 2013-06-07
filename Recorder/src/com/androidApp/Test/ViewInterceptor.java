@@ -57,6 +57,7 @@ import com.androidApp.Utility.ViewExtractor;
 
 /**
  * class to install the interceptors in the view event listeners
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  */
 public class ViewInterceptor {
 	protected static final String	TAG = "ViewInterceptor";

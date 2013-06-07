@@ -3,6 +3,7 @@ package createrecorder.util;
 /**
  * utility functions for processing package names and paths
  * @author Matthew
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  *
  */
 public class PackageUtils {

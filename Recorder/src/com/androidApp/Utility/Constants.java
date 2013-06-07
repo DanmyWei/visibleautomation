@@ -3,8 +3,7 @@ package com.androidApp.Utility;
 /**
  * constants used in the recorder, categorized by use
  * @author Matthew
- *  * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
-
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  *
  */
 public class Constants {

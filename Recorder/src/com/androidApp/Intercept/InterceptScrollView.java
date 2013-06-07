@@ -8,7 +8,9 @@ import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 
-// TODO: defunct: remove this class
+/* TODO: defunct: remove this class
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ */
 public class InterceptScrollView extends View {
 	private static final String TAG = "InterceptScrollView";
 	protected int				mTop;

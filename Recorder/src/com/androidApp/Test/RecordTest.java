@@ -8,7 +8,7 @@ import android.util.Log;
 
 /**
  * record events in an activity. In short, be awesome.
- * @author matreyno
+ * @author matthew
  *
  * @param <T> activity being subjected to recording
  * This uses a thread which waits on events from an activity monitor to track activity forward and back events.  
@@ -18,6 +18,7 @@ import android.util.Log;
  * Since dialogs can be popped up at any time, and they aren't picked up by the layout listener, we had to create a timer task
  * which polls for newly created dialogs in the current activity.  Unfortunately, the event handlers are member functions of
  * activity, so we can't intercept them, except with methods that are highly intrusive.
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  */
 public abstract class RecordTest<T extends Activity> extends ActivityInstrumentationTestCase2<T> {
 	private static final String 			TAG = "RecordTest";

@@ -12,7 +12,9 @@ import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 /**
+ * parse the Project file for the project name
  * @author Matthew
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  *
  */
 public class ProjectParser extends Parser {

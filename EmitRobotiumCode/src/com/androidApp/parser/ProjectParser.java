@@ -13,6 +13,7 @@ import org.xml.sax.helpers.DefaultHandler;
 
 /**
  * @author Matthew
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  *
  */
 public class ProjectParser extends Parser {

@@ -16,6 +16,7 @@ import org.xml.sax.helpers.DefaultHandler;
  * activity, and launch intent filters.  It's mostly a SAXParser based on the Parser class, which manages the XML tags
  * We just match against the fully qualified tags of the form com.foo.bar
  * @author matthew
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  *
  */
 public class ManifestParser extends Parser {

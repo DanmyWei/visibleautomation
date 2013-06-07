@@ -47,6 +47,7 @@ import createrecorderplugin.popup.actions.CreateRobotiumRecorderAction;
  * Our sample handler extends AbstractHandler, an IHandler base class.
  * @see org.eclipse.core.commands.IHandler
  * @see org.eclipse.core.commands.AbstractHandler
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  */
 public class CreateRecorderHandler extends AbstractHandler {
 	/**

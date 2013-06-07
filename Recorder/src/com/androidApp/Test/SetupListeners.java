@@ -27,6 +27,10 @@ import com.androidApp.Utility.ReflectionUtils;
 import com.androidApp.Utility.TestUtils;
 import com.androidApp.randomtest.RandTest;
 
+/**
+ * class to install listeners in the view hierarchy
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ */
 public class SetupListeners {
 	private static final String 			TAG = "SetupListeners";
 	private static final long				DIALOG_SYNC_TIME = 50;				// test for dialogs 20x second.
@@ -217,7 +221,7 @@ public class SetupListeners {
 
 	/**
 	 * when the activity is added to the stack, walk through the view hierarchy and intercept the listeners for each view.
-	 * @author matreyno
+	 * @author matthew
 	 *
 	 */
 	public class InterceptDialogRunnable implements Runnable {

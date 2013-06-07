@@ -25,7 +25,6 @@ public class ApiDemosTest extends RecordTest<ApiDemos> {
 	}
 	
 	public void setUp() throws Exception { 
-		setActivityClass(ApiDemos.class);
 		super.setUp();
 	}
 }

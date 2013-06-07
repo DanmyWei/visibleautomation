@@ -7,7 +7,10 @@ import java.io.IOException;
 import com.androidApp.util.Constants;
 import com.androidApp.util.FileUtility;
 import com.androidApp.util.StringUtils;
-
+/*
+ * utilities to set up a robotium project in eclipse
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ */
 public class SetupRobotiumProject {
 	/**
 	 * retains parsed options

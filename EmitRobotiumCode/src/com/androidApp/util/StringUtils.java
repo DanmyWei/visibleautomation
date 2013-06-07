@@ -7,9 +7,14 @@ import java.io.InputStreamReader;
 import java.util.Iterator;
 import java.util.List;
 
+/**
+ * general string utilities
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ */
 public class StringUtils {
-	
-	
+  	/**
+  	 * is s null or an empty string?
+   	 */	
 	public static boolean isEmpty(String s) {
 		return (s == null) || s.equals("");
 	}

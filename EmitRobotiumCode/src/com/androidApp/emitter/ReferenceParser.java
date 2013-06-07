@@ -11,7 +11,7 @@ import com.androidApp.util.StringUtils;
  * the class of the view, and its index relative to the root view, or a parent with a unique id, or for
  * text views, a string, and the unique id of its ancestor.
  * @author Matthew
- *
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  */
 public class ReferenceParser {
 	public enum ReferenceType {

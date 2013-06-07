@@ -15,6 +15,10 @@ import org.omg.CORBA_2_3.portable.OutputStream;
 
 import com.androidApp.emitter.EmitRobotiumCode;
 
+/**
+ * file utilities used in the robotium code emitter
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ */
 public class FileUtility {
 	// I'm so lazy, but I'm lazy-fast
 	protected static final String TAG = "FileUtility";

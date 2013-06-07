@@ -3,6 +3,11 @@ package createrecorderplugin.parser;
 import java.util.Stack;
 import org.xml.sax.helpers.DefaultHandler;
 
+/**
+ * SAXParser DefaultHandler extension which maintains a stack of the XML tags
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ */
+
 public class Parser extends DefaultHandler {
 	protected Stack<String> mTokenStack;
 	

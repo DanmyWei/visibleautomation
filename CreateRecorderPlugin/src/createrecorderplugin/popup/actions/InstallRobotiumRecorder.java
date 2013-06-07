@@ -17,6 +17,10 @@ import com.androidApp.util.FileUtility;
 
 import createrecorder.util.Exec;
 
+/**
+ * install the custom keyboard and log service components for recording.
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ */
 public class InstallRobotiumRecorder implements IObjectActionDelegate {
 	
 	private Shell mShell;

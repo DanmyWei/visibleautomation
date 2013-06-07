@@ -5,7 +5,8 @@ import org.xml.sax.helpers.DefaultHandler;
 
 /**
  * base parser class which maintains a token stackas element tags are encountered.
- * @author mark10
+ * @author matthew
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  *
  */
 public class Parser extends DefaultHandler {

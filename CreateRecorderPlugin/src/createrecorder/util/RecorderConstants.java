@@ -1,5 +1,9 @@
 package createrecorder.util;
 
+/**
+ * Constants for the plugin event recorder (these need to be broken into included classes)
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ */
 public class RecorderConstants {
 	public static final String ALLTESTS_FILE = "AllTests.java";
 	public static final String CLASSPATH_TEMPLATE = "classpath_template_createrecorder.txt";

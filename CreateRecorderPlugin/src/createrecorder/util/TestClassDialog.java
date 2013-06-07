@@ -5,6 +5,10 @@ import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.window.Window;
 import org.eclipse.swt.widgets.Shell;
 
+/**
+ * dialog to prompt for the test class name.  This needs to be changed to a list dialog with the output from the package list
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ */
 public class TestClassDialog {
 	public static String getTestClassDialog(Shell shell, String title, String prompt) {
 		InputDialog inputDialog = new InputDialog(shell, title, prompt, "", null); 

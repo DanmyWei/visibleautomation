@@ -1,6 +1,8 @@
 package createrecorder.util;
 
-// simple pair class used for parsing the aapt output for AndroidManifest.xml
+/** simple pair class used for parsing the aapt output for AndroidManifest.xml
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ */
 public class Pair {
 	String mFirst;
 	String mSecond;

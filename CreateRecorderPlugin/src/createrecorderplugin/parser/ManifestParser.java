@@ -11,6 +11,11 @@ import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
+/** 
+ * simple SAXParser to extract interesting values from the manifest
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ */
+
 public class ManifestParser extends Parser {
 	protected final String MANIFEST_TAG = "manifest";
 	protected final String ACTIVITY_TAG = "manifest.application.activity";

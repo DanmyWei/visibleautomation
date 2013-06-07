@@ -40,7 +40,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.androidApp.recorderInterface.EventRecorderInterface;
 import com.androidApp.tcpListener.TCPListener;
 
 /**

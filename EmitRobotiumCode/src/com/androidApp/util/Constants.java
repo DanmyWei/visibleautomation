@@ -1,5 +1,9 @@
 package com.androidApp.util;
 
+/**
+ * Constants used in the robotium code emitter
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ */
 public class Constants {
 	// view listener references.
 	public static final String UNKNOWN = "unknown";

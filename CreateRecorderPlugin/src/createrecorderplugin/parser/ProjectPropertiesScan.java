@@ -7,7 +7,11 @@ import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 
-// scan the source project.properties file.
+/** 
+ * scan the source project.properties file, so we can get the android target
+ * TODO: get this from the manifest instead.
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ */
 public class ProjectPropertiesScan {
 	protected final String TARGET = "target";
 	protected String mTarget;

@@ -15,7 +15,9 @@ import com.androidApp.util.FileUtility;
 import createrecorder.util.Exec;
 import createrecorder.util.RecorderConstants;
 
-// menu handler to install the log service and keyboard apks to support the recorder.
+/** menu handler to install the log service and keyboard apks to support the recorder.
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ */
 public class InstallRecorderHandler extends AbstractHandler {
 	
 	public Object execute(ExecutionEvent event) throws ExecutionException {

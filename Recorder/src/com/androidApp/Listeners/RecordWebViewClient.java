@@ -18,7 +18,10 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
-// we can't derive from RecordListener, because we extend WebViewClient
+/** we can't derive from RecordListener, because we extend WebViewClient
+ * @author mattrey
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ */
 
 public class RecordWebViewClient extends WebViewClient implements IOriginalListener {
 	protected WebViewClient 	mOriginalWebViewClient;

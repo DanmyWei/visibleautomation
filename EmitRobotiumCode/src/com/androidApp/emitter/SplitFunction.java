@@ -10,7 +10,10 @@ import com.androidApp.util.Constants;
 import com.androidApp.util.FileUtility;
 import com.androidApp.util.StringUtils;
 
-// class to split lines of robotium code into functions based on the depth of the activity stack
+/**
+ * class to split lines of robotium code into functions based on the depth of the activity stack
+ * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ */
 public class SplitFunction {
 	protected ClassTable mClassTable;				// symbol table for function to reduce repeated references
 	protected int		 mMinLines;					// minimum # of lines for code to be broken into a subfunction

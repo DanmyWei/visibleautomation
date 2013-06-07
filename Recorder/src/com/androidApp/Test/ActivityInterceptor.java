@@ -434,7 +434,7 @@ public class ActivityInterceptor {
 
 	/**
 	 * when the activity is added to the stack, walk through the view hierarchy and intercept the listeners for each view.
-	 * @author matreyno
+	 * @author mattrey
 	 *
 	 */
 	public class InterceptRunnable implements Runnable {

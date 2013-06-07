@@ -4,7 +4,11 @@ import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-// parse the information of importance from the output of aapt dump --values xmltree <apk-name> AndroidManifest.xml
+/** parse the information of importance from the output of aapt dump --values xmltree <apk-name> AndroidManifest.xml
+  *
+  * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+  */
+
 public class ManifestInformation {
 	public String	mPackage = null;
 	public int		mTargetSDKVersion = 0;
