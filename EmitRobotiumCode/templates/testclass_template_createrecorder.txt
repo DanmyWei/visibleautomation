@@ -23,7 +23,6 @@ public class %CLASSNAME%Recorder extends RecordTest<%CLASSNAME%> {
 	}
 
 	public void setUp() throws Exception { 
-		setActivityClass(%CLASSNAME%.class);
 		super.setUp();
 	}
 }

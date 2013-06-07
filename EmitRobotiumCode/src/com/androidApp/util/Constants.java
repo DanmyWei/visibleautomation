@@ -176,6 +176,7 @@ public class Constants {
 		public static final String PROJECT_PROPERTIES_FILENAME = "project.properties";
 		public static final String PROJECT_FILENAME = ".project";
 		public static final String ROBOTIUM_JAR = "robotium-solo-4.1.1-SNAPSHOT.jar";
+		public static final String ANDROID_SUPPORT_JAR = "android-support-v13.jar";
 	}
 	
 	// output directories
