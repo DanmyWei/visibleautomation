@@ -67,7 +67,7 @@ public class IMEMessageListener implements Runnable {
 				} catch (Exception ex) {
 					fSuccessfulRead = false;
 				}
-				if (fSuccessfulRead) {
+				if (fSuccessfulRead && (numBytes > 0)) {
 					String msg = new String(buffer);
 					msg = msg.substring(0, numBytes);
 					mfKeyboardVisible = msg.equals(SHOW_IME);

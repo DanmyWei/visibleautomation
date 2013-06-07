@@ -24,7 +24,7 @@ public class ActivityMonitorRunnable implements Runnable {
 	 public static final int 						MINISLEEP = 100;			
 	 protected Instrumentation.ActivityMonitor		mActivityMonitor;				// activity monitor
 	 protected Stack<ActivityInfo>					mActivityStack;					// stack of activities.
-	 
+	 protected Instrumentation						mInstrumentation;				// so we can run stuff on the UI thread
 	 /**
 	  * so we can retain information associated with the activity
 	  * @author mattrey
@@ -49,6 +49,7 @@ public class ActivityMonitorRunnable implements Runnable {
 	  * @param instrumentation
 	  */
 	protected void init(Instrumentation instrumentation) {
+		mInstrumentation = instrumentation;
 		mActivityStack = new Stack<ActivityInfo>();
 		IntentFilter intentFilter = null;
 		mActivityMonitor = instrumentation.addMonitor(intentFilter, null, false);
@@ -70,8 +71,9 @@ public class ActivityMonitorRunnable implements Runnable {
 			// finish activities lower in the stack.
 			Activity activityA = mActivityMonitor.waitForActivity();
 			if (activityA.isFinishing()) {
-				Log.i(TAG, "interesting");
+				Log.i(TAG, "activity " + activityA + " finishing");
 				removeActivityFromStack(activityA);
+				Log.i(TAG, "activity stack depth = " + mActivityStack.size());
 				if (mActivityStack.empty()) {
 					break;
 				}
@@ -82,12 +84,17 @@ public class ActivityMonitorRunnable implements Runnable {
 				if (!mActivityStack.isEmpty()) {
 					activityB = mActivityMonitor.waitForActivity();
 				}
-				if (!atTopOfActivityStack(activityA)) {
+				Log.i(TAG, "activity stack depth = " + mActivityStack.size());
+				if (!inActivityStack(activityA)) {
 					addActivityToStack(activityA);
-				} else if (!atTopOfActivityStack(activityB)) {
+				} else if (!inActivityStack(activityB)) {
 					addActivityToStack(activityB);
 				} else {
-					removeActivityFromStack(activityA);
+					if (isActivityGoingBack(activityA, activityB)) {
+						removeActivityFromStack(activityA);
+					} else if (isActivityGoingBack(activityB, activityA)) {
+						removeActivityFromStack(activityB);
+					}
 					if (mActivityStack.empty()) {
 						break;
 					}
@@ -96,19 +103,25 @@ public class ActivityMonitorRunnable implements Runnable {
 		}
 	}	
 	
-	/** 
-	 * we insert a global layout listener, so we can wait for new layouts, for example, when the IME is displayed
-	 * @param a activity to get the window.view content from.
+	/**
+	 * is the current activity going back to the previous activity
+	 * @param activityCurrent what we think is the current activity
+	 * @param activityPrevious what we think is the previous activity
+	 * @return
 	 */
-	public void interceptLayout(Activity a) {
-		Window w = a.getWindow();
-	    View v = w.getDecorView().findViewById(android.R.id.content);
-	    
-	    // good stroke of luck, we can listen to layout events on the root view.
-	    ViewTreeObserver viewTreeObserver = v.getViewTreeObserver();
-	    viewTreeObserver.addOnGlobalLayoutListener(new OnLayoutInterceptListener());
+	public boolean isActivityGoingBack(Activity activityCurrent, Activity activityPrevious) {
+		if (atTopOfActivityStack(activityCurrent)) {
+			if (mActivityStack.size() == 1) {
+				return true;
+			} else {
+				ActivityInfo activityInfoPrevious = mActivityStack.get(mActivityStack.size() - 2);
+				if (activityInfoPrevious.mRefActivity.get() == activityPrevious) {
+					return true;
+				}
+			} 
+		}
+		return false;
 	}
-
 
 	/**
 	 * public function to wait for an activity by the "short" class name.
@@ -152,13 +165,11 @@ public class ActivityMonitorRunnable implements Runnable {
 	 * if the topmost activity is null.
 	 */
 	public Activity getCurrentActivity() {
-		synchronized(mActivityStack) {
-			if (!mActivityStack.isEmpty()) {
-				ActivityInfo activityInfo = mActivityStack.peek();
-				WeakReference<Activity> ref = activityInfo.mRefActivity;
-				if (ref != null) {
-					return ref.get();
-				}
+		if (!mActivityStack.isEmpty()) {
+			ActivityInfo activityInfo = mActivityStack.peek();
+			WeakReference<Activity> ref = activityInfo.mRefActivity;
+			if (ref != null) {
+				return ref.get();
 			}
 		}
 		return null;
@@ -169,13 +180,11 @@ public class ActivityMonitorRunnable implements Runnable {
 	 * @return previous activity or null if the stack does not have 2 elements.
 	 */
 	public Activity getPreviousActivity() {
-		synchronized(mActivityStack) {
-			if (mActivityStack.size() >= 2) {
-				ActivityInfo activityInfo = mActivityStack.get(mActivityStack.size() - 2);
-				WeakReference<Activity> ref = activityInfo.mRefActivity;
-				if (ref != null) {
-					return ref.get();
-				}
+		if (mActivityStack.size() >= 2) {
+			ActivityInfo activityInfo = mActivityStack.get(mActivityStack.size() - 2);
+			WeakReference<Activity> ref = activityInfo.mRefActivity;
+			if (ref != null) {
+				return ref.get();
 			}
 		}
 		return null;
@@ -203,13 +212,11 @@ public class ActivityMonitorRunnable implements Runnable {
 	 * @return
 	 */
 	public boolean atTopOfActivityStack(Activity activity) {
-		synchronized(mActivityStack) {
-			if ((mActivityStack != null) && !mActivityStack.isEmpty()) {
-				ActivityInfo topInfo = mActivityStack.peek();
-				WeakReference<Activity> ref = topInfo.mRefActivity;
-				if (ref.get() == activity) {
-					return true;
-				}
+		if ((mActivityStack != null) && !mActivityStack.isEmpty()) {
+			ActivityInfo topInfo = mActivityStack.peek();
+			WeakReference<Activity> ref = topInfo.mRefActivity;
+			if (ref.get() == activity) {
+				return true;
 			}
 		}
 		return false;		
@@ -221,12 +228,10 @@ public class ActivityMonitorRunnable implements Runnable {
 	 * @return if there is a reference to the activity
 	 */
 	protected boolean inActivityStack(Activity activity) {
-		synchronized(mActivityStack) {
-			for (ActivityInfo activityInfo : mActivityStack) {
-				WeakReference<Activity> ref = activityInfo.mRefActivity;
-				if (ref.get() == activity) {
-					return true;
-				}
+		for (ActivityInfo activityInfo : mActivityStack) {
+			WeakReference<Activity> ref = activityInfo.mRefActivity;
+			if (ref.get() == activity) {
+				return true;
 			}
 		}
 		return false;
@@ -237,30 +242,38 @@ public class ActivityMonitorRunnable implements Runnable {
 	 * @param activity activity to be pushed on the stack
 	 */
 	protected void addActivityToStack(Activity activity) {
-		synchronized (mActivityStack) {
-			ActivityInfo activityInfo = new ActivityInfo();
-			activityInfo.mRefActivity = new WeakReference<Activity>(activity);
-			OnLayoutInterceptListener listener = addLayoutObserver(activity);
-			activityInfo.mRefLayoutListener = new WeakReference<OnLayoutInterceptListener>(listener);
-			mActivityStack.push(activityInfo);
-		}
+		ActivityInfo activityInfo = new ActivityInfo();
+		activityInfo.mRefActivity = new WeakReference<Activity>(activity);
+		OnLayoutInterceptListener listener = new OnLayoutInterceptListener();
+		activityInfo.mRefLayoutListener = new WeakReference<OnLayoutInterceptListener>(listener);
+	    mInstrumentation.runOnMainSync(new AddGlobalLayoutListenerRunnable(activity, listener));
+		mActivityStack.push(activityInfo);
 	}
 		
-	/**
-	 * when we add an activity to the stack, we also add a layout observer, which can signal to instrumentation
-	 * that a layout has completed.  Handy for stuff like waiting for the keyboard to appear/disappear
-	 * @param a
-	 * @return
-	 */
-	protected OnLayoutInterceptListener addLayoutObserver(Activity a) {
-		Window w = a.getWindow();
-	    View v = w.getDecorView().findViewById(android.R.id.content);
-	        
-	    // good stroke of luck, we can listen to layout events on the root view.
-	    ViewTreeObserver viewTreeObserver = v.getViewTreeObserver();
-	    OnLayoutInterceptListener listener = new OnLayoutInterceptListener();
-	    viewTreeObserver.addOnGlobalLayoutListener(listener);
-	    return listener;
+	
+	public class AddGlobalLayoutListenerRunnable implements Runnable {
+		protected Activity 					mActivity;
+		protected OnLayoutInterceptListener mListener;
+		
+		public AddGlobalLayoutListenerRunnable(Activity activity, OnLayoutInterceptListener listener) {
+			mActivity = activity;
+			mListener = listener;
+		}
+		
+		public void run() {
+			try {
+				Window w = mActivity.getWindow();
+			    View v = w.getDecorView().findViewById(android.R.id.content);
+			    if (v != null) {
+				        
+				    // good stroke of luck, we can listen to layout events on the root view.
+				    ViewTreeObserver viewTreeObserver = v.getViewTreeObserver();
+				    viewTreeObserver.addOnGlobalLayoutListener(mListener);
+			    }
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}
 	}
 
 	
@@ -270,20 +283,20 @@ public class ActivityMonitorRunnable implements Runnable {
 	 */
 	protected boolean removeActivityFromStack(Activity activity) {
 		ActivityInfo activityInfo = null;
-		synchronized(mActivityStack) {
-			for (ActivityInfo candActivityInfo : mActivityStack) {
-				WeakReference<Activity> candRef = candActivityInfo.mRefActivity;
-				if (candRef.get() == activity) {
-					activityInfo = candActivityInfo;
-					break;
-				}
+		for (ActivityInfo candActivityInfo : mActivityStack) {
+			WeakReference<Activity> candRef = candActivityInfo.mRefActivity;
+			if (candRef.get() == activity) {
+				activityInfo = candActivityInfo;
+				break;
 			}
-			if (activityInfo != null) {
-				mActivityStack.remove(activityInfo);
-				return true;
-			}
-			return false;
 		}
+		if (activityInfo != null) {
+			mActivityStack.remove(activityInfo);
+			return true;
+		} else {
+			Log.d(TAG, "failed to remove " + activity + " from stack");
+		}
+		return false;
 	}
 
 	// sleep utility
