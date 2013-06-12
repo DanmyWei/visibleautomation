@@ -3,6 +3,8 @@ package com.androidApp.emitter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.util.List;
 
 import com.androidApp.util.Constants;
 import com.androidApp.util.FileUtility;
@@ -29,6 +31,7 @@ public class SetupRobotiumProject {
 		public String mSrcDir = null;							// src
 		public String mLibDir = null;							// lib
 		public String mResDir = null;							// res
+		public String mAssetsDir = null;						// assets
 		public String mDrawableDir = null;						// res/drawable	
 	}
 	/**
@@ -57,6 +60,7 @@ public class SetupRobotiumProject {
 	 * res/drawable - directory for icons and stuff
 	 * res/values - directory for strings and stuff
 	 * libs - directory for libraries (specifically the robotium jar)
+	 * assets - directory for motion event files
 	 * @param dirname name of the output test class (also the name of the project)
 	 * @param testClassFilePath full path directory to output test class files
 	 */
@@ -75,6 +79,9 @@ public class SetupRobotiumProject {
 		dirs.mDrawableDir = resdir.getPath() + File.separator + Constants.Dirs.DRAWABLE;
 		File drawabledir = new File(dirs.mDrawableDir);
 		fOK &= drawabledir.mkdir();
+		dirs.mAssetsDir = dirname + File.separator + Constants.Dirs.ASSETS;
+		File assetsDir = new File(dirs.mAssetsDir);
+		fOK &= assetsDir.mkdir();
 		return dirs;
 	}
 	
@@ -263,5 +270,21 @@ public class SetupRobotiumProject {
 	        }        
 		}
 		return Constants.Filenames.EVENTS;
+	}
+	
+	/**
+	 * write the motion events to files under the test class name. We need to use subdirectories to differentiate
+	 * between files on each run
+	 * @param assetDirName asset directory
+	 * @param testClassName
+	 * @param motionEvents
+	 * @throws IOException
+	 */
+	public static void writeMotionEvents(String assetDirName, String testClassName, List<MotionEventList> motionEvents) throws IOException {
+		for (MotionEventList eventList : motionEvents) {
+			String path = assetDirName + File.separator + testClassName + File.separator + eventList.getName() + "." + Constants.Extensions.TEXT;
+			OutputStream os = new FileOutputStream(path);
+			eventList.write(os);
+		}
 	}
 }

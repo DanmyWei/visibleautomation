@@ -2,6 +2,7 @@ package com.androidApp.emitter;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
@@ -31,8 +32,8 @@ public interface IEmitCode {
 	String getApplicationClassPath();
 	String getApplicationClassName();
 	String getApplicationPackage();
-	List<LineAndTokens> generateTestCode(IEmitCode emitter, String eventsFileName) throws FileNotFoundException, IOException, EmitterException;
-	void emit(BufferedReader br, List<LineAndTokens> lines) throws IOException, EmitterException;
+	List<LineAndTokens> generateTestCode(IEmitCode emitter, String eventsFileName, List<MotionEventList> motionEvents) throws FileNotFoundException, IOException, EmitterException;
+	void emit(BufferedReader br, List<LineAndTokens> lines, List<MotionEventList> motionEvents) throws IOException, EmitterException;
 	String getDescription(List<String> tokens);
 	void writeFunctionHeader(BufferedWriter bw) throws IOException;
 	void writeException(List<String> tokens, List<LineAndTokens> lines) throws IOException;

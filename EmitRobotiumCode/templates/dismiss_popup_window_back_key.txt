@@ -2,4 +2,4 @@
 		Activity activity%ACTIVITY_VARIABLE_INDEX% = robotiumUtils.getCurrentActivity();
 		PopupWindow popupWindow%VARIABLE_INDEX% = ViewExtractor.findPopupWindow(activity%ACTIVITY_VARIABLE_INDEX%);
 		solo.goBack();
-		robotiumUtils.verifyPopupWindowDimissed(activity%ACTIVITY_VARIABLE_INDEX%, popupWindow%VARIABLE_INDEX%);
+		TestCase.assertTrue(robotiumUtils.verifyPopupWindowDimissed(activity%ACTIVITY_VARIABLE_INDEX%, popupWindow%VARIABLE_INDEX%));

@@ -27,10 +27,11 @@ import com.androidApp.util.SuperTokenizer;
  * TODO: add mLastEventWasCreateDialog for the same thing
  */
 public class EmitRobotiumCodeSource implements IEmitCode {
-	protected int mViewVariableIndex = 0;					// incremented for unique variable names
-	protected int mActivityVariableIndex = 0;					// incremented for unique variable names
-	protected String mTargetClassPath = null;		// class path of initial activity.	
-	protected String mTargetPackage = null;			// package name that the recorder pulled from the app
+	protected int mViewVariableIndex = 0;					// incremented for unique view variable names
+	protected int mActivityVariableIndex = 0;				// incremented for unique activity variable names
+	protected int mMotionEventVariableIndex = 0;			// incremented for unique motion event file names
+	protected String mTargetClassPath = null;				// class path of initial activity.	
+	protected String mTargetPackage = null;					// package name that the recorder pulled from the app
 	private boolean mLastEventWasWaitForActivity = false;	// want to do a waitForView for next event.
 		
 	public EmitRobotiumCodeSource() {
@@ -75,10 +76,10 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	 * @throws IOException
 	 * @throws EmitterException
 	 */
-	public List<LineAndTokens> generateTestCode(IEmitCode emitter, String eventsFileName) throws FileNotFoundException, IOException, EmitterException {
+	public List<LineAndTokens> generateTestCode(IEmitCode emitter, String eventsFileName, List<MotionEventList> motionEvents) throws FileNotFoundException, IOException, EmitterException {
 		List<LineAndTokens> lines = new ArrayList<LineAndTokens>();
 		BufferedReader br = new BufferedReader(new FileReader(eventsFileName));
-		emitter.emit(br, lines);
+		emitter.emit(br, lines, motionEvents);
 		return lines;
 	}
 
@@ -92,7 +93,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	 * @throws EmitterException
 	 */
 	@Override
-	public void emit(BufferedReader br, List<LineAndTokens> lines) throws IOException, EmitterException {
+	public void emit(BufferedReader br, List<LineAndTokens> lines, List<MotionEventList> motionEvents) throws IOException, EmitterException {
 		boolean scrollsHaveHappened = false;				// we get a zillion scroll events.  We only care about the last one
 		int scrollFirstVisibleItem = 0;						// preserve scroll values so we can apply it on the last scroll.
 		int scrollListIndex = 0;							// track the current scroll index to write on the next non-scroll instruction
@@ -102,17 +103,16 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		String currentActivityName = null;					// to track the activity class name to see if it changes in transitions
 		boolean fForwardActivityMatches = false;			// there was a navigation to a new activity with the same class name
 		boolean fBackActivityMatches = false;				// there was a navigation to a previous activity with the same class name
-		
-		String line = br.readLine();
-		String nextLine = br.readLine();
+		boolean	fWasSpinner = false;						// for following item_selected event, the list was a spinner, not a ListView
+		String line = br.readLine();	
 		int lineNumber = 0;									// track line number for errors
 		do {
 			if (line == null) {
 				break;
 			}
-			String nextNextLine = br.readLine();
 			lineNumber++;
 			try {
+				String nextLine = br.readLine();
 				// syntax is event:time,arguments,separated,by,commas
 				SuperTokenizer st = new SuperTokenizer(line, "\"", ":,", '\\');
 				List<String> tokens = st.toList();
@@ -223,6 +223,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 						writePopupMenuItemClick(tokens, lines);
 					} else if (action.equals(Constants.Events.ITEM_SELECTED)) {
 						writeItemSelected(tokens, lines);
+						fWasSpinner = false;
 					} else if (action.equals(Constants.Events.SCROLL)) {
 						scrollFirstVisibleItem = Integer.parseInt(tokens.get(2));
 						scrollsHaveHappened = true;
@@ -230,8 +231,10 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 					} else if (action.equals(Constants.Events.CLICK)) {
 						writeClick(tokens, lines);
 					} else if (action.equals(Constants.Events.DISMISS_DIALOG)) {
+						fWasSpinner = false;
 						writeDismissDialog(tokens, lines);
 					} else if (action.equals(Constants.Events.CANCEL_DIALOG)) {
+						fWasSpinner = false;
 						writeCancelDialog(tokens, lines);
 					} else if (action.equals(Constants.Events.CREATE_DIALOG)) {
 						writeCreateDialog(tokens, lines);
@@ -251,16 +254,14 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 					} else if (action.equals(Constants.Events.DISMISS_AUTOCOMPLETE_DROPDOWN)) {
 						writeDismissAutoCompleteDropdown(tokens, lines);
 					} else if (action.equals(Constants.Events.CREATE_SPINNER_POPUP_WINDOW)) {
-						SuperTokenizer stNextNext = new SuperTokenizer(nextNextLine, "\"", ":,", '\\');
-						List<String> nextNextTokens = stNextNext.toList();
-						String nextNextAction = nextNextTokens.get(0);
-						// he opened the spinner window, but didn't select anything, so we just click on
-						// the spinner button, then dismiss the dropdown.
-						if (!nextNextAction.equals(Constants.Events.ITEM_SELECTED)) {
-							writeClick(tokens, lines);
-						}
+						fWasSpinner = true;
+					} else if (action.equals(Constants.Events.CREATE_SPINNER_POPUP_DIALOG)) {
+						fWasSpinner = true;
 					} else if (action.equals(Constants.Events.DISMISS_POPUP_WINDOW_BACK_KEY)) {
 						writeDismissPopupWindowBackKey(tokens, lines);
+					} else if (action.equals(Constants.Events.DISMISS_SPINNER_DIALOG_BACK_KEY)) {
+						writeGoBack(tokens, lines);
+						writeDismissDialog(tokens,lines);
 					} else if (action.equals(Constants.Events.ROTATION)) {
 						writeRotation(tokens, lines);
 					} else if (action.equals(Constants.Events.MENU_ITEM_CLICK)) {
@@ -271,10 +272,11 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 						selectActionBarTab(tokens, lines);
 					} else if (action.equals(Constants.Events.ON_PAGE_FINISHED)) {
 						waitForPageToLoad(tokens, lines);
+					} else if (action.equals(Constants.Events.TOUCH_DOWN)) {
+						writeMotionEvents(tokens, br, motionEvents);
 					}
 				}
 				line = nextLine;
-				nextLine = nextNextLine;
 			} catch (Exception ex) {
 				System.err.println("error parsing line " + lineNumber);
 				System.err.println("line = " + line);
@@ -601,7 +603,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	 */
 	public void writeDismissPopupWindowBackKey(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
 		String dismissPopupTemplate = FileUtility.readTemplate(Constants.Templates.DISMISS_POPUP_WINDOW_BACK_KEY);
-		dismissPopupTemplate = dismissPopupTemplate.replace(Constants.VariableNames.ACTIVITY_VARIABLE_INDEX, Integer.toString(mViewVariableIndex++));
+		dismissPopupTemplate = dismissPopupTemplate.replace(Constants.VariableNames.ACTIVITY_VARIABLE_INDEX, Integer.toString(mActivityVariableIndex++));
 		dismissPopupTemplate = dismissPopupTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mViewVariableIndex++));
 		lines.add(new LineAndTokens(tokens, dismissPopupTemplate));
 	}
@@ -657,9 +659,8 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 			String showImeViewTemplate = writeViewIDCommand(Constants.Templates.SHOW_IME_ID, ref, fullDescription);
 			lines.add(new LineAndTokens(tokens, showImeViewTemplate));
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
-			String showImeClassIndexTemplate = FileUtility.readTemplate(Constants.Templates.SHOW_IME_CLASS_INDEX);
-			String showImeViewTemplate = writeViewClassIndexCommand(Constants.Templates.SHOW_IME_ID, ref, fullDescription);
-			lines.add(new LineAndTokens(tokens, showImeClassIndexTemplate));			
+			String showImeViewTemplate = writeViewClassIndexCommand(Constants.Templates.SHOW_IME_CLASS_INDEX, ref, fullDescription);
+			lines.add(new LineAndTokens(tokens, showImeViewTemplate));			
 		} else {
 			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
 		}
@@ -952,5 +953,16 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		template = template.replace(Constants.VariableNames.URL, url);
 		lines.add(new LineAndTokens(tokens, template));
 	}
+	
+	/**
+	 * touch_down:20903880,720,176,139.80583,102.80562,id,0x7f0900a2,android.widget.Gallery,Gallery
+	 * @param tokens
+	 * @param motionEvents
+	 */
+	public void writeMotionEvents(List<String> tokens, BufferedReader br, List<MotionEventList> motionEvents) throws IOException, EmitterException {
+		String name = tokens.get(9) + "_MotionEvents" + Integer.toString(mMotionEventVariableIndex);
+		mMotionEventVariableIndex++;
+		MotionEventList motionEventList = new MotionEventList(name, tokens, br);
 
+	}
 }

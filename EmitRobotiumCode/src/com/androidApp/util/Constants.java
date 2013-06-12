@@ -55,10 +55,13 @@ public class Constants {
 		public static final String MENU_ITEM_CLICK = "menu_item_click";
 		public static final String POPUP_MENU_ITEM_CLICK = "popup_menu_item_click";
 		public static final String EXCEPTION = "exception";
-		public static final Object SELECT_ACTIONBAR_TAB = "select_actionbar_tab";
+		public static final String SELECT_ACTIONBAR_TAB = "select_actionbar_tab";
 		public static final String CREATE_SPINNER_POPUP_WINDOW = "create_spinner_popup_window";
-		public static final Object ON_PAGE_FINISHED = "on_page_finished";
-		public static final Object CREATE_DIALOG = "create_dialog";
+		public static final String ON_PAGE_FINISHED = "on_page_finished";
+		public static final String CREATE_DIALOG = "create_dialog";
+		public static final String CREATE_SPINNER_POPUP_DIALOG = "create_spinner_popup_dialog";
+		public static final String DISMISS_SPINNER_DIALOG_BACK_KEY = "dismiss_spinner_dialog_back_key";
+
 	}
 	
 	public static class Templates {
@@ -192,6 +195,7 @@ public class Constants {
 		public static final String PLATFORM_TOOLS = "platform-tools";
 		public static final String PLATFORM_TOOLS_22 = "build-tools/17.0.0";
 		public static final String GEN = "gen";
+		public static final String ASSETS = "assets";
 	}
 	
 	// executables
@@ -203,6 +207,7 @@ public class Constants {
 	public static class Extensions {
 		public static final String TEST = "Test";
 		public static final String JAVA = "java";
+		public static final String TEXT = "txt";
 	}
 	
 	public static class SoloFunctions {

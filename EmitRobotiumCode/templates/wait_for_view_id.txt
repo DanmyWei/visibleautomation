@@ -1,3 +1,2 @@
 		// %DESCRIPTION%
-		%CLASSPATH% view%VARIABLE_INDEX% = (%CLASSPATH%) solo.getView(%ID%);
-		TestCase.assertTrue(solo.waitForView(view%VARIABLE_INDEX%));
+		TestCase.assertTrue(solo.waitForView(solo.getView(%ID%)));
