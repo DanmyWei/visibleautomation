@@ -21,6 +21,7 @@ import android.widget.Adapter;
 import android.widget.AdapterView;
 import android.widget.PopupWindow;
 import android.widget.TextView;
+import android.widget.Gallery;
 
 /**
  * grab-bag of utilities to extract views from the android view tree.
@@ -435,7 +436,7 @@ public class TestUtils {
 		ViewParent vp = v.getParent();
 		return isDescendentOfClass(vp, v.getRootView(), actionBarImplClass);
 	}
-	
+		
 	public static boolean isDescendentOfClass(ViewParent vp, View rootView, Class c) {
 		if ((vp == null) || (vp == rootView)) {
 			return false;
@@ -456,6 +457,28 @@ public class TestUtils {
 		return isDescendentOfClass(vp, v.getRootView(), AdapterView.class);
 	}
 	
+	
+	/**
+	 * low-level events to this object should be ignored
+	 * @param v view to check
+	 * @return true if the view sends higher-level events that we listen to
+	 */
+	public static boolean shouldBeIgnored(View v) {
+		String className = v.getClass().getName();
+		return className.equals(Constants.Classes.OVERFLOW_MENU_BUTTON) ||
+			   className.equals(Constants.Classes.SCROLLING_TAG_CONTAINER_TAB_VIEW);
+	}
+
+	/**
+	 * unfortunately, galleries don't have scroll listeners that we can hook to, and instead implement
+	 * methods for onScroll(), etc.  We have to listen for motion events, then play them back.
+	 * Later, we'll allow the user to set listen to motion events for custom controls and stuff like that.
+	 * @param v
+	 * @return true if we should listen to motion events
+	 */
+	public static boolean listenMotionEvents(View v) {
+		return v instanceof Gallery;
+	}
 	/**
 	 * given a view inside of an adapter view, find the index of its containing item in the adapter view.
 	 * @param av adapterView ancestor of v

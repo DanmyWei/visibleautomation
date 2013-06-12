@@ -1,13 +1,19 @@
 package com.androidApp.EventRecorder;
 
+import java.io.IOException;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 
+import android.app.Activity;
+import android.app.Instrumentation;
+import android.content.Context;
+import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.FieldUtils;
 import com.androidApp.Utility.StringUtils;
 import com.androidApp.Utility.TestUtils;
 
@@ -19,12 +25,26 @@ import com.androidApp.Utility.TestUtils;
  *
  */
 public class ViewReference {
+	protected final String 		TAG = "ViewReference";
 	private List<Object>		mRIDList;							// list of R.id classes used in the application
 	private List<Object>		mRStringList;						// list of R.string classes used in the application.
-
-	public ViewReference() {
+	private Instrumentation		mInstrumentation;
+	private FieldUtils			mFieldUtils;						// to whitelist public android classes
+	
+	public ViewReference(Instrumentation instrumentation) throws IOException {
+		mInstrumentation = instrumentation;
 		mRIDList = new ArrayList<Object>();
-		mRStringList = new ArrayList<Object>();		
+		mRStringList = new ArrayList<Object>();	
+	}
+	
+	/**
+	 * we need an activity to get the target version so we can read the whitelist for the android version
+	 * @param activity activity to get the target sdk version
+	 * @param instrumentation instrumentation handle
+	 */
+	public void initializeWithActivity(Activity activity, Instrumentation instrumentation) throws IOException {
+		mFieldUtils = new FieldUtils(instrumentation.getContext(), activity);
+		
 	}
 	
 	public void addRdotID(Object rdotid) {
@@ -64,6 +84,27 @@ public class ViewReference {
 	}
 
 	/**
+	 * return a class name for the view that can be compiled into an android application.  many of the views, such as popup menus
+	 * and action bar containers are internal
+	 * @param v view
+	 * @return android external class name
+	 */
+	protected String getUsableClassName(Context context, View v) {
+		Class viewClass = ViewReference.getVisibleClass(v);
+		String className = viewClass.getName();
+		try {
+			if (!mFieldUtils.isWhiteListedAndroidClass(viewClass)) {
+				viewClass = mFieldUtils.getPublicClassForAndroidInternalClass(viewClass);
+				className = viewClass.getName();
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			Log.e(TAG, "exception while trying to get internal class for " + viewClass + " = " + ex.getMessage());
+			className = "unable to find public class for " + v.getClass();
+		}
+		return className;
+	}
+	/**
 	 * Given a view, generate a reference for it so it can be found when the application is run again
 	 * id, id: if the view has an ID, the ID is unique for all views, and the view is not a descendant of an AdapterView
 	 * ex: id, R.id.button1 (if the ID is found in the R.id class).  id, 0x90300200 if not found
@@ -84,6 +125,7 @@ public class ViewReference {
 	 * @return
 	 */
 	public String getReference(View v) throws IllegalAccessException {
+		String className = getUsableClassName(mInstrumentation.getContext(), v);
 	
 		// first, try the id, and verify that it is unique.
 		int id = v.getId();
@@ -91,9 +133,11 @@ public class ViewReference {
 		if (id != 0) {
 			int idCount = TestUtils.idCount(rootView, id);
 			if (idCount == 1) {
-				return Constants.Reference.ID + "," + TestUtils.getIdForValue(mRIDList, id) + "," + v.getClass().getName();
+				return Constants.Reference.ID + "," + TestUtils.getIdForValue(mRIDList, id) + "," + className;
 			}
 		}
+		
+		// special case for text views, we can find on the text contents
 		if (v instanceof TextView) {
 			TextView tv = (TextView) v;
 			String s = tv.getText().toString();
@@ -109,16 +153,17 @@ public class ViewReference {
 				}
 			}
 		}
-		Class viewClass = getVisibleClass(v);
+		
+		// not-to-special case for everyone else.
 		View viewParentWithId = TestUtils.findParentViewWithId(v);
 		if (viewParentWithId != null) {
 			int parentIdCount = TestUtils.idCount(rootView, viewParentWithId.getId());
 			if (parentIdCount == 1) {
 				int classIndex = TestUtils.classIndex(viewParentWithId, v);
-				return Constants.Reference.CLASS_ID + "," +  TestUtils.getIdForValue(mRIDList, viewParentWithId.getId()) + "," + viewClass.getName() + "," + classIndex;
+				return Constants.Reference.CLASS_ID + "," +  TestUtils.getIdForValue(mRIDList, viewParentWithId.getId()) + "," + className + "," + classIndex;
 			} else {
 				int classIndex = TestUtils.classIndex(rootView, v);
-				return Constants.Reference.CLASS_INDEX + "," + viewClass.getName() + "," + classIndex;
+				return Constants.Reference.CLASS_INDEX + "," + className + "," + classIndex;
 			}
 		}
 		return Constants.Reference.UNKNOWN;	

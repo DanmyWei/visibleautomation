@@ -6,6 +6,7 @@ import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.ReflectionUtils;
 
 import android.app.ActionBar;
+import android.view.View;
 
 /**
  * functions to intercept action bar events.
@@ -13,7 +14,12 @@ import android.app.ActionBar;
  * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  */
 public class InterceptActionBar {
-
+	// get the action bar view.
+	public static View getActionBarView(ActionBar actionBar) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
+		Class actionBarImplClass = Class.forName(Constants.Classes.ACTION_BAR_IMPL);
+		return (View) ReflectionUtils.getFieldValue(actionBar, actionBarImplClass, Constants.Fields.ACTION_VIEW);
+	}
+	
 	public static ActionBar.TabListener getTabListener(ActionBar actionBar, int index) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
 		ActionBar.Tab tab = actionBar.getTabAt(index);
 		Class tabImplClass = Class.forName(Constants.Classes.ACTION_BAR_IMPL_TAB_IMPL);

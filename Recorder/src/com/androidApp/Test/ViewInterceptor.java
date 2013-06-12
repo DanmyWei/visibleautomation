@@ -164,13 +164,14 @@ public class ViewInterceptor {
 	 */
 	public void replaceListeners(View v) {
 		try {
-			if (!TestUtils.isActionBarDescendant(v)) {
+			//if (!TestUtils.isActionBarDescendant(v)) {
+			if (true) {
 				// adapterViews don't like click listeners, they like item click listeners.
 				if (!(v instanceof AdapterView)) {
 					if (v instanceof WebView) {
 						replaceWebViewListeners(v);
 					} else {
-						if (!TestUtils.isAdapterViewAncestor(v)) {
+						if (!TestUtils.isAdapterViewAncestor(v) && !TestUtils.shouldBeIgnored(v)) {
 							replaceViewListeners(v);
 						}
 					}
@@ -186,9 +187,12 @@ public class ViewInterceptor {
 							Spinner spinner = (Spinner) v;
 							replaceSpinnerListeners(spinner);
 						} else {
-							AbsListView absListView = (AbsListView) v;
-							if (!isSpinnerDropdownList(absListView)) {
-								replaceAdapterViewListeners(absListView);
+							AdapterView adapterView = (AdapterView) v;
+							if (!isSpinnerDropdownList(adapterView)) {
+								replaceAdapterViewListeners(adapterView);
+							}
+							if (TestUtils.listenMotionEvents(v)) {
+								replaceTouchListener(v);
 							}
 						}
 					}
@@ -210,13 +214,27 @@ public class ViewInterceptor {
 	}
 	
 	/**
+	 * replace the touch listener for views that listen for motion events.
+	 * @param v
+	 * @return
+	 */
+	public boolean replaceTouchListener(View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
+		View.OnTouchListener originalTouchListener = ListenerIntercept.getTouchListener(v);
+		if (!(originalTouchListener instanceof RecordOnTouchListener)) {
+			RecordOnTouchListener recordTouchListener = new RecordOnTouchListener(mEventRecorder, originalTouchListener);
+			v.setOnTouchListener(recordTouchListener);
+			return true;
+		}
+		return false;
+	}
+	/**
 	 * the spinner popup is actually a list view, but we've already intercepted the item selected event for the spinner
 	 * and we don't want to also get the list item click
 	 * @param absListView list view to test
 	 * @return true if the list view's adapter is a spinner adapter.
 	 */
-	public static boolean isSpinnerDropdownList(AbsListView absListView) throws ClassNotFoundException {
-		Adapter adapter = absListView.getAdapter();
+	public static boolean isSpinnerDropdownList(AdapterView adapterView) throws ClassNotFoundException {
+		Adapter adapter = adapterView.getAdapter();
 		Class spinnerAdapterClass = Class.forName(Constants.Classes.SPINNER_ADAPTER);
 		return (adapter.getClass() == spinnerAdapterClass);
 	}
@@ -255,13 +273,13 @@ public class ViewInterceptor {
 			RecordOnLongClickListener recordLongClickListener = new RecordOnLongClickListener(mEventRecorder, originalLongClickListener);
 			v.setOnLongClickListener(recordLongClickListener);
 		}
-	
-		View.OnTouchListener originalTouchListener = ListenerIntercept.getTouchListener(v);
-		if (!(originalTouchListener instanceof RecordOnTouchListener)) {
-			RecordOnTouchListener recordTouchListener = new RecordOnTouchListener(mEventRecorder, originalTouchListener);
-			v.setOnTouchListener(recordTouchListener);
+		if (TestUtils.listenMotionEvents(v)) {
+			View.OnTouchListener originalTouchListener = ListenerIntercept.getTouchListener(v);
+			if (!(originalTouchListener instanceof RecordOnTouchListener)) {
+				RecordOnTouchListener recordTouchListener = new RecordOnTouchListener(mEventRecorder, originalTouchListener);
+				v.setOnTouchListener(recordTouchListener);
+			}
 		}
-		
 		View.OnKeyListener originalKeyListener = ListenerIntercept.getKeyListener(v);
 		if ((originalKeyListener != null) && !(originalKeyListener instanceof RecordOnKeyListener)) {
 			RecordOnKeyListener recordKeyListener = new RecordOnKeyListener(mEventRecorder, originalKeyListener);
@@ -317,16 +335,19 @@ public class ViewInterceptor {
 	 * @throws NoSuchFieldException
 	 * @throws ClassNotFoundExceptions
 	 */
-	public void replaceAdapterViewListeners(AbsListView absListView) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
-		AdapterView.OnItemClickListener itemClickListener = absListView.getOnItemClickListener();
+	public void replaceAdapterViewListeners(AdapterView adapterView) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
+		AdapterView.OnItemClickListener itemClickListener = adapterView.getOnItemClickListener();
 		if (!(itemClickListener instanceof RecordOnItemClickListener)) {
-			RecordOnItemClickListener recordItemClickListener = new RecordOnItemClickListener(mEventRecorder, absListView);
-			absListView.setOnItemClickListener(recordItemClickListener);		
+			RecordOnItemClickListener recordItemClickListener = new RecordOnItemClickListener(mEventRecorder, adapterView);
+			adapterView.setOnItemClickListener(recordItemClickListener);		
 		}	
-		AbsListView.OnScrollListener originalScrollListener = ListenerIntercept.getScrollListener(absListView);
-		if (!(originalScrollListener instanceof RecordOnScrollListener)) {
-			RecordOnScrollListener recordScrollListener = new RecordOnScrollListener(mEventRecorder, originalScrollListener);
-			absListView.setOnScrollListener(recordScrollListener);
+		if (adapterView instanceof AbsListView) {
+			AbsListView absListView = (AbsListView) adapterView;
+			AbsListView.OnScrollListener originalScrollListener = ListenerIntercept.getScrollListener(absListView);
+			if (!(originalScrollListener instanceof RecordOnScrollListener)) {
+				RecordOnScrollListener recordScrollListener = new RecordOnScrollListener(mEventRecorder, originalScrollListener);
+				absListView.setOnScrollListener(recordScrollListener);
+			}
 		}
 	}
 
@@ -403,6 +424,7 @@ public class ViewInterceptor {
 		       	if (actionBar.getCustomView() != null) {
 		        	intercept(actionBar.getCustomView());
 		        }
+		       	intercept(InterceptActionBar.getActionBarView(actionBar));
         	} catch (Exception ex) {
         		mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, "while intercepting action bar");
         	}

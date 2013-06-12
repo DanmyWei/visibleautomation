@@ -45,6 +45,8 @@ public class Constants {
 		public static final String MENU_POPUP_HELPER = "com.android.internal.view.menu.MenuPopupHelper";
 		public static final String MENU_ITEM_IMPL = "com.android.internal.view.menu.MenuItemImpl";
 		public static final String ACTION_MENU_PRESENTER = "com.android.internal.view.menu.ActionMenuPresenter$OverflowPopup";
+		public static final String OVERFLOW_MENU_BUTTON = "com.android.internal.view.menu.ActionMenuPresenter$OverflowMenuButton";
+		public static final String SCROLLING_TAG_CONTAINER_TAB_VIEW = "com.android.internal.widget.ScrollingTabContainerView$TabView";
 		public static final String EXPANDED_MENU_VIEW = "com.android.internal.view.menu.ExpandedMenuView";	
 		public static final String ACTIONBAR_CONTAINER = "com.android.internal.widget.ActionBarContainer";
 		public static final String LOCAL_WINDOW_MANAGER = "android.view.Window$LocalWindowManager";
@@ -56,6 +58,8 @@ public class Constants {
 		public static final String ACTION_BAR_IMPL_TAB_IMPL = "com.android.internal.app.ActionBarImpl$TabImpl";
 		public static final String SPINNER_ADAPTER = "android.widget.Spinner$DropDownAdapter";
 		public static final String WEBKIT_CALLBACK_PROXY = "android.webkit.CallbackProxy";
+		public static final String ALERT_CONTROLLER = "com.android.internal.app.AlertController";
+		public static final String SPINNER_DROPDOWN_ADAPTER = "android.widget.Spinner$DropDownAdapter";		
 	}
 	
 	// listener field names
@@ -111,6 +115,7 @@ public class Constants {
 		public static final String ANCHOR = "mAnchor";
 		public static final String CALLBACK_PROXY = "mCallbackProxy";
 		public static final String WEBVIEW_CLIENT = "mWebViewClient";
+		public static final String ALERT = "mAlert";
 	}
 	
 	// possible derive methods which listen for events.
@@ -185,6 +190,7 @@ public class Constants {
 		public static final String ON_PAGE_STARTED = "on_page_started";
 		public static final String ON_RECEIVED_ERROR = "on_received_error";
 		public static final String ON_SCALE_CHANGED = "on_scale_changed";
+		public static final String CREATE_SPINNER_POPUP_DIALOG = "create_spinner_popup_dialog";
 	}
 	
 	// description strings 
@@ -200,5 +206,12 @@ public class Constants {
 		public static final String UNKNOWN = "unknown";
 		public static final String UP = "up";
 		public static final String DOWN = "down";
+	}
+	
+	// internal asset file names
+	public static class Asset {
+		public static final String DICTIONARY = "dictionary.txt";	
+		public static final String INTERNALCLASSES = "internalclasses.txt";
+		public static final String WHITELIST = "whitelist-android";	
 	}
 }

@@ -2,6 +2,7 @@ package com.androidApp.Test;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -14,6 +15,7 @@ import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.PopupWindow;
 import android.widget.Spinner;
 
@@ -23,8 +25,10 @@ import com.androidApp.Intercept.InterceptKeyViewMenu;
 import com.androidApp.Intercept.MagicFrame;
 import com.androidApp.Intercept.MagicFramePopup;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.FieldUtils;
 import com.androidApp.Utility.ReflectionUtils;
 import com.androidApp.Utility.TestUtils;
+import com.androidApp.Utility.ViewExtractor;
 import com.androidApp.randomtest.RandTest;
 
 /**
@@ -58,7 +62,7 @@ public class SetupListeners {
 	
 	public void initRecorder(Context context) throws IOException {
 		mContext = context;
-		mRecorder = new EventRecorder(mContext, "events.txt");
+		mRecorder = new EventRecorder(mInstrumentation, mContext, "events.txt");
 		mViewInterceptor = new ViewInterceptor(mRecorder);
 		mIMEMessageListener = new IMEMessageListener(mViewInterceptor, mRecorder);
 		Thread thread = new Thread(mIMEMessageListener);
@@ -114,7 +118,10 @@ public class SetupListeners {
 							viewInterceptor.setCurrentDialog(dialog);
 							// TODO: placeholder until I can put together a description for dialogs
 							View contentView = TestUtils.getDialogContentView(dialog);
-							if (!TestUtils.isSpinnerDialog(contentView)) {
+							Spinner spinner = isSpinnerDialog(dialog, activity);
+							if (spinner != null) {
+								recorder.writeRecord(Constants.EventTags.CREATE_SPINNER_POPUP_DIALOG, spinner, "create spinner popup dialog");
+							} else {
 								SetupListeners.this.mRecorder.writeRecord(Constants.EventTags.CREATE_DIALOG, "dialog");
 							}
 						}
@@ -181,6 +188,46 @@ public class SetupListeners {
 	}
 	
 	/**
+	 * spinners can have popups (which are actually dropdowns), or dialog windows depending on the mode: MODE_DIALOG or mode: MODE_POPUP
+	 * @param popupWindow
+	 * @return
+	 */
+	public boolean isSpinnerPopup(PopupWindow popupWindow) throws NoSuchFieldException, IllegalAccessException {
+		View anchorView = getPopupWindowAnchor(popupWindow);
+		return (anchorView instanceof Spinner);
+	}
+	
+	public Spinner isSpinnerDialog(Dialog dialog, Activity activity)  throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
+		List<Spinner> spinnerList = ViewExtractor.getActivityViews(activity, Spinner.class);
+		for (Spinner spinner : spinnerList) {
+			if (isPopupDialogForSpinner(dialog, spinner)) {
+				return spinner;
+			}
+		}
+		return null;
+	}
+	
+	/**
+	 * for a given spinner, see if this dialog is the spinner's popup dialog
+	 * @param dialog dialog
+	 * @param spinner candidate spinner
+	 * @return true if it belongs, false if it does not
+	 * @throws NoSuchFieldException
+	 * @throws IllegalAccessException
+	 * @throws ClassNotFoundException
+	 */
+	public boolean isPopupDialogForSpinner(Dialog dialog, Spinner spinner) throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
+		Object spinnerPopup = FieldUtils.getFieldValue(spinner, Spinner.class, Constants.Fields.POPUP);
+		if (spinnerPopup != null) {
+			Class spinnerDialogPopupClass = Class.forName(Constants.Classes.SPINNER_DIALOG_POPUP);
+			if (spinnerDialogPopupClass.equals(spinnerPopup.getClass())) {
+				Object spinnerPopupPopup = FieldUtils.getFieldValue(spinnerPopup, spinnerDialogPopupClass, Constants.Fields.POPUP);
+				return spinnerPopupPopup == dialog;
+			}
+		}
+		return false;
+	}
+	/**
 	 * some popup windows have anchors, like the overflow menu button in the action bar, or the button in a spinner
 	 * @param popupWindow the potentially anchored popup window
 	 * @return anchor view or null.
@@ -207,7 +254,9 @@ public class SetupListeners {
 		}
 		@Override
 		public void run() {
-			InterceptKeyViewMenu interceptKeyView = new InterceptKeyViewMenu(mExpandedMenuView.getContext(), SetupListeners.this.getRecorder());
+			InterceptKeyViewMenu interceptKeyView = new InterceptKeyViewMenu(mExpandedMenuView.getContext(), 
+																			 SetupListeners.this.getRecorder(),
+																			 SetupListeners.this.getViewInterceptor());
 			((ViewGroup) mExpandedMenuView).addView(interceptKeyView);
 			interceptKeyView.requestFocus();	
 		}
@@ -391,5 +440,4 @@ public class SetupListeners {
 		}
 		Log.i("foo", "foo");
 	}
-
 }

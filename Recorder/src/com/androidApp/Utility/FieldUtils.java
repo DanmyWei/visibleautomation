@@ -1,7 +1,13 @@
 package com.androidApp.Utility;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.HashSet;
 
+import com.androidApp.Test.R;
+
+import android.content.Context;
+import android.content.pm.ApplicationInfo;
 import android.util.Log;
 
 /**
@@ -12,6 +18,44 @@ import android.util.Log;
  */
 public class FieldUtils {
 	protected final static String TAG = "FieldUtils";
+	protected  HashSet<String> mWhiteList = null;
+	
+	public FieldUtils(Context instrumentationContext, Context targetContext) throws IOException {
+		ApplicationInfo appInfo = targetContext.getApplicationInfo();
+		int targetSdkVersion = appInfo.targetSdkVersion;
+		int whitelistResourceId = getWhitelistResourceId(targetSdkVersion);
+		String[] whiteListClasses = FileUtils.readRawResource(instrumentationContext, whitelistResourceId);
+		mWhiteList = new HashSet<String>();
+		for (int i = 0; i < whiteListClasses.length; i++) {
+			mWhiteList.add(whiteListClasses[i]);
+		}
+	}
+	
+	// get the whitelist for the application's SDK
+	protected static int getWhitelistResourceId(int sdk) {
+		switch (sdk) {
+		case 8:
+			return R.raw.whitelist_android_8;
+		case 10:
+			return R.raw.whitelist_android_10;
+		case 11:
+			return R.raw.whitelist_android_11;
+		case 12:
+			return R.raw.whitelist_android_12;
+		case 13:
+			return R.raw.whitelist_android_13;
+		case 14:
+			return R.raw.whitelist_android_14;
+		case 15:
+			return R.raw.whitelist_android_15;
+		case 16:
+			return R.raw.whitelist_android_16;
+		case 17:
+			return R.raw.whitelist_android_17;
+		default:
+			return -1;
+		}
+	}
 	
 	/**
 	 * given an object, its class, and a fieldName, return the value of that field for the object
@@ -38,5 +82,19 @@ public class FieldUtils {
 			Log.i(TAG, "field name = " + field.getName());
 		}
 	}
-
+	
+	// is the class an internal android class?
+	public boolean isWhiteListedAndroidClass(Class cls) throws IOException {
+		String canonicalName = cls.getCanonicalName();
+		return mWhiteList.contains(canonicalName);
+	}
+	
+	// for an android internal class, return the public superclass.
+	public Class getPublicClassForAndroidInternalClass(Class cls) throws IOException {
+		while (!isWhiteListedAndroidClass(cls)) {
+			cls = cls.getSuperclass();
+			Log.i(TAG, "superclass = " + cls.getCanonicalName() + " name = " + cls.getName());
+		}
+		return cls;
+	}
 }

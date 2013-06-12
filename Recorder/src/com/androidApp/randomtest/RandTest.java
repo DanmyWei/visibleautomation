@@ -5,6 +5,8 @@ import java.util.List;
 
 import com.androidApp.Intercept.MagicFrame;
 import com.androidApp.Test.ActivityInterceptor;
+import com.androidApp.Test.R;
+import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.TestUtils;
 import com.androidApp.Utility.ViewExtractor;
 
@@ -40,7 +42,6 @@ public class RandTest {
 	private final int MINISLEEP = 100;
 	private final int MAX_TEXT_LENGTH = 64;
 	private final int MAX_SECURITY_EXCEPTION = 100;
-	private final String DICTIONARY = "dictionary.txt";	
 	protected ActivityInterceptor mActivityInterceptor;
 	protected Instrumentation mInstrumentation; 
 	
@@ -55,8 +56,7 @@ public class RandTest {
 	public RandTest(Instrumentation instrumentation, ActivityInterceptor activityInterceptor) throws IOException {
 		mInstrumentation = instrumentation;
 		mActivityInterceptor = activityInterceptor;
-		mDictionary = new RandomDictionary(mInstrumentation.getContext(), DICTIONARY);
-
+		mDictionary = new RandomDictionary(mInstrumentation.getContext(), R.raw.dictionary);
 	}
 	
 	/**

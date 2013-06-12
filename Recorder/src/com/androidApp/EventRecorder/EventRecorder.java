@@ -6,6 +6,7 @@ import com.androidApp.Utility.Constants;
 import com.androidApp.recorderInterface.EventRecorderInterface;
 
 import android.app.Activity;
+import android.app.Instrumentation;
 import android.content.Context;
 import android.content.Intent;
 import android.os.SystemClock;
@@ -27,10 +28,10 @@ public class EventRecorder extends EventRecorderInterface {
 	protected boolean				mfVisualDebug = true;							// enable visual debugging.
 	protected Context				mContext;										// to send requests to service
 	// constructor which opens the recording file, which is stashed somewhere on the sdcard.
-	public EventRecorder(Context context, String recordFileName) throws IOException {
+	public EventRecorder(Instrumentation instrumentation, Context context, String recordFileName) throws IOException {
 		super(context, recordFileName);
 		mContext = context;
-		mViewReference = new ViewReference();
+		mViewReference = new ViewReference(instrumentation);
 	}
 	
 	/**

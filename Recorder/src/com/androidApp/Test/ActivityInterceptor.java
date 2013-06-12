@@ -156,7 +156,10 @@ public class ActivityInterceptor {
 						currentRotation  = activityA.getWindowManager().getDefaultDisplay().getRotation();
 						mInstrumentation.runOnMainSync(new InsertRecordWindowCallbackRunnable(activityA.getWindow(), recorder, viewInterceptor));
 						// write out the package so we can do the correct import for the application
+						// initialize the view reference with an activity so we can read the appropriate whitelist
+						// for the target application's SDK
 						try {
+							recorder.getViewReference().initializeWithActivity(activityA, mInstrumentation);;
 							String packageName = getPackageName(activityA);
 							ActivityInterceptor.this.getRecorder().writeRecord(Constants.EventTags.PACKAGE, packageName);
 						} catch (Exception ex) {

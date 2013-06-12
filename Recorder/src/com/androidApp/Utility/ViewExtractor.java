@@ -94,5 +94,39 @@ public class ViewExtractor {
 		}
 		return viewList;
 	}
-
+	
+	/**
+	 * recursively retreive the views from an activity which inherit form a specified class
+	 */
+	
+	public static <T extends View> List<T> getActivityViews(Activity activity, Class<T> clsFilter) {
+		View[] decorViews = getWindowDecorViews();
+		View currentDecorView = null;
+		List<T> viewList = new ArrayList<T>();
+		
+		for (int iDecorView = 0; iDecorView < decorViews.length; iDecorView++) {
+			if (decorViews[iDecorView].getContext() == activity) {
+				currentDecorView = decorViews[iDecorView];
+				addChildren((ViewGroup) currentDecorView, viewList, clsFilter);
+			}
+		}
+		return viewList;
+	}
+	/**
+	 * flatten the view hierarchy into a list and filter by view class
+	 * @param vg view group parent
+	 * @param childList list to populate.
+	 */
+	public static <T extends View> void addChildren(ViewGroup vg, List<T> childList, Class<T> clsFilter) {
+		int nChild = vg.getChildCount();
+		for (int iChild = 0; iChild < nChild; iChild++) {
+			View child = vg.getChildAt(iChild);
+			if (clsFilter.isAssignableFrom(child.getClass())) {
+				childList.add((T) child);
+			}
+			if (child instanceof ViewGroup) {
+				addChildren((ViewGroup) child, childList, clsFilter);
+			}
+		}
+	}
 }
