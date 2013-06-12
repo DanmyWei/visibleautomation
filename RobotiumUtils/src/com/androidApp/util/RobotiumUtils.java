@@ -20,6 +20,7 @@ import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.AdapterView;
 import android.widget.AutoCompleteTextView;
 import android.widget.ListView;
 import android.widget.PopupWindow;
@@ -57,8 +58,8 @@ public class RobotiumUtils {
 	}
 	
 	// get a list view item.  
-	public static View getListViewItem(ListView lv, int itemIndex) {
-		return lv.getChildAt((itemIndex - 1) - lv.getFirstVisiblePosition());
+	public static View getAdapterViewItem(AdapterView av, int itemIndex) {
+		return av.getChildAt((itemIndex - 1) - av.getFirstVisiblePosition());
 	}
 	
 	// wrapper for sleep
@@ -72,18 +73,18 @@ public class RobotiumUtils {
 	
 	
 	/**
-	 * wait for a list view item to become visible.
-	 * @param listView list view containing item
+	 * wait for a adapter view item to become visible.
+	 * @param adpaterView list view containing item
 	 * @param itemIndex index of item
 	 * @param waitMsec max wait time in milliseconds
 	 * @return
 	 */
-	public boolean waitForListViewItem(Solo solo, ListView listView, int itemIndex, int waitMsec) {
-		android.view.View listViewItem = null; 
-		while ((listViewItem == null) && (waitMsec > 0)) {
-			listViewItem = RobotiumUtils.getListViewItem(listView, itemIndex);
-			if (listViewItem != null) {
-				if (solo.waitForView(listViewItem)) {
+	public boolean waitForAdaperViewItem(Solo solo, AdapterView adapterView, int itemIndex, int waitMsec) {
+		android.view.View adapterViewItem = null; 
+		while ((adapterViewItem == null) && (waitMsec > 0)) {
+			adapterViewItem = RobotiumUtils.getAdapterViewItem(adapterView, itemIndex);
+			if (adapterViewItem != null) {
+				if (solo.waitForView(adapterViewItem)) {
 					return true;
 				}
 			} 
@@ -93,26 +94,25 @@ public class RobotiumUtils {
 		return false;
 	}
 	/**
-	 * wait for the list, then wait for the specified view, then click on it.
+	 * wait for the adapter view, then wait for the specified view, then click on it.
 	 * @param solo robotium handle
-	 * @param listViewIndex index of the list view in the array of list views in the android layout
+	 * @param adapterViewIndex index of the list view in the array of list views in the android layout
 	 * @param itemIndex absolute index of the item 
 	 * @return list of TextViews in the list
 	 */
-	public ArrayList<android.widget.TextView> waitAndClickInListByClassIndex(Solo solo, int listViewIndex, int itemIndex) {
-		boolean foundView = solo.waitForView(android.widget.ListView.class, listViewIndex + 1, VIEW_TIMEOUT_MSEC);
+	public boolean waitAndClickInAdapterByClassIndex(Solo solo, int adapterViewIndex, int itemIndex) {
+		boolean foundView = solo.waitForView(android.widget.AdapterView.class, adapterViewIndex + 1, VIEW_TIMEOUT_MSEC);
 		if (!foundView) {
-			Log.e("test", "test");
-			TestCase.assertTrue(foundView);
+			return false;
 		}
-		android.widget.ListView listView = (android.widget.ListView) solo.getView(android.widget.ListView.class, listViewIndex);
-		scrollToViewVisible(solo, listView);
+		android.widget.AdapterView adapterView = (android.widget.AdapterView) solo.getView(android.widget.AdapterView.class, adapterViewIndex);
+		scrollToViewVisible(solo, adapterView);
 		int waitMsec = VIEW_TIMEOUT_MSEC;
-		android.view.View listViewItem = null; 
-		while ((listViewItem == null) && (waitMsec > 0)) {
-			listViewItem = RobotiumUtils.getListViewItem(listView, itemIndex);
-			if (listViewItem != null) {
-				if (solo.waitForView(listViewItem)) {
+		android.view.View adapterViewItem = null; 
+		while ((adapterViewItem == null) && (waitMsec > 0)) {
+			adapterViewItem = RobotiumUtils.getAdapterViewItem(adapterView, itemIndex);
+			if (adapterViewItem != null) {
+				if (solo.waitForView(adapterViewItem)) {
 					break;
 				}
 			} 
@@ -120,38 +120,38 @@ public class RobotiumUtils {
 			waitMsec -= VIEW_POLL_INTERVAL_MSEC;
 		}	
 		if (waitMsec > 0) {
-			int visibleIndex = itemIndex - listView.getFirstVisiblePosition();
-			ArrayList<android.widget.TextView> textViewList = solo.clickInList(visibleIndex, listViewIndex);
-			return textViewList;
+			int visibleIndex = itemIndex - adapterView.getFirstVisiblePosition();
+			solo.clickOnView(adapterViewItem);
+			return true;
 		} else {
-			return null;
+			return false;
 		}
 	}
 	/**
-	 * wait for the list, then wait for the specified view, then click on it.
+	 * wait for the adapter, then wait for the specified view, then click on it.
 	 * @param solo robotium handle
-	 * @param listViewIndex index of the list view in the array of list views in the android layout
+	 * @param adapterViewIndex index of the list view in the array of list views in the android layout
 	 * @param itemIndex absolute index of the item 
-	 * @return list of TextViews in the list
+	 * @return true if selected, false if timeout
 	 */
-	public static ArrayList<android.widget.TextView> waitAndClickInListById(Solo solo, int listViewId, int itemIndex) {
-		android.widget.ListView listView = null;
+	public static boolean waitAndClickInAdapterById(Solo solo, int adapterViewId, int itemIndex) {
+		android.widget.AdapterView adapterView = null;
 		int waitMsec = VIEW_TIMEOUT_MSEC;
-		while ((listView == null) && (waitMsec > 0)) {
-			listView = (android.widget.ListView) solo.getView(listViewId);
-			if (listView != null) {
-				TestCase.assertTrue(solo.waitForView(listView));
+		while ((adapterView == null) && (waitMsec > 0)) {
+			adapterView = (android.widget.AdapterView) solo.getView(adapterViewId);
+			if (adapterView != null) {
+				TestCase.assertTrue(solo.waitForView(adapterView));
 				break;
 			}
 			RobotiumUtils.sleep(VIEW_POLL_INTERVAL_MSEC);
 			waitMsec -= VIEW_POLL_INTERVAL_MSEC;
 		}
 		waitMsec = VIEW_TIMEOUT_MSEC;
-		android.view.View listViewItem = null; 
-		while ((listView == null) && (waitMsec > 0)) {
-			listViewItem = RobotiumUtils.getListViewItem(listView, itemIndex);
-			if (listViewItem != null) {
-				if (solo.waitForView(listViewItem)) {
+		android.view.View adapterViewItem = null; 
+		while ((adapterViewItem == null) && (waitMsec > 0)) {
+			adapterViewItem = RobotiumUtils.getAdapterViewItem(adapterView, itemIndex);
+			if (adapterViewItem != null) {
+				if (solo.waitForView(adapterViewItem)) {
 					break;
 				}
 			} 
@@ -160,10 +160,10 @@ public class RobotiumUtils {
 		}
 		if (waitMsec > 0) {
 			// click item Seeking
-			ArrayList<android.widget.TextView> textViewList = solo.clickInList(itemIndex, itemIndex - listView.getFirstVisiblePosition());
-			return textViewList;
+			solo.clickOnView(adapterViewItem);
+			return true;
 		} else {
-			return null;
+			return false;
 		}
 	}
 
@@ -232,7 +232,7 @@ public class RobotiumUtils {
 				return (ScrollView) vp;
 			}
 			vp = vp.getParent();
-			if (vp.getParent() == null) {
+			if ((vp == null) || (vp.getParent() == null)) {
 				return null;
 			}
 		}
@@ -316,9 +316,10 @@ public class RobotiumUtils {
 	 * @param solo handle to robotium
 	 * @param v view to click on
 	 */
-	public void clickOnViewAndScrollIfNeeded(Solo solo, View v) {
+	public boolean clickOnViewAndScrollIfNeeded(Solo solo, View v) {
 		scrollToViewVisible(solo, v);
 		solo.clickOnView(v, true);
+		return true;
 	}
 	
 	/** 
@@ -436,8 +437,8 @@ public class RobotiumUtils {
 		return false;
 	}
 	
-	public static void verifyPopupWindowDimissed(Activity activity, PopupWindow dismissedPopupWindow) throws TestException {
-		verifyPopupWindowDismissed(activity, dismissedPopupWindow, VIEW_TIMEOUT_MSEC);
+	public static boolean verifyPopupWindowDimissed(Activity activity, PopupWindow dismissedPopupWindow) throws TestException {
+		return verifyPopupWindowDismissed(activity, dismissedPopupWindow, VIEW_TIMEOUT_MSEC);
 	}
 
 	/**
