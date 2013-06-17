@@ -61,6 +61,8 @@ public class Constants {
 		public static final String CREATE_DIALOG = "create_dialog";
 		public static final String CREATE_SPINNER_POPUP_DIALOG = "create_spinner_popup_dialog";
 		public static final String DISMISS_SPINNER_DIALOG_BACK_KEY = "dismiss_spinner_dialog_back_key";
+		public static final String DISMISS_SPINNER_POPUP_BACK_KEY = "dismiss_spinner_popup_window_back_key";
+		public static final String SELECT_TAB = "select_tab";
 
 	}
 	
@@ -127,6 +129,9 @@ public class Constants {
 		public static final String WAIT_FOR_DIALOG_TO_OPEN = "wait_for_dialog_to_open.txt";
 		public static final String CANCEL_DIALOG_TEMPLATE = "dialog_cancel_template.txt";
 		public static final String BINARY_CLASSPATH = "binary_classpath.txt";
+		public static final String PLAYBACK_MOTION_EVENTS = "playback_motion_events.txt";
+		public static final String SELECT_TAB_ID = "select_tab_id.txt";
+		public static final String SELECT_TAB_CLASS_INDEX = "select_tab_class_index.txt";
 	}
 	
 	// template %replace% variables
@@ -138,6 +143,7 @@ public class Constants {
 		public static final String ACTIVITY_CLASS = "%ACTIVITY_CLASS%";
 		public static final String VARIABLE_INDEX = "%VARIABLE_INDEX%";
 		public static final String ACTIVITY_VARIABLE_INDEX = "%ACTIVITY_VARIABLE_INDEX%";
+		public static final String MOTION_EVENT_VARIABLE_INDEX = "%MOTION_EVENT_VARIABLE_INDEX%";
 		public static final String ITEM_INDEX = "%ITEM_INDEX%";
 		public static final String VIEW_INDEX = "%VIEW_INDEX%";
 		public static final String ID = "%ID%";
@@ -158,6 +164,7 @@ public class Constants {
 		public static final String TESTPACKAGE = "%TESTPACKAGE%";
 		public static final CharSequence TAB_INDEX = "%TAB_INDEX%";
 		public static final CharSequence URL = "%URL%";
+		public static final CharSequence TAB_ID = "%TAB_ID%";
 
 	}
 	

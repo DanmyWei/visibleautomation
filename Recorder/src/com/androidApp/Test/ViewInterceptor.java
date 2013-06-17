@@ -26,6 +26,7 @@ import android.widget.PopupMenu;
 import android.widget.PopupWindow;
 import android.widget.SeekBar;
 import android.widget.Spinner;
+import android.widget.TabHost;
 import android.widget.TextView;
 
 import com.androidApp.EventRecorder.EventRecorder;
@@ -43,11 +44,13 @@ import com.androidApp.Listeners.RecordOnItemSelectedListener;
 import com.androidApp.Listeners.RecordOnKeyListener;
 import com.androidApp.Listeners.RecordOnLongClickListener;
 import com.androidApp.Listeners.RecordOnScrollListener;
+import com.androidApp.Listeners.RecordOnTabChangeListener;
 import com.androidApp.Listeners.RecordOnTouchListener;
 import com.androidApp.Listeners.RecordPopupMenuOnMenuItemClickListener;
 import com.androidApp.Listeners.RecordPopupWindowOnDismissListener;
 import com.androidApp.Listeners.RecordSeekBarChangeListener;
 import com.androidApp.Listeners.RecordSpinnerDialogOnDismissListener;
+import com.androidApp.Listeners.RecordSpinnerPopupWindowOnDismissListener;
 import com.androidApp.Listeners.RecordTextChangedListener;
 import com.androidApp.Listeners.RecordWebViewClient;
 import com.androidApp.Utility.Constants;
@@ -164,43 +167,46 @@ public class ViewInterceptor {
 	 */
 	public void replaceListeners(View v) {
 		try {
-			//if (!TestUtils.isActionBarDescendant(v)) {
-			if (true) {
-				// adapterViews don't like click listeners, they like item click listeners.
-				if (!(v instanceof AdapterView)) {
-					if (v instanceof WebView) {
-						replaceWebViewListeners(v);
-					} else {
-						if (!TestUtils.isAdapterViewAncestor(v) && !TestUtils.shouldBeIgnored(v)) {
-							replaceViewListeners(v);
-						}
-					}
-					
-					// specific handlers for seekbars/progress bars/etc.
-					if (v instanceof SeekBar) {
-						SeekBar seekBar = (SeekBar) v;
-						replaceSeekBarListeners(seekBar);
-					}
+			// adapterViews don't like click listeners, they like item click listeners.
+			if (!(v instanceof AdapterView)) {
+				if (v instanceof WebView) {
+					replaceWebViewListeners(v);
 				} else {
-					if (v instanceof AdapterView) {
-						if (v instanceof Spinner) {
-							Spinner spinner = (Spinner) v;
-							replaceSpinnerListeners(spinner);
-						} else {
-							AdapterView adapterView = (AdapterView) v;
-							if (!isSpinnerDropdownList(adapterView)) {
-								replaceAdapterViewListeners(adapterView);
-							}
-							if (TestUtils.listenMotionEvents(v)) {
-								replaceTouchListener(v);
-							}
+					if (!TestUtils.isAdapterViewAncestor(v) && 
+						!TestUtils.shouldBeIgnored(v) &&
+						!TestUtils.isInTabControl(v)) {
+						replaceViewListeners(v);
+					}
+				}
+				
+				// specific handlers for seekbars/progress bars/etc.
+				if (v instanceof SeekBar) {
+					SeekBar seekBar = (SeekBar) v;
+					replaceSeekBarListeners(seekBar);
+				}
+				if (v instanceof TabHost) {
+					TabHost tabHost = (TabHost) v;
+					replaceTabHostListeners(tabHost);
+				}
+			} else {
+				if (v instanceof AdapterView) {
+					if (v instanceof Spinner) {
+						Spinner spinner = (Spinner) v;
+						replaceSpinnerListeners(spinner);
+					} else {
+						AdapterView adapterView = (AdapterView) v;
+						if (!isSpinnerDropdownList(adapterView)) {
+							replaceAdapterViewListeners(adapterView);
+						}
+						if (TestUtils.listenMotionEvents(v)) {
+							replaceTouchListener(v);
 						}
 					}
 				}
-				if (v instanceof EditText) {
-					TextView tv = (TextView) v;
-					replaceEditTextListeners(tv);
-				}
+			}
+			if (v instanceof EditText) {
+				TextView tv = (TextView) v;
+				replaceEditTextListeners(tv);
 			}
 		} catch (Exception ex) {
 			try {
@@ -215,8 +221,11 @@ public class ViewInterceptor {
 	
 	/**
 	 * replace the touch listener for views that listen for motion events.
-	 * @param v
+	 * @param v view to replace listener for 
 	 * @return
+	 * @throws IllegalAccessException
+	 * @throws ClassNotFoundException
+	 * @throws NoSuchFieldException
 	 */
 	public boolean replaceTouchListener(View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
 		View.OnTouchListener originalTouchListener = ListenerIntercept.getTouchListener(v);
@@ -227,6 +236,25 @@ public class ViewInterceptor {
 		}
 		return false;
 	}
+	
+	/**
+	 * replace this view's click listener
+	 * @param v view to replace listener for 
+	 * @return
+	 * @throws IllegalAccessException
+	 * @throws ClassNotFoundException
+	 * @throws NoSuchFieldException
+	 */
+	public boolean replaceClickListener(View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
+		View.OnClickListener originalClickListener = ListenerIntercept.getClickListener(v);
+		if (!(originalClickListener instanceof RecordOnClickListener)) {
+			RecordOnClickListener recordClickListener = new RecordOnClickListener(mEventRecorder, originalClickListener);
+			v.setOnClickListener(recordClickListener);
+			return true;
+		}
+		return false;
+	}
+
 	/**
 	 * the spinner popup is actually a list view, but we've already intercepted the item selected event for the spinner
 	 * and we don't want to also get the list item click
@@ -263,11 +291,7 @@ public class ViewInterceptor {
 	 * @throws ClassNotFoundException
 	 */
 	public void replaceViewListeners(View v) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
-		View.OnClickListener originalClickListener = ListenerIntercept.getClickListener(v);
-		if (!(originalClickListener instanceof RecordOnClickListener)) {
-			RecordOnClickListener recordClickListener = new RecordOnClickListener(mEventRecorder, originalClickListener);
-			v.setOnClickListener(recordClickListener);
-		}
+		replaceClickListener(v);
 		View.OnLongClickListener originalLongClickListener = ListenerIntercept.getLongClickListener(v);
 		if (!(originalLongClickListener instanceof RecordOnClickListener)) {
 			RecordOnLongClickListener recordLongClickListener = new RecordOnLongClickListener(mEventRecorder, originalLongClickListener);
@@ -327,7 +351,14 @@ public class ViewInterceptor {
 			spinner.setOnItemSelectedListener(recordItemSelectedListener);
 		}
 	}
-
+	
+	public void replaceTabHostListeners(TabHost tabHost) throws IllegalAccessException, NoSuchFieldException {
+		TabHost.OnTabChangeListener originalTabChangeListener = ListenerIntercept.getTabChangeListener(tabHost);
+		if (!(originalTabChangeListener instanceof RecordOnTabChangeListener)) {
+			RecordOnTabChangeListener recordOnTabChangeListener = new RecordOnTabChangeListener(mEventRecorder, originalTabChangeListener, tabHost);
+			tabHost.setOnTabChangedListener(recordOnTabChangeListener);
+		}
+	}
 	/**
 	 * replace the listeners for item click, list scroll, and item select if its a spinner
 	 * @param absListView list view to intercept
@@ -451,7 +482,21 @@ public class ViewInterceptor {
         setFocusedView(null);
         intercept(v);     
         ActionBar actionBar = a.getActionBar();
-        intercept(a, actionBar);
+        if (actionBar != null) {
+        	try {
+	        	View actionBarView = InterceptActionBar.getActionBarView(actionBar);
+	            ViewTreeObserver viewTreeObserverActionBar = actionBarView.getViewTreeObserver();
+	            viewTreeObserverActionBar.addOnGlobalLayoutListener(new OnLayoutInterceptListener(a));
+	            View customView = actionBar.getCustomView();
+	            if (customView != null) {
+		            ViewTreeObserver viewTreeObserverActionBarCustomView = customView.getViewTreeObserver();
+		            viewTreeObserverActionBarCustomView.addOnGlobalLayoutListener(new OnLayoutInterceptListener(a));	            	
+	            }
+        	} catch (Exception ex) {
+        		Log.d(TAG, "failed to intercept action bar");
+        	}
+        	intercept(a, actionBar);
+        }
        
  	}
 	
@@ -469,27 +514,6 @@ public class ViewInterceptor {
 			mCurrentRotation = display.getRotation();
 			mPreviousContentHeight = getContentHeight(mActivity.getWindow().getDecorView());
 		}
-		/**
-		 * unfortunately, there isn't an event for IME display/hide, so we have to guess by examining the content view
-		 * and seeing if it's enough smaller than its parent that the IME could probably fit in there.  This is called
-		 * in the global layout listener, so we at least know that the layout has changed, but not why.
-		 * @param contentView android.R.id.content from the activity's window.
-		 * @return true if the IME is probably up, false if it's certainly down.
-		 */
-		public boolean isIMEDisplayed(View decorView) {
-			// not quite.
-			int contentHeight = getContentHeight(decorView);
-			int distanceFromBottom = decorView.getHeight() - contentHeight;
-			int imeHeight = (int) (decorView.getHeight()*GUESS_IME_HEIGHT);
-			boolean fIMEDisplayed = (distanceFromBottom > imeHeight) && (decorView.getHeight() - mPreviousContentHeight < imeHeight);
-			if (fIMEDisplayed) {
-				Log.d(TAG, "fIMEDisplayed");
-			}
-			mPreviousContentHeight = contentHeight;
-			return fIMEDisplayed;
-		}
-	
-		
 		
 		public void onGlobalLayout() {
 			// this actually returns our magic frame, which doesn't resize when the IME is displayed
@@ -540,6 +564,23 @@ public class ViewInterceptor {
 				replacePopupMenuListeners(contentView);
 			} else {
 				// we are assuming this is a spinner, which is probably not the best thing.
+			}
+		} catch (Exception ex) {
+			mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, "Intercepting popup window " + ex.getMessage());
+			ex.printStackTrace();
+		}
+	}
+
+	/**
+	 * intercept the contents of a popup window, which isn't in the view hierarchy of an activity.
+	 * @param popupWindow
+	 */
+	public void interceptSpinnerPopupWindow(PopupWindow popupWindow) {
+		try {
+			PopupWindow.OnDismissListener originalDismissListener = ListenerIntercept.getOnDismissListener(popupWindow);
+			if ((originalDismissListener == null) || (originalDismissListener.getClass() != RecordPopupWindowOnDismissListener.class)) {
+				RecordSpinnerPopupWindowOnDismissListener recordOnDismissListener = new RecordSpinnerPopupWindowOnDismissListener(mEventRecorder, this, null, popupWindow, originalDismissListener);
+				popupWindow.setOnDismissListener(recordOnDismissListener);
 			}
 		} catch (Exception ex) {
 			mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, "Intercepting popup window " + ex.getMessage());

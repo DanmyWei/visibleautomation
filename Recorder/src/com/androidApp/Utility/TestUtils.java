@@ -5,8 +5,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import com.androidApp.EventRecorder.ListenerIntercept;
-
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
@@ -20,6 +18,7 @@ import android.view.Window;
 import android.widget.Adapter;
 import android.widget.AdapterView;
 import android.widget.PopupWindow;
+import android.widget.TabHost;
 import android.widget.TextView;
 import android.widget.Gallery;
 
@@ -38,7 +37,7 @@ public class TestUtils {
 	 * @param cls class to match
 	 * @return View if found, returns null if not found.
 	 */
-	public static View getChildAt(ViewGroup vg, int index, Class cls) {
+	public static View getChildAt(ViewGroup vg, int index, Class<? extends View> cls) {
 		int nChild = vg.getChildCount();
 		for (int i = 0; i < nChild; i++) {
 			View v = vg.getChildAt(i);
@@ -59,7 +58,7 @@ public class TestUtils {
 	 * @param cls class to match
 	 * @return count of matching children
 	 */
-	public static int getChildCount(ViewGroup vg, Class cls) {
+	public static int getChildCount(ViewGroup vg, Class<? extends View> cls) {
 		int nChild = vg.getChildCount();
 		int count = 0;
 		for (int i = 0; i < nChild; i++) {
@@ -72,8 +71,8 @@ public class TestUtils {
 	}
 	
 	
-	public static View findChild(View v, int index, Class cls) {
-		Integer indexWrapper = new Integer(index);
+	public static View findChild(View v, int index, Class<? extends View> cls) {
+		Integer indexWrapper = Integer.valueOf(index);
 		return findChild(v, indexWrapper, cls);
 	}
 	
@@ -84,7 +83,7 @@ public class TestUtils {
 	 * @param cls class to match
 	 * @return view or null if no matching child found
 	 */
-	public static View findChild(View v, Integer index, Class cls) {
+	public static View findChild(View v, Integer index, Class<? extends View> cls) {
 		if (v.getClass().isAssignableFrom(cls)) {
 			if (index == 0) {
 				return v;
@@ -152,7 +151,7 @@ public class TestUtils {
 	 * @param cls class to match
 	 * @return View or null if not found.
 	 */
-	public static View findNearest(View v, Class cls) {
+	public static View findNearest(View v, Class<?extends View> cls) {
 		ViewParent vp = v.getParent();
 		while (vp != null) {
 			View vFound = TestUtils.findDescendantByClass((View) vp, v, cls);
@@ -171,7 +170,7 @@ public class TestUtils {
 	 * @param cls class to match
 	 * @return View or null
 	 */
-	public static View findDescendantByClass(View v, View vExcept, Class cls) {
+	public static View findDescendantByClass(View v, View vExcept, Class<? extends View> cls) {
 		if ((v != vExcept) && cls.isAssignableFrom(v.getClass())) {
 			return v;
 		} else if (v instanceof ViewGroup) {
@@ -296,7 +295,7 @@ public class TestUtils {
 	 * @param cls class to match
 	 * @return count of matching descendants.
 	 */
-	public static int countDescendants(View v, Class cls) {
+	public static int countDescendants(View v, Class<? extends View> cls) {
 		if (v.getClass().isAssignableFrom(cls)) {
 			return 1;
 		} else if (v instanceof ViewGroup) {
@@ -373,7 +372,7 @@ public class TestUtils {
 	 * @param cls class to match
 	 * @return number of matches.
 	 */
-	public static int classCount(View v, Class cls) {
+	public static int classCount(View v, Class<? extends View> cls) {
 		int count = 0;
 		if (v.getClass() == cls) {
 			count++;
@@ -432,12 +431,48 @@ public class TestUtils {
 	 * @throws ClassNotFoundException
 	 */
 	public static boolean isActionBarDescendant(View v) throws ClassNotFoundException {
-   		Class actionBarImplClass = Class.forName(Constants.Classes.ACTION_BAR_CONTAINER);
-		ViewParent vp = v.getParent();
-		return isDescendentOfClass(vp, v.getRootView(), actionBarImplClass);
+   		Class<? extends View> actionBarImplClass = (Class<? extends View>) Class.forName(Constants.Classes.ACTION_BAR_CONTAINER);
+		return isDescendentOfClass(v, v.getRootView(), actionBarImplClass);
+	}
+	
+	// is this control a child of a tab control? There's the old TabHost, and the new action bar tab
+	// control to take into consideration
+	public static boolean isInTabControl(View v) throws ClassNotFoundException {
+		if (isDescendentOfClass(v, v.getRootView(), TabHost.class)) {
+			return true;
+		}
+		Class<? extends View> tabImplClass = (Class<? extends View>) Class.forName(Constants.Classes.ACTION_BAR_IMPL_TAB_IMPL);
+		if (isDescendentOfClass(v, v.getRootView(), tabImplClass)) {
+			return true;
+		}
+		Class<? extends View> scrollingTabContainerClass = (Class<? extends View>) Class.forName(Constants.Classes.SCROLLING_TAB_CONTAINER_VIEW);
+		if (isDescendentOfClass(v, v.getRootView(), scrollingTabContainerClass)) {
+			return true;
+		}
+		
+		return false;
+
+	}
+	
+	/**
+	 * is view a descendant of some view of class c?
+	 * @param v candidate view
+	 * @param rootView root view to recurse up to
+	 * @param c class to test againsg
+	 * @return
+	 */
+	public static boolean isDescendentOfClass(View v, View rootView, Class<? extends View> c) {
+		if ((v == null) || (v == rootView)) {
+			return false;
+		} else if (c.isAssignableFrom(v.getClass())) {
+			return true;
+		} else {
+			return isDescendentOfClass(v.getParent(), rootView, c);
+		}
 	}
 		
-	public static boolean isDescendentOfClass(ViewParent vp, View rootView, Class c) {
+	// variant which takes a view parent, since view root is a view parent, but not neccessarily a view.
+	protected static boolean isDescendentOfClass(ViewParent vp, View rootView, Class<? extends View> c) {
 		if ((vp == null) || (vp == rootView)) {
 			return false;
 		} else if (c.isAssignableFrom(vp.getClass())) {
@@ -624,7 +659,7 @@ public class TestUtils {
 	public static boolean isOptionsMenu(View v) throws ClassNotFoundException {
 		if (v instanceof ViewGroup) {
 			View vChild = ((ViewGroup) v).getChildAt(0);
-			Class menuViewClass = Class.forName(Constants.Classes.EXPANDED_MENU_VIEW);
+			Class<? extends View> menuViewClass = (Class<? extends View>) Class.forName(Constants.Classes.EXPANDED_MENU_VIEW);
 			return vChild.getClass() == menuViewClass; 	
 		} else {
 			return false;
@@ -633,8 +668,7 @@ public class TestUtils {
 	
 	public static View findOptionsMenu(Activity activity) {
 		try {
-			ViewExtractor viewExractor = new ViewExtractor();
-			View[] views = viewExractor.getWindowDecorViews();
+			View[] views = ViewExtractor.getWindowDecorViews();
 			if (views != null) {
 				int numDecorViews = views.length;
 				
@@ -775,7 +809,7 @@ public class TestUtils {
 	 */
 	
 	public static List<Object> getPopupWindowCallbackList(PopupWindow popupWindow) throws ClassNotFoundException, IllegalAccessException, NoSuchFieldException {
-		List<Object> callbackList = new ArrayList();
+		List<Object> callbackList = new ArrayList<Object>();
 		View contentView = popupWindow.getContentView();
 		ViewGroup contentViewGroup = (ViewGroup) contentView;
 		Class listMenuItemViewClass = Class.forName(Constants.Classes.LIST_MENU_ITEM_VIEW);
@@ -858,7 +892,7 @@ public class TestUtils {
 	 * @param cls
 	 * @param viewList
 	 */
-	protected static void getChildrenByClassName(View v, Class cls, List<View> viewList) {
+	protected static void getChildrenByClassName(View v, Class<? extends View> cls, List<View> viewList) {
 		if (cls.isAssignableFrom(v.getClass())) {
 			viewList.add(v);
 		} 
@@ -877,7 +911,7 @@ public class TestUtils {
 	 * @param cls class to match
 	 * @return list of matching views
 	 */
-	public static List<View> getChildrenByClass(View v, Class cls) {
+	public static List<View> getChildrenByClass(View v, Class<? extends View> cls) {
 		List<View> viewList = new ArrayList<View>();
 		getChildrenByClassName(v, cls, viewList);
 		return viewList;

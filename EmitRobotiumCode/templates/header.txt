@@ -2,12 +2,14 @@ package %TESTPACKAGE%;
 
 import %CLASSPATH%;
 import com.androidApp.util.RobotiumUtils;
+import com.androidApp.util.PlaybackMotionEvents;
 import com.androidApp.util.ViewExtractor;
 import com.androidApp.util.TestException;
 import com.jayway.android.robotium.solo.Solo;
 import android.test.ActivityInstrumentationTestCase2;
 import android.view.View;
 import java.util.ArrayList;
+import java.io.IOException;
 import junit.framework.TestCase;
 import android.app.Activity;
 import android.view.Surface;

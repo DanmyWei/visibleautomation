@@ -27,4 +27,5 @@ public class RecorderConstants {
 	public static final String KEYBOARD_PACKAGE = "com.example.android.softkeyboard";
 	public static final String LOGSERVICE_APK = "LogService.apk";
 	public static final String LOGSERVICE_PACKAGE = "com.androidApp.logService";
+	public static final String EVENTRECORDERINTERFACE_JAR = "eventrecorderinterface.jar";
 }

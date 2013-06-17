@@ -1,1 +1,3 @@
-	public void testRun() throws TestException {
+	public void testRun() throws TestException, IOException {
+		// to provide access to asset files for motion events and stuff like that.
+	    String testClassName = this.getClass().getSimpleName();

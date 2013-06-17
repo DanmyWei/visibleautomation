@@ -1,13 +1,16 @@
 package com.androidApp.emitter;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
 import com.androidApp.util.Constants;
+import com.androidApp.util.SuperTokenizer;
 
 /**
  * for views which receive motion events, the recorder writes the ACTION_DOWN event, followed
@@ -41,13 +44,13 @@ public class MotionEventList {
 			mY = y;
 		}
 	}
-	
+	protected ReferenceParser 			mRef; 
 	protected String 					mName;				// file name to write to		
 	protected int						mWidth;				// dimensions of containing view
 	protected int						mHeight;
 	protected List<MotionEventPoint>	mPoints;			// list of recorded points
 	
-	public MotionEventList(String name, List<String> touchDownTokens, BufferedReader br) throws EmitterException, IOException {
+	public MotionEventList(String name, List<String> touchDownTokens, String nextLine, BufferedReader br) throws EmitterException, IOException {
 		mName = name;
 		mPoints = new ArrayList<MotionEventPoint>();
 		mWidth = Integer.parseInt(touchDownTokens.get(2));
@@ -56,26 +59,30 @@ public class MotionEventList {
 		float eventX = Float.parseFloat(touchDownTokens.get(4));
 		float eventY = Float.parseFloat(touchDownTokens.get(5));
 		MotionEventPoint downEvent = new MotionEventPoint(eventTimeMsec, eventX, eventY);
+		mRef = new ReferenceParser(touchDownTokens, 6);
 		mPoints.add(downEvent);
+		String line = nextLine;
 		do {
-			String line = br.readLine();
-			String[] tokens = line.split(",");
-			if (tokens[0].equals(Constants.Events.TOUCH_MOVE)) {
-				eventTimeMsec = Long.parseLong(tokens[1]);
-				eventX = Float.parseFloat(tokens[2]);
-				eventY = Float.parseFloat(tokens[3]);
+			
+			SuperTokenizer st = new SuperTokenizer(line, "\"", ":,", '\\');
+			List<String> tokens = st.toList();
+			if (tokens.get(0).equals(Constants.Events.TOUCH_MOVE)) {
+				eventTimeMsec = Long.parseLong(tokens.get(1));
+				eventX = Float.parseFloat(tokens.get(2));
+				eventY = Float.parseFloat(tokens.get(3));
 				MotionEventPoint moveEvent = new MotionEventPoint(eventTimeMsec, eventX, eventY);
 				mPoints.add(moveEvent);
-			} else if (tokens[0].equals(Constants.Events.TOUCH_UP)) { 
-				eventTimeMsec = Long.parseLong(tokens[1]);
-				eventX = Float.parseFloat(tokens[2]);
-				eventY = Float.parseFloat(tokens[3]);
+			} else if (tokens.get(0).equals(Constants.Events.TOUCH_UP)) { 
+				eventTimeMsec = Long.parseLong(tokens.get(1));
+				eventX = Float.parseFloat(tokens.get(2));
+				eventY = Float.parseFloat(tokens.get(3));
 				MotionEventPoint upEvent = new MotionEventPoint(eventTimeMsec, eventX, eventY);
 				mPoints.add(upEvent);
 				break;
 			} else {
-				throw new EmitterException("motion events: bad tag " + tokens[0]);
+				throw new EmitterException("motion events: bad tag " + tokens.get(0));
 			}
+			line = br.readLine();
 		} while (true);
 	}
 	
@@ -83,16 +90,22 @@ public class MotionEventList {
 	 * write the points to an output stream
 	 * @param os
 	 */
-	public void write(OutputStream os) {
-		PrintWriter pr = new PrintWriter(os);
-		String startLine = Integer.toString(mWidth) + "," + Integer.toString(mHeight) + "\n";
-		pr.write(startLine);
+	public void write(OutputStream os) throws IOException {
+		BufferedWriter br = new BufferedWriter(new OutputStreamWriter(os));
+		String startLine = Integer.toString(mWidth) + "," + Integer.toString(mHeight);
+		br.write(startLine + "\n");
 		for (MotionEventPoint point : mPoints) {
-			String pointLne = Long.toString(point.mTimeMsec) + "," + Float.toString(point.mX) + "," + Float.toString(point.mY);
+			String pointLine = Long.toString(point.mTimeMsec) + "," + Float.toString(point.mX) + "," + Float.toString(point.mY);
+			br.write(pointLine + "\n");
 		}
+		br.flush();
 	}
 	
 	public String getName() {
 		return mName;
+	}
+	
+	public ReferenceParser getRef() {
+		return mRef;
 	}
 }

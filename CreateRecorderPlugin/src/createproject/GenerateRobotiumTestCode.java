@@ -8,6 +8,7 @@ import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.StringBufferInputStream;
 import java.util.List;
 
@@ -22,6 +23,7 @@ import org.eclipse.jdt.core.JavaModelException;
 import com.androidApp.emitter.EmitRobotiumCode;
 import com.androidApp.emitter.EmitRobotiumCodeSource;
 import com.androidApp.emitter.IEmitCode;
+import com.androidApp.emitter.MotionEventList;
 import com.androidApp.emitter.IEmitCode.LineAndTokens;
 import com.androidApp.emitter.SetupRobotiumProject;
 import com.androidApp.util.Constants;
@@ -56,6 +58,7 @@ public class GenerateRobotiumTestCode {
 		IFolder resFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.RES);
 		IFolder drawableFolder = EclipseUtility.createFolder(resFolder, Constants.Dirs.DRAWABLE);
 		IFolder genFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.GEN);
+		IFolder assetsFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.ASSETS);
 	}
 	
 	public void writeBuildXML(IProject project, String targetClassPath) throws CoreException, IOException {
@@ -208,5 +211,35 @@ public class GenerateRobotiumTestCode {
 		emitter.writeLines(bw, lines);
 		emitter.writeTrailer(bw);
 		bw.close();
+	}
+	
+	
+	/**
+	 * write the motion events to files under the test class name. We need to use subdirectories to differentiate
+	 * between files on each run
+	 * @param assetDirName asset directory
+	 * @param testClassName
+	 * @param motionEvents
+	 * @throws IOException
+	 */
+	
+	public void writeMotionEvents(IProject project, String testClassName, List<MotionEventList> motionEvents) throws IOException, CoreException {
+		if (!motionEvents.isEmpty()) {
+			IFolder assetsFolder = project.getFolder(Constants.Dirs.ASSETS);
+			IFolder pointsFolder = EclipseUtility.createFolder(assetsFolder, testClassName);
+		
+			for (MotionEventList eventList : motionEvents) {
+				File tempFile = File.createTempFile("points", "txt");
+				OutputStream os = new FileOutputStream(tempFile);
+				eventList.write(os);
+				os.close();
+				FileInputStream fis = new FileInputStream(tempFile);
+				IFile file = pointsFolder.getFile(eventList.getName() + "." + Constants.Extensions.TEXT);
+				file.delete(false, null);
+				file.create(fis, IFile.FORCE, null);	
+				tempFile.delete();
+				
+			}
+		}
 	}
 }

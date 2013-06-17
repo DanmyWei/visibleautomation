@@ -280,11 +280,19 @@ public class SetupRobotiumProject {
 	 * @param motionEvents
 	 * @throws IOException
 	 */
-	public static void writeMotionEvents(String assetDirName, String testClassName, List<MotionEventList> motionEvents) throws IOException {
-		for (MotionEventList eventList : motionEvents) {
-			String path = assetDirName + File.separator + testClassName + File.separator + eventList.getName() + "." + Constants.Extensions.TEXT;
-			OutputStream os = new FileOutputStream(path);
-			eventList.write(os);
+	public static void writeMotionEvents(String assetDirName, String testClassName, List<MotionEventList> motionEvents) throws IOException, EmitterException {
+		if (!motionEvents.isEmpty()) {
+			File motionPointDir = new File(assetDirName + File.separator + testClassName);
+			if (!motionPointDir.mkdirs()) {
+				throw new EmitterException("failed to create motion events directory " + motionPointDir.getAbsolutePath());
+			}
+		
+			for (MotionEventList eventList : motionEvents) {
+				String path = assetDirName + File.separator + testClassName + File.separator + eventList.getName() + "." + Constants.Extensions.TEXT;
+				OutputStream os = new FileOutputStream(path);
+				eventList.write(os);
+				os.close();
+			}
 		}
 	}
 }

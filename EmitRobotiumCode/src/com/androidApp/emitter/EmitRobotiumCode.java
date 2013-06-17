@@ -93,12 +93,14 @@ public class EmitRobotiumCode {
 		String srcDirName = testClassName + File.separator + Constants.Dirs.SRC;
 		String packageFilePath = srcDirName + File.separator + FileUtility.sourceDirectoryFromClassName(testClassPath);
 		String templateFileName = testClassName + "." + Constants.Extensions.JAVA;
+		// asset directory to write motion event files to
+		String assetDirName = testClassName + File.separator + Constants.Dirs.ASSETS;
+		
+		// TODO: should change this variable
 		int uniqueFileIndex = FileUtility.uniqueFileIndex(packageFilePath, templateFileName);
 		if (uniqueFileIndex != 0) {
 			testClassName += Integer.toString(uniqueFileIndex) ;
 		}
-		// asset directory to write motion event files to
-		String assetDirName = testClassName + File.separator + Constants.Dirs.SRC;
 
 		// write the header template, the emitter output, and the trailer temoplate.
 		BufferedWriter bw = new BufferedWriter(new FileWriter(outputCodeFileName));

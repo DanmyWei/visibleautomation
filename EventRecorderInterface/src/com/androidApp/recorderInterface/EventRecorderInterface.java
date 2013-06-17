@@ -27,8 +27,8 @@ public class EventRecorderInterface {
 	public EventRecorderInterface(Context context, String recordFileName) {	
 		mContext = context;
 		mRecordFileName = recordFileName;
-        Intent i = new Intent(LOGSERVICE);
-        i.putExtra(LOGSERVICE_INITIALIZE, mRecordFileName);
+        Intent i = new Intent(LOGSERVICE_INITIALIZE);
+        i.putExtra(LOGSERVICE_FILENAME, mRecordFileName);
         mContext.startService(i);
 	}	
 	

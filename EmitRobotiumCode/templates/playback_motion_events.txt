@@ -1,0 +1,5 @@
+		// %DESCRIPTION%
+		%CLASSPATH% view%VARIABLE_INDEX% = (%CLASSPATH%) solo.getView(%ID%);
+		PlaybackMotionEvents motionEvents%MOTION_EVENT_VARIABLE_INDEX% = new PlaybackMotionEvents(getInstrumentation(), testClassName + "/%CLASSNAME%_MotionEvents%MOTION_EVENT_VARIABLE_INDEX%.txt");
+		motionEvents%MOTION_EVENT_VARIABLE_INDEX%.playback(getInstrumentation(), view%VARIABLE_INDEX%, false);
+		

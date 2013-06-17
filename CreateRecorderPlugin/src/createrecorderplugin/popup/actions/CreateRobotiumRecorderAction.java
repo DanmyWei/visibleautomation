@@ -101,7 +101,7 @@ public class CreateRobotiumRecorderAction implements IObjectActionDelegate {
 				createRecorder.createFolders(testProject);
 				createRecorder.createTestClass(testProject, javaProject, manifestParser.getPackage(), manifestParser.getStartActivity());
 				createRecorder.createAllTests(testProject, javaProject, manifestParser.getPackage());
-				createRecorder.addLibrary(testProject);
+				createRecorder.addLibraries(testProject);
 			} catch (Exception ex) {
 				MessageDialog.openInformation(
 						mShell,

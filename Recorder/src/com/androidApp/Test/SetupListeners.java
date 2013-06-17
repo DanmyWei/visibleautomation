@@ -172,10 +172,11 @@ public class SetupListeners {
 								View anchorView = getPopupWindowAnchor(popupWindow);
 								if (anchorView instanceof Spinner) {
 									recorder.writeRecord(Constants.EventTags.CREATE_SPINNER_POPUP_WINDOW, anchorView, "create spinner popup window");
+									instrumentation.runOnMainSync(new InterceptSpinnerPopupWindowRunnable(popupWindow));
 								} else {
 									recorder.writeRecord(Constants.EventTags.CREATE_POPUP_WINDOW, "create popup window");
-								}
-								instrumentation.runOnMainSync(new InterceptPopupWindowRunnable(popupWindow));
+									instrumentation.runOnMainSync(new InterceptPopupWindowRunnable(popupWindow));
+								}		
 							}
 						}
 					} 
@@ -303,7 +304,7 @@ public class SetupListeners {
 	/**
 	 * same, except for intercepting popup windows
 	 */
-	public class InterceptPopupWindowRunnable implements Runnable {
+	protected class InterceptPopupWindowRunnable implements Runnable {
 		protected PopupWindow mPopupWindow;
 		
 		public InterceptPopupWindowRunnable(PopupWindow popupWindow) {
@@ -315,6 +316,26 @@ public class SetupListeners {
 			if (contentView != null && !(contentView instanceof MagicFrame)) {
 				MagicFramePopup magicFramePopup = new MagicFramePopup(contentView.getContext(), mPopupWindow, mRecorder, mViewInterceptor);
 				SetupListeners.this.getViewInterceptor().interceptPopupWindow(mPopupWindow);
+			}
+		}
+	}
+	
+	/**
+	 * special class for spinner popup windows
+	 * @author matt2
+	 *
+	 */
+	protected class InterceptSpinnerPopupWindowRunnable implements Runnable {
+		protected PopupWindow mPopupWindow;
+		
+		public InterceptSpinnerPopupWindowRunnable(PopupWindow popupWindow) {
+			mPopupWindow = popupWindow;
+		}
+		public void run() {
+			View contentView = mPopupWindow.getContentView();
+			if (contentView != null && !(contentView instanceof MagicFrame)) {
+				MagicFramePopup magicFramePopup = new MagicFramePopup(contentView.getContext(), mPopupWindow, mRecorder, mViewInterceptor);
+				SetupListeners.this.getViewInterceptor().interceptSpinnerPopupWindow(mPopupWindow);
 			}
 		}
 	}

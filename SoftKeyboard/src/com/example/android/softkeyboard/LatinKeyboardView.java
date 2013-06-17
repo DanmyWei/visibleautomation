@@ -23,6 +23,7 @@ import android.inputmethodservice.KeyboardView;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.inputmethod.InputMethodSubtype;
+import android.widget.PopupWindow;
 
 public class LatinKeyboardView extends KeyboardView {
 	static final String TAG = "LatinKeyboardView";
@@ -30,12 +31,43 @@ public class LatinKeyboardView extends KeyboardView {
 
     public LatinKeyboardView(Context context, AttributeSet attrs) {
         super(context, attrs);
+        Log.i(TAG, "replacing listeners");
+        replacePopupDismissListener();
     }
 
     public LatinKeyboardView(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
+        Log.i(TAG, "replacing listeners");
+        replacePopupDismissListener();
     }
 
+    public class TestDismissListener implements PopupWindow.OnDismissListener {
+    	PopupWindow.OnDismissListener mOriginalListener;
+    	
+    	public TestDismissListener(PopupWindow.OnDismissListener originalListener) {
+    		mOriginalListener = originalListener;
+    	}
+    	public void	onDismiss() {
+    		Log.i(TAG, "test dismiss listener");
+    		if (mOriginalListener != null) {
+    			mOriginalListener.onDismiss();
+    		}
+    	}
+    }
+    
+    public void replacePopupDismissListener() {
+    	try {
+    		PopupWindow popupKeyboard = (PopupWindow) ReflectionUtils.getFieldValue(this, KeyboardView.class, "mPopupKeyboard");
+    		PopupWindow.OnDismissListener originalListener = (PopupWindow.OnDismissListener) ReflectionUtils.getFieldValue(popupKeyboard, PopupWindow.class, "mOnDismissListener");
+    		popupKeyboard.setOnDismissListener(new TestDismissListener(originalListener));
+       		Log.i(TAG, "listener replace success");
+       	} catch (Exception ex) {
+    		Log.e(TAG, ex.getMessage());
+    		ex.printStackTrace();
+       		Log.i(TAG, "listener replace fail");
+    	}
+    	
+    }
     @Override
     protected boolean onLongPress(Key key) {
         if (key.codes[0] == Keyboard.KEYCODE_CANCEL) {
@@ -64,13 +96,7 @@ public class LatinKeyboardView extends KeyboardView {
     	Log.i(TAG, "handle back");
     	return f;
     }
-    
-    @Override
-    public void closing() {
-    	super.closing();
-    	Log.i(TAG, "closing");
-    }
-    
+        
     @Override
     public void bringToFront() {
     	super.bringToFront();

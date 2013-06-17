@@ -133,7 +133,7 @@ public class CreateRecorderHandler extends AbstractHandler {
 			createRecorder.createFolders(testProject);
 			createRecorder.createTestClass(testProject, javaProject, manifestInformation.mPackage, manifestInformation.mStartActivityName);
 			createRecorder.createAllTests(testProject, javaProject, manifestInformation.mPackage);
-			createRecorder.addLibrary(testProject);
+			createRecorder.addLibraries(testProject);
 		} catch (Exception ex) {
 			MessageDialog.openInformation(
 					shell,

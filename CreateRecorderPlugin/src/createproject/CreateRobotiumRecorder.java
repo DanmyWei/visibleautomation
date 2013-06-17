@@ -1,9 +1,13 @@
 package createproject;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.StringBufferInputStream;
+import java.util.List;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
@@ -24,6 +28,7 @@ import org.eclipse.ui.IWorkbenchPart;
 
 import com.androidApp.emitter.EmitRobotiumCode;
 import com.androidApp.emitter.EmitterException;
+import com.androidApp.emitter.MotionEventList;
 import com.androidApp.parser.ManifestParser;
 import com.androidApp.parser.ProjectParser;
 import com.androidApp.parser.ProjectPropertiesScan;
@@ -176,10 +181,15 @@ public class CreateRobotiumRecorder  {
 	 * @param testProject
 	 * @throws CoreException
 	 */
-	public void addLibrary(IProject testProject) throws CoreException {
+	public void addLibraries(IProject testProject) throws CoreException, IOException {
 		IFolder libFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.LIBS);
 		IFile file = libFolder.getFile(RecorderConstants.RECORDER_JAR);
 		InputStream fis = EmitRobotiumCode.class.getResourceAsStream("/" + RecorderConstants.RECORDER_JAR);
 		file.create(fis, IFile.FORCE, null);	
+		fis.close();
+		IFile file2 = libFolder.getFile(RecorderConstants.EVENTRECORDERINTERFACE_JAR);
+		InputStream fis2 = EmitRobotiumCode.class.getResourceAsStream("/" + RecorderConstants.EVENTRECORDERINTERFACE_JAR);
+		file2.create(fis2, IFile.FORCE, null);	
+		fis.close();
 	}
 }

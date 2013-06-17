@@ -34,6 +34,7 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
 	public void setUp() throws Exception { 
 		super.setUp();
 		mSetupListeners = new SetupListeners(getInstrumentation(), sActivityClass);
+		initializeResources();
 	}
 
     public abstract void initializeResources();

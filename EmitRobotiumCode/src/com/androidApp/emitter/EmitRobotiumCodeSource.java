@@ -262,6 +262,8 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 					} else if (action.equals(Constants.Events.DISMISS_SPINNER_DIALOG_BACK_KEY)) {
 						writeGoBack(tokens, lines);
 						writeDismissDialog(tokens,lines);
+					} else if (action.equals(Constants.Events.DISMISS_SPINNER_POPUP_BACK_KEY)) {
+						writeDismissPopupWindowBackKey(tokens, lines);
 					} else if (action.equals(Constants.Events.ROTATION)) {
 						writeRotation(tokens, lines);
 					} else if (action.equals(Constants.Events.MENU_ITEM_CLICK)) {
@@ -270,10 +272,12 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 						writeException(tokens, lines);
 					} else if (action.equals(Constants.Events.SELECT_ACTIONBAR_TAB)) {
 						selectActionBarTab(tokens, lines);
+					} else if (action.equals(Constants.Events.SELECT_TAB)) {
+						selectTab(tokens, lines);
 					} else if (action.equals(Constants.Events.ON_PAGE_FINISHED)) {
 						waitForPageToLoad(tokens, lines);
 					} else if (action.equals(Constants.Events.TOUCH_DOWN)) {
-						writeMotionEvents(tokens, br, motionEvents);
+						writeMotionEvents(tokens, nextLine, getApplicationClassName(), br, motionEvents, lines);
 					}
 				}
 				line = nextLine;
@@ -331,6 +335,28 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		selectActionBarTabTemplate = selectActionBarTabTemplate.replace(Constants.VariableNames.TAB_INDEX, tabIndex);
 		lines.add(new LineAndTokens(tokens, selectActionBarTabTemplate));
 	}
+	/**
+	 * write the select tab event select_tab:88338018,id,0x1020012,android.widget.TabHost,tab3
+	 * @param tokens
+	 * @param lines
+	 * @throws IOException
+	 */
+	public void selectTab(List<String> tokens, List<LineAndTokens> lines) throws IOException {
+		String description = "select tab";
+		String selectTabTemplate = "";
+		String tabId = tokens.get(5);
+		ReferenceParser ref = new ReferenceParser(tokens, 2);
+		// NOTE: need to search resource files for the tab id's
+		if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
+			selectTabTemplate = writeViewIDCommand(Constants.Templates.SELECT_TAB_ID, ref, description);
+		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
+			selectTabTemplate = writeViewClassIndexCommand(Constants.Templates.SELECT_TAB_CLASS_INDEX, ref, description);
+		}
+		selectTabTemplate = selectTabTemplate.replace(Constants.VariableNames.TAB_ID, tabId);
+		lines.add(new LineAndTokens(tokens, selectTabTemplate));
+	}
+	
+	
 
 	/**
 	 * write the invokeMenuActionSync() call
@@ -959,10 +985,30 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	 * @param tokens
 	 * @param motionEvents
 	 */
-	public void writeMotionEvents(List<String> tokens, BufferedReader br, List<MotionEventList> motionEvents) throws IOException, EmitterException {
-		String name = tokens.get(9) + "_MotionEvents" + Integer.toString(mMotionEventVariableIndex);
+	public void writeMotionEvents(List<String> 			tokens, 
+								  String				nextLine,
+								  String 				testClassName, 
+								  BufferedReader 		br, 
+								  List<MotionEventList> motionEvents, 
+								  List<LineAndTokens> lines) throws IOException, EmitterException {
+		if (mLastEventWasWaitForActivity) {
+			writeWaitForView(tokens, 6, lines);
+			mLastEventWasWaitForActivity = false;
+		} 
+		String viewClassName = tokens.get(9);
+		String name = viewClassName + "_MotionEvents" + Integer.toString(mMotionEventVariableIndex);
+		MotionEventList motionEventList = new MotionEventList(name, tokens, nextLine, br);
+		motionEvents.add(motionEventList);
+		ReferenceParser ref = motionEventList.getRef();
+		String fullDescription = "play back motion events";
+		String template = null;
+		if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
+			template = writeViewIDCommand(Constants.Templates.PLAYBACK_MOTION_EVENTS, ref, fullDescription);
+		}
+		template = template.replace(Constants.VariableNames.MOTION_EVENT_VARIABLE_INDEX, Integer.toString(mMotionEventVariableIndex));
+		template = template.replace(Constants.VariableNames.TESTCLASSNAME, testClassName);
+		template = template.replace(Constants.VariableNames.CLASSNAME, viewClassName);
+		lines.add(new LineAndTokens(tokens, template));
 		mMotionEventVariableIndex++;
-		MotionEventList motionEventList = new MotionEventList(name, tokens, br);
-
 	}
 }

@@ -20,6 +20,7 @@ import android.widget.ListPopupWindow;
 import android.widget.PopupMenu;
 import android.widget.PopupWindow;
 import android.widget.SeekBar;
+import android.widget.TabHost;
 import android.widget.TextView;
 
 import com.androidApp.Utility.Constants;
@@ -481,5 +482,9 @@ public class ListenerIntercept {
 		Object callbackProxy = ReflectionUtils.getFieldValue(webView, WebView.class, Constants.Fields.CALLBACK_PROXY);
 		WebViewClient webViewClient = (WebViewClient) ReflectionUtils.getFieldValue(callbackProxy, callbackProxyClass, Constants.Fields.WEBVIEW_CLIENT);
 		return webViewClient;
+	}
+	
+	public static TabHost.OnTabChangeListener getTabChangeListener(TabHost tabHost) throws NoSuchFieldException, IllegalAccessException {
+		return (TabHost.OnTabChangeListener) ReflectionUtils.getFieldValue(tabHost, TabHost.class, Constants.Fields.ON_TAB_CHANGE_LISTENER);
 	}
 }

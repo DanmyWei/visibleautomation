@@ -55,4 +55,21 @@ public class FileUtils {
 		is.close();
 		return lines;
 	}
+	
+	/**
+	 * because we have to include the recorder as a jar file, we can't use assets and resources
+	 * @param cls class to get resource names
+	 * @param resourceName resource name
+	 * @return Array of Strings
+	 * @throws IOException
+	 */
+	public static String[] readJarResource(Class cls, String resourceName) throws IOException {
+		InputStream is = cls.getResourceAsStream(resourceName);
+		int nLines = FileUtils.numLines(is);
+		is.close();
+		is = cls.getResourceAsStream(resourceName);
+		String[] lines = FileUtils.readLines(is, nLines);
+		is.close();
+		return lines;
+	}
 }

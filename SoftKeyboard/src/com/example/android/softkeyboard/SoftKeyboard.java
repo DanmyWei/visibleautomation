@@ -119,6 +119,10 @@ public class SoftKeyboard extends InputMethodService
         	}
         }
     }
+    
+    public static TCPListener getTCPListener() {
+    	return sTCPListener;
+    }
     /**
      * This is the point where you can do all of your UI initialization.  It
      * is called after creation and any configuration change.
@@ -150,7 +154,6 @@ public class SoftKeyboard extends InputMethodService
                 R.layout.input, null);
         mInputView.setOnKeyboardActionListener(this);
         mInputView.setKeyboard(mQwertyKeyboard);
-        Toast toast = Toast.makeText(this, "keyboard onCreateInputView", Toast.LENGTH_LONG);
         return mInputView;
     }
 
@@ -174,7 +177,6 @@ public class SoftKeyboard extends InputMethodService
     @Override public void onStartInput(EditorInfo attribute, boolean restarting) {
         super.onStartInput(attribute, restarting);
         Log.i(TAG, "onStartInput");
-        Toast toast = Toast.makeText(this, "keyboard onStartInput", Toast.LENGTH_LONG);
        
         // Reset our state.  We want to do this even if restarting, because
         // the underlying state of the text editor could have changed in any way.
@@ -260,6 +262,12 @@ public class SoftKeyboard extends InputMethodService
         mCurKeyboard.setImeOptions(getResources(), attribute.imeOptions);
     }
 
+    @Override
+    public void onFinishInputView (boolean finishingInput) {
+        Log.i(TAG, "onFinishInputView");
+       	sTCPListener.broadcast(SHOW_IME);
+    	super.onFinishInputView(finishingInput);
+    }
     /**
      * This is called when the user is done editing a field.  We can use
      * this to reset our state.
@@ -680,7 +688,6 @@ public class SoftKeyboard extends InputMethodService
 
     private void handleClose() {
     	Log.i(TAG, "handleClose");
-    	sTCPListener.broadcast(HIDE_IME);
         commitTyped(getCurrentInputConnection());
         requestHideSelf(0);
         mInputView.closing();

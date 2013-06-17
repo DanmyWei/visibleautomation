@@ -59,7 +59,9 @@ public class Constants {
 		public static final String SPINNER_ADAPTER = "android.widget.Spinner$DropDownAdapter";
 		public static final String WEBKIT_CALLBACK_PROXY = "android.webkit.CallbackProxy";
 		public static final String ALERT_CONTROLLER = "com.android.internal.app.AlertController";
-		public static final String SPINNER_DROPDOWN_ADAPTER = "android.widget.Spinner$DropDownAdapter";		
+		public static final String SPINNER_DROPDOWN_ADAPTER = "android.widget.Spinner$DropDownAdapter";	
+		public static final String SCROLLING_TAB_CONTAINER_VIEW = "com.android.internal.widget.ScrollingTabContainerView";	
+		
 	}
 	
 	// listener field names
@@ -116,6 +118,7 @@ public class Constants {
 		public static final String CALLBACK_PROXY = "mCallbackProxy";
 		public static final String WEBVIEW_CLIENT = "mWebViewClient";
 		public static final String ALERT = "mAlert";
+		public static final String ON_TAB_CHANGE_LISTENER = "mOnTabChangeListener";
 	}
 	
 	// possible derive methods which listen for events.
@@ -168,7 +171,9 @@ public class Constants {
 		public static final String LONG_CLICK = "long_click";
 		public static final String DISMISS_AUTOCOMPLETE_DROPDOWN = "dismiss_autocomplete_dropdown";
 		public static final String DISMISS_POPUP_WINDOW = "dismiss_popup_window";
+		public static final String DISMISS_SPINNER_POPUP_WINDOW = "dismiss_spinner_popup_window";
 		public static final String DISMISS_POPUP_WINDOW_BACK_KEY = "dismiss_popup_window_back_key";
+		public static final String DISMISS_SPINNER_POPUP_WINDOW_BACK_KEY = "dismiss_spinner_popup_window_back_key";
 		public static final String CREATE_POPUP_WINDOW = "create_popup_window";
 		public static final String CREATE_SPINNER_POPUP_WINDOW = "create_spinner_popup_window";
 		public static final String ROTATION = "rotation";
@@ -191,6 +196,7 @@ public class Constants {
 		public static final String ON_RECEIVED_ERROR = "on_received_error";
 		public static final String ON_SCALE_CHANGED = "on_scale_changed";
 		public static final String CREATE_SPINNER_POPUP_DIALOG = "create_spinner_popup_dialog";
+		public static final String SELECT_TAB = "select_tab";
 	}
 	
 	// description strings 
