@@ -26,7 +26,7 @@ public class RecordActionBarTabListener extends RecordListener implements Action
 			mOriginalTabListener = InterceptActionBar.getTabListener(actionBar, index);
 			actionBar.getTabAt(index).setTabListener(this);
 		} catch (Exception ex) {
-			ex.printStackTrace();
+			mEventRecorder.writeException(ex, "create record action bar tab listener");
 		}		
 	}
 

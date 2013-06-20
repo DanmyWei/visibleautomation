@@ -51,8 +51,7 @@ public class RecordDialogOnDismissListener extends RecordListener implements Dia
 					mEventRecorder.writeRecord(Constants.EventTags.DISMISS_DIALOG, description);
 				}
 			} catch (Exception ex) {
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, "on dismiss dialog");
-				ex.printStackTrace();
+				mEventRecorder.writeException(ex, "on dismiss dialog");
 			}
 		}
 		if (!fReentryBlock) {

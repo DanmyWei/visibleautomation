@@ -37,7 +37,7 @@ public class RecordOnClickListener extends RecordListener implements View.OnClic
 			mOriginalOnClickListener = ListenerIntercept.getClickListener(v);
 			v.setOnClickListener(this);
 		} catch (Exception ex) {
-			ex.printStackTrace();
+			mEventRecorder.writeException(ex, v, "create on click listener");
 		}		
 	}
 	
@@ -61,8 +61,7 @@ public class RecordOnClickListener extends RecordListener implements View.OnClic
 			try {
 				mEventRecorder.writeRecord(Constants.EventTags.CLICK, v, getDescription(v));
 			} catch (Exception ex) {
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, v, "on click");
-				ex.printStackTrace();
+				mEventRecorder.writeException(ex, v, "on click");
 			}
 		}
 		if (!fReentryBlock) {

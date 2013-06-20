@@ -40,6 +40,7 @@ import android.widget.TabHost;
  *
  */
 public class RobotiumUtils {
+	private static final String TAG = "RobotiumUtils";
 	protected static int ACTIVITY_POLL_INTERVAL_MSEC = 1000;			// interval for activity existence polling
 	protected static int VIEW_TIMEOUT_MSEC = 5000;						// time to wait for view to be visible
 	protected static int VIEW_POLL_INTERVAL_MSEC = 1000;				// poll interval for view existence
@@ -188,6 +189,7 @@ public class RobotiumUtils {
 			ActivityMonitorRunnable.sleep(ActivityMonitorRunnable.MINISLEEP);
 			currentTimeMillis = SystemClock.uptimeMillis();
 		} while (currentTimeMillis - startTimeMillis < timeoutMsec);
+		Log.e(TAG, "wait for new activity failed " + newActivityClass.getName());
 		return false;
 	}
 	

@@ -22,7 +22,7 @@ public class RecordDialogOnShowListener extends RecordListener implements Dialog
 		try {
 			mOriginalOnShowListener = ListenerIntercept.getOnShowListener((Dialog) dialog);
 		} catch (Exception ex) {
-			ex.printStackTrace();
+			mEventRecorder.writeException(ex, "create on show dialog listener");
 		}
 	}
 	
@@ -38,8 +38,7 @@ public class RecordDialogOnShowListener extends RecordListener implements Dialog
 				String description = getDescription(dialog);
 				mEventRecorder.writeRecord(Constants.EventTags.SHOW_DIALOG, description);
 			} catch (Exception ex) {
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, "on show dialog");
-				ex.printStackTrace();
+				mEventRecorder.writeException(ex, "on show dialog");
 			}
 		}
 		if (!fReentryBlock) {

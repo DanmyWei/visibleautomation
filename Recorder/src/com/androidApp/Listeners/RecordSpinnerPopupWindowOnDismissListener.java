@@ -57,8 +57,7 @@ public class RecordSpinnerPopupWindowOnDismissListener extends RecordListener im
 				}
 				mViewInterceptor.setLastKeyAction(-1);
 			} catch (Exception ex) {
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, Constants.EventTags.DISMISS_POPUP_WINDOW);
-				ex.printStackTrace();
+				mEventRecorder.writeException(ex, Constants.EventTags.DISMISS_POPUP_WINDOW);
 			}
 		}
 		if (!fReentryBlock) {

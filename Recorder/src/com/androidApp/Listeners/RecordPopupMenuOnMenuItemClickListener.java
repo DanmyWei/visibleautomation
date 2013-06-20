@@ -26,8 +26,7 @@ public class RecordPopupMenuOnMenuItemClickListener extends RecordListener imple
 		try {
 			mOriginalMenuItemClickListener = ListenerIntercept.getPopupMenuOnMenuItemClickListener(v);
 		} catch (Exception ex) {
-			mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, ex.getMessage());
-			ex.printStackTrace();
+			mEventRecorder.writeException(ex, "create popup on item click listener");
 		}
 	}
 	
@@ -49,8 +48,7 @@ public class RecordPopupMenuOnMenuItemClickListener extends RecordListener imple
 				int position = RecordPopupMenuOnMenuItemClickListener.getMenuItemIndex(item);
 				mEventRecorder.writeRecord(Constants.EventTags.POPUP_MENU_ITEM_CLICK, position + "," + ViewReference.getClassIndexReference(mMenuView) + "," + RecordListener.getDescription(item));
 			} catch (Exception ex) {
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, "menu item click " + ex.getMessage());
-				ex.printStackTrace();
+				mEventRecorder.writeException(ex, "menu item click " + ex.getMessage());
 			}	
 		}
 		if (!fReentryBlock) {

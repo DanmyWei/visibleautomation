@@ -35,7 +35,7 @@ public class ViewInsertRecordWindowCallbackRunnable implements Runnable {
 				ListenerIntercept.setWindowCallbackToDecorView(mView, recordCallback);
 			}
 		} catch (Exception ex) {
-			mRecorder.writeRecord(Constants.EventTags.EXCEPTION, "installing window callback recorder");
+			mRecorder.writeException(ex, "installing window callback recorder");
 		}
 	}
 

@@ -22,7 +22,7 @@ public class RecordSeekBarChangeListener extends RecordListener implements SeekB
 			mOriginalOnSeekBarChangeListener = ListenerIntercept.getSeekBarChangeListener(seekbar);
 			seekbar.setOnSeekBarChangeListener(this);
 		} catch (Exception ex) {
-			ex.printStackTrace();
+			mEventRecorder.writeException(ex, seekbar, "create on progress changed listener");
 		}		
 	}
 	
@@ -52,8 +52,7 @@ public class RecordSeekBarChangeListener extends RecordListener implements SeekB
 					String description = getDescription(seekBar);
 					mEventRecorder.writeRecord( Constants.EventTags.PROGRESS_CHANGED, progress + "," + mEventRecorder.getViewReference().getReference(seekBar) + "," + description);
 				} catch (Exception ex) {
-					mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, seekBar, "on progress changed");
-					ex.printStackTrace();
+					mEventRecorder.writeException(ex, seekBar, "on progress changed");
 				}
 			}
 		}
@@ -75,7 +74,7 @@ public class RecordSeekBarChangeListener extends RecordListener implements SeekB
 			try {
 				mEventRecorder.writeRecord(Constants.EventTags.START_TRACKING, mEventRecorder.getViewReference().getReference(seekBar));
 			} catch (Exception ex) {
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, seekBar, "on start tracking touch");
+				mEventRecorder.writeException(ex, seekBar, "on start tracking touch");
 				ex.printStackTrace();
 			}
 		}
@@ -94,8 +93,7 @@ public class RecordSeekBarChangeListener extends RecordListener implements SeekB
 			try {
 				mEventRecorder.writeRecord(Constants.EventTags.STOP_TRACKING, mEventRecorder.getViewReference().getReference(seekBar));
 			} catch (Exception ex) {
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, seekBar, "on stop tracking touch");
-				ex.printStackTrace();
+				mEventRecorder.writeException(ex, seekBar, "on stop tracking touch");
 			}
 		}
 		if (!fReentryBlock) {

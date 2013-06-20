@@ -43,8 +43,7 @@ public class InsertMagicFrameRunnable implements Runnable {
 				} 
 			}
 		} catch (Exception ex) {
-			mRecorder.writeRecord(Constants.EventTags.EXCEPTION, "attempting to insert magic frame");
-			ex.printStackTrace();
+			mRecorder.writeException(ex, "attempting to insert magic frame");
 		}
 	}
 }

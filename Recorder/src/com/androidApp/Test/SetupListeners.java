@@ -296,7 +296,7 @@ public class SetupListeners {
 					mViewInterceptor.interceptDialog(mDialog);
 				}
 			} catch (Exception ex) {
-				mRecorder.writeRecord(Constants.EventTags.EXCEPTION, "Intercepting dialog " + ex.getMessage());
+				mRecorder.writeException(ex, "Intercepting dialog");
 			}
 		}
 	}

@@ -33,10 +33,12 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	protected String mTargetClassPath = null;				// class path of initial activity.	
 	protected String mTargetPackage = null;					// package name that the recorder pulled from the app
 	private boolean mLastEventWasWaitForActivity = false;	// want to do a waitForView for next event.
+	protected String mCurrentActivityName = null;			// current activity name (from activity transition)
+	protected String mActivityVariable = null;				// variable name for this activity
+	protected boolean mfActivityMatches = false;			// new activity has same name as current activity
 		
 	public EmitRobotiumCodeSource() {
-	}
-	
+	}	
 		
 	/**
 	 * return the fully qualified class path of the application under test
@@ -98,12 +100,6 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		int scrollFirstVisibleItem = 0;						// preserve scroll values so we can apply it on the last scroll.
 		int scrollListIndex = 0;							// track the current scroll index to write on the next non-scroll instruction
 		List<String> lastTextEntryTokens = null;			// to preserve the last text entry event
-		String nextActivityVariable = null;
-		String previousActivityVariable = null;		
-		String currentActivityName = null;					// to track the activity class name to see if it changes in transitions
-		boolean fForwardActivityMatches = false;			// there was a navigation to a new activity with the same class name
-		boolean fBackActivityMatches = false;				// there was a navigation to a previous activity with the same class name
-		boolean	fWasSpinner = false;						// for following item_selected event, the list was a spinner, not a ListView
 		String line = br.readLine();	
 		int lineNumber = 0;									// track line number for errors
 		do {
@@ -123,34 +119,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 				if (nextLine != null) {
 					SuperTokenizer stNext = new SuperTokenizer(nextLine, "\"", ":,", '\\');
 					nextTokens = stNext.toList();
-					if (tokens.get(0).equals(Constants.Events.ACTIVITY_FORWARD)) {
-						currentActivityName = tokens.get(2);
-						if (mTargetClassPath == null) {
-							mTargetClassPath =  tokens.get(2);
-						}
-					}
-					if (nextTokens.size() > 2) {
-						if (nextTokens.get(0).equals(Constants.Events.ACTIVITY_FORWARD)) {
-							String nextActivityName = nextTokens.get(2);
-							if (nextActivityName.equals(currentActivityName)) {
-								nextActivityVariable = writeGetCurrentActivity(tokens, lines);
-								fForwardActivityMatches = true;
-							} else {
-								fForwardActivityMatches = false;
-							}
-							currentActivityName = nextActivityName;
-						} 
-						if (nextTokens.get(0).equals(Constants.Events.ACTIVITY_BACK) || nextTokens.get(0).equals(Constants.Events.ACTIVITY_BACK_KEY)) {
-							String previousActivityName = nextTokens.get(2);
-							if (previousActivityName.equals(currentActivityName)) {
-								previousActivityVariable = writeGetPreviousActivity(tokens, lines);
-								fBackActivityMatches = true;
-							} else {
-								fBackActivityMatches = false;
-							}
-							currentActivityName = previousActivityName;
-						}
-					}
+					checkActivityTransition(tokens, nextTokens, lines);
 				}
 				String action = tokens.get(0);
 				
@@ -189,30 +158,19 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 					if (mTargetClassPath == null) {
 						mTargetClassPath = tokens.get(2);
 					}
-					if (nextActivityVariable != null) {
-						mLastEventWasWaitForActivity = true;
-						if (fForwardActivityMatches) {
-							writeWaitForMatchingActivity(nextActivityVariable, tokens, lines);
-						} else {
-							writeWaitForActivity(tokens, lines);
-						}
+					mLastEventWasWaitForActivity = true;
+					if (mfActivityMatches) {
+						writeWaitForMatchingActivity(mActivityVariable, tokens, lines);
+					} else {
+						writeWaitForActivity(tokens, lines);
 					}
-				} else if (action.equals(Constants.Events.ACTIVITY_BACK)) {
+				} else if (action.equals(Constants.Events.ACTIVITY_BACK) || action.equals(Constants.Events.ACTIVITY_BACK_KEY)) {
 					
 					// I think this is technically incorrect, since the "back" event doesn't always happen from the back key
 					// but some other event like a click, and we should use a different template
-					if ((tokens.size() > 2) && fBackActivityMatches) {
-						writeGoBackToMatchingActivity(previousActivityVariable, tokens, lines);
+					if ((tokens.size() > 2) && mfActivityMatches) {
+						writeGoBackToMatchingActivity(mActivityVariable, tokens, lines);
 					} else {
-						// TODO: ALWAYS CHECK ACTVITIY, NEVER JUST GO BACK
-						writeGoBack(tokens, lines);
-					}
-					mLastEventWasWaitForActivity = true;
-				} else if (action.equals(Constants.Events.ACTIVITY_BACK_KEY)) {
-					if ((tokens.size() > 2) && fBackActivityMatches) {
-						writeGoBackToMatchingActivity(previousActivityVariable, tokens, lines);
-					} else {
-						// TODO: ALWAYS CHECK ACTVITIY, NEVER JUST GO BACK
 						writeGoBack(tokens, lines);
 					}
 					mLastEventWasWaitForActivity = true;
@@ -223,7 +181,6 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 						writePopupMenuItemClick(tokens, lines);
 					} else if (action.equals(Constants.Events.ITEM_SELECTED)) {
 						writeItemSelected(tokens, lines);
-						fWasSpinner = false;
 					} else if (action.equals(Constants.Events.SCROLL)) {
 						scrollFirstVisibleItem = Integer.parseInt(tokens.get(2));
 						scrollsHaveHappened = true;
@@ -231,10 +188,8 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 					} else if (action.equals(Constants.Events.CLICK)) {
 						writeClick(tokens, lines);
 					} else if (action.equals(Constants.Events.DISMISS_DIALOG)) {
-						fWasSpinner = false;
 						writeDismissDialog(tokens, lines);
 					} else if (action.equals(Constants.Events.CANCEL_DIALOG)) {
-						fWasSpinner = false;
 						writeCancelDialog(tokens, lines);
 					} else if (action.equals(Constants.Events.CREATE_DIALOG)) {
 						writeCreateDialog(tokens, lines);
@@ -253,10 +208,6 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 						lastTextEntryTokens = tokens;
 					} else if (action.equals(Constants.Events.DISMISS_AUTOCOMPLETE_DROPDOWN)) {
 						writeDismissAutoCompleteDropdown(tokens, lines);
-					} else if (action.equals(Constants.Events.CREATE_SPINNER_POPUP_WINDOW)) {
-						fWasSpinner = true;
-					} else if (action.equals(Constants.Events.CREATE_SPINNER_POPUP_DIALOG)) {
-						fWasSpinner = true;
 					} else if (action.equals(Constants.Events.DISMISS_POPUP_WINDOW_BACK_KEY)) {
 						writeDismissPopupWindowBackKey(tokens, lines);
 					} else if (action.equals(Constants.Events.DISMISS_SPINNER_DIALOG_BACK_KEY)) {
@@ -289,6 +240,47 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 			}
 		} while (true);
 	}
+	
+	/**
+	 * for an activity forward or activity back
+	 * member variables: set mCurrentActivityName if the event was activity_forward
+	 * mfActivityMatches: there was an activity transition, and the activity transitioned to has the same name
+	 * mActivityVariable: variable name assigned to the activity transitioned to.
+	 * @param tokens tokens for the current line
+	 * @param nextTokens tokens for the lookahead next line
+	 * @param lines output if we record an activity transition.
+	 * @return true if there was an activity transition
+	 */
+	protected boolean checkActivityTransition(List<String> tokens, List<String> nextTokens, List<LineAndTokens> lines) throws IOException {
+		// if it's the first "activity_forward", then it's the class
+		if (tokens.get(0).equals(Constants.Events.ACTIVITY_FORWARD)) {
+			if (mTargetClassPath == null) {
+				mTargetClassPath =  tokens.get(2);
+			}
+		}
+		if (nextTokens.size() > 2) {
+			if (nextTokens.get(0).equals(Constants.Events.ACTIVITY_FORWARD)) {
+				String nextActivityName = nextTokens.get(2);
+				mfActivityMatches = nextActivityName.equals(mCurrentActivityName);
+				if (mfActivityMatches) {
+					mActivityVariable = writeGetCurrentActivity(tokens, lines);
+				}
+				mCurrentActivityName = nextActivityName;
+				return true;
+			} 
+			if (nextTokens.get(0).equals(Constants.Events.ACTIVITY_BACK) || nextTokens.get(0).equals(Constants.Events.ACTIVITY_BACK_KEY)) {
+				String previousActivityName = nextTokens.get(2);
+				mfActivityMatches = previousActivityName.equals(mCurrentActivityName);
+				if (mfActivityMatches) {
+					mActivityVariable = writeGetPreviousActivity(tokens, lines);
+				}
+				mCurrentActivityName = previousActivityName;
+				return true;
+			}
+		}
+		return false;
+	}
+
 	
 	/**
 	 * the description is written as the last token
@@ -426,27 +418,6 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		mViewVariableIndex++;
 	}
 	
-	/**
-	 * when we go back to an activity of the same name as the current one, we get the current activity
-	 * variable, then save it, and wait for another activity of the same name to come into existence
-	 * which is different from that variable
-	 * @param nextActivityVariable name of the activity variable we saved
-	 * @param tokens parsed from a line in events.txt
-	 * @param lines output list of java instructions
-	 * @throws IOException if the template file can't be read
-	 */
-	public void writeWentBackToMatchingActivity(String nextActivityVariable, List<String> tokens, List<LineAndTokens> lines) throws IOException {
-		String waitTemplate = FileUtility.readTemplate(Constants.Templates.WENT_BACK_TO_MATCHING_ACTIVITY);
-		String classPath = tokens.get(2);
-		String description = getDescription(tokens);
-		String fullDescription = "wait for activity " + description;
-		waitTemplate = waitTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
-		waitTemplate = waitTemplate.replace(Constants.VariableNames.ACTIVITY_CLASS, classPath);
-		waitTemplate = waitTemplate.replace(Constants.VariableNames.ACTIVITY, nextActivityVariable);
-		waitTemplate = waitTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mActivityVariableIndex));
-		mActivityVariableIndex++;
-		lines.add(new LineAndTokens(tokens, waitTemplate));
-	}
 	
 	/**
 	 * the application has finished an activity, or set of activities, so we just need to wait for the activity.
@@ -475,8 +446,18 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	 * @throws IOException if the template file can't be read
 	 */
 	public void writeGoBack(List<String> tokens, List<LineAndTokens> lines) throws IOException {
-		String goBackTemplate = FileUtility.readTemplate(Constants.Templates.GO_BACK);
-		lines.add(new LineAndTokens(tokens, goBackTemplate));
+		if (tokens.size() > 2) {
+			String classPath = tokens.get(2);
+			String description = getDescription(tokens);
+			String fullDescription = "wait for activity " + description;
+			String goBackTemplate = FileUtility.readTemplate(Constants.Templates.GO_BACK_WAIT_ACTIVITY);
+			goBackTemplate = goBackTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
+			goBackTemplate = goBackTemplate.replace(Constants.VariableNames.ACTIVITY_CLASS, classPath);
+			lines.add(new LineAndTokens(tokens, goBackTemplate));
+		} else {
+			String goBackTemplate = FileUtility.readTemplate(Constants.Templates.GO_BACK);
+			lines.add(new LineAndTokens(tokens, goBackTemplate));			
+		}
 	}
 
 	/**

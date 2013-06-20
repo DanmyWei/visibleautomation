@@ -41,8 +41,7 @@ public class RecordDialogOnCancelListener extends RecordListener implements Dial
 				String description = getDescription(dialog);
 				mEventRecorder.writeRecord(Constants.EventTags.CANCEL_DIALOG, description);
 			} catch (Exception ex) {
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, "on cancel dialog");
-				ex.printStackTrace();
+				mEventRecorder.writeException(ex, "on cancel dialog");
 			} 
 		}
 		if (!fReentryBlock) {

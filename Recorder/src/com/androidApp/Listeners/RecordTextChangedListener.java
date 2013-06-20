@@ -38,8 +38,7 @@ public class RecordTextChangedListener extends RecordListener implements TextWat
 				String logString = '\"' + StringUtils.escapeString(s.toString(), "\"", '\\') + '\"' + "," + start + "," +  count + "," + after + "," + mEventRecorder.getViewReference().getReference(mTextView) + "," + description;
 				mEventRecorder.writeRecord(Constants.EventTags.BEFORE_TEXT, logString);
 			} catch (Exception ex) {
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, mTextView, "before text changed");
-				ex.printStackTrace();
+				mEventRecorder.writeException(ex, mTextView, " before text changed");
 			}	
 		}
 	}
@@ -53,8 +52,7 @@ public class RecordTextChangedListener extends RecordListener implements TextWat
 				String logString = '\"' + StringUtils.escapeString(s.toString(), "\"", '\\') + '\"' + "," + start + "," + before + "," + count + "," + mEventRecorder.getViewReference().getReference(mTextView) + "," + description;
 				mEventRecorder.writeRecord(Constants.EventTags.AFTER_TEXT, logString);
 			} catch (Exception ex) {
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, mTextView, "on text changed");
-				ex.printStackTrace();
+				mEventRecorder.writeException(ex, mTextView, "on text changed");
 			}	
 		}
 	}

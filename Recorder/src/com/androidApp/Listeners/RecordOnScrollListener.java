@@ -64,8 +64,7 @@ public class RecordOnScrollListener extends RecordListener implements AbsListVie
 					mEventRecorder.writeRecord(Constants.EventTags.SCROLL, logString);
 				}
 			} catch (Exception ex) {
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, view, "on scroll");
-				ex.printStackTrace();
+				mEventRecorder.writeException(ex, view, " on scroll");
 			}
 		}
 		if (!fReentryBlock) {

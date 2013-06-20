@@ -51,7 +51,7 @@ public class MagicFramePopup extends MagicFrame {
 			ReflectionUtils.setFieldValue(popupWindow, PopupWindow.class, Constants.Fields.CONTENT_VIEW, mPopupViewContainer);
 			this.requestLayout();
 		} catch (Exception ex) {
-			recorder.writeRecord(Constants.EventTags.EXCEPTION, "trying to intercept popup window");
+			recorder.writeException(ex,  "trying to intercept popup window");
 		}
 		mViewInterceptor = viewInterceptor;
 		init();

@@ -33,7 +33,7 @@ public class RecordWebViewClient extends WebViewClient implements IOriginalListe
 			mOriginalWebViewClient = ListenerIntercept.getWebViewClient(webView);
 			webView.setWebViewClient(this);
 		} catch (Exception ex) {
-			ex.printStackTrace();
+			mEventRecorder.writeException(ex, webView, "create on pageStarted listener");
 		}		
 	}
 	
@@ -74,8 +74,7 @@ public class RecordWebViewClient extends WebViewClient implements IOriginalListe
 			String message = RecordListener.getDescription(view) + ",\"" + happyUrl + "\"";
 			mEventRecorder.writeRecord(Constants.EventTags.ON_PAGE_FINISHED, view, message);
 		} catch (Exception ex) {
-			mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, view, "on pageStarted");
-			ex.printStackTrace();
+			mEventRecorder.writeException(ex, view, " on pageStarted");
 		}		
 		
 	}
@@ -88,7 +87,7 @@ public class RecordWebViewClient extends WebViewClient implements IOriginalListe
 			String message = RecordListener.getDescription(view) + "," + happyUrl;
 			mEventRecorder.writeRecord(Constants.EventTags.ON_PAGE_STARTED, view, message);
 		} catch (Exception ex) {
-			mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, view, "on pageStarted");
+			mEventRecorder.writeException(ex, view, "on pageStarted");
 			ex.printStackTrace();
 		}		
 	}
@@ -100,7 +99,7 @@ public class RecordWebViewClient extends WebViewClient implements IOriginalListe
 		try {
 			mEventRecorder.writeRecord(Constants.EventTags.ON_RECEIVED_ERROR, view, RecordListener.getDescription(view));
 		} catch (Exception ex) {
-			mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, view, "on onReceivedError");
+			mEventRecorder.writeException(ex, view, "on onReceivedError");
 			ex.printStackTrace();
 		}
 	}
@@ -132,7 +131,7 @@ public class RecordWebViewClient extends WebViewClient implements IOriginalListe
 			String message = RecordListener.getDescription(view) + "," + scales;
 			mEventRecorder.writeRecord(Constants.EventTags.ON_SCALE_CHANGED, view, message);
 		} catch (Exception ex) {
-			mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, view, "on onReceivedError");
+			mEventRecorder.writeException(ex, view, "on onReceivedError");
 			ex.printStackTrace();
 		}
 		

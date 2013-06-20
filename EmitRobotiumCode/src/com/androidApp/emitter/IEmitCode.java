@@ -42,7 +42,6 @@ public interface IEmitCode {
 	String writeGetCurrentActivity(List<String> tokens, List<LineAndTokens> lines) throws IOException;
 	String writeGetPreviousActivity(List<String> tokens, List<LineAndTokens> lines) throws IOException;
 	void writeWaitForView(List<String> tokens, int startIndex, List<LineAndTokens> lines) throws IOException;
-	void writeWentBackToMatchingActivity(String nextActivityVariable, List<String> tokens, List<LineAndTokens> lines) throws IOException;
 	void writeGoBackToMatchingActivity(String nextActivityVariable, List<String> tokens, List<LineAndTokens> lines) throws IOException;
 	void writeGoBack(List<String> tokens, List<LineAndTokens> lines) throws IOException;
 	void writeWaitForActivity(List<String> tokens, List<LineAndTokens> lines) throws IOException;

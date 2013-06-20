@@ -21,7 +21,8 @@ import android.view.Window;
  */
 public class ActivityMonitorRunnable implements Runnable {
 	 private static final String 					TAG = "ActivityMonitorRunnable";
-	 public static final int 						MINISLEEP = 100;			
+	 public static final int 						MINISLEEP = 100;
+	 private static final long 						ACTIVITY_MONITOR_TIMEOUT_MSEC = 2000;			
 	 protected Instrumentation.ActivityMonitor		mActivityMonitor;				// activity monitor
 	 protected Stack<ActivityInfo>					mActivityStack;					// stack of activities.
 	 protected Instrumentation						mInstrumentation;				// so we can run stuff on the UI thread
@@ -55,6 +56,13 @@ public class ActivityMonitorRunnable implements Runnable {
 		mActivityMonitor = instrumentation.addMonitor(intentFilter, null, false);
 	}
 	
+	public void logActivityStack() {
+		for (int i = 0; i < mActivityStack.size(); i++) {
+			ActivityInfo activityInfo = mActivityStack.get(i);
+			Log.i(TAG, "stack[" + i + "] = " + activityInfo.mRefActivity.get());
+		}
+	}
+	
 	/**
 	 * runnable for the background thread.  This waits for activities to start and stop, and adds and
 	 * removes them from the stack
@@ -74,28 +82,44 @@ public class ActivityMonitorRunnable implements Runnable {
 				Log.i(TAG, "activity " + activityA + " finishing");
 				removeActivityFromStack(activityA);
 				Log.i(TAG, "activity stack depth = " + mActivityStack.size());
+				logActivityStack();
 				if (mActivityStack.empty()) {
+					Log.i(TAG, "empty activity stack");
 					break;
 				}
 			} else {
 	 			Activity activityB = null;
 				
-				// OK, now this is very very strange
+				// OK, now this is very very strange, but sometimes, even though there should be a second activity,
+	 			// there isn't, so we time out on the wait.
+	 			// TODO: There must be a better solution for this, and we need to find out why only one activity is returned
+	 			// The previous activity is getting nulled out because it's a WeakReference<> by another thread, and 
+	 			// we need to detect that case.  If the previous activity in the stack is null, then do we get a double-tap
+	 			// from the activity monitor as usual?  What are the messages we get?
 				if (!mActivityStack.isEmpty()) {
 					activityB = mActivityMonitor.waitForActivity();
 				}
 				Log.i(TAG, "activity stack depth = " + mActivityStack.size());
 				if (!inActivityStack(activityA)) {
+					Log.i(TAG, "add activity to stack " + activityA);
 					addActivityToStack(activityA);
+					logActivityStack();
 				} else if (!inActivityStack(activityB)) {
+					Log.i(TAG, "add activity to stack " + activityB);
 					addActivityToStack(activityB);
+					logActivityStack();
 				} else {
 					if (isActivityGoingBack(activityA, activityB)) {
+						Log.i(TAG, "remove activity from stack " + activityA);
 						removeActivityFromStack(activityA);
+						logActivityStack();
 					} else if (isActivityGoingBack(activityB, activityA)) {
+						Log.i(TAG, "remove activity from stack " + activityB);
 						removeActivityFromStack(activityB);
+						logActivityStack();
 					}
 					if (mActivityStack.empty()) {
+						Log.i(TAG, "empty activity stack");
 						break;
 					}
 				}
@@ -114,9 +138,13 @@ public class ActivityMonitorRunnable implements Runnable {
 			if (mActivityStack.size() == 1) {
 				return true;
 			} else {
-				ActivityInfo activityInfoPrevious = mActivityStack.get(mActivityStack.size() - 2);
-				if (activityInfoPrevious.mRefActivity.get() == activityPrevious) {
+				if (activityPrevious == null) {
 					return true;
+				} else {
+					ActivityInfo activityInfoPrevious = mActivityStack.get(mActivityStack.size() - 2);
+					if (activityInfoPrevious.mRefActivity.get() == activityPrevious) {
+						return true;
+					}
 				}
 			} 
 		}

@@ -26,7 +26,7 @@ public class RecordOnTouchListener extends RecordListener implements View.OnTouc
 			mOriginalOnTouchListener = ListenerIntercept.getTouchListener(v);
 			v.setOnTouchListener(this);
 		} catch (Exception ex) {
-			ex.printStackTrace();
+			mEventRecorder.writeException(ex, v, "create on touch listener");
 		}		
 	}
 	
@@ -70,8 +70,7 @@ public class RecordOnTouchListener extends RecordListener implements View.OnTouc
 						 	 mEventRecorder.getViewReference().getReference(v) + "," + description;
 				mEventRecorder.writeRecord(eventName, logString);
 			} catch (Exception ex) {
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, v, "on touch");
-				ex.printStackTrace();
+				mEventRecorder.writeException(ex, v, "on touch");
 			}
 		}
 		if (!fReentryBlock) {

@@ -84,10 +84,34 @@ public class EventRecorder extends EventRecorderInterface {
 		try {
 			writeRecord(event + ":" + time + "," + getViewReference().getReference(v));
 		} catch (Exception ex) {
-			writeRecord(Constants.EventTags.EXCEPTION, "while getting reference for view in event " + event);
+			writeException(ex,  "while getting reference for view in event " + event);
 		}
 	}
 	
+	/**
+	 * to enforce consistent exception logging
+	 * @param ex the offending exception
+	 * @param message descriptive message
+	 */
+	public void writeException(Exception ex, String message) {
+		writeRecord(Constants.EventTags.EXCEPTION, ex.getMessage() + ": " + message);
+		ex.printStackTrace();
+	}
+	
+	/**
+	 * variant with view description
+	 * @param ex
+	 * @param v
+	 * @param message
+	 */
+	public void writeException(Exception ex, View v, String message) {
+		try {
+			writeRecord(Constants.EventTags.EXCEPTION, ex.getMessage() + ": " + getViewReference().getReference(v) + ": " + message);
+		} catch (Exception ex3) {
+			writeException(ex3,  "while getting reference for view " + v);
+		}
+		ex.printStackTrace();
+	}
 	/**
 	 * write out the rotation expression: rotation:<time>,<rotation:0,90,180,270>,activity,activity_description
 	 * @param recorder event recorder reference

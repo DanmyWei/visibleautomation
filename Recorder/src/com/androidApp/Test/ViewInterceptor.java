@@ -211,10 +211,9 @@ public class ViewInterceptor {
 		} catch (Exception ex) {
 			try {
 				String description = "Intercepting view " +  RecordListener.getDescription(v);
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, description);
-				ex.printStackTrace();
+				mEventRecorder.writeException(ex, description);
 			} catch (Exception exlog) {
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION + " unknown description");
+				mEventRecorder.writeException(ex, "unknown description");
 			}
 		}
 	}
@@ -424,10 +423,10 @@ public class ViewInterceptor {
 		} catch (Exception ex) {
 			try {
 				String description = "Intercepting view " +  RecordListener.getDescription(v);
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, description);
+				mEventRecorder.writeException(ex, description);
 				ex.printStackTrace();
 			} catch (Exception exlog) {
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION + " unknown description");
+				mEventRecorder.writeException(exlog , " unknown description");
 			}
 		}
 	}
@@ -445,8 +444,7 @@ public class ViewInterceptor {
 	        		Class actionBarImplClass = Class.forName(Constants.Classes.ACTION_BAR_IMPL);
 	        		contentView = (View) ReflectionUtils.getFieldValue(actionBar, actionBarImplClass, Constants.Fields.CONTAINER_VIEW);
 	        	} catch (Exception ex) {
-	        		mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, "while intercepting the action bar for " + activity.getClass().getName());
-	        		ex.printStackTrace();
+	        		mEventRecorder.writeException(ex, "while intercepting the action bar for " + activity.getClass().getName());
 	        	}
 	        	if (contentView != null) {
 	            	intercept(contentView);
@@ -457,7 +455,7 @@ public class ViewInterceptor {
 		        }
 		       	intercept(InterceptActionBar.getActionBarView(actionBar));
         	} catch (Exception ex) {
-        		mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, "while intercepting action bar");
+        		mEventRecorder.writeException(ex, "while intercepting action bar");
         	}
 	  	}		
 	}
@@ -566,8 +564,7 @@ public class ViewInterceptor {
 				// we are assuming this is a spinner, which is probably not the best thing.
 			}
 		} catch (Exception ex) {
-			mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, "Intercepting popup window " + ex.getMessage());
-			ex.printStackTrace();
+			mEventRecorder.writeException(ex, "Intercepting popup window");
 		}
 	}
 
@@ -583,8 +580,7 @@ public class ViewInterceptor {
 				popupWindow.setOnDismissListener(recordOnDismissListener);
 			}
 		} catch (Exception ex) {
-			mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, "Intercepting popup window " + ex.getMessage());
-			ex.printStackTrace();
+			mEventRecorder.writeException(ex, "Intercepting popup window");
 		}
 	}
 	
@@ -620,11 +616,10 @@ public class ViewInterceptor {
 		} catch (Exception ex) {
 			try {
 				String description = "Intercepting dialog " +  RecordListener.getDescription(dialog);
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, description);
+				mEventRecorder.writeException(ex, description);
 			} catch (Exception exlog) {
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, " unknown description");
+				mEventRecorder.writeException(ex, " unknown description");
 			}
-			ex.printStackTrace();
 		}
 	}
 	
@@ -651,11 +646,10 @@ public class ViewInterceptor {
 		} catch (Exception ex) {
 			try {
 				String description = "Intercepting dialog " +  RecordListener.getDescription(dialog);
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, description);
+				mEventRecorder.writeException(ex, description);
 			} catch (Exception exlog) {
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, " unknown description");
+				mEventRecorder.writeException(ex, "unknown description");
 			}
-			ex.printStackTrace();
 		}
 	}
 

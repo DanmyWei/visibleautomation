@@ -387,6 +387,9 @@ public class TestUtils {
 		return count;
 	}
 	
+	protected class IndexTarget {
+		public int mCountSoFar = 0;
+	}
 	/**
 	 * find the index of v filtered by class in the set of subchildren of vRoot, by preorder traversal
 	 * @param vRoot root to traverse from
@@ -394,29 +397,28 @@ public class TestUtils {
 	 * @return index of v by class, or -1 if not found
 	 */
 	public static int classIndex(View vRoot, View v) {
-		Integer index = new Integer(0);
-		boolean found = classIndex(vRoot, v, index);
-		if (found) {
-			return index.intValue();
+		TestUtils testUtils = new TestUtils();
+		IndexTarget target = testUtils.new IndexTarget();
+		if (classIndex(vRoot, v, target)) {
+			return target.mCountSoFar;
 		} else {
 			return -1;
 		}
 	}
 	
 	// recursive subfunction which actually does the work to find the index of the view's class.
-	private static boolean classIndex(View vRoot, View v, Integer index) {
+	private static boolean classIndex(View vRoot, View v, IndexTarget target) {
 		if (vRoot == v) {
 			return true;
 		}
 		if (vRoot.getClass() == v.getClass()) {
-			index++;
+			target.mCountSoFar++;
 		}
 		if (vRoot instanceof ViewGroup) {
 			ViewGroup vg = (ViewGroup) vRoot;
 			for (int iChild = 0; iChild < vg.getChildCount(); iChild++) {
 				View vChild = vg.getChildAt(iChild);
-				boolean found = classIndex(vChild, v, index);
-				if (found) {
+				if (classIndex(vChild, v, target)) {
 					return true;
 				}
 			}

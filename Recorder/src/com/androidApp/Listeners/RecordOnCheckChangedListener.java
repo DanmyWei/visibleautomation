@@ -41,8 +41,7 @@ public class RecordOnCheckChangedListener extends RecordListener implements Comp
 				String fullDescription = isChecked + "," + mEventRecorder.getViewReference().getReference(buttonView);
 				mEventRecorder.writeRecord(Constants.EventTags.CHECKED, fullDescription);
 			} catch (Exception ex) {
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, buttonView, "on check changed");
-				ex.printStackTrace();
+				mEventRecorder.writeException(ex, buttonView, " on check changed");
 			}
 		}
 		if (!fReentryBlock) {

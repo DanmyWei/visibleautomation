@@ -25,7 +25,7 @@ public class RecordOnKeyListener extends RecordListener implements View.OnKeyLis
 			mOriginalOnKeyListener = ListenerIntercept.getKeyListener(v);
 			v.setOnKeyListener(this);
 		} catch (Exception ex) {
-			ex.printStackTrace();
+			mEventRecorder.writeException(ex, v, "create on key listener");
 		}		
 	}
 	
@@ -61,8 +61,7 @@ public class RecordOnKeyListener extends RecordListener implements View.OnKeyLis
 				mEventRecorder.writeRecord(Constants.EventTags.KEY, keyCode + "," + action + "," +
 										   mEventRecorder.getViewReference().getReference(v) + "," + getDescription(v));
 			} catch (Exception ex) {
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, v, " key event");
-				ex.printStackTrace();
+				mEventRecorder.writeException(ex, v, "key event");
 			}
 		}
 		if (!fReentryBlock) {

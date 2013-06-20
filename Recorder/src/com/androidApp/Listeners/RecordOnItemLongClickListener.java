@@ -39,8 +39,7 @@ public class RecordOnItemLongClickListener extends RecordListener implements Ada
 			try {
 				mEventRecorder.writeRecord(Constants.EventTags.ITEM_LONG_CLICK, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
 			} catch (Exception ex) {
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, view, "item long click");
-				ex.printStackTrace();
+				mEventRecorder.writeException(ex, view, "item long click");
 			}
 		}
 		if (!fReentryBlock) {

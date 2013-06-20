@@ -28,7 +28,7 @@ public class RecordOnFocusChangeListener extends RecordListener implements View.
 			mOriginalOnFocusChangeListener = view.getOnFocusChangeListener();
 			view.setOnFocusChangeListener(mOriginalOnFocusChangeListener);
 		} catch (Exception ex) {
-			ex.printStackTrace();
+			mEventRecorder.writeException(ex, "create on focus change listener");
 		}
 	}
 	
@@ -62,8 +62,7 @@ public class RecordOnFocusChangeListener extends RecordListener implements View.
 					mEventRecorder.writeRecord(Constants.EventTags.LOSE_FOCUS, v);
 				}
 			} catch (Exception ex) {
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, v, "on focus change " + hasFocus);
-				ex.printStackTrace();
+				mEventRecorder.writeException(ex, v, "on focus change " + hasFocus);
 			}
 		}
 		if (!fReentryBlock) {

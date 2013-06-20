@@ -65,8 +65,7 @@ public class RecordPopupWindowOnDismissListener extends RecordListener implement
 				}
 				mViewInterceptor.setLastKeyAction(-1);
 			} catch (Exception ex) {
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, Constants.EventTags.DISMISS_POPUP_WINDOW);
-				ex.printStackTrace();
+				mEventRecorder.writeException(ex, Constants.EventTags.DISMISS_POPUP_WINDOW);
 			}
 		}
 		if (!fReentryBlock) {

@@ -23,7 +23,7 @@ public class RecordOnLongClickListener extends RecordListener implements View.On
 		try {
 			mOriginalOnLongClickListener = ListenerIntercept.getLongClickListener(v);
 		} catch (Exception ex) {
-			ex.printStackTrace();
+			mEventRecorder.writeException(ex, v, "create long click listener");
 		}		
 	}
 	
@@ -52,8 +52,7 @@ public class RecordOnLongClickListener extends RecordListener implements View.On
 				String description = getDescription(v);
 				mEventRecorder.writeRecord(Constants.EventTags.LONG_CLICK, v, description);
 			} catch (Exception ex) {
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, v, "long click");
-				ex.printStackTrace();
+				mEventRecorder.writeException(ex, v, "long click");
 			}
 		}
 		if (!fReentryBlock) {

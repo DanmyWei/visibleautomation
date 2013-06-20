@@ -163,8 +163,7 @@ public class ActivityInterceptor {
 							String packageName = getPackageName(activityA);
 							ActivityInterceptor.this.getRecorder().writeRecord(Constants.EventTags.PACKAGE, packageName);
 						} catch (Exception ex) {
-							ActivityInterceptor.this.getRecorder().writeRecord(Constants.EventTags.EXCEPTION, ex.getMessage());
-							ex.printStackTrace();
+							ActivityInterceptor.this.getRecorder().writeException(ex, "getting package name");
 						}
 					} else {
 						if (!fEventsHaveBeenFired) {
@@ -253,13 +252,16 @@ public class ActivityInterceptor {
 	 */
 	public void recordRotation(EventRecorder recorder, ViewInterceptor viewInterceptor, Activity activityA, int newRotation) {
 		Activity activityB = mActivityMonitor.waitForActivity();
+
 		recorder.writeRotation(activityB, newRotation);
-		replaceLastActivity(activityB);
-		Activity activityBAgain = mActivityMonitor.waitForActivity();
-		if (activityBAgain != activityB) {
-			recorder.writeRecord(Constants.EventTags.EXCEPTION, "rotated activities did not match");
+		if (!activityA.equals(activityB)) {
+			replaceLastActivity(activityB);
+			Activity activityBAgain = mActivityMonitor.waitForActivity();
+			if (activityBAgain != activityB) {
+				recorder.writeRecord(Constants.EventTags.EXCEPTION, "rotated activities did not match");
+			}
+			MagicFrame.insertMagicFrame(mInstrumentation, activityB, recorder, viewInterceptor);
 		}
-		MagicFrame.insertMagicFrame(mInstrumentation, activityB, recorder, viewInterceptor);
 	}
 	
 	/**

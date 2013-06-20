@@ -48,8 +48,7 @@ public class RecordOnItemClickListener extends RecordListener implements Adapter
 			try {
 				mEventRecorder.writeRecord(Constants.EventTags.ITEM_CLICK, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
 			} catch (Exception ex) {
-				mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, view, "item click");
-				ex.printStackTrace();
+				mEventRecorder.writeException(ex, view, "item click");
 			}	
 		}
 		if (!fReentryBlock) {
