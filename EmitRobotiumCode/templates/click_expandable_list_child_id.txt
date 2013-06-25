@@ -1,0 +1,3 @@
+		// %DESCRIPTION%
+		ExpandableListView expandableListView%VARIABLE_INDEX% = (ExpandableListView) solo.getView(%ID%);
+		robotiumUtils.clickChild(expandableListView%VARIABLE_INDEX%, %ITEM_INDEX%);
