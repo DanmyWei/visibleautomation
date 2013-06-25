@@ -63,7 +63,8 @@ public class Constants {
 		public static final String DISMISS_SPINNER_DIALOG_BACK_KEY = "dismiss_spinner_dialog_back_key";
 		public static final String DISMISS_SPINNER_POPUP_BACK_KEY = "dismiss_spinner_popup_window_back_key";
 		public static final String SELECT_TAB = "select_tab";
-
+		public static final String CHILD_CLICK = "child_click";
+		public static final String GROUP_CLICK = "group_click";
 	}
 	
 	public static class Templates {
@@ -130,8 +131,14 @@ public class Constants {
 		public static final String CANCEL_DIALOG_TEMPLATE = "dialog_cancel_template.txt";
 		public static final String BINARY_CLASSPATH = "binary_classpath.txt";
 		public static final String PLAYBACK_MOTION_EVENTS = "playback_motion_events.txt";
+		public static final String PLAYBACK_MOTION_EVENTS_CLASS_INDEX = "playback_motion_events_class_index.txt";
 		public static final String SELECT_TAB_ID = "select_tab_id.txt";
 		public static final String SELECT_TAB_CLASS_INDEX = "select_tab_class_index.txt";
+		public static final String CLICK_EXPANDABLE_LIST_CHILD_CLASS_INDEX = "click_expandable_list_child_class_index.txt";
+		public static final String CLICK_EXPANDABLE_LIST_CHILD_ID = "click_expandable_list_child_id.txt";
+		public static final String CLICK_EXPANDABLE_LIST_GROUP_CLASS_INDEX = "click_expandable_list_group_class_index.txt";
+		public static final String CLICK_EXPANDABLE_LIST_GROUP_ID = "click_expandable_list_group_id.txt";
+		
 	}
 	
 	// template %replace% variables

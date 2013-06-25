@@ -40,7 +40,6 @@ public interface IEmitCode {
 	void selectActionBarTab(List<String> tokens, List<LineAndTokens> lines) throws IOException;
 	void writeMenuItemClick(List<String> tokens, List<LineAndTokens> lines) throws IOException;
 	String writeGetCurrentActivity(List<String> tokens, List<LineAndTokens> lines) throws IOException;
-	String writeGetPreviousActivity(List<String> tokens, List<LineAndTokens> lines) throws IOException;
 	void writeWaitForView(List<String> tokens, int startIndex, List<LineAndTokens> lines) throws IOException;
 	void writeGoBackToMatchingActivity(String nextActivityVariable, List<String> tokens, List<LineAndTokens> lines) throws IOException;
 	void writeGoBack(List<String> tokens, List<LineAndTokens> lines) throws IOException;
@@ -63,6 +62,8 @@ public interface IEmitCode {
 	void writeItemClick(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
 	void writePopupMenuItemClick(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
 	void writeItemSelected(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
+	void writeChildClick(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
+	void writeGroupClick(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
 	void writeHeader(String classPath, String testPackage, String testClassName, String className, BufferedWriter bw) throws IOException;
 	void writeTrailer(BufferedWriter bw) throws IOException;
 	void writeClassTrailer(BufferedWriter bw) throws IOException;

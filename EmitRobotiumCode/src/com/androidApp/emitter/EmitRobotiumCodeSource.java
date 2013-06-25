@@ -171,7 +171,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 					if ((tokens.size() > 2) && mfActivityMatches) {
 						writeGoBackToMatchingActivity(mActivityVariable, tokens, lines);
 					} else {
-						writeGoBack(tokens, lines);
+						writeGoBackAndWaitForActivity(tokens, lines);
 					}
 					mLastEventWasWaitForActivity = true;
 				} else {
@@ -181,6 +181,10 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 						writePopupMenuItemClick(tokens, lines);
 					} else if (action.equals(Constants.Events.ITEM_SELECTED)) {
 						writeItemSelected(tokens, lines);
+					} else if (action.equals(Constants.Events.GROUP_CLICK)) {
+						writeGroupClick(tokens, lines);
+					} else if (action.equals(Constants.Events.GROUP_CLICK)) {
+						writeChildClick(tokens, lines);
 					} else if (action.equals(Constants.Events.SCROLL)) {
 						scrollFirstVisibleItem = Integer.parseInt(tokens.get(2));
 						scrollsHaveHappened = true;
@@ -256,10 +260,13 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		if (tokens.get(0).equals(Constants.Events.ACTIVITY_FORWARD)) {
 			if (mTargetClassPath == null) {
 				mTargetClassPath =  tokens.get(2);
+				mCurrentActivityName = tokens.get(2);
 			}
 		}
-		if (nextTokens.size() > 2) {
-			if (nextTokens.get(0).equals(Constants.Events.ACTIVITY_FORWARD)) {
+		if (nextTokens.size() > 2) {		
+			if (nextTokens.get(0).equals(Constants.Events.ACTIVITY_FORWARD) || 
+			    nextTokens.get(0).equals(Constants.Events.ACTIVITY_BACK) || 
+			    nextTokens.get(0).equals(Constants.Events.ACTIVITY_BACK_KEY)) {
 				String nextActivityName = nextTokens.get(2);
 				mfActivityMatches = nextActivityName.equals(mCurrentActivityName);
 				if (mfActivityMatches) {
@@ -268,15 +275,6 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 				mCurrentActivityName = nextActivityName;
 				return true;
 			} 
-			if (nextTokens.get(0).equals(Constants.Events.ACTIVITY_BACK) || nextTokens.get(0).equals(Constants.Events.ACTIVITY_BACK_KEY)) {
-				String previousActivityName = nextTokens.get(2);
-				mfActivityMatches = previousActivityName.equals(mCurrentActivityName);
-				if (mfActivityMatches) {
-					mActivityVariable = writeGetPreviousActivity(tokens, lines);
-				}
-				mCurrentActivityName = previousActivityName;
-				return true;
-			}
 		}
 		return false;
 	}
@@ -379,20 +377,6 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		String activityName = Constants.Names.ACTIVITY + Integer.toString(mActivityVariableIndex);
 		return activityName;
 	}
-
-	/**
-	 * write the getPreviousActivity() call
-	 * @param lines
-	 * @throws IOException
-	 */
-	public String writeGetPreviousActivity(List<String> tokens, List<LineAndTokens> lines) throws IOException {
-		String getPreviousActivityTemplate = FileUtility.readTemplate(Constants.Templates.GET_PREVIOUS_ACTIVITY);
-		getPreviousActivityTemplate = getPreviousActivityTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mActivityVariableIndex));
-		getPreviousActivityTemplate = getPreviousActivityTemplate.replace(Constants.VariableNames.DESCRIPTION, "get the previous activity, since the next one has the same class name");
-		lines.add(new LineAndTokens(null, getPreviousActivityTemplate));
-		String activityName = Constants.Names.ACTIVITY + Integer.toString(mActivityVariableIndex);
-		return activityName;
-	}
 	
 	/**
 	 * when we send an event to a view just after we do waitForActivity(), some applications (like ApiDemos) use the same activity
@@ -446,6 +430,17 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	 * @throws IOException if the template file can't be read
 	 */
 	public void writeGoBack(List<String> tokens, List<LineAndTokens> lines) throws IOException {
+		String goBackTemplate = FileUtility.readTemplate(Constants.Templates.GO_BACK);
+		lines.add(new LineAndTokens(tokens, goBackTemplate));			
+	}
+	
+	/**
+	 * write the solo.goBack() call
+	 * @param tokens parsed from a line in events.txt
+	 * @param lines output list of java instructions
+	 * @throws IOException if the template file can't be read
+	 */
+	public void writeGoBackAndWaitForActivity(List<String> tokens, List<LineAndTokens> lines) throws IOException {
 		if (tokens.size() > 2) {
 			String classPath = tokens.get(2);
 			String description = getDescription(tokens);
@@ -846,6 +841,8 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 			writeWaitForView(tokens, 3, lines);
 			mLastEventWasWaitForActivity = false;
 		} 
+		
+		// TODO: we need to expand RobotiumUtils to select a spinner item based on the spinner ID
 		if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
 			int classIndex = ref.getIndex();
 			String itemClickTemplate = writeViewClassIndexCommand(Constants.Templates.SELECT_SPINNER_ITEM, ref, fullDescription);
@@ -858,6 +855,59 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		mViewVariableIndex++;	
 	}
 	
+	/**
+	 * child_click:105261255,0,0,class_index,android.widget.ExpandableListView,0,Arnold
+	 */
+	public void writeChildClick(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
+		int itemIndex = Integer.parseInt(tokens.get(2)) + 1;
+		ReferenceParser ref = new ReferenceParser(tokens, 3);
+		String description = getDescription(tokens);
+		String fullDescription = "child click item " + description;
+		if (mLastEventWasWaitForActivity) {
+			writeWaitForView(tokens, 3, lines);
+			mLastEventWasWaitForActivity = false;
+		} 
+		if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
+			String childClickTemplate = writeViewClassIndexCommand(Constants.Templates.CLICK_EXPANDABLE_LIST_CHILD_CLASS_INDEX, ref, fullDescription);
+			childClickTemplate = childClickTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
+			lines.add(new LineAndTokens(tokens, childClickTemplate));
+		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
+			String childClickTemplate = writeViewIDCommand(Constants.Templates.CLICK_EXPANDABLE_LIST_CHILD_ID, ref, fullDescription);
+			childClickTemplate = childClickTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
+			lines.add(new LineAndTokens(tokens, childClickTemplate));
+		} else {
+			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
+		}
+		mViewVariableIndex++;			
+	}
+	
+	/**
+	 * group_click:105266794,1,class_index,android.widget.ExpandableListView,0,Dog Names
+	 */
+	public void writeGroupClick(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
+		int itemIndex = Integer.parseInt(tokens.get(2)) + 1;
+		ReferenceParser ref = new ReferenceParser(tokens, 3);
+		String description = getDescription(tokens);
+		String fullDescription = "group click item " + description;
+		if (mLastEventWasWaitForActivity) {
+			writeWaitForView(tokens, 3, lines);
+			mLastEventWasWaitForActivity = false;
+		} 
+		if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
+			String groupClickTemplate = writeViewClassIndexCommand(Constants.Templates.CLICK_EXPANDABLE_LIST_GROUP_CLASS_INDEX, ref, fullDescription);
+			groupClickTemplate = groupClickTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
+			lines.add(new LineAndTokens(tokens, groupClickTemplate));
+		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
+			String groupClickTemplate = writeViewIDCommand(Constants.Templates.CLICK_EXPANDABLE_LIST_GROUP_ID, ref, fullDescription);
+			groupClickTemplate = groupClickTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
+			lines.add(new LineAndTokens(tokens, groupClickTemplate));
+		} else {
+			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
+		}
+		mViewVariableIndex++;			
+		
+	}
+
 	
 	/**
 	 * write the header on the first activity
@@ -934,6 +984,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	
 	public String writeViewClassIndexCommand(String templateFile, ReferenceParser ref, String fullDescription) throws IOException {
 		String template = FileUtility.readTemplate(templateFile);
+		int classIndex = ref.getIndex();
 		template = template.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
 		template = template.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mViewVariableIndex++));
 		template = template.replace(Constants.VariableNames.CLASSPATH, ref.getClassName());
@@ -985,6 +1036,8 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		String template = null;
 		if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
 			template = writeViewIDCommand(Constants.Templates.PLAYBACK_MOTION_EVENTS, ref, fullDescription);
+		} else {
+			template = writeViewClassIndexCommand(Constants.Templates.PLAYBACK_MOTION_EVENTS_CLASS_INDEX, ref, fullDescription);
 		}
 		template = template.replace(Constants.VariableNames.MOTION_EVENT_VARIABLE_INDEX, Integer.toString(mMotionEventVariableIndex));
 		template = template.replace(Constants.VariableNames.TESTCLASSNAME, testClassName);

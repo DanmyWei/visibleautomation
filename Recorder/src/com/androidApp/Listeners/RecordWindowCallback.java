@@ -53,7 +53,7 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 				mEventRecorder.writeRecordTime(Constants.EventTags.MENU_MENU_KEY);
 				break;
 			case KeyEvent.KEYCODE_HOME:
-				mEventRecorder.writeRecordTime(Constants.EventTags.MENU_MENU_KEY);
+				mEventRecorder.writeRecordTime(Constants.EventTags.KEY_HOME);
 				break;
 			} 
 		}

@@ -1,6 +1,9 @@
 package com.androidApp.Test;
 
 import java.io.IOException;
+
+import com.androidApp.Utility.TestUtils;
+
 import android.app.Activity;
 import android.test.ActivityInstrumentationTestCase2;
 import android.util.Log;

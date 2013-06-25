@@ -16,6 +16,7 @@ import android.webkit.WebViewClient;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.CompoundButton;
+import android.widget.ExpandableListView;
 import android.widget.ListPopupWindow;
 import android.widget.PopupMenu;
 import android.widget.PopupWindow;
@@ -43,6 +44,17 @@ public class ListenerIntercept {
 		Object listPopupWindowObject = ReflectionUtils.getFieldValue(menuPopupHelperObject, menuPopupHelperClass, Constants.Fields.POPUP);
 		Object listenerObject = ReflectionUtils.getFieldValue(listPopupWindowObject, ListPopupWindow.class, Constants.Fields.ITEM_CLICK_LISTENER);
 		return (AdapterView.OnItemClickListener) listenerObject;
+	}
+	
+	// for expandable list views, since they are uncaring of onItemClickListener
+	public static ExpandableListView.OnGroupClickListener getOnGroupClickListener(ExpandableListView expandableListView) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
+		Object listenerObject = ReflectionUtils.getFieldValue(expandableListView, ExpandableListView.class, Constants.Fields.ONGROUP_CLICK_LISTENER);
+		return (ExpandableListView.OnGroupClickListener) listenerObject;
+	}
+	
+	public static ExpandableListView.OnChildClickListener getOnChildClickListener(ExpandableListView expandableListView) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
+		Object listenerObject = ReflectionUtils.getFieldValue(expandableListView, ExpandableListView.class, Constants.Fields.ONCHILD_CLICK_LISTENER);
+		return (ExpandableListView.OnChildClickListener) listenerObject;
 	}
 	
 	public static void setPopupMenuOnItemClickListener(View v, AdapterView.OnItemClickListener listener) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {

@@ -8,6 +8,7 @@ import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.Listeners.RecordOnFocusChangeListener;
 import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.TestUtils;
 
 import android.app.Activity;
 import android.app.Instrumentation;
@@ -101,63 +102,58 @@ public class MagicFrame extends FrameLayout {
 	/**
 	 * intercept the back, menu, and home keys.
 	 */
-
-	@Override 
-	public boolean dispatchKeyEventPreIme(KeyEvent event) {
-		if (event.getAction() == KeyEvent.ACTION_UP){ 
-			if ((mRecorder != null) && mRecorder.getVisualDebug()) {
-				Log.i(TAG, "dispatch pre IME intercepted key event " + MagicFrame.keyEventToString(event));
-			}
-			try {
-				if ((mRecorder != null) && (mViewInterceptor != null)) {
-					recordKeyEvent(event);
-				} else {
-					Log.i(TAG, "dispatchKeyEventPreIme viewInterceptor = " + mViewInterceptor + " recorder = " + mRecorder);
-				}
-			} catch (Exception ex) {
-				ex.printStackTrace();
-			}
-		}
-		return false;
-	}
 	@Override 
 	public boolean onKeyPreIme (int keyCode, KeyEvent event){
-		if (event.getAction() == KeyEvent.ACTION_UP){ 
-			if ((mRecorder != null) && mRecorder.getVisualDebug()) {
-				Log.i(TAG, "onkey pre IME intercepted key event " + MagicFrame.keyEventToString(event));
+		try {
+			if ((mRecorder != null) && (mViewInterceptor != null)) {
+				recordKeyEvent(event);
+			} else {
+				Log.i(TAG, "dispatchKeyEventPreIme viewInterceptor = " + mViewInterceptor + " recorder = " + mRecorder);
 			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
 		}
 		return false;
 	}
 
-    // actually record the key event.
+    // actually record the key event. Only record on ACTION_UP. sometimes the window doesn't exist anymore if it's ACTION_DOWN
+	// also, just check for a null view anyway
     public void recordKeyEvent(KeyEvent event) {
-    	View v = getChildAt(0);
-		switch (event.getKeyCode()) {
-		case KeyEvent.KEYCODE_BACK:
-			mViewInterceptor.setLastKeyAction(KeyEvent.KEYCODE_BACK);
-			mRecorder.writeRecord(Constants.EventTags.KEY_BACK, v);
-			break;
-		case KeyEvent.KEYCODE_MENU:
-			mViewInterceptor.setLastKeyAction(KeyEvent.KEYCODE_MENU);
-			mRecorder.writeRecord(Constants.EventTags.KEY_MENU, v);
-			break;
-		case KeyEvent.KEYCODE_HOME:
-			mViewInterceptor.setLastKeyAction(KeyEvent.KEYCODE_HOME);
-			mRecorder.writeRecord(Constants.EventTags.KEY_HOME, v);
-			break;
-		default:
-			Log.i(TAG, "did not log key " + event.getKeyCode());
-			break;
-		} 
-    }
-
-
-	@Override
-    protected void onFocusChanged(boolean gainFocus, int direction, Rect previouslyFocusedRect) {
-		if ((mRecorder != null) && mRecorder.getVisualDebug()) {
-			Log.i(TAG, "onFocusChanged gainFocus = " + gainFocus);
-		}
+    	View v = null;
+    	if (event.getAction() == KeyEvent.ACTION_UP) {
+    		if (getChildCount() > 0) {
+    			v = getChildAt(0);
+    		}
+			switch (event.getKeyCode()) {
+			case KeyEvent.KEYCODE_BACK:
+				mViewInterceptor.setLastKeyAction(KeyEvent.KEYCODE_BACK);
+				if (v != null) {
+					mRecorder.writeRecord(Constants.EventTags.KEY_BACK, v);
+				} else {
+					mRecorder.writeRecordTime(Constants.EventTags.KEY_BACK);
+				}
+				break;
+			case KeyEvent.KEYCODE_MENU:
+				mViewInterceptor.setLastKeyAction(KeyEvent.KEYCODE_MENU);
+				if (v != null) {
+					mRecorder.writeRecord(Constants.EventTags.KEY_MENU, v);
+				} else {
+					mRecorder.writeRecordTime(Constants.EventTags.KEY_MENU);
+				}
+				break;
+			case KeyEvent.KEYCODE_HOME:
+				mViewInterceptor.setLastKeyAction(KeyEvent.KEYCODE_HOME);
+				if (v != null) {
+					mRecorder.writeRecord(Constants.EventTags.KEY_HOME, v);
+				} else {
+					mRecorder.writeRecordTime(Constants.EventTags.KEY_HOME);
+				}
+				break;
+			default:
+				Log.i(TAG, "did not log key " + event.getKeyCode());
+				break;
+			} 
+	    }
     }
   
 	@Override
@@ -202,11 +198,16 @@ public class MagicFrame extends FrameLayout {
 	 * @param index
 	 */
 	public void insertInterceptor(View contentView, int index) {
-		ViewGroup parentView = (ViewGroup) contentView.getParent();
+		ViewGroup parentView = (ViewGroup) contentView.getParent();		
+		// we have to reset the focused view because reparenting with the MagicFrame causes it to lose focus
+		View focusedView = mViewInterceptor.getFocusedView();
 		parentView.removeView(contentView);
 		contentView.setLayoutParams(new LayoutParams(ViewGroup.LayoutParams.FILL_PARENT, ViewGroup.LayoutParams.FILL_PARENT));
 		this.addView(contentView);
 		parentView.addView(this, index);
+		if (focusedView != null) {
+			focusedView.requestFocus();
+		}
 	}
 
 	/**

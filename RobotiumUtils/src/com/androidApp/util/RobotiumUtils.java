@@ -21,8 +21,10 @@ import android.view.inputmethod.InputMethodManager;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.AbsListView;
+import android.widget.Adapter;
 import android.widget.AdapterView;
 import android.widget.AutoCompleteTextView;
+import android.widget.ExpandableListView;
 import android.widget.ListView;
 import android.widget.PopupWindow;
 import android.widget.ScrollView;
@@ -182,7 +184,8 @@ public class RobotiumUtils {
 		long startTimeMillis = SystemClock.uptimeMillis();
 		long currentTimeMillis = startTimeMillis;
 		do {
-			Activity newActivity = sActivityMonitorRunnable.waitForActivity(newActivityClass, timeoutMsec);
+			Activity newActivity = sActivityMonitorRunnable.waitForActivity(newActivityClass, ActivityMonitorRunnable.MINISLEEP);
+			Log.d(TAG, "trying " + currentActivity + " against " + newActivity);
 			if ((newActivity != currentActivity) || (currentActivity == null)) {
 				return true;
 			}
@@ -525,7 +528,64 @@ public class RobotiumUtils {
 			mTabHost.setCurrentTabByTag(mTabId);
 		}
 	}
+
+	/**
+	 * click a group in an expandable list
+	 * @param expandableListView
+	 * @param position
+	 */
+	public void clickGroup(ExpandableListView expandableListView, int position) {
+		mInstrumentation.runOnMainSync(new GroupClickRunnable(expandableListView, position));
+	}
+	
+	/**
+	 * runnable to select a group in an expandable list
+	 */
 		
+	public class GroupClickRunnable implements Runnable {
+		public ExpandableListView 	mExpandableListView;
+		public int					mPosition;
+		
+		public GroupClickRunnable(ExpandableListView expandableListView, int position) {
+			mExpandableListView = expandableListView;
+			mPosition = position;
+		}
+		
+		public void run() {
+			View v = RobotiumUtils.getAdapterViewItem(mExpandableListView, mPosition);	
+			Adapter adapter = mExpandableListView.getAdapter();
+			long id = adapter.getItemId(mPosition);
+			mExpandableListView.performItemClick(v, mPosition, id);
+		}
+	}
+
+	/**
+	 * click a child in an expandable list
+	 * @param expandableListView
+	 * @param position
+	 */
+	public void clickChild(ExpandableListView expandableListView, int position) {
+		mInstrumentation.runOnMainSync(new ChildClickRunnable(expandableListView, position));
+	}
+	
+	public class ChildClickRunnable implements Runnable {
+		public ExpandableListView 	mExpandableListView;
+		public int					mPosition;
+		
+		public ChildClickRunnable(ExpandableListView expandableListView, int position) {
+			mExpandableListView = expandableListView;
+			mPosition = position;
+		}
+		
+		public void run() {
+			View v = RobotiumUtils.getAdapterViewItem(mExpandableListView, mPosition);	
+			Adapter adapter = mExpandableListView.getAdapter();
+			long id = adapter.getItemId(mPosition);
+			mExpandableListView.performItemClick(v, mPosition, id);
+		}
+	}
+	
+	
 	/**
 	 * extract the WebViewClient from WebView.mCallbackProxy.mWebViewClient
 	 * @param webView

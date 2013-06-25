@@ -1,5 +1,7 @@
 package com.androidApp.Test;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,6 +23,7 @@ import android.widget.AbsListView;
 import android.widget.Adapter;
 import android.widget.AdapterView;
 import android.widget.EditText;
+import android.widget.ExpandableListView;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.PopupWindow;
@@ -31,14 +34,19 @@ import android.widget.TextView;
 
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
+import com.androidApp.EventRecorder.ReferenceException;
+import com.androidApp.EventRecorder.UserDefinedViewReference;
 import com.androidApp.Intercept.InterceptActionBar;
 import com.androidApp.Intercept.MagicFrame;
 import com.androidApp.Listeners.FinishTextChangedListener;
+import com.androidApp.Listeners.RecordAutoCompleteDropdownOnDismissListener;
 import com.androidApp.Listeners.RecordDialogOnCancelListener;
 import com.androidApp.Listeners.RecordDialogOnDismissListener;
 import com.androidApp.Listeners.RecordListener;
+import com.androidApp.Listeners.RecordOnChildClickListener;
 import com.androidApp.Listeners.RecordOnClickListener;
 import com.androidApp.Listeners.RecordOnFocusChangeListener;
+import com.androidApp.Listeners.RecordOnGroupClickListener;
 import com.androidApp.Listeners.RecordOnItemClickListener;
 import com.androidApp.Listeners.RecordOnItemSelectedListener;
 import com.androidApp.Listeners.RecordOnKeyListener;
@@ -54,6 +62,7 @@ import com.androidApp.Listeners.RecordSpinnerPopupWindowOnDismissListener;
 import com.androidApp.Listeners.RecordTextChangedListener;
 import com.androidApp.Listeners.RecordWebViewClient;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.FileUtils;
 import com.androidApp.Utility.ReflectionUtils;
 import com.androidApp.Utility.TestUtils;
 import com.androidApp.Utility.ViewExtractor;
@@ -63,20 +72,29 @@ import com.androidApp.Utility.ViewExtractor;
  * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
  */
 public class ViewInterceptor {
-	protected static final String	TAG = "ViewInterceptor";
-	public static final float		GUESS_IME_HEIGHT = 0.25F;			// guess that IME takes up this amount of the screen.
-	protected EventRecorder 		mEventRecorder;
-	protected int					mHashCode;							// for quick view hierarchy comparison
-	protected boolean				mIMEWasDisplayed = false;			// IME was displayed in the last layout
-	protected View					mViewFocus;
-	protected int					mLastKeyAction;						// so we can track dialog/popup/ime/activity dismiss from back/menu key					
-	private Dialog					mCurrentDialog = null;				// track the current dialog, so we don't re-record it.
-	private PopupWindow				mCurrentPopupWindow = null;			// current popup window, which is like the current dialog, but different
-	private View					mCurrentOptionsMenuView = null;		// current action menu window
+	protected static final String			TAG = "ViewInterceptor";
+	public static final float				GUESS_IME_HEIGHT = 0.25F;			// guess that IME takes up this amount of the screen.
+	protected EventRecorder 				mEventRecorder;
+	protected int							mHashCode;							// for quick view hierarchy comparison
+	protected boolean						mIMEWasDisplayed = false;			// IME was displayed in the last layout
+	protected View							mViewFocus;
+	protected int							mLastKeyAction;						// so we can track dialog/popup/ime/activity dismiss from back/menu key					
+	private Dialog							mCurrentDialog = null;				// track the current dialog, so we don't re-record it.
+	private PopupWindow						mCurrentPopupWindow = null;			// current popup window, which is like the current dialog, but different
+	private View							mCurrentOptionsMenuView = null;		// current action menu window
+	private List<UserDefinedViewReference>	mMotionEventViewRefs;				// references to views which receive motion events
+	private List<View>						mMotionEventViews;
 	
-	public ViewInterceptor(EventRecorder eventRecorder) {
+	public ViewInterceptor(EventRecorder eventRecorder) throws IOException, ClassNotFoundException, ReferenceException {
 		mEventRecorder = eventRecorder;
 		mLastKeyAction = -1;
+		InputStream is = ViewInterceptor.class.getResourceAsStream("/raw/motion_event_views.txt");
+		mMotionEventViewRefs = UserDefinedViewReference.readViewReferences(is);
+	}
+	
+	public void findMotionEventViews(Activity a) {
+		List<UserDefinedViewReference> activityReferences = UserDefinedViewReference.filterReferencesInActivity(a, mMotionEventViewRefs);
+		mMotionEventViews = UserDefinedViewReference.getMatchingViews(a, activityReferences);
 	}
 	
 	// accessors/mutator for focused view for IME display/remove event
@@ -198,7 +216,12 @@ public class ViewInterceptor {
 						if (!isSpinnerDropdownList(adapterView)) {
 							replaceAdapterViewListeners(adapterView);
 						}
-						if (TestUtils.listenMotionEvents(v)) {
+						// expandable list views are a special case.
+						if (adapterView instanceof ExpandableListView) {
+							ExpandableListView expandableListView = (ExpandableListView) adapterView;
+							replaceExpandableListVewListeners(expandableListView);
+						}
+						if (TestUtils.listenMotionEvents(mMotionEventViews, v)) {
 							replaceTouchListener(v);
 						}
 					}
@@ -296,7 +319,7 @@ public class ViewInterceptor {
 			RecordOnLongClickListener recordLongClickListener = new RecordOnLongClickListener(mEventRecorder, originalLongClickListener);
 			v.setOnLongClickListener(recordLongClickListener);
 		}
-		if (TestUtils.listenMotionEvents(v)) {
+		if (TestUtils.listenMotionEvents(mMotionEventViews, v)) {
 			View.OnTouchListener originalTouchListener = ListenerIntercept.getTouchListener(v);
 			if (!(originalTouchListener instanceof RecordOnTouchListener)) {
 				RecordOnTouchListener recordTouchListener = new RecordOnTouchListener(mEventRecorder, originalTouchListener);
@@ -380,7 +403,25 @@ public class ViewInterceptor {
 			}
 		}
 	}
-
+	
+	/**
+	 * ExpandableListViews are different from list views. They ignore onItemClickListener, but they have an onGroupClickListener
+	 * and an onChildClickListener
+	 */
+	public void replaceExpandableListVewListeners(ExpandableListView expandableListView) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
+		ExpandableListView.OnChildClickListener onChildClickListener = ListenerIntercept.getOnChildClickListener(expandableListView);
+		if (!(onChildClickListener instanceof RecordOnChildClickListener)) {
+			RecordOnChildClickListener recordOnChildClickListner = new RecordOnChildClickListener(mEventRecorder, expandableListView);
+			expandableListView.setOnChildClickListener(recordOnChildClickListner);
+		}
+		ExpandableListView.OnGroupClickListener onGroupClickListener = ListenerIntercept.getOnGroupClickListener(expandableListView);
+		if (!(onGroupClickListener instanceof RecordOnGroupClickListener)) {
+			RecordOnGroupClickListener recordOnGroupClickListener = new RecordOnGroupClickListener(mEventRecorder, expandableListView);
+			expandableListView.setOnGroupClickListener(recordOnGroupClickListener);
+		}
+	}
+		
+		
 	/**
 	 * replace the text watcher and focus change listeners for a text view (actually EditText, but we're not picky)
 	 * @param tv TextView
@@ -504,13 +545,11 @@ public class ViewInterceptor {
 	public class OnLayoutInterceptListener implements ViewTreeObserver.OnGlobalLayoutListener {
 		protected Activity mActivity;
 		protected int mCurrentRotation;
-		protected int mPreviousContentHeight = 0;
 		
 		public OnLayoutInterceptListener(Activity activity) {
 			mActivity = activity;
 			Display display = mActivity.getWindowManager().getDefaultDisplay();
 			mCurrentRotation = display.getRotation();
-			mPreviousContentHeight = getContentHeight(mActivity.getWindow().getDecorView());
 		}
 		
 		public void onGlobalLayout() {
@@ -534,16 +573,6 @@ public class ViewInterceptor {
 			ActionBar actionBar = mActivity.getActionBar();
 	        intercept(mActivity, actionBar);   
 		}
-	}
-	
-	public static int getContentHeight(View decorView) {
-		ViewGroup vg = (ViewGroup) decorView;
-		LinearLayout linearLayout = (LinearLayout) vg.getChildAt(0);
-		int contentHeight = 0;
-		for (int iChild = 0; iChild < linearLayout.getChildCount(); iChild++) {
-			contentHeight += linearLayout.getChildAt(iChild).getMeasuredHeight();
-		}
-		return contentHeight;
 	}
 
 	/**
@@ -576,7 +605,8 @@ public class ViewInterceptor {
 		try {
 			PopupWindow.OnDismissListener originalDismissListener = ListenerIntercept.getOnDismissListener(popupWindow);
 			if ((originalDismissListener == null) || (originalDismissListener.getClass() != RecordPopupWindowOnDismissListener.class)) {
-				RecordSpinnerPopupWindowOnDismissListener recordOnDismissListener = new RecordSpinnerPopupWindowOnDismissListener(mEventRecorder, this, null, popupWindow, originalDismissListener);
+				View anchorView = TestUtils.getPopupWindowAnchor(popupWindow);
+				RecordSpinnerPopupWindowOnDismissListener recordOnDismissListener = new RecordSpinnerPopupWindowOnDismissListener(mEventRecorder, this, anchorView, popupWindow, originalDismissListener);
 				popupWindow.setOnDismissListener(recordOnDismissListener);
 			}
 		} catch (Exception ex) {
@@ -584,6 +614,24 @@ public class ViewInterceptor {
 		}
 	}
 	
+	
+
+	/**
+	 * intercept the contents of a popup window, which isn't in the view hierarchy of an activity.
+	 * @param popupWindow
+	 */
+	public void interceptAutocompleteDropdown(PopupWindow popupWindow) {
+		try {
+			PopupWindow.OnDismissListener originalDismissListener = ListenerIntercept.getOnDismissListener(popupWindow);
+			if ((originalDismissListener == null) || (originalDismissListener.getClass() != RecordAutoCompleteDropdownOnDismissListener.class)) {
+				View anchorView = TestUtils.getPopupWindowAnchor(popupWindow);
+				RecordAutoCompleteDropdownOnDismissListener recordOnDismissListener = new RecordAutoCompleteDropdownOnDismissListener(mEventRecorder, this, anchorView, popupWindow, originalDismissListener);
+				popupWindow.setOnDismissListener(recordOnDismissListener);
+			}
+		} catch (Exception ex) {
+			mEventRecorder.writeException(ex, "Intercepting popup window");
+		}
+	}
 	/**
 	 * intercept the contents of a dialog.
 	 * @param dialog

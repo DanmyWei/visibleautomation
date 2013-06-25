@@ -21,8 +21,7 @@ import android.view.Window;
  */
 public class ActivityMonitorRunnable implements Runnable {
 	 private static final String 					TAG = "ActivityMonitorRunnable";
-	 public static final int 						MINISLEEP = 100;
-	 private static final long 						ACTIVITY_MONITOR_TIMEOUT_MSEC = 2000;			
+	 public static final int 						MINISLEEP = 1000;
 	 protected Instrumentation.ActivityMonitor		mActivityMonitor;				// activity monitor
 	 protected Stack<ActivityInfo>					mActivityStack;					// stack of activities.
 	 protected Instrumentation						mInstrumentation;				// so we can run stuff on the UI thread
@@ -78,7 +77,8 @@ public class ActivityMonitorRunnable implements Runnable {
 			// TODO: handle the activity.isFinishing() case explicitly, since the operating system can
 			// finish activities lower in the stack.
 			Activity activityA = mActivityMonitor.waitForActivity();
-			if (activityA.isFinishing()) {
+			//if (activityA.isFinishing()) {
+			if (false) {
 				Log.i(TAG, "activity " + activityA + " finishing");
 				removeActivityFromStack(activityA);
 				Log.i(TAG, "activity stack depth = " + mActivityStack.size());
@@ -88,6 +88,11 @@ public class ActivityMonitorRunnable implements Runnable {
 					break;
 				}
 			} else {
+				if (!inActivityStack(activityA)) {
+					Log.i(TAG, "add activity to stack " + activityA);
+					addActivityToStack(activityA);
+					logActivityStack();
+				}
 	 			Activity activityB = null;
 				
 				// OK, now this is very very strange, but sometimes, even though there should be a second activity,
@@ -98,29 +103,27 @@ public class ActivityMonitorRunnable implements Runnable {
 	 			// from the activity monitor as usual?  What are the messages we get?
 				if (!mActivityStack.isEmpty()) {
 					activityB = mActivityMonitor.waitForActivity();
-				}
-				Log.i(TAG, "activity stack depth = " + mActivityStack.size());
-				if (!inActivityStack(activityA)) {
-					Log.i(TAG, "add activity to stack " + activityA);
-					addActivityToStack(activityA);
-					logActivityStack();
-				} else if (!inActivityStack(activityB)) {
-					Log.i(TAG, "add activity to stack " + activityB);
-					addActivityToStack(activityB);
-					logActivityStack();
-				} else {
-					if (isActivityGoingBack(activityA, activityB)) {
-						Log.i(TAG, "remove activity from stack " + activityA);
-						removeActivityFromStack(activityA);
+				} 
+				if (activityB != activityA) {
+					Log.i(TAG, "activity stack depth = " + mActivityStack.size());
+					if (!inActivityStack(activityB)) {
+						Log.i(TAG, "add activity to stack " + activityB);
+						addActivityToStack(activityB);
 						logActivityStack();
-					} else if (isActivityGoingBack(activityB, activityA)) {
-						Log.i(TAG, "remove activity from stack " + activityB);
-						removeActivityFromStack(activityB);
-						logActivityStack();
-					}
-					if (mActivityStack.empty()) {
-						Log.i(TAG, "empty activity stack");
-						break;
+					} else {
+						if (isActivityGoingBack(activityA, activityB)) {
+							Log.i(TAG, "remove activity from stack " + activityA);
+							removeActivityFromStack(activityA);
+							logActivityStack();
+						} else if (isActivityGoingBack(activityB, activityA)) {
+							Log.i(TAG, "remove activity from stack " + activityB);
+							removeActivityFromStack(activityB);
+							logActivityStack();
+						}
+						if (mActivityStack.empty()) {
+							Log.i(TAG, "empty activity stack");
+							break;
+						}
 					}
 				}
 			}
@@ -197,6 +200,7 @@ public class ActivityMonitorRunnable implements Runnable {
 			ActivityInfo activityInfo = mActivityStack.peek();
 			WeakReference<Activity> ref = activityInfo.mRefActivity;
 			if (ref != null) {
+				Log.d(TAG, "current activity = " + ref.get());
 				return ref.get();
 			}
 		}

@@ -1,14 +1,20 @@
 package com.androidApp.Utility;
 
+import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+
+import com.androidApp.Test.R;
 
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.res.Resources;
+import android.os.Build;
 import android.util.Log;
 import android.view.ContextThemeWrapper;
 import android.view.View;
@@ -17,7 +23,9 @@ import android.view.ViewParent;
 import android.view.Window;
 import android.widget.Adapter;
 import android.widget.AdapterView;
+import android.widget.AutoCompleteTextView;
 import android.widget.PopupWindow;
+import android.widget.Spinner;
 import android.widget.TabHost;
 import android.widget.TextView;
 import android.widget.Gallery;
@@ -399,7 +407,26 @@ public class TestUtils {
 	public static int classIndex(View vRoot, View v) {
 		TestUtils testUtils = new TestUtils();
 		IndexTarget target = testUtils.new IndexTarget();
-		if (classIndex(vRoot, v, target)) {
+		if (classIndex(vRoot, v.getClass(), v, target)) {
+			return target.mCountSoFar;
+		} else {
+			return -1;
+		}
+	}
+	
+	/**
+	 * sometimes the class is different than the class of the actual view that we're looking for.
+	 * For example, the view may be private, and have derived from another view class, so we want the
+	 * index of *that* class
+	 * @param vRoot root of hierarchy to search
+	 * @param cls class to compare against
+	 * @param v view to match
+	 * @return preorder index of the view, filtered by views which match cls
+	 */
+	public static int classIndex(View vRoot, Class<? extends View> cls, View v) {
+		TestUtils testUtils = new TestUtils();
+		IndexTarget target = testUtils.new IndexTarget();
+		if (classIndex(vRoot, cls, v, target)) {
 			return target.mCountSoFar;
 		} else {
 			return -1;
@@ -407,18 +434,18 @@ public class TestUtils {
 	}
 	
 	// recursive subfunction which actually does the work to find the index of the view's class.
-	private static boolean classIndex(View vRoot, View v, IndexTarget target) {
+	private static boolean classIndex(View vRoot, Class<? extends View> cls, View v, IndexTarget target) {
 		if (vRoot == v) {
 			return true;
 		}
-		if (vRoot.getClass() == v.getClass()) {
+		if (vRoot.getClass() == cls) {
 			target.mCountSoFar++;
 		}
 		if (vRoot instanceof ViewGroup) {
 			ViewGroup vg = (ViewGroup) vRoot;
 			for (int iChild = 0; iChild < vg.getChildCount(); iChild++) {
 				View vChild = vg.getChildAt(iChild);
-				if (classIndex(vChild, v, target)) {
+				if (classIndex(vChild, cls, v, target)) {
 					return true;
 				}
 			}
@@ -451,9 +478,7 @@ public class TestUtils {
 		if (isDescendentOfClass(v, v.getRootView(), scrollingTabContainerClass)) {
 			return true;
 		}
-		
 		return false;
-
 	}
 	
 	/**
@@ -505,6 +530,17 @@ public class TestUtils {
 		return className.equals(Constants.Classes.OVERFLOW_MENU_BUTTON) ||
 			   className.equals(Constants.Classes.SCROLLING_TAG_CONTAINER_TAB_VIEW);
 	}
+	
+	public static boolean isScrollingTextView(TextView tv) throws IllegalAccessException, NoSuchFieldException {
+		return ReflectionUtils.getFieldBoolean(tv, TextView.class, Constants.Fields.HORIZONTALLY_SCROLLING);
+	}
+	
+	public static boolean invokeIsScrollingContainer(View v) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
+		if (android.os.Build.VERSION.SDK_INT > 16) {
+			return ReflectionUtils.execMethodBoolean(v, View.class, Constants.Methods.IS_SCROLLING_CONTAINER, null);
+		}
+		return false;
+	}
 
 	/**
 	 * unfortunately, galleries don't have scroll listeners that we can hook to, and instead implement
@@ -513,8 +549,35 @@ public class TestUtils {
 	 * @param v
 	 * @return true if we should listen to motion events
 	 */
-	public static boolean listenMotionEvents(View v) {
-		return v instanceof Gallery;
+	public static boolean listenMotionEvents(List<View> motionEventViewList, View v) throws IllegalAccessException, NoSuchFieldException{
+		
+		// I really dislike this hardcoded bullshit that is certain to break in later versions.  We need to have a 
+		// "blacklist" as well as a "whitelist" for motion events. Or Something Better Than This Implementation
+		// which sucks Giant Donkey Dicks
+		if (!(v instanceof AdapterView)) {
+			if (v instanceof TextView) {
+				TextView tv = (TextView) v;
+				if (!isScrollingTextView(tv)) {
+					return false;
+				}
+			}
+			if (v.canScrollHorizontally(-1)) {
+				return true;
+			}
+			if (v.canScrollVertically(-1)) {
+				return true;
+			}
+			if (v.canScrollHorizontally(1)) {
+				return true;
+			}
+			if (v.canScrollVertically(1)) {
+				return true;
+			}
+		}
+		if (motionEventViewList != null) {
+			return motionEventViewList.contains(v);
+		}
+		return false;
 	}
 	/**
 	 * given a view inside of an adapter view, find the index of its containing item in the adapter view.
@@ -668,6 +731,11 @@ public class TestUtils {
 		}
 	}
 	
+	/**
+	 * find the view associated with the options menu for this activity
+	 * @param activity
+	 * @return
+	 */
 	public static View findOptionsMenu(Activity activity) {
 		try {
 			View[] views = ViewExtractor.getWindowDecorViews();
@@ -691,7 +759,7 @@ public class TestUtils {
 	}
 	
 	/**
-	 * see if this dialog has popped up an activity.
+	 * see if this activity has popped up a dialog.
 	 * @param activity activity to test
 	 * @return Dialog or null
 	 */
@@ -859,6 +927,80 @@ public class TestUtils {
 		}
 		return true;
 	}
+	/**
+	 * some popup windows have anchors, like the overflow menu button in the action bar, or the button in a spinner
+	 * @param popupWindow the potentially anchored popup window
+	 * @return anchor view or null.
+	 * @throws IllegalAccessException
+	 * @throws NoSuchFieldException
+	 */
+	public static View getPopupWindowAnchor(PopupWindow popupWindow) throws IllegalAccessException, NoSuchFieldException {
+		WeakReference<View> anchorRef = (WeakReference<View>) ReflectionUtils.getFieldValue(popupWindow, PopupWindow.class, Constants.Fields.ANCHOR);
+		if (anchorRef != null) {
+			return anchorRef.get();
+		}
+		return null;
+	}
+
+	/**
+	 * is this popup window the dropdown to an AutoCompleteTextView?
+	 * @param popupWindow
+	 * @return true if the anchor is AutoCompleteTextView
+	 * @throws ClassNotFoundException
+	 * @throws IllegalAccessException
+	 * @throws NoSuchFieldException
+	 */
+	public static boolean isAutoCompleteWindow(PopupWindow popupWindow) throws ClassNotFoundException, IllegalAccessException, NoSuchFieldException {
+		View anchorView = getPopupWindowAnchor(popupWindow);
+		if (anchorView != null) {
+			if (anchorView instanceof AutoCompleteTextView) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	/**
+	 * spinners can have popups (which are actually dropdowns), or dialog windows depending on the mode: MODE_DIALOG or mode: MODE_POPUP
+	 * @param popupWindow
+	 * @return
+	 */
+	public static boolean isSpinnerPopup(PopupWindow popupWindow) throws NoSuchFieldException, IllegalAccessException {
+		View anchorView = TestUtils.getPopupWindowAnchor(popupWindow);
+		return (anchorView instanceof Spinner);
+	}
+	
+	public static Spinner isSpinnerDialog(Dialog dialog, Activity activity)  throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
+		List<Spinner> spinnerList = ViewExtractor.getActivityViews(activity, Spinner.class);
+		for (Spinner spinner : spinnerList) {
+			if (TestUtils.isPopupDialogForSpinner(dialog, spinner)) {
+				return spinner;
+			}
+		}
+		return null;
+	}
+	
+	/**
+	 * for a given spinner, see if this dialog is the spinner's popup dialog
+	 * @param dialog dialog
+	 * @param spinner candidate spinner
+	 * @return true if it belongs, false if it does not
+	 * @throws NoSuchFieldException
+	 * @throws IllegalAccessException
+	 * @throws ClassNotFoundException
+	 */
+	public static boolean isPopupDialogForSpinner(Dialog dialog, Spinner spinner) throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
+		Object spinnerPopup = FieldUtils.getFieldValue(spinner, Spinner.class, Constants.Fields.POPUP);
+		if (spinnerPopup != null) {
+			Class spinnerDialogPopupClass = Class.forName(Constants.Classes.SPINNER_DIALOG_POPUP);
+			if (spinnerDialogPopupClass.equals(spinnerPopup.getClass())) {
+				Object spinnerPopupPopup = FieldUtils.getFieldValue(spinnerPopup, spinnerDialogPopupClass, Constants.Fields.POPUP);
+				return spinnerPopupPopup == dialog;
+			}
+		}
+		return false;
+	}
+
 
 	/**
 	 * sometimes they put '$'s in the classname, sometimes they don't
@@ -937,11 +1079,38 @@ public class TestUtils {
 		return false;		
 	}
 	
+	/**
+	 * get the content view of a dialog so we can intercept it with a MagicFrame
+	 * @param dialog
+	 * @return
+	 */
 	public static View getDialogContentView(Dialog dialog) {
 		Window window = dialog.getWindow();
 		View decorView = window.getDecorView();
 		View contentView = ((ViewGroup) decorView).getChildAt(0);
 		return contentView;
+	}
+	
+	/**
+	 * find the focused view in the hierarchy
+	 * @param v parent view.
+	 * @return focused view or null
+	 */
+	public static View getFocusedView(View v) {
+		if (v.hasFocus()) {
+			return v;
+		}
+		if (v instanceof ViewGroup) {
+			ViewGroup vg = (ViewGroup) v;
+			for (int iChild = 0; iChild < vg.getChildCount(); iChild++) {
+				View vChild = vg.getChildAt(iChild);
+				View vFocus = getFocusedView(vChild);
+				if (vFocus != null) {
+					return vFocus;
+				}
+			}
+		}
+		return null;
 	}
 
 }

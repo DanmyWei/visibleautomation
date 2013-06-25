@@ -27,6 +27,7 @@ public class MagicFramePopup extends MagicFrame {
 	 * variant for popup window contents
 	 * TODO: When we detect the dismiss, we have to bring up the popup menu in the first place, otherwise the generated code dismisses a non-existent
 	 * popup menu. 
+	 * TODO: this doesn't work for AutoCompleteTextView dropdowns
 	 * @param context
 	 * @param popupWindow
 	 * @param recorder
@@ -35,6 +36,7 @@ public class MagicFramePopup extends MagicFrame {
 	public MagicFramePopup(Context context, PopupWindow popupWindow, EventRecorder recorder, ViewInterceptor viewInterceptor) {
 		super(context);
 		mRecorder = recorder;
+		mViewInterceptor = viewInterceptor;
 		try {
 			FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.FILL_PARENT, FrameLayout.LayoutParams.FILL_PARENT);
 			this.setLayoutParams(layoutParams);
@@ -53,14 +55,24 @@ public class MagicFramePopup extends MagicFrame {
 		} catch (Exception ex) {
 			recorder.writeException(ex,  "trying to intercept popup window");
 		}
-		mViewInterceptor = viewInterceptor;
 		init();
 	}
 	
+	/**
+	 * onKeyPreIme() doesn't fire for PopupWindows
+	 */
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
 		Log.i(TAG, "dispatch intercepted key event " + MagicFrame.keyEventToString(event));
-		mPopupViewContainer.dispatchKeyEvent(event);
-		return false;
+		try {
+			if ((mRecorder != null) && (mViewInterceptor != null)) {
+				recordKeyEvent(event);
+			} else {
+				Log.i(TAG, "dispatchKeyEventPreIme viewInterceptor = " + mViewInterceptor + " recorder = " + mRecorder);
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+		return mPopupViewContainer.dispatchKeyEvent(event);
     }
 }

@@ -24,6 +24,10 @@ public class Constants {
 		public static final String TEXT = "text";
 		public static final String TEXT_ID = "text_id";
 		public static final String CLASS_INDEX = "class_index";
+		public static final String VIEW_BY_CLASS = "view_class";
+		public static final String VIEW_BY_ACTIVITY_CLASS = "activity_view_class";
+		public static final String VIEW_BY_ACTIVITY_CLASS_INDEX = "activity_view_class_index";
+		public static final String VIEW_BY_ACTIVITY_ID = "activity_view_id";
 	}
 	
 	// classes used in reflection
@@ -119,6 +123,10 @@ public class Constants {
 		public static final String WEBVIEW_CLIENT = "mWebViewClient";
 		public static final String ALERT = "mAlert";
 		public static final String ON_TAB_CHANGE_LISTENER = "mOnTabChangeListener";
+		public static final String ONGROUP_CLICK_LISTENER = "mOnGroupClickListener";
+		public static final String ONCHILD_CLICK_LISTENER = "mOnChildClickListener";
+		public static final String HORIZONTALLY_SCROLLING = "mHorizontallyScrolling";
+
 	}
 	
 	// possible derive methods which listen for events.
@@ -176,6 +184,9 @@ public class Constants {
 		public static final String DISMISS_SPINNER_POPUP_WINDOW_BACK_KEY = "dismiss_spinner_popup_window_back_key";
 		public static final String CREATE_POPUP_WINDOW = "create_popup_window";
 		public static final String CREATE_SPINNER_POPUP_WINDOW = "create_spinner_popup_window";
+		public static final String CREATE_AUTOCOMPLETE_DROPDOWN = "create_autocomplete_dropdown";
+		public static final String DISMISS_SPINNER_DIALOG_BACK_KEY = "dismiss_spinner_dialog_back_key";
+		public static final String DISMISS_AUTOCOMPLETE_DROPDOWN_BACK_KEY = "dismiss_autocomplete_dropdown_back_key";
 		public static final String ROTATION = "rotation";
 		public static final String MENU_ITEM_CLICK = "menu_item_click";
 		public static final String POPUP_MENU_ITEM_CLICK = "popup_menu_item_click";
@@ -190,13 +201,14 @@ public class Constants {
 		public static final String KEY_HOME = "key_home";
 		public static final String CLOSE_OPTIONS_MENU = "close_options_menu";
 		public static final String SELECT_ACTIONBAR_TAB = "select_actionbar_tab";
-		public static final String DISMISS_SPINNER_DIALOG_BACK_KEY = "dismiss_spinner_dialog_back_key";
 		public static final String ON_PAGE_FINISHED = "on_page_finished";
 		public static final String ON_PAGE_STARTED = "on_page_started";
 		public static final String ON_RECEIVED_ERROR = "on_received_error";
 		public static final String ON_SCALE_CHANGED = "on_scale_changed";
 		public static final String CREATE_SPINNER_POPUP_DIALOG = "create_spinner_popup_dialog";
 		public static final String SELECT_TAB = "select_tab";
+		public static final String GROUP_CLICK = "group_click";
+		public static final String CHILD_CLICK = "child_click";
 	}
 	
 	// description strings 
@@ -219,5 +231,10 @@ public class Constants {
 		public static final String DICTIONARY = "dictionary.txt";	
 		public static final String INTERNALCLASSES = "internalclasses.txt";
 		public static final String WHITELIST = "whitelist-android";	
+	}
+	
+	public static class Methods {
+		public static final String DICTIONARY = "dictionary.txt";
+		public static final String IS_SCROLLING_CONTAINER = "isScrollingContainer";	
 	}
 }

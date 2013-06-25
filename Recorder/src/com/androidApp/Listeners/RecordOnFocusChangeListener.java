@@ -50,8 +50,10 @@ public class RecordOnFocusChangeListener extends RecordListener implements View.
 	 */
 	@Override
 	public void onFocusChange(View v, boolean hasFocus) {
-		// save the view for IME event detection whether or not events are blockeds
-		mViewInterceptor.setFocusedView(v);
+		// save the view for IME event detection whether or not events are blocked
+		if (hasFocus) {
+			mViewInterceptor.setFocusedView(v);
+		}
 		boolean fReentryBlock = getReentryBlock();
 		if (!RecordListener.getEventBlock()) {
 			setEventBlock(true);

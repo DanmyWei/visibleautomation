@@ -1,6 +1,9 @@
 package com.androidApp.EventRecorder;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +34,22 @@ public class ViewReference {
 	private Instrumentation		mInstrumentation;
 	private FieldUtils			mFieldUtils;						// to whitelist public android classes
 	
+	public enum ReferenceEnum {
+		VIEW_BY_CLASS(Constants.Reference.VIEW_BY_CLASS, 0x1),
+		VIEW_BY_ACTIVITY_CLASS(Constants.Reference.VIEW_BY_ACTIVITY_CLASS, 0x2),
+		VIEW_BY_ACTIVITY_CLASS_INDEX(Constants.Reference.VIEW_BY_ACTIVITY_CLASS_INDEX, 0x3),
+		VIEW_BY_ACTIVITY_ID(Constants.Reference.VIEW_BY_ACTIVITY_ID, 0x4);
+		
+		public String mName;
+		public int mValue;
+		
+		private ReferenceEnum(String name, int value) {
+			mName = name;
+			mValue = value;
+		}
+	}
+	
+
 	public ViewReference(Instrumentation instrumentation) throws IOException {
 		mInstrumentation = instrumentation;
 		mRIDList = new ArrayList<Object>();
@@ -71,14 +90,14 @@ public class ViewReference {
 	 * @param v something derived from view.class
 	 * @return a public class
 	 */
-	public static Class getVisibleClass(View v) {
-		Class cls = v.getClass();
+	public static Class<? extends View> getVisibleClass(View v) {
+		Class<? extends View> cls = v.getClass();
 		while (!cls.equals(View.class)) {
 			int modifiers = cls.getModifiers();
 			if ((modifiers & Modifier.PUBLIC) != 0x0) {
 				return cls;
 			}
-			cls = cls.getSuperclass();
+			cls = (Class<? extends View>) cls.getSuperclass();
 		}
 		return cls;
 	}
@@ -90,11 +109,11 @@ public class ViewReference {
 	 * @return android external class name
 	 */
 	protected String getUsableClassName(Context context, View v) {
-		Class viewClass = ViewReference.getVisibleClass(v);
+		Class<? extends View> viewClass = ViewReference.getVisibleClass(v);
 		String className = viewClass.getName();
 		try {
 			if (!mFieldUtils.isWhiteListedAndroidClass(viewClass)) {
-				viewClass = mFieldUtils.getPublicClassForAndroidInternalClass(viewClass);
+				viewClass = (Class<? extends View>) mFieldUtils.getPublicClassForAndroidInternalClass(viewClass);
 				className = viewClass.getName();
 			}
 		} catch (Exception ex) {
@@ -104,6 +123,15 @@ public class ViewReference {
 		}
 		return className;
 	}
+	
+	protected Class<? extends View> getUsableClass(Context context, View v) throws IOException {
+		Class<? extends View> viewClass = ViewReference.getVisibleClass(v);
+		if (!mFieldUtils.isWhiteListedAndroidClass(viewClass)) {
+			viewClass = (Class<? extends View>) mFieldUtils.getPublicClassForAndroidInternalClass(viewClass);
+		}
+		return viewClass;
+	}
+	
 	/**
 	 * Given a view, generate a reference for it so it can be found when the application is run again
 	 * id, id: if the view has an ID, the ID is unique for all views, and the view is not a descendant of an AdapterView
@@ -124,8 +152,8 @@ public class ViewReference {
 	 * @param v
 	 * @return
 	 */
-	public String getReference(View v) throws IllegalAccessException {
-		String className = getUsableClassName(mInstrumentation.getContext(), v);
+	public String getReference(View v) throws IllegalAccessException, IOException {
+		Class<? extends View> usableClass = getUsableClass(mInstrumentation.getContext(), v);
 	
 		// first, try the id, and verify that it is unique.
 		int id = v.getId();
@@ -133,7 +161,7 @@ public class ViewReference {
 		if (id != 0) {
 			int idCount = TestUtils.idCount(rootView, id);
 			if (idCount == 1) {
-				return Constants.Reference.ID + "," + TestUtils.getIdForValue(mRIDList, id) + "," + className;
+				return Constants.Reference.ID + "," + TestUtils.getIdForValue(mRIDList, id) + "," + usableClass.getName();
 			}
 		}
 		
@@ -160,10 +188,10 @@ public class ViewReference {
 			int parentIdCount = TestUtils.idCount(rootView, viewParentWithId.getId());
 			if (parentIdCount == 1) {
 				int classIndex = TestUtils.classIndex(viewParentWithId, v);
-				return Constants.Reference.CLASS_ID + "," +  TestUtils.getIdForValue(mRIDList, viewParentWithId.getId()) + "," + className + "," + classIndex;
+				return Constants.Reference.CLASS_ID + "," +  TestUtils.getIdForValue(mRIDList, viewParentWithId.getId()) + "," + usableClass.getName() + "," + classIndex;
 			} else {
 				int classIndex = TestUtils.classIndex(rootView, v);
-				return Constants.Reference.CLASS_INDEX + "," + className + "," + classIndex;
+				return Constants.Reference.CLASS_INDEX + "," + usableClass.getName() + "," + classIndex;
 			}
 		}
 		return Constants.Reference.UNKNOWN;	

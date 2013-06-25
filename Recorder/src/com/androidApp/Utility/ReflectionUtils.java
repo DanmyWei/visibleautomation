@@ -1,11 +1,14 @@
 package com.androidApp.Utility;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
 import android.util.Log;
+import android.view.View;
 
 /**
  * utilities to access and set fields in objects via reflection
@@ -124,5 +127,25 @@ public class ReflectionUtils {
 			objectClass = objectClass.getSuperclass();
 		}
 	}
-
+	
+	/**
+	 * invoke a method on a class with parameters.
+	 * @param object
+	 * @param cls
+	 * @param methodName
+	 * @param args
+	 * @return
+	 * @throws NoSuchMethodException
+	 * @throws IllegalAccessException
+	 * @throws InvocationTargetException
+	 */
+	public static boolean execMethodBoolean(Object object, Class cls, String methodName, Object ... args) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+		Class[] parameterTypes = new Class[args.length];
+		for (int i = 0; i < args.length; i++) {
+			parameterTypes[i] = args.getClass();
+		}
+		Method method = cls.getDeclaredMethod(methodName, parameterTypes);
+		Boolean b = (Boolean) method.invoke(object, args);
+		return b.booleanValue();
+	}
 }

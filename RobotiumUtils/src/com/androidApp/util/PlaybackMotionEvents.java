@@ -6,6 +6,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
+
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -35,6 +37,7 @@ public class PlaybackMotionEvents {
 			mY = y;
 		}
 	}
+	private static final String TAG = "PlaybackMotionEvents";
 	protected int mWidth;
 	protected int mHeight;
 	protected List<MotionEventPoint> mPointList;
@@ -109,14 +112,15 @@ public class PlaybackMotionEvents {
 			boolean fSkip = false;
 			for (MotionEventPoint point : mPointList) {
 				if (!fAllowSkip || !fSkip) {
+					Log.i(TAG, "motion event x = " + point.mX + " y = " + point.mY + "down time = " + startRealTime + " time = " + realTime);
 					if (point.equals(firstPoint)) {
-						MotionEvent event = MotionEvent.obtain(realTime, realTime, MotionEvent.ACTION_DOWN, point.mX, point.mY, 0);
+						MotionEvent event = MotionEvent.obtain(startRealTime, realTime, MotionEvent.ACTION_DOWN, point.mX, point.mY, 0);
 						instrumentation.sendPointerSync(event);
 					} else if (point.equals(lastPoint)) {
-						MotionEvent event = MotionEvent.obtain(realTime, realTime, MotionEvent.ACTION_UP, point.mX, point.mY, 0);
+						MotionEvent event = MotionEvent.obtain(startRealTime, realTime, MotionEvent.ACTION_UP, point.mX, point.mY, 0);
 						instrumentation.sendPointerSync(event);
 					} else {
-						MotionEvent event = MotionEvent.obtain(realTime, realTime, MotionEvent.ACTION_MOVE, point.mX, point.mY, 0);
+						MotionEvent event = MotionEvent.obtain(startRealTime, realTime, MotionEvent.ACTION_MOVE, point.mX, point.mY, 0);
 						instrumentation.sendPointerSync(event);
 					}
 				}
@@ -127,6 +131,7 @@ public class PlaybackMotionEvents {
 					fSkip = true;
 				}
 			}
+			instrumentation.waitForIdleSync();
 		}
 	}
 

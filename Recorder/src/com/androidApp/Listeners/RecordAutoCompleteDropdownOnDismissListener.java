@@ -18,17 +18,17 @@ import android.view.View;
  *Copyright (c) 2013 Matthew Reynods.  All Rights Reserved.
  */
 
-public class RecordSpinnerPopupWindowOnDismissListener extends RecordListener implements PopupWindow.OnDismissListener, IOriginalListener  {
+public class RecordAutoCompleteDropdownOnDismissListener extends RecordListener implements PopupWindow.OnDismissListener, IOriginalListener  {
 	protected PopupWindow.OnDismissListener mOriginalOnDismissListener;
 	protected ViewInterceptor				mViewInterceptor;
 	protected View 							mAnchorView;
 	protected String						mEventTag;
 	protected PopupWindow					mPopupWindow;
 	
-	public RecordSpinnerPopupWindowOnDismissListener() {
+	public RecordAutoCompleteDropdownOnDismissListener() {
 	}
 	
-	public RecordSpinnerPopupWindowOnDismissListener(EventRecorder 					eventRecorder, 
+	public RecordAutoCompleteDropdownOnDismissListener(EventRecorder 					eventRecorder, 
 												     ViewInterceptor				viewInterceptor,
 												     View							anchorView,
 												     PopupWindow					popupWindow, 
@@ -52,13 +52,13 @@ public class RecordSpinnerPopupWindowOnDismissListener extends RecordListener im
 				// clear the current popup window so it gets intercepted if it comes up again.
 				mViewInterceptor.setCurrentPopupWindow(null);
 				if (mViewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_BACK){
-					mEventRecorder.writeRecord(Constants.EventTags.DISMISS_SPINNER_POPUP_WINDOW_BACK_KEY, mAnchorView, "dismiss spinner popup window");					
+					mEventRecorder.writeRecord(Constants.EventTags.DISMISS_AUTOCOMPLETE_DROPDOWN_BACK_KEY, mAnchorView, "dismiss autocomplete dropdown window");					
 				} else {
-					mEventRecorder.writeRecord(Constants.EventTags.DISMISS_SPINNER_POPUP_WINDOW, mAnchorView, "dismiss spinner popup window");
+					mEventRecorder.writeRecord(Constants.EventTags.DISMISS_AUTOCOMPLETE_DROPDOWN, mAnchorView, "dismiss autocomplete dropdown window");
 				}
 				mViewInterceptor.setLastKeyAction(-1);
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, Constants.EventTags.DISMISS_POPUP_WINDOW);
+				mEventRecorder.writeException(ex, Constants.EventTags.DISMISS_AUTOCOMPLETE_DROPDOWN);
 			}
 		}
 		if (!fReentryBlock) {

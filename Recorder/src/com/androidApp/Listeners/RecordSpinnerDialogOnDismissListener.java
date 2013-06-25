@@ -4,6 +4,7 @@ import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.TestUtils;
 
 import android.app.Dialog;
 import android.content.DialogInterface;
