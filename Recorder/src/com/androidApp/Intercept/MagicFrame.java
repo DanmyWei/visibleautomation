@@ -156,6 +156,7 @@ public class MagicFrame extends FrameLayout {
 	    }
     }
   
+    /*
 	@Override
 	public boolean onInterceptTouchEvent(MotionEvent event) {
 		if (event.getAction() == MotionEvent.ACTION_DOWN) {			
@@ -168,6 +169,7 @@ public class MagicFrame extends FrameLayout {
 		}
 		return false;
 	}
+	*/
 
     /**
      *  for debugging purposes
@@ -228,12 +230,7 @@ public class MagicFrame extends FrameLayout {
 			c.drawLine(mTouchPoint.x + mSize, mTouchPoint.y - mSize, mTouchPoint.x - mSize, mTouchPoint.y + mSize, mPaint);
 		}
 	}
-	
-	@Override
-	protected void onLayout (boolean changed, int left, int top, int right, int bottom) {
-		super.onLayout(changed, left, top, right, bottom);
-	}
-	
+
 	/**
 	 * for visual debugging.
 	 * The problem with this is that the timer can keep firing long after the activity is finished, and it throws a coniption fit.

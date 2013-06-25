@@ -19,12 +19,14 @@ import android.view.View;
  */
 public class RecordOnTouchListener extends RecordListener implements View.OnTouchListener, IOriginalListener  {
 	protected View.OnTouchListener 	mOriginalOnTouchListener;
+	protected boolean				mFirstEventFired;				// in ViewGroups, the listener does not receive ACTION_DOWN events.
 	
 	public RecordOnTouchListener(EventRecorder eventRecorder, View v) {
 		super(eventRecorder);
 		try {
 			mOriginalOnTouchListener = ListenerIntercept.getTouchListener(v);
 			v.setOnTouchListener(this);
+			mFirstEventFired = true;
 		} catch (Exception ex) {
 			mEventRecorder.writeException(ex, v, "create on touch listener");
 		}		
@@ -33,6 +35,7 @@ public class RecordOnTouchListener extends RecordListener implements View.OnTouc
 	public RecordOnTouchListener(EventRecorder eventRecorder, View.OnTouchListener originalTouchListener) {
 		super(eventRecorder);
 		mOriginalOnTouchListener = originalTouchListener;
+		mFirstEventFired = true;
 	}
 	
 	public Object getOriginalListener() {
@@ -63,16 +66,20 @@ public class RecordOnTouchListener extends RecordListener implements View.OnTouc
 				// we want to save the widget size in the down case, because the motion events have to be
 				// scaled on playback in case it's a different device
 				String logString = "";
-				if (event.getAction() == MotionEvent.ACTION_DOWN) {
+				if (mFirstEventFired) {
 					logString = v.getWidth() + "," + v.getHeight() + ",";
+					mFirstEventFired = false;
 				}
 				logString += event.getX() + "," + event.getY() + "," +
 						 	 mEventRecorder.getViewReference().getReference(v) + "," + description;
 				mEventRecorder.writeRecord(eventName, logString);
+				if (event.getAction() == MotionEvent.ACTION_UP) {
+					mFirstEventFired = true;
+				}
 			} catch (Exception ex) {
 				mEventRecorder.writeException(ex, v, "on touch");
 			}
-		}
+		} 
 		if (!fReentryBlock) {
 			if (mOriginalOnTouchListener != null) {
 				fConsumeEvent = mOriginalOnTouchListener.onTouch(v, event);

@@ -172,6 +172,7 @@ public class Constants {
 		public static final CharSequence TAB_INDEX = "%TAB_INDEX%";
 		public static final CharSequence URL = "%URL%";
 		public static final CharSequence TAB_ID = "%TAB_ID%";
+		public static final CharSequence UNIQUE_NAME = "%UNIQUE_NAME%";
 
 	}
 	

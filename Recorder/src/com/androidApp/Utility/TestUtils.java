@@ -28,6 +28,7 @@ import android.widget.PopupWindow;
 import android.widget.Spinner;
 import android.widget.TabHost;
 import android.widget.TextView;
+import android.widget.ScrollView;
 import android.widget.Gallery;
 
 /**
@@ -535,9 +536,42 @@ public class TestUtils {
 		return ReflectionUtils.getFieldBoolean(tv, TextView.class, Constants.Fields.HORIZONTALLY_SCROLLING);
 	}
 	
+	/**
+	 * detecting whether something can scroll is difficult, except that there is the "isScrollingContainer" function
+	 * unfortunately, it's only available in API level 16
+	 * @param v
+	 * @return
+	 * @throws InvocationTargetException
+	 * @throws IllegalAccessException
+	 * @throws NoSuchMethodException
+	 */
 	public static boolean invokeIsScrollingContainer(View v) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
 		if (android.os.Build.VERSION.SDK_INT > 16) {
 			return ReflectionUtils.execMethodBoolean(v, View.class, Constants.Methods.IS_SCROLLING_CONTAINER, null);
+		}
+		return false;
+	}
+	
+	/**
+	 * is it an instrinsic scrolling view
+	 * @param v
+	 * @return
+	 */
+	public static boolean isScrollView(View v) {
+		if (v instanceof ScrollView) {
+			return true;
+		}
+		if (v instanceof Gallery) {
+			return true;
+		}
+		// HorizontalScrolView may not be defined in earlier android APIs
+		
+		try {
+			Class<? extends View> cls = (Class<? extends View>) Class.forName(Constants.Classes.HORIZONTAL_SCROLL_VIEW);
+			if (cls.isAssignableFrom(v.getClass())) {
+				return true;
+			}
+		} catch (Exception ex) {		
 		}
 		return false;
 	}
@@ -555,6 +589,12 @@ public class TestUtils {
 		// "blacklist" as well as a "whitelist" for motion events. Or Something Better Than This Implementation
 		// which sucks Giant Donkey Dicks
 		if (!(v instanceof AdapterView)) {
+			if (isScrollView(v)) {
+				return true;
+			}
+			if (v.isHorizontalScrollBarEnabled() || v.isVerticalScrollBarEnabled()) {
+				return true;
+			}
 			if (v instanceof TextView) {
 				TextView tv = (TextView) v;
 				if (!isScrollingTextView(tv)) {

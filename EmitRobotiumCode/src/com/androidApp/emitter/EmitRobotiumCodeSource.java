@@ -231,8 +231,14 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 						selectTab(tokens, lines);
 					} else if (action.equals(Constants.Events.ON_PAGE_FINISHED)) {
 						waitForPageToLoad(tokens, lines);
-					} else if (action.equals(Constants.Events.TOUCH_DOWN)) {
+					} else if (action.equals(Constants.Events.TOUCH_DOWN) || action.equals(Constants.Events.TOUCH_MOVE)) {
+						// we have to listen for the first "touch move", not just touch down, because scroll containers
+						// don't actually fire the TouchEvent listener for TOUCH_DOWN because it dispatches the event
+						// to a child object, and does not call View.dispatchTouchEvent() for the scrolling view.
+						// there may be a way around this
 						writeMotionEvents(tokens, nextLine, getApplicationClassName(), br, motionEvents, lines);
+						// read the line after touch_up
+						nextLine = br.readLine();
 					}
 				}
 				line = nextLine;
@@ -1027,21 +1033,22 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 			writeWaitForView(tokens, 6, lines);
 			mLastEventWasWaitForActivity = false;
 		} 
-		String viewClassName = tokens.get(9);
-		String name = viewClassName + "_MotionEvents" + Integer.toString(mMotionEventVariableIndex);
+		ReferenceParser ref = new ReferenceParser(tokens, 6);
+		String uniqueName = (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) ? ref.getID() : (ref.getClassName() + ref.getIndex());
+		String name = uniqueName + "_MotionEvents" + Integer.toString(mMotionEventVariableIndex);
 		MotionEventList motionEventList = new MotionEventList(name, tokens, nextLine, br);
 		motionEvents.add(motionEventList);
-		ReferenceParser ref = motionEventList.getRef();
+		ReferenceParser refEvents = motionEventList.getRef();
 		String fullDescription = "play back motion events";
 		String template = null;
 		if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
-			template = writeViewIDCommand(Constants.Templates.PLAYBACK_MOTION_EVENTS, ref, fullDescription);
+			template = writeViewIDCommand(Constants.Templates.PLAYBACK_MOTION_EVENTS, refEvents, fullDescription);
 		} else {
-			template = writeViewClassIndexCommand(Constants.Templates.PLAYBACK_MOTION_EVENTS_CLASS_INDEX, ref, fullDescription);
+			template = writeViewClassIndexCommand(Constants.Templates.PLAYBACK_MOTION_EVENTS_CLASS_INDEX, refEvents, fullDescription);
 		}
 		template = template.replace(Constants.VariableNames.MOTION_EVENT_VARIABLE_INDEX, Integer.toString(mMotionEventVariableIndex));
 		template = template.replace(Constants.VariableNames.TESTCLASSNAME, testClassName);
-		template = template.replace(Constants.VariableNames.CLASSNAME, viewClassName);
+		template = template.replace(Constants.VariableNames.UNIQUE_NAME, uniqueName);
 		lines.add(new LineAndTokens(tokens, template));
 		mMotionEventVariableIndex++;
 	}

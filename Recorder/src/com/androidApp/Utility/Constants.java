@@ -64,7 +64,8 @@ public class Constants {
 		public static final String WEBKIT_CALLBACK_PROXY = "android.webkit.CallbackProxy";
 		public static final String ALERT_CONTROLLER = "com.android.internal.app.AlertController";
 		public static final String SPINNER_DROPDOWN_ADAPTER = "android.widget.Spinner$DropDownAdapter";	
-		public static final String SCROLLING_TAB_CONTAINER_VIEW = "com.android.internal.widget.ScrollingTabContainerView";	
+		public static final String SCROLLING_TAB_CONTAINER_VIEW = "com.android.internal.widget.ScrollingTabContainerView";
+		public static final String HORIZONTAL_SCROLL_VIEW = "com.android.widget.HorizontalScrollView";	
 		
 	}
 	

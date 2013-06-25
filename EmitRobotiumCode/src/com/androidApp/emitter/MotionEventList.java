@@ -49,7 +49,6 @@ public class MotionEventList {
 	protected int						mWidth;				// dimensions of containing view
 	protected int						mHeight;
 	protected List<MotionEventPoint>	mPoints;			// list of recorded points
-	
 	public MotionEventList(String name, List<String> touchDownTokens, String nextLine, BufferedReader br) throws EmitterException, IOException {
 		mName = name;
 		mPoints = new ArrayList<MotionEventPoint>();
