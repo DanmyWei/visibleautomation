@@ -32,13 +32,11 @@ public class LatinKeyboardView extends KeyboardView {
     public LatinKeyboardView(Context context, AttributeSet attrs) {
         super(context, attrs);
         Log.i(TAG, "replacing listeners");
-        replacePopupDismissListener();
     }
 
     public LatinKeyboardView(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
         Log.i(TAG, "replacing listeners");
-        replacePopupDismissListener();
     }
 
     public class TestDismissListener implements PopupWindow.OnDismissListener {
@@ -53,20 +51,6 @@ public class LatinKeyboardView extends KeyboardView {
     			mOriginalListener.onDismiss();
     		}
     	}
-    }
-    
-    public void replacePopupDismissListener() {
-    	try {
-    		PopupWindow popupKeyboard = (PopupWindow) ReflectionUtils.getFieldValue(this, KeyboardView.class, "mPopupKeyboard");
-    		PopupWindow.OnDismissListener originalListener = (PopupWindow.OnDismissListener) ReflectionUtils.getFieldValue(popupKeyboard, PopupWindow.class, "mOnDismissListener");
-    		popupKeyboard.setOnDismissListener(new TestDismissListener(originalListener));
-       		Log.i(TAG, "listener replace success");
-       	} catch (Exception ex) {
-    		Log.e(TAG, ex.getMessage());
-    		ex.printStackTrace();
-       		Log.i(TAG, "listener replace fail");
-    	}
-    	
     }
     @Override
     protected boolean onLongPress(Key key) {

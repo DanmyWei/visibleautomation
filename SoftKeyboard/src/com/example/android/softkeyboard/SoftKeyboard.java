@@ -265,7 +265,7 @@ public class SoftKeyboard extends InputMethodService
     @Override
     public void onFinishInputView (boolean finishingInput) {
         Log.i(TAG, "onFinishInputView");
-       	sTCPListener.broadcast(SHOW_IME);
+       	sTCPListener.broadcast(HIDE_IME);
     	super.onFinishInputView(finishingInput);
     }
     /**
