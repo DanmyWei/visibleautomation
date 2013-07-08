@@ -348,7 +348,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
 			selectTabTemplate = writeViewClassIndexCommand(Constants.Templates.SELECT_TAB_CLASS_INDEX, ref, description);
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.INTERNAL_CLASS_INDEX) {
-			selectTabTemplate = writeViewClassIndexCommand(Constants.Templates.SELECT_TAB_INTERNAL_CLASS_INDEX, ref, description);
+			selectTabTemplate = writeViewInternalClassIndexCommand(Constants.Templates.SELECT_TAB_INTERNAL_CLASS_INDEX, ref, description);
 		}
 		selectTabTemplate = selectTabTemplate.replace(Constants.VariableNames.TAB_ID, tabId);
 		lines.add(new LineAndTokens(tokens, selectTabTemplate));
@@ -791,6 +791,20 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		listItemWaitTemplate = listItemWaitTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
 		lines.add(new LineAndTokens(tokens, listItemWaitTemplate));				
 	}
+	/**
+	 * wait for a list element, where the list is referenced by class and index.
+	 * @param tokens
+	 * @param itemIndex
+	 * @param lines
+	 * @throws IOException
+	 */
+	public void writeWaitForListInternalClassIndex(List<String> tokens, int itemIndex, List<LineAndTokens> lines) throws IOException {
+		ReferenceParser ref = new ReferenceParser(tokens, 3);
+		String fullDescription = "select item " + itemIndex + " in " + getDescription(tokens);
+		String listItemWaitTemplate = writeViewInternalClassIndexCommand(Constants.Templates.WAIT_FOR_LIST_INTERNAL_CLASS_INDEX, ref, fullDescription);
+		listItemWaitTemplate = listItemWaitTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
+		lines.add(new LineAndTokens(tokens, listItemWaitTemplate));				
+	}
 	
 	/**
 	 * List items need a wait for the selected item, not just the list.
@@ -1063,7 +1077,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
 			template = writeViewClassIndexCommand(Constants.Templates.WAIT_FOR_WEBVIEW_PAGE_CLASS_INDEX, ref, fullDescription);
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.INTERNAL_CLASS_INDEX) {
-			template = writeViewClassIndexCommand(Constants.Templates.WAIT_FOR_WEBVIEW_PAGE_INTERNAL_CLASS_INDEX, ref, fullDescription);
+			template = writeViewInternalClassIndexCommand(Constants.Templates.WAIT_FOR_WEBVIEW_PAGE_INTERNAL_CLASS_INDEX, ref, fullDescription);
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
 			template = writeViewIDCommand(Constants.Templates.WAIT_FOR_WEBVIEW_PAGE_ID, ref, fullDescription);
 		} else {
@@ -1101,7 +1115,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
 			template = writeViewClassIndexCommand(Constants.Templates.PLAYBACK_MOTION_EVENTS_CLASS_INDEX, refEvents, fullDescription);
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.INTERNAL_CLASS_INDEX) {
-			template = writeViewClassIndexCommand(Constants.Templates.PLAYBACK_MOTION_EVENTS_INTERNAL_CLASS_INDEX, refEvents, fullDescription);
+			template = writeViewInternalClassIndexCommand(Constants.Templates.PLAYBACK_MOTION_EVENTS_INTERNAL_CLASS_INDEX, refEvents, fullDescription);
 		}
 		template = template.replace(Constants.VariableNames.MOTION_EVENT_VARIABLE_INDEX, Integer.toString(mMotionEventVariableIndex));
 		template = template.replace(Constants.VariableNames.TESTCLASSNAME, testClassName);
