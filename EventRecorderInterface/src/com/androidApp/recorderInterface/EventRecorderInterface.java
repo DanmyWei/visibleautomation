@@ -9,7 +9,7 @@ import android.util.Log;
  * interface to the log service, since instrumentation can't do its own permissions.  We also call this from
  * the keyboard service.
  * @author Matthew Reynolds
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  *
  */
 public class EventRecorderInterface {
