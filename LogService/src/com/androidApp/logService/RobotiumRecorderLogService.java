@@ -22,7 +22,9 @@ import android.util.Log;
  * com.androidApp.test.log: write a log message to the specified file 
  * 		message: message to write
  * 		filename: filename to write to (on the /sdcard)
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * TODO: chances are that we will extend this service to provide other operations, such as 
+ * enabling flight mode and stuff
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 
 public class RobotiumRecorderLogService extends IntentService {
