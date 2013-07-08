@@ -13,7 +13,7 @@ import android.widget.AdapterView;
 /**
  * class to extract views from the android view hierarchy.
  * @author Matthew
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class ViewExtractor {
 	protected static String getWindowManagerString(){

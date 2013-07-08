@@ -1,9 +1,15 @@
 package com.androidApp.Utility;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 import android.content.Context;
 import android.content.res.AssetManager;
@@ -11,7 +17,7 @@ import android.content.res.AssetManager;
 /**
  * utilities to read files and raw resources.  We can't read assets, because we're a library.
  * @author Matthew
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class FileUtils {
 	
@@ -36,6 +42,19 @@ public class FileUtils {
 		for (int i = 0; i < numLines; i++) {
 			lines[i] = br.readLine();
 		} 
+		return lines;
+	}
+	
+	public static List<String> readLines(InputStream is) throws IOException {
+		List<String> lines = new ArrayList<String>();
+		BufferedReader br = new BufferedReader(new InputStreamReader(is));
+		String line = null;
+		do {
+			line = br.readLine();
+			if (line != null) {
+				lines.add(line);
+			}
+		} while (line != null);
 		return lines;
 	}
 	
@@ -71,5 +90,42 @@ public class FileUtils {
 		String[] lines = FileUtils.readLines(is, nLines);
 		is.close();
 		return lines;
+	}
+	
+	/**
+	 * copy a file from inPath to outPath
+	 * @param inPath
+	 * @param outPath
+	 * @throws IOException
+	 */
+	public static void copyFile(String inPath, String outPath) throws IOException {
+		OutputStream os = new FileOutputStream(outPath);
+		InputStream is = new FileInputStream(inPath);
+		byte[] buffer = new byte[1024];
+		do {
+			int count = is.read(buffer);
+			if (count > 0) {
+				os.write(buffer, 0, count);
+			}
+			if (count < 1024) {
+				break;
+			}
+		} while (true);
+	}
+	
+	/**
+	 * copy a list of files from one directory to the other
+	 * @param srcDir source directoru
+	 * @param dstDir destination directory
+	 * @param fileList list of files
+	 * @throws IOException
+	 */
+	public static void copyFileList(File srcDir, File dstDir, String[] fileList) throws IOException {
+		for (int iFile = 0; iFile < fileList.length; iFile++) {
+			String inPath = srcDir.getAbsolutePath() + "/" + fileList[iFile];
+			String outPath = dstDir + File.separator + fileList[iFile];
+			FileUtils.copyFile(inPath, outPath);
+		}
+
 	}
 }

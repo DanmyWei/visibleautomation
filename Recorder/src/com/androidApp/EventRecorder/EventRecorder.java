@@ -17,21 +17,28 @@ import android.view.View;
 /**
  * interface to the log service, since instrumentation can't do its own permissions
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  *
  */
 public class EventRecorder extends EventRecorderInterface {
 	protected static final String	TAG = "EventRecorder";
-	public static final float		GUESS_IME_HEIGHT = 0.25F;						// guess that IME takes up this amount of the screen.
 	protected int 					mHashCode = 0x0;								// for fast tracking of view tree changes
 	protected ViewReference			mViewReference;
 	protected boolean				mfVisualDebug = true;							// enable visual debugging.
 	protected Context				mContext;										// to send requests to service
-	// constructor which opens the recording file, which is stashed somewhere on the sdcard.
-	public EventRecorder(Instrumentation instrumentation, Context context, String recordFileName) throws IOException {
+	
+	/**
+	 * constructor which opens the recording file, which is stashed somewhere on the sdcard.
+	 * @param instrumentation instrumentation handle
+	 * @param context context of application being tested
+	 * @param recordFileName output filename on the sdcard
+	 * @param fBinary target application is binary: Object references must be resolved to android public classes
+	 * @throws IOException
+	 */
+	public EventRecorder(Instrumentation instrumentation, Context context, String recordFileName, boolean fBinary) throws IOException {
 		super(context, recordFileName);
 		mContext = context;
-		mViewReference = new ViewReference(instrumentation);
+		mViewReference = new ViewReference(instrumentation, fBinary);
 	}
 	
 	/**
@@ -46,6 +53,10 @@ public class EventRecorder extends EventRecorderInterface {
 		mViewReference.addRdotID(rdotstring);
 	}
 	
+	/**
+	 * return the handle to the view reference generator 
+	 * @return the view reference generator for this event recorder
+	 */
 	public ViewReference getViewReference() {
 		return mViewReference;
 	}
@@ -99,10 +110,10 @@ public class EventRecorder extends EventRecorderInterface {
 	}
 	
 	/**
-	 * variant with view description
-	 * @param ex
-	 * @param v
-	 * @param message
+	 * write exception: (view parameter variant) all exceptions should go through this interface
+	 * @param ex exception to write
+	 * @param v view to generate reference from
+	 * @param message error message in addition to exception message
 	 */
 	public void writeException(Exception ex, View v, String message) {
 		try {

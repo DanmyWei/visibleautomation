@@ -3,7 +3,7 @@ package com.androidApp.Utility;
 /**
  * constants used in the recorder, categorized by use
  * @author Matthew
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  *
  */
 public class Constants {
@@ -24,6 +24,7 @@ public class Constants {
 		public static final String TEXT = "text";
 		public static final String TEXT_ID = "text_id";
 		public static final String CLASS_INDEX = "class_index";
+		public static final String INTERNAL_CLASS_INDEX = "internal_class_index";
 		public static final String VIEW_BY_CLASS = "view_class";
 		public static final String VIEW_BY_ACTIVITY_CLASS = "activity_view_class";
 		public static final String VIEW_BY_ACTIVITY_CLASS_INDEX = "activity_view_class_index";
@@ -65,7 +66,9 @@ public class Constants {
 		public static final String ALERT_CONTROLLER = "com.android.internal.app.AlertController";
 		public static final String SPINNER_DROPDOWN_ADAPTER = "android.widget.Spinner$DropDownAdapter";	
 		public static final String SCROLLING_TAB_CONTAINER_VIEW = "com.android.internal.widget.ScrollingTabContainerView";
-		public static final String HORIZONTAL_SCROLL_VIEW = "com.android.widget.HorizontalScrollView";	
+		public static final String HORIZONTAL_SCROLL_VIEW = "com.android.widget.HorizontalScrollView";
+		public static final String ANDROID_WIDGET = "com.android.widget";	
+		public static final String ANDROID_VIEW = "com.android.view";	
 		
 	}
 	
@@ -127,6 +130,7 @@ public class Constants {
 		public static final String ONGROUP_CLICK_LISTENER = "mOnGroupClickListener";
 		public static final String ONCHILD_CLICK_LISTENER = "mOnChildClickListener";
 		public static final String HORIZONTALLY_SCROLLING = "mHorizontallyScrolling";
+		public static final String ON_HIERARCHY_CHANGE_LISTENER = "mOnHierarchyChangeListener";
 
 	}
 	
@@ -210,6 +214,8 @@ public class Constants {
 		public static final String SELECT_TAB = "select_tab";
 		public static final String GROUP_CLICK = "group_click";
 		public static final String CHILD_CLICK = "child_click";
+		public static final String CREATE_FLOATING_WINDOW = "create_floating_window";
+		public static final String TOUCH_CANCEL = "touch_cancel";
 	}
 	
 	// description strings 
@@ -232,10 +238,22 @@ public class Constants {
 		public static final String DICTIONARY = "dictionary.txt";	
 		public static final String INTERNALCLASSES = "internalclasses.txt";
 		public static final String WHITELIST = "whitelist-android";	
+		public static final String USER_MOTION_EVENT_VIEWS = "user_motion_event_views.txt";
+		public static final String INTERSTITIAL_ACTIVITIES = "interstitial_activities.txt";
 	}
 	
 	public static class Methods {
-		public static final String DICTIONARY = "dictionary.txt";
-		public static final String IS_SCROLLING_CONTAINER = "isScrollingContainer";	
+		public static final String IS_SCROLLING_CONTAINER = "isScrollingContainer";
+		public static final String ON_CLICK = "onClick";
+		public static final String ON_TOUCH = "onTouch";	
+	}
+	
+	public static class Sizes {
+		public static final int MAX_TEXT_LEN = 32;
+		public static final int REALLY_MAX_TEXT_LEN = 64;
+	}
+	
+	public static class Files {
+		public static final String EVENTS = "events.txt";
 	}
 }

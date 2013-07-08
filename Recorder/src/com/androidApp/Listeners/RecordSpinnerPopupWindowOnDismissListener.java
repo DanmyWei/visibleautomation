@@ -15,7 +15,7 @@ import android.view.View;
  * We have an exception case for popupWindows created by spinners, so the emitter can generate
  * custom widget-specific code.
  * @author mattrey
- *Copyright (c) 2013 Matthew Reynods.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 
 public class RecordSpinnerPopupWindowOnDismissListener extends RecordListener implements PopupWindow.OnDismissListener, IOriginalListener  {
@@ -51,6 +51,8 @@ public class RecordSpinnerPopupWindowOnDismissListener extends RecordListener im
 			try {
 				// clear the current popup window so it gets intercepted if it comes up again.
 				mViewInterceptor.setCurrentPopupWindow(null);
+				
+				// check to see if the user hit the back key to dismiss this popup
 				if (mViewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_BACK){
 					mEventRecorder.writeRecord(Constants.EventTags.DISMISS_SPINNER_POPUP_WINDOW_BACK_KEY, mAnchorView, "dismiss spinner popup window");					
 				} else {

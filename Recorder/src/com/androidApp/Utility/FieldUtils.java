@@ -12,8 +12,9 @@ import android.util.Log;
 
 /**
  * this should be folded into ReflectionUtils
+ * resolve private classes to public classes
  * @author Matthew
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  *
  */
 public class FieldUtils {
@@ -30,24 +31,6 @@ public class FieldUtils {
 		for (int i = 0; i < whiteListClasses.length; i++) {
 			mWhiteList.add(whiteListClasses[i]);
 		}
-	}
-
-	/**
-	 * given an object, its class, and a fieldName, return the value of that field for the object
-	 * because there's a lot of stuff you can set in android, but you can't get it.
-	 * IMPORTANT NOTE: The desired field must be a member of the specified class, not a class that it derives from. 
-	 * TODO: Modify this function to iterate up the class hierarchy to find the field.
-	 * @param o our intended victim
-	 * @param c object class (proletariat, bourgeois, or plutocrat)
-	 * @param fieldName name of the field (it better match)
-	 * @return
-	 * @throws NoSuchFieldException the field didn't match anything the class had
-	 * @throws IllegalAccessException I hope this never happens
-	 */
-	public static Object getFieldValue(Object o, Class c, String fieldName) throws NoSuchFieldException, IllegalAccessException {
-		Field field = c.getDeclaredField(fieldName);
-		field.setAccessible(true);
-		return field.get(o);
 	}
 	
 	// handy debug function when extracting fields from objects

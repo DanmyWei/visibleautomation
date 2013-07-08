@@ -24,7 +24,7 @@ import com.androidApp.Utility.TestUtils;
  * code to generate view references, either by unique id's or by class name and index within the list of views
  * on the screen
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  *
  */
 public class ViewReference {
@@ -33,6 +33,7 @@ public class ViewReference {
 	private List<Object>		mRStringList;						// list of R.string classes used in the application.
 	private Instrumentation		mInstrumentation;
 	private FieldUtils			mFieldUtils;						// to whitelist public android classes
+	private boolean				mfBinary;							// Binary: need to filter non-android classnames
 	
 	public enum ReferenceEnum {
 		VIEW_BY_CLASS(Constants.Reference.VIEW_BY_CLASS, 0x1),
@@ -50,21 +51,29 @@ public class ViewReference {
 	}
 	
 
-	public ViewReference(Instrumentation instrumentation) throws IOException {
+	/**
+	 * constructor: copy the instrumentation reference, initialize the id and string resource lists, and
+	 * set the binary flag, which determines whether we can use target app view derived classes or not
+	 * @param instrumentation
+	 * @param fBinary
+	 * @throws IOException
+	 */
+	public ViewReference(Instrumentation instrumentation, boolean fBinary) throws IOException {
 		mInstrumentation = instrumentation;
 		mRIDList = new ArrayList<Object>();
 		mRStringList = new ArrayList<Object>();	
+		mfBinary = fBinary;
 	}
-	
-	/**
-	 * we need an activity to get the target version so we can read the whitelist for the android version
-	 * @param activity activity to get the target sdk version
-	 * @param instrumentation instrumentation handle
-	 */
-	public void initializeWithActivity(Activity activity, Instrumentation instrumentation) throws IOException {
-		mFieldUtils = new FieldUtils(instrumentation.getContext(), activity);
-		
-	}
+
+    /** 
+     * we need an activity to get the target version so we can read the whitelist for the android version
+     * @param activity activity to get the target sdk version
+     * @param instrumentation instrumentation handle
+     */  
+    public void initializeWithActivity(Activity activity, Instrumentation instrumentation) throws IOException {
+        mFieldUtils = new FieldUtils(instrumentation.getContext(), activity);
+
+    }   
 	
 	public void addRdotID(Object rdotid) {
 		mRIDList.add(rdotid);
@@ -124,24 +133,35 @@ public class ViewReference {
 		return className;
 	}
 	
-	protected Class<? extends View> getUsableClass(Context context, View v) throws IOException {
+	// is this view defined in the Android library?
+	public static boolean isAndroidClass(Class<? extends View> viewClass) {
+		String name = viewClass.getName();
+		return name.startsWith(Constants.Classes.ANDROID_WIDGET) || name.startsWith(Constants.Classes.ANDROID_VIEW);
+	}
+	
+	// get a usable class name for our application
+	protected Class<? extends View> getUsableClass(Context context, View v, boolean fBinary) throws IOException {
 		Class<? extends View> viewClass = ViewReference.getVisibleClass(v);
-		if (!mFieldUtils.isWhiteListedAndroidClass(viewClass)) {
+		if ((fBinary || isAndroidClass(viewClass)) && !mFieldUtils.isWhiteListedAndroidClass(viewClass)) {
 			viewClass = (Class<? extends View>) mFieldUtils.getPublicClassForAndroidInternalClass(viewClass);
 		}
 		return viewClass;
 	}
 	
+	
 	/**
+	 * TODO: this documentation is out of date.
 	 * Given a view, generate a reference for it so it can be found when the application is run again
 	 * id, id: if the view has an ID, the ID is unique for all views, and the view is not a descendant of an AdapterView
 	 * ex: id, R.id.button1 (if the ID is found in the R.id class).  id, 0x90300200 if not found
 	 * text_id:  the view is a subclass of TextView, has text, the text is unique for all views, the view is not a child
 	 * of adapterView.  The ID is the id of the leastmost ancestor of v with an id which is unique for all views
 	 * ex: text_id, "escaped\ntext", R.id.parentID or text_id, "escaped text", 0x90300200
-	 * class_index_id: The view does not have a unique id, use the view class name, the index of that class by pre-order
+	 * class_index: The view does not have a unique id, use the view class name, the index of that class by pre-order
 	 * traversal from the leastmost parent with an id which is unique for all views, and the view is not a descendant of
 	 * an AdapterView
+	 * internal_class_index:  creates a reference with 2 classes: a visible class which can be used for casting, and
+	 * an internal class (either to the android library or the binary application) which can be used with Class.forName()
 	 * ex: class_index_id, android.widget.Button, 5, R.id.parent or class_index_id, android.widget.Button, 5, 0x9030200
 	 * list_index_id: The view is a descendant of an AdapterView, and has a unique ID within the set of views of its list
 	 * element.  Index is the index within the AdapterView.
@@ -153,7 +173,14 @@ public class ViewReference {
 	 * @return
 	 */
 	public String getReference(View v) throws IllegalAccessException, IOException {
-		Class<? extends View> usableClass = getUsableClass(mInstrumentation.getContext(), v);
+		
+		// in some cases, the view sends an event before any activity is initialized, so we initialize the field utilities here
+		// initialize the view reference with an activity so we can read the appropriate whitelist for the target application's SDK
+		if (mFieldUtils == null) {
+			mFieldUtils = new FieldUtils(mInstrumentation.getContext(), v.getContext());
+		}
+		Class<? extends View> usableClass = getUsableClass(mInstrumentation.getContext(), v, mfBinary);
+		boolean fInternalClass = (usableClass != v.getClass());
 	
 		// first, try the id, and verify that it is unique.
 		int id = v.getId();
@@ -161,7 +188,7 @@ public class ViewReference {
 		if (id != 0) {
 			int idCount = TestUtils.idCount(rootView, id);
 			if (idCount == 1) {
-				return Constants.Reference.ID + "," + TestUtils.getIdForValue(mRIDList, id) + "," + usableClass.getName();
+				return Constants.Reference.ID + "," + TestUtils.getIdForValue(mRIDList, id) + "," + usableClass.getCanonicalName();
 			}
 		}
 		
@@ -188,10 +215,16 @@ public class ViewReference {
 			int parentIdCount = TestUtils.idCount(rootView, viewParentWithId.getId());
 			if (parentIdCount == 1) {
 				int classIndex = TestUtils.classIndex(viewParentWithId, v);
-				return Constants.Reference.CLASS_ID + "," +  TestUtils.getIdForValue(mRIDList, viewParentWithId.getId()) + "," + usableClass.getName() + "," + classIndex;
+				return Constants.Reference.CLASS_ID + "," +  TestUtils.getIdForValue(mRIDList, viewParentWithId.getId()) + "," + usableClass.getCanonicalName() + "," + classIndex;
 			} else {
-				int classIndex = TestUtils.classIndex(rootView, v);
-				return Constants.Reference.CLASS_INDEX + "," + usableClass.getName() + "," + classIndex;
+				if (fInternalClass) {
+					int classIndex = TestUtils.classIndex(rootView, v);
+					return Constants.Reference.CLASS_INDEX + "," + usableClass.getCanonicalName() + "," + classIndex;
+
+				} else {
+					int classIndex = TestUtils.classIndex(rootView, v);
+					return Constants.Reference.INTERNAL_CLASS_INDEX + "," + v.getClass().getCanonicalName() + "," + usableClass.getCanonicalName() + "," + classIndex;
+				}
 			}
 		}
 		return Constants.Reference.UNKNOWN;	

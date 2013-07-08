@@ -29,13 +29,14 @@ import android.view.Surface;
 
 
 /**
- * class for intercepting activity events
+ * class for intercepting activity transitions
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+  * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  *
  */
 public class ActivityInterceptor {
 	protected static final String 	TAG = "ActivityInterceptor";
+	protected static final long		ACTIVITY_WAIT_MSEC = 30000;
 	protected EventRecorder			mEventRecorder;						// reference to the event record
 	protected ViewInterceptor		mViewInterceptor;
 	protected Instrumentation		mInstrumentation;					// to run things synchronized on the UI thread
@@ -44,6 +45,8 @@ public class ActivityInterceptor {
 	private Thread					mActivityThread;					// to track the activity monitor thread
 	protected boolean				mfHasStarted;						// the first activity has been observed.
 	protected boolean				mfHasFinished;						// last activity was finished()
+	protected boolean				mfPastFirstActivity;				// first activity might finish() immediately because it's a splash screen
+	protected boolean		 		mfMightBeSplashScreenFinish;		// waiting for next activity after splash screen finish
 	/**
 	 * retain the activity information along with the activity.
 	 * @author Matthew
@@ -91,6 +94,7 @@ public class ActivityInterceptor {
 		mViewInterceptor = viewInterceptor;
 		mfHasStarted = false;
 		mfHasFinished = false;
+		mfPastFirstActivity = false;
 	}
 	
 	public EventRecorder getRecorder() {
@@ -134,6 +138,7 @@ public class ActivityInterceptor {
 		mActivityStack = new Stack<ActivityState>();
 		Runnable runnable = new Runnable() {
 			public void run() {
+				ActivityInterceptor.this.mfMightBeSplashScreenFinish = false;
 				EventRecorder recorder = ActivityInterceptor.this.getRecorder();
 				ViewInterceptor viewInterceptor = ActivityInterceptor.this.getViewInterceptor();
 				boolean fStart = true;
@@ -159,7 +164,7 @@ public class ActivityInterceptor {
 						// initialize the view reference with an activity so we can read the appropriate whitelist
 						// for the target application's SDK
 						try {
-							recorder.getViewReference().initializeWithActivity(activityA, mInstrumentation);;
+							recorder.getViewReference().initializeWithActivity(activityA, mInstrumentation);
 							String packageName = getPackageName(activityA);
 							ActivityInterceptor.this.getRecorder().writeRecord(Constants.EventTags.PACKAGE, packageName);
 						} catch (Exception ex) {
@@ -171,9 +176,14 @@ public class ActivityInterceptor {
 						}
 						int newRotation = activityA.getWindowManager().getDefaultDisplay().getRotation();
 						if (isFinalActivityBack(activityA)) {
-							Log.i(TAG, "first activity back case activity = " + activityA);
-							ActivityInterceptor.this.recordFirstActivityBack(recorder);
-							ActivityInterceptor.this.setFinished(true);
+							if (mfPastFirstActivity) {
+								Log.i(TAG, "first activity back case activity = " + activityA);
+								ActivityInterceptor.this.recordFirstActivityBack(recorder);
+								ActivityInterceptor.this.setFinished(true);
+								return;
+							} else {
+								ActivityInterceptor.this.mfMightBeSplashScreenFinish = true;
+							}
 						} else {
 							// the device has rotated in the activity transition, where one activity is destroyed, and another created
 							// with the rotated layout.
@@ -182,7 +192,19 @@ public class ActivityInterceptor {
 								Log.i(TAG, "rotation case activity = " + activityA);
 								ActivityInterceptor.this.recordRotation(recorder, viewInterceptor, activityA, newRotation);
 							} else {
-								Activity activityB = ActivityInterceptor.this.mActivityMonitor.waitForActivity();
+								Activity activityB;
+								// the user may have backed out of the initial screen, so we should timeout on the next activity wait
+								if (ActivityInterceptor.this.mfMightBeSplashScreenFinish) {
+									activityB = ActivityInterceptor.this.mActivityMonitor.waitForActivityWithTimeout(ACTIVITY_WAIT_MSEC);
+									if (activityB == null) {
+										ActivityInterceptor.this.setFinished(true);
+										return;						
+									}
+								} else {
+									activityB = ActivityInterceptor.this.mActivityMonitor.waitForActivity();
+								}
+								ActivityInterceptor.this.mfMightBeSplashScreenFinish = false;
+								mfPastFirstActivity = true;
 								// if the activity was in the stack, then we are going back to it, otherwise we're
 								// going forward to a new activity.
 								if (ActivityInterceptor.this.inActivityStack(activityA)  && ActivityInterceptor.this.inActivityStack(activityB)) {
@@ -196,7 +218,7 @@ public class ActivityInterceptor {
 									if (ActivityInterceptor.this.inActivityStack(activityB)) {
 										newActivity = activityA;
 									}
-									if (!activityA.isFinishing() && !activityB.isFinishing()) {
+									if (!newActivity.isFinishing()) {
 										Log.i(TAG, "forward case activity = " + newActivity);
 										ActivityInterceptor.this.recordActivityForward(recorder, viewInterceptor, newActivity);
 										mInstrumentation.runOnMainSync(new InsertRecordWindowCallbackRunnable(newActivity.getWindow(), recorder, viewInterceptor));
@@ -222,6 +244,10 @@ public class ActivityInterceptor {
 		return activityA.isFinishing() && (activityA.getChangingConfigurations() == 0x0) && (activityStackSize() == 1) && inActivityStack(activityA);
 	}
 	
+	public boolean mightBeWaitingForSplashScreen() {
+		return mfMightBeSplashScreenFinish;
+	}
+	
 	/**
 	 * record the initial activity start, which we mark as "activity_forward"
 	 * @param recorder event recorder
@@ -230,7 +256,7 @@ public class ActivityInterceptor {
 	public void recordInitialActivity(EventRecorder recorder, ViewInterceptor viewInterceptor, Activity activityA) {
 		pushActivityOnStack(activityA);
 		// intercept events on the newly created activity.
-		mInstrumentation.runOnMainSync(new InterceptRunnable(activityA));
+		mInstrumentation.runOnMainSync(new InterceptActivityRunnable(activityA));
 		String logMsg = activityA.getClass().getName() + "," + activityA.toString();
 		recorder.writeRecord(Constants.EventTags.ACTIVITY_FORWARD, logMsg);
 		
@@ -337,7 +363,7 @@ public class ActivityInterceptor {
 	public void recordActivityForward(EventRecorder recorder, ViewInterceptor viewInterceptor, Activity activityB) {
 		pushActivityOnStack(activityB);
 		// intercept events on the newly created activity.
-		mInstrumentation.runOnMainSync(new InterceptRunnable(activityB));
+		mInstrumentation.runOnMainSync(new InterceptActivityRunnable(activityB));
 		String logMsg =  activityB.getClass().getName() + "," + activityB.toString();
 		recorder.writeRecord(Constants.EventTags.ACTIVITY_FORWARD, logMsg);
 		MagicFrame.insertMagicFrame(mInstrumentation, activityB, recorder, viewInterceptor);
@@ -442,10 +468,10 @@ public class ActivityInterceptor {
 	 * @author mattrey
 	 *
 	 */
-	public class InterceptRunnable implements Runnable {
+	public class InterceptActivityRunnable implements Runnable {
 		protected Activity mActivity;
 		
-		public InterceptRunnable(Activity activity) {
+		public InterceptActivityRunnable(Activity activity) {
 			mActivity = activity;
 		}
 		

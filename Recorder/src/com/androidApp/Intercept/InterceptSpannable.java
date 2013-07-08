@@ -9,7 +9,7 @@ import android.util.Log;
  * so we can intercept operations on text controls
  * TODO: defunct: this was only used for testing.
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  *
  */
 public class InterceptSpannable extends SpannableStringBuilder {

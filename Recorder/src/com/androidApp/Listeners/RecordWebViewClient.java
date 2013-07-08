@@ -19,8 +19,9 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 /** we can't derive from RecordListener, because we extend WebViewClient
+ * we like to wait for pageloaded events, because it's polite to wait for a webview to load before interacting with it.
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 
 public class RecordWebViewClient extends WebViewClient implements IOriginalListener {
@@ -69,53 +70,61 @@ public class RecordWebViewClient extends WebViewClient implements IOriginalListe
 		if (mOriginalWebViewClient != null) {
 			mOriginalWebViewClient.onPageFinished(view, url);
 		}
-		try {
-			String happyUrl = StringUtils.escapeString(url, "\"\'", '\\');
-			String message = RecordListener.getDescription(view) + ",\"" + happyUrl + "\"";
-			mEventRecorder.writeRecord(Constants.EventTags.ON_PAGE_FINISHED, view, message);
-		} catch (Exception ex) {
-			mEventRecorder.writeException(ex, view, " on pageStarted");
-		}		
+		// robotium indexes by shown views.
+		if (view.isShown()) {
+			try {
+				String happyUrl = StringUtils.escapeString(url, "\"\'", '\\');
+				String message = RecordListener.getDescription(view) + ",\"" + happyUrl + "\"";
+				mEventRecorder.writeRecord(Constants.EventTags.ON_PAGE_FINISHED, view, message);
+			} catch (Exception ex) {
+				mEventRecorder.writeException(ex, view, " on pageStarted");
+			}	
+		}
 		
 	}
 	public void onPageStarted(WebView view, String url, Bitmap favicon){
 		if (mOriginalWebViewClient != null) {
 			mOriginalWebViewClient.onPageStarted(view, url, favicon);
 		}
-		try {
-			String happyUrl = StringUtils.escapeString(url, "\"\'", '\\');
-			String message = RecordListener.getDescription(view) + "," + happyUrl;
-			mEventRecorder.writeRecord(Constants.EventTags.ON_PAGE_STARTED, view, message);
-		} catch (Exception ex) {
-			mEventRecorder.writeException(ex, view, "on pageStarted");
-			ex.printStackTrace();
-		}		
+		// robotium indexes by shown views.
+		if (view.isShown()) {
+			try {
+				String happyUrl = StringUtils.escapeString(url, "\"\'", '\\');
+				String message = RecordListener.getDescription(view) + "," + happyUrl;
+				mEventRecorder.writeRecord(Constants.EventTags.ON_PAGE_STARTED, view, message);
+			} catch (Exception ex) {
+				mEventRecorder.writeException(ex, view, "on pageStarted");
+			}	
+		}
 	}
 	
 	public void onReceivedError(WebView view, int errorCode, String description, String failingUrl){
 		if (mOriginalWebViewClient != null) {
 			mOriginalWebViewClient.onReceivedError(view, errorCode, description, failingUrl);
 		}		
-		try {
-			mEventRecorder.writeRecord(Constants.EventTags.ON_RECEIVED_ERROR, view, RecordListener.getDescription(view));
-		} catch (Exception ex) {
-			mEventRecorder.writeException(ex, view, "on onReceivedError");
-			ex.printStackTrace();
+		// robotium indexes by shown views.
+		if (view.isShown()) {
+			try {
+				mEventRecorder.writeRecord(Constants.EventTags.ON_RECEIVED_ERROR, view, RecordListener.getDescription(view));
+			} catch (Exception ex) {
+				mEventRecorder.writeException(ex, view, "on onReceivedError");
+			}
 		}
 	}
 	
 	public void onReceivedHttpAuthRequest(WebView view, HttpAuthHandler handler, String host, String realm){
 		if (mOriginalWebViewClient != null) {
 			mOriginalWebViewClient.onReceivedHttpAuthRequest(view, handler, host, realm);
-		}
-		
+		}	
 	}
+	
 	public void onReceivedLoginRequest(WebView view, String realm, String account, String args){
 		if (mOriginalWebViewClient != null) {
 			mOriginalWebViewClient.onReceivedLoginRequest(view, realm, account, args);
 		}
 		
 	}
+	
 	public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error){
 		if (mOriginalWebViewClient != null) {
 			mOriginalWebViewClient.onReceivedSslError(view, handler, error);
@@ -126,28 +135,32 @@ public class RecordWebViewClient extends WebViewClient implements IOriginalListe
 		if (mOriginalWebViewClient != null) {
 			mOriginalWebViewClient.onScaleChanged(view, oldScale, newScale);
 		}
-		try {
-			String scales = Float.toString(oldScale) + "," + Float.toString(newScale);
-			String message = RecordListener.getDescription(view) + "," + scales;
-			mEventRecorder.writeRecord(Constants.EventTags.ON_SCALE_CHANGED, view, message);
-		} catch (Exception ex) {
-			mEventRecorder.writeException(ex, view, "on onReceivedError");
-			ex.printStackTrace();
+		// robotium indexes by shown views.
+		if (view.isShown()) {
+	
+			try {
+				String scales = Float.toString(oldScale) + "," + Float.toString(newScale);
+				String message = RecordListener.getDescription(view) + "," + scales;
+				mEventRecorder.writeRecord(Constants.EventTags.ON_SCALE_CHANGED, view, message);
+			} catch (Exception ex) {
+				mEventRecorder.writeException(ex, view, "on onReceivedError");
+			}
 		}
-		
 	}
+	
 	public void onTooManyRedirects(WebView view, Message cancelMsg, Message continueMsg){
 		if (mOriginalWebViewClient != null) {
 			mOriginalWebViewClient.onTooManyRedirects(view, cancelMsg, continueMsg);
 		}
 		
 	}
+	
 	public void onUnhandledKeyEvent(WebView view, KeyEvent event){
 		if (mOriginalWebViewClient != null) {
 			mOriginalWebViewClient.onUnhandledKeyEvent(view, event);
 		}
-		
 	}
+	
 	public WebResourceResponse shouldInterceptRequest(WebView view, String url){
 		if (mOriginalWebViewClient != null) {
 			return mOriginalWebViewClient.shouldInterceptRequest(view, url);

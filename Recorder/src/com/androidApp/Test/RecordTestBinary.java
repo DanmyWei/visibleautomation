@@ -2,6 +2,11 @@ package com.androidApp.Test;
 
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.List;
+
+import com.androidApp.EventRecorder.UserDefinedViewReference;
+import com.androidApp.Utility.SaveState;
 
 import android.app.Activity;
 import android.content.IntentFilter;
@@ -21,24 +26,26 @@ import android.util.Log;
  * Since dialogs can be popped up at any time, and they aren't picked up by the layout listener, we had to create a timer task
  * which polls for newly created dialogs in the current activity.  Unfortunately, the event handlers are member functions of
  * activity, so we can't intercept them, except with methods that are highly intrusive.
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
-public abstract class RecordTestBinary extends ActivityInstrumentationTestCase2 {
+public abstract class RecordTestBinary<T extends RecordTestBinary> extends ActivityInstrumentationTestCase2 implements IRecordTest {
 	private static final String 				TAG = "RecordTestBinary";
 	protected SetupListeners					mSetupListeners;
 	protected static Class<? extends Activity>	sActivityClass;
+	protected List<UserDefinedViewReference>	mMotionEventViewReferences = null;	// user-defined references to listen for motion events
 	
-	public RecordTestBinary(String activityName) throws IOException {
+	public RecordTestBinary(String activityName, Class<T> activityTestClass) throws IOException {
 		super(sActivityClass);
+        try {
+        	InputStream isMotionEvents = activityTestClass.getResourceAsStream("/raw/motion_event_views.txt");
+        	mMotionEventViewReferences = UserDefinedViewReference.readViewReferences(isMotionEvents);
+        } catch (Exception ex) {
+        }
 	}
-	
-	public RecordTestBinary() throws IOException {
-		super(sActivityClass);
-	}
-	
-	public void setUp() throws Exception { 
-		super.setUp();
-		mSetupListeners = new SetupListeners(getInstrumentation(), sActivityClass);
+		
+	public void initialize(Class<? extends Activity> activityClass) throws Exception { 
+		mSetupListeners = new SetupListeners(getInstrumentation(), sActivityClass, this, true);
+		SaveState.backupDatabases(getInstrumentation().getTargetContext());
 	}
 
 
@@ -52,4 +59,8 @@ public abstract class RecordTestBinary extends ActivityInstrumentationTestCase2 
 	public void testRecord() {
 		mSetupListeners.testRecord();
 	}
+	public List<UserDefinedViewReference> getMotionEventViewReferences() {
+		return mMotionEventViewReferences;
+	}
 }
+

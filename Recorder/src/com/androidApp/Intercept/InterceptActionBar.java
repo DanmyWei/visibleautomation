@@ -11,7 +11,7 @@ import android.view.View;
 /**
  * functions to intercept action bar events.
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class InterceptActionBar {
 	// get the action bar view.
@@ -20,6 +20,7 @@ public class InterceptActionBar {
 		return (View) ReflectionUtils.getFieldValue(actionBar, actionBarImplClass, Constants.Fields.ACTION_VIEW);
 	}
 	
+	// get the action bar tab listener for action bar tabs
 	public static ActionBar.TabListener getTabListener(ActionBar actionBar, int index) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
 		ActionBar.Tab tab = actionBar.getTabAt(index);
 		Class tabImplClass = Class.forName(Constants.Classes.ACTION_BAR_IMPL_TAB_IMPL);

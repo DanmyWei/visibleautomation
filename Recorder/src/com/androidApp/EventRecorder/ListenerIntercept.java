@@ -10,6 +10,7 @@ import android.os.Message;
 import android.text.TextWatcher;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewGroup.OnHierarchyChangeListener;
 import android.view.Window;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -31,12 +32,13 @@ import com.androidApp.Utility.ReflectionUtils;
  * class which contains static functions used to obtain and set various listeners for android views, like
  * the onClickListener, onItemClickListener, etc).
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  *
  */
 public class ListenerIntercept {
 	protected static final String TAG = "ListenerIntercept";
-	
+
+	// TODO: unused: remove this
 	public static AdapterView.OnItemClickListener getPopupMenuOnItemClickListener(View v) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
 		Class dropdownListViewClass = Class.forName(Constants.Classes.DROPDOWN_LISTVIEW);
 		Object menuPopupHelperObject = ReflectionUtils.getFieldValue(v, AdapterView.class, Constants.Fields.ONITEM_CLICK_LISTENER);
@@ -46,23 +48,39 @@ public class ListenerIntercept {
 		return (AdapterView.OnItemClickListener) listenerObject;
 	}
 	
-	// for expandable list views, since they are uncaring of onItemClickListener
-	public static ExpandableListView.OnGroupClickListener getOnGroupClickListener(ExpandableListView expandableListView) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
-		Object listenerObject = ReflectionUtils.getFieldValue(expandableListView, ExpandableListView.class, Constants.Fields.ONGROUP_CLICK_LISTENER);
-		return (ExpandableListView.OnGroupClickListener) listenerObject;
-	}
-	
-	public static ExpandableListView.OnChildClickListener getOnChildClickListener(ExpandableListView expandableListView) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
-		Object listenerObject = ReflectionUtils.getFieldValue(expandableListView, ExpandableListView.class, Constants.Fields.ONCHILD_CLICK_LISTENER);
-		return (ExpandableListView.OnChildClickListener) listenerObject;
-	}
-	
+	// TODO: unused: remove this
 	public static void setPopupMenuOnItemClickListener(View v, AdapterView.OnItemClickListener listener) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
 		Class dropdownListViewClass = Class.forName(Constants.Classes.DROPDOWN_LISTVIEW);
 		Object menuPopupHelperObject = ReflectionUtils.getFieldValue(v, AdapterView.class, Constants.Fields.ONITEM_CLICK_LISTENER);
 		Class menuPopupHelperClass = Class.forName(Constants.Classes.MENU_POPUP_HELPER);
 		Object listPopupWindowObject = ReflectionUtils.getFieldValue(menuPopupHelperObject, menuPopupHelperClass, Constants.Fields.POPUP);
 		ReflectionUtils.setFieldValue(listPopupWindowObject, ListPopupWindow.class, Constants.Fields.ITEM_CLICK_LISTENER, listener);
+	}
+	
+	/**
+	 *  for expandable list views, since they are uncaring of onItemClickListener
+	 * @param expandableListView list view to get the click listener from
+	 * @return OnGroupClickListener
+	 * @throws NoSuchFieldException  exceptions returned from ReflectionUtils
+	 * @throws ClassNotFoundException
+	 * @throws IllegalAccessException
+	 */
+	public static ExpandableListView.OnGroupClickListener getOnGroupClickListener(ExpandableListView expandableListView) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
+		Object listenerObject = ReflectionUtils.getFieldValue(expandableListView, ExpandableListView.class, Constants.Fields.ONGROUP_CLICK_LISTENER);
+		return (ExpandableListView.OnGroupClickListener) listenerObject;
+	}
+	
+	/**
+	 *  for expandable list views, since they are uncaring of onItemClickListener
+	 * @param expandableListView list view to get the click listener from
+	 * @return OnGroupClickListener
+	 * @throws NoSuchFieldException  exceptions returned from ReflectionUtils
+	 * @throws ClassNotFoundException
+	 * @throws IllegalAccessException
+	 */
+	public static ExpandableListView.OnChildClickListener getOnChildClickListener(ExpandableListView expandableListView) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
+		Object listenerObject = ReflectionUtils.getFieldValue(expandableListView, ExpandableListView.class, Constants.Fields.ONCHILD_CLICK_LISTENER);
+		return (ExpandableListView.OnChildClickListener) listenerObject;
 	}
 	
 	/**
@@ -152,7 +170,7 @@ public class ListenerIntercept {
 	 * currently unused, because it overlaps onClickListener
 	 * @param cb
 	 * @return
-	 * @throws NoSuchFieldExceptionc
+	 * @throws NoSuchFieldException exceptions thrown by ReflectionUtils
 	 * @throws ClassNotFoundException
 	 * @throws IllegalAccessException
 	 */
@@ -496,7 +514,25 @@ public class ListenerIntercept {
 		return webViewClient;
 	}
 	
+	/**
+	 * when tabs are selected, they send out a tab change 
+	 * @param tabHost
+	 * @return
+	 * @throws NoSuchFieldException
+	 * @throws IllegalAccessException
+	 */
 	public static TabHost.OnTabChangeListener getTabChangeListener(TabHost tabHost) throws NoSuchFieldException, IllegalAccessException {
 		return (TabHost.OnTabChangeListener) ReflectionUtils.getFieldValue(tabHost, TabHost.class, Constants.Fields.ON_TAB_CHANGE_LISTENER);
+	}
+
+	/**
+	 * when views are added or removed from a view hierarchy, the parent gets a notification
+	 * @param vg
+	 * @return
+	 * @throws NoSuchFieldException
+	 * @throws IllegalAccessException
+	 */
+	public static OnHierarchyChangeListener getOnHierarchyChangeListener(ViewGroup vg)  throws NoSuchFieldException, IllegalAccessException {
+		return (OnHierarchyChangeListener) ReflectionUtils.getFieldValue(vg, ViewGroup.class, Constants.Fields.ON_HIERARCHY_CHANGE_LISTENER);
 	}
 }

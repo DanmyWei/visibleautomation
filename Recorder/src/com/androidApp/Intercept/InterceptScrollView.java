@@ -9,7 +9,7 @@ import android.view.View;
 import android.view.ViewGroup;
 
 /* TODO: defunct: remove this class
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class InterceptScrollView extends View {
 	private static final String TAG = "InterceptScrollView";

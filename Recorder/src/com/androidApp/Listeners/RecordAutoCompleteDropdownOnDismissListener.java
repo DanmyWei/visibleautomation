@@ -15,7 +15,7 @@ import android.view.View;
  * We have an exception case for popupWindows created by spinners, so the emitter can generate
  * custom widget-specific code.
  * @author mattrey
- *Copyright (c) 2013 Matthew Reynods.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 
 public class RecordAutoCompleteDropdownOnDismissListener extends RecordListener implements PopupWindow.OnDismissListener, IOriginalListener  {
@@ -44,6 +44,12 @@ public class RecordAutoCompleteDropdownOnDismissListener extends RecordListener 
 		return mOriginalOnDismissListener;
 	}
 
+	/**
+	 * dismiss can happen programmatically, or by the back key. We listen for the back key in the magic frames, 
+	 * and if this event happens afterwrd, we record it as a "back key" dismiss, otherwise we record it as a 
+	 * programmatic dismiss, which should be ignored.
+	 * TODO: does this work in dialogs/popups?
+	 */
 	public void onDismiss() {
 		boolean fReentryBlock = getReentryBlock();
 		if (!RecordListener.getEventBlock()) {

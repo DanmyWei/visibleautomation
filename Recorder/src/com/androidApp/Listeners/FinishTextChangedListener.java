@@ -15,7 +15,7 @@ import android.widget.TextView;
  * While this would be a wonderful thing, there's an ordering issue with text watchers, and if another text watcher
  * or God Only Knows What changes the text before it's displayed in the text control, this text watcher records the 
  * text after the transformation has been applied (like formatting a phone number or something like that)
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class FinishTextChangedListener extends RecordListener implements TextWatcher {
 	public FinishTextChangedListener(EventRecorder eventRecorder) {

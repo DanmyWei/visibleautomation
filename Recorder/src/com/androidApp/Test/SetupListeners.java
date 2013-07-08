@@ -15,6 +15,7 @@ import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.ImageView;
 import android.widget.PopupWindow;
 import android.widget.Spinner;
@@ -30,11 +31,12 @@ import com.androidApp.Utility.FieldUtils;
 import com.androidApp.Utility.ReflectionUtils;
 import com.androidApp.Utility.TestUtils;
 import com.androidApp.Utility.ViewExtractor;
+import com.androidApp.Utility.WindowAndView;
 import com.androidApp.randomtest.RandTest;
 
 /**
  * class to install listeners in the view hierarchy
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class SetupListeners {
 	private static final String 			TAG = "SetupListeners";
@@ -52,19 +54,41 @@ public class SetupListeners {
 	private float							mMenuPercentage = 10.0f;			// 1 in 50 operations is device rotation.
 	protected Context						mContext;							// to communicate with the log service
 	protected Instrumentation				mInstrumentation;
-	protected String						mActivityName;
-	protected IMEMessageListener			mIMEMessageListener;
+	protected String						mActivityName;						// TODO: probably should be the class of the activity under test
+	protected IMEMessageListener			mIMEMessageListener;				// to listen to IME up/down events
+	protected IRecordTest					mRecordTest;						// so we can pass info from the top-level recorder
 
-	public SetupListeners(Instrumentation instrumentation, Class<? extends Activity> activityClass) throws Exception {
+	
+	/** 
+	 * constructor: copy the instrumentation reference, the start activity, and the recorder
+	 * @param instrumentation instrumentation reference
+	 * @param activityClass start activity under test
+	 * @param recordTest test class
+	 * @param fBinary dictates how view references are resolved to public classes
+	 * @throws Exception
+	 */
+	public SetupListeners(Instrumentation 			instrumentation, 
+						  Class<? extends Activity> activityClass,
+						  IRecordTest				recordTest,
+						  boolean					fBinary) throws Exception {
 		mInstrumentation = instrumentation;
 		mActivityName = activityClass.getCanonicalName();
-		setUp(activityClass);
+		mRecordTest = recordTest;
+		setUp(activityClass, fBinary);
 	}
 	
-	public void initRecorder(Context context) throws IOException, ReferenceException, ClassNotFoundException {
+	/**
+	 * initialize the recorder
+	 * @param context so event recorder can send requests to the log service
+	 * @param fBinary dictates how view classes are resolved to public classes
+	 * @throws IOException can't open events.txt
+	 * @throws ReferenceException Reflection utilties exception
+	 * @throws ClassNotFoundException
+	 */
+	public void initRecorder(Context context, boolean fBinary) throws IOException, ReferenceException, ClassNotFoundException {
 		mContext = context;
-		mRecorder = new EventRecorder(mInstrumentation, mContext, "events.txt");
-		mViewInterceptor = new ViewInterceptor(mRecorder);
+		mRecorder = new EventRecorder(mInstrumentation, mContext, Constants.Files.EVENTS, fBinary);
+		mViewInterceptor = new ViewInterceptor(mRecorder, mRecordTest);
 		mIMEMessageListener = new IMEMessageListener(mViewInterceptor, mRecorder);
 		Thread thread = new Thread(mIMEMessageListener);
 		thread.start();
@@ -75,8 +99,8 @@ public class SetupListeners {
 	 * popup window listener, then launches the activity
 	 * @throws IOException
 	 */
-	public void setUp(Class<? extends Activity> activityClass) throws Exception {
-		initRecorder(getInstrumentation().getContext());
+	public void setUp(Class<? extends Activity> activityClass, boolean fBinary) throws Exception {
+		initRecorder(getInstrumentation().getContext(), fBinary);
 		mScanTimer = new Timer();
 		mActivityInterceptor = new ActivityInterceptor(getRecorder(), getViewInterceptor());
 		setupDialogListener();
@@ -127,10 +151,10 @@ public class SetupListeners {
 							}
 						}
 					} else {
-						if (SetupListeners.this.getActivityInterceptor().hasStarted()) {
+						if (SetupListeners.this.getActivityInterceptor().hasStarted() && !SetupListeners.this.getActivityInterceptor().mightBeWaitingForSplashScreen()) {
+							Log.i(TAG, "setupDialogListener activity = " + activity + " viewInterceptor = " + viewInterceptor);
 							this.cancel();
 						}
-						Log.i(TAG, "setupDialogListener activity = " + activity + " viewInterceptor = " + viewInterceptor);
 					}
 				} catch (Exception ex) {
 					ex.printStackTrace();
@@ -157,30 +181,47 @@ public class SetupListeners {
 					
 					// scan for a new popup window, or the options menu
 					if ((recorder != null) && (activity !=  null) && (viewInterceptor != null)) {
-						PopupWindow popupWindow = TestUtils.findPopupWindow(activity);
-						if ((popupWindow != null) && !TestUtils.isPopupWindowEmpty(popupWindow) && (popupWindow != viewInterceptor.getCurrentPopupWindow())) {
-							viewInterceptor.setCurrentPopupWindow(popupWindow);
-							if (TestUtils.isOptionsMenu(popupWindow)) {
-								View optionsMenuView = TestUtils.findViewForPopup(activity, popupWindow);
-								if (viewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_MENU) {
-									recorder.writeRecord(Constants.EventTags.OPEN_ACTION_MENU_KEY, "open action menu from menu key");
-								} else {
-									recorder.writeRecord(Constants.EventTags.OPEN_ACTION_MENU, "open action menu");
+						WindowAndView windowAndView = TestUtils.findPopupWindow(activity);
+						if (windowAndView != null) {
+							if (windowAndView.mWindow instanceof PopupWindow) {
+								PopupWindow popupWindow = (PopupWindow) windowAndView.mWindow;
+								if ((popupWindow != null) && !TestUtils.isPopupWindowEmpty(popupWindow) && (popupWindow != viewInterceptor.getCurrentPopupWindow())) {
+									viewInterceptor.setCurrentPopupWindow(popupWindow);
+									if (TestUtils.isOptionsMenu(popupWindow)) {
+										View optionsMenuView = TestUtils.findViewForPopup(activity, popupWindow);
+										if (viewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_MENU) {
+											recorder.writeRecord(Constants.EventTags.OPEN_ACTION_MENU_KEY, "open action menu from menu key");
+										} else {
+											recorder.writeRecord(Constants.EventTags.OPEN_ACTION_MENU, "open action menu");
+										}
+										instrumentation.runOnMainSync(new InsertKeyListenerRunnable(optionsMenuView));
+									} else {
+										// the popup window might have an anchor which changes the generated code, to spinner specific output
+										View anchorView = TestUtils.getPopupWindowAnchor(popupWindow);
+										if (TestUtils.isSpinnerPopup(popupWindow)) {
+											recorder.writeRecord(Constants.EventTags.CREATE_SPINNER_POPUP_WINDOW, anchorView, "create spinner popup window");
+											instrumentation.runOnMainSync(new InterceptSpinnerPopupWindowRunnable(popupWindow));
+										} else if (TestUtils.isAutoCompleteWindow(popupWindow)) {
+											recorder.writeRecord(Constants.EventTags.CREATE_AUTOCOMPLETE_DROPDOWN, anchorView, "create autocomplete dropdown");
+											instrumentation.runOnMainSync(new InterceptAutoCompleteDropdownRunnable(popupWindow));
+										} else {
+											recorder.writeRecord(Constants.EventTags.CREATE_POPUP_WINDOW, "create popup window");
+											instrumentation.runOnMainSync(new InterceptPopupWindowRunnable(popupWindow));
+										}		
+									}
 								}
-								instrumentation.runOnMainSync(new InsertKeyListenerRunnable(optionsMenuView));
 							} else {
-								// the popup window might have an anchor which changes the generated code, to spinner specific output
-								View anchorView = TestUtils.getPopupWindowAnchor(popupWindow);
-								if (TestUtils.isSpinnerPopup(popupWindow)) {
-									recorder.writeRecord(Constants.EventTags.CREATE_SPINNER_POPUP_WINDOW, anchorView, "create spinner popup window");
-									instrumentation.runOnMainSync(new InterceptSpinnerPopupWindowRunnable(popupWindow));
-								} else if (TestUtils.isAutoCompleteWindow(popupWindow)) {
-									recorder.writeRecord(Constants.EventTags.CREATE_AUTOCOMPLETE_DROPDOWN, anchorView, "create autocomplete dropdown");
-									instrumentation.runOnMainSync(new InterceptAutoCompleteDropdownRunnable(popupWindow));
-								} else {
-									recorder.writeRecord(Constants.EventTags.CREATE_POPUP_WINDOW, "create popup window");
-									instrumentation.runOnMainSync(new InterceptPopupWindowRunnable(popupWindow));
-								}		
+								if (windowAndView.mWindow != viewInterceptor.getCurrentFloatingWindow()) {
+									if (windowAndView.mView instanceof ViewGroup) {
+										ViewGroup vg = (ViewGroup) windowAndView.mView;
+										if (vg.getChildCount() > 0) {
+											View vChild = vg.getChildAt(0);
+											viewInterceptor.setCurrentFloatingWindow(windowAndView.mWindow);
+											recorder.writeRecord(Constants.EventTags.CREATE_FLOATING_WINDOW, "create floating window");
+											instrumentation.runOnMainSync(new InterceptViewRunnable(vChild));
+										}
+									}
+								}
 							}
 						}
 					} 
@@ -222,11 +263,11 @@ public class SetupListeners {
 	 * @throws ClassNotFoundException
 	 */
 	public boolean isPopupDialogForSpinner(Dialog dialog, Spinner spinner) throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
-		Object spinnerPopup = FieldUtils.getFieldValue(spinner, Spinner.class, Constants.Fields.POPUP);
+		Object spinnerPopup = ReflectionUtils.getFieldValue(spinner, Spinner.class, Constants.Fields.POPUP);
 		if (spinnerPopup != null) {
 			Class spinnerDialogPopupClass = Class.forName(Constants.Classes.SPINNER_DIALOG_POPUP);
 			if (spinnerDialogPopupClass.equals(spinnerPopup.getClass())) {
-				Object spinnerPopupPopup = FieldUtils.getFieldValue(spinnerPopup, spinnerDialogPopupClass, Constants.Fields.POPUP);
+				Object spinnerPopupPopup = ReflectionUtils.getFieldValue(spinnerPopup, spinnerDialogPopupClass, Constants.Fields.POPUP);
 				return spinnerPopupPopup == dialog;
 			}
 		}
@@ -306,6 +347,46 @@ public class SetupListeners {
 			if (contentView != null && !(contentView instanceof MagicFrame)) {
 				MagicFramePopup magicFramePopup = new MagicFramePopup(contentView.getContext(), mPopupWindow, mRecorder, mViewInterceptor);
 				SetupListeners.this.getViewInterceptor().interceptPopupWindow(mPopupWindow);
+			}
+		}
+	}
+
+	/**
+	 * same, except for intercepting "popup" windows
+	 */
+	protected class InterceptWindowRunnable implements Runnable {
+		protected Window mWindow;
+		
+		public InterceptWindowRunnable(Window window) {
+			mWindow = window;
+		}
+		
+		public void run() {
+			ViewGroup decorView = (ViewGroup) mWindow.getDecorView();
+			ViewGroup contentView = (ViewGroup) decorView.getChildAt(0);		
+			if (contentView != null && !(contentView instanceof MagicFrame)) {
+				MagicFrame magic = new MagicFrame(contentView.getContext(), contentView, 0, mRecorder, mViewInterceptor);
+				SetupListeners.this.getViewInterceptor().intercept(contentView);
+			}
+		}
+	}
+	
+	/**
+	 * same, except for just views.
+	 * @author matt2
+	 *
+	 */
+	protected class InterceptViewRunnable implements Runnable {
+		protected View mView;
+		
+		public InterceptViewRunnable(View view) {
+			mView = view;
+		}
+		
+		public void run() {
+			if (mView != null && !(mView instanceof MagicFrame)) {
+				MagicFrame magic = new MagicFrame(mView.getContext(), mView, 0, mRecorder, mViewInterceptor);
+				SetupListeners.this.getViewInterceptor().intercept(mView);
 			}
 		}
 	}

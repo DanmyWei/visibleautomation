@@ -10,9 +10,10 @@ import android.widget.AdapterView;
 import android.widget.ExpandableListView;
 
 /**
- *  record item clicks for listviews
+ *  record item clicks for expandable list views (group expansion), since android doesn't fire onItemClick() and
+ *  stuff lie that. Bad llama
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class RecordOnGroupClickListener extends RecordListener implements ExpandableListView.OnGroupClickListener, IOriginalListener  {
 	protected ExpandableListView.OnGroupClickListener	mOriginalGroupClickListener;

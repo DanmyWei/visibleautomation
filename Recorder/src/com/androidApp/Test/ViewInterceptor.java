@@ -8,6 +8,7 @@ import java.util.List;
 import android.app.ActionBar;
 import android.app.Activity;
 import android.app.Dialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -39,6 +40,7 @@ import com.androidApp.EventRecorder.UserDefinedViewReference;
 import com.androidApp.Intercept.InterceptActionBar;
 import com.androidApp.Intercept.MagicFrame;
 import com.androidApp.Listeners.FinishTextChangedListener;
+import com.androidApp.Listeners.InterceptOnHierarchyChangeListener;
 import com.androidApp.Listeners.RecordAutoCompleteDropdownOnDismissListener;
 import com.androidApp.Listeners.RecordDialogOnCancelListener;
 import com.androidApp.Listeners.RecordDialogOnDismissListener;
@@ -69,7 +71,7 @@ import com.androidApp.Utility.ViewExtractor;
 
 /**
  * class to install the interceptors in the view event listeners
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class ViewInterceptor {
 	protected static final String			TAG = "ViewInterceptor";
@@ -81,20 +83,51 @@ public class ViewInterceptor {
 	protected int							mLastKeyAction;						// so we can track dialog/popup/ime/activity dismiss from back/menu key					
 	private Dialog							mCurrentDialog = null;				// track the current dialog, so we don't re-record it.
 	private PopupWindow						mCurrentPopupWindow = null;			// current popup window, which is like the current dialog, but different
+	private Object							mCurrentFloatingWindow = null;		// for windows that are not popup windows
 	private View							mCurrentOptionsMenuView = null;		// current action menu window
 	private List<UserDefinedViewReference>	mMotionEventViewRefs;				// references to views which receive motion events
 	private List<View>						mMotionEventViews;
 	
-	public ViewInterceptor(EventRecorder eventRecorder) throws IOException, ClassNotFoundException, ReferenceException {
-		mEventRecorder = eventRecorder;
-		mLastKeyAction = -1;
-		InputStream is = ViewInterceptor.class.getResourceAsStream("/raw/motion_event_views.txt");
-		mMotionEventViewRefs = UserDefinedViewReference.readViewReferences(is);
+	private class InterceptInfo {
+		public View			mClickView;			// this view had its onClickListener set (or overrode onClick()), so don't bother anymore
+		public View			mTouchView;			// this view had its onTouchListener set (or overrode onTouch()), so don't bother anymore
+		public View			mLongClickView;		// this view had its onLongClickListener set
+		public AdapterView	mAdapterView;		// this adapter was found, so any child is now a child of an adapter.
+		public boolean		mfAdapterListens;	// the adapter listens to item click and item selected events.	
+		
+		public InterceptInfo() {
+			mClickView = null;
+			mTouchView = null;
+			mLongClickView = null;
+			mAdapterView = null;
+			mfAdapterListens = false;
+		}
 	}
 	
+	public ViewInterceptor(EventRecorder eventRecorder, IRecordTest recordTest) throws IOException, ClassNotFoundException, ReferenceException {
+		mEventRecorder = eventRecorder;
+		mLastKeyAction = -1;
+		try {
+			InputStream is = ViewInterceptor.class.getResourceAsStream("/raw/motion_event_views.txt");
+			mMotionEventViewRefs = UserDefinedViewReference.readViewReferences(is);
+			List<UserDefinedViewReference> addedMotionEventViewRefs = recordTest.getMotionEventViewReferences();
+			if (addedMotionEventViewRefs != null) {
+				mMotionEventViewRefs.addAll(addedMotionEventViewRefs);
+			}
+		} catch (Exception ex) {
+			Log.i(TAG, "no view references were specified to accept motion events");
+		}
+	}
+	
+	/**
+	 * given an activity, recurse its views to find any that we should listen
+	 * @param a
+	 */
 	public void findMotionEventViews(Activity a) {
-		List<UserDefinedViewReference> activityReferences = UserDefinedViewReference.filterReferencesInActivity(a, mMotionEventViewRefs);
-		mMotionEventViews = UserDefinedViewReference.getMatchingViews(a, activityReferences);
+		if (mMotionEventViewRefs != null) {
+			List<UserDefinedViewReference> activityReferences = UserDefinedViewReference.filterReferencesInActivity(a, mMotionEventViewRefs);
+			mMotionEventViews = UserDefinedViewReference.getMatchingViews(a, activityReferences);
+		}
 	}
 	
 	// accessors/mutator for focused view for IME display/remove event
@@ -130,20 +163,32 @@ public class ViewInterceptor {
 		return mCurrentPopupWindow;
 	}
 	
-	public View getCurrentOptionsMenuView() {
-		return mCurrentOptionsMenuView;
-	}
-	
-	public void setCurrentOptionsMenuView(View view) {
-		mCurrentOptionsMenuView = view;
-	}
-	
 	/**
 	 * set the current popup window
 	 * @param popupWindow
 	 */
 	public void setCurrentPopupWindow(PopupWindow popupWindow) {
 		mCurrentPopupWindow = popupWindow;
+	}
+	
+	/**
+	 * get and set the current floating window
+	 * @return
+	 */
+	public Object getCurrentFloatingWindow() {
+		return mCurrentFloatingWindow;
+	}
+
+	public void setCurrentFloatingWindow(Object window) {
+		mCurrentFloatingWindow = window;
+	}
+	
+	public View getCurrentOptionsMenuView() {
+		return mCurrentOptionsMenuView;
+	}
+	
+	public void setCurrentOptionsMenuView(View view) {
+		mCurrentOptionsMenuView = view;
 	}
 			
 	
@@ -185,50 +230,51 @@ public class ViewInterceptor {
 	 */
 	public void replaceListeners(View v) {
 		try {
-			// adapterViews don't like click listeners, they like item click listeners.
-			if (!(v instanceof AdapterView)) {
-				if (v instanceof WebView) {
-					replaceWebViewListeners(v);
-				} else {
-					if (!TestUtils.isAdapterViewAncestor(v) && 
-						!TestUtils.shouldBeIgnored(v) &&
-						!TestUtils.isInTabControl(v)) {
-						replaceViewListeners(v);
-					}
-				}
-				
-				// specific handlers for seekbars/progress bars/etc.
-				if (v instanceof SeekBar) {
-					SeekBar seekBar = (SeekBar) v;
-					replaceSeekBarListeners(seekBar);
-				}
-				if (v instanceof TabHost) {
-					TabHost tabHost = (TabHost) v;
-					replaceTabHostListeners(tabHost);
-				}
+			if (v instanceof WebView) {
+				replaceWebViewListeners(v);
 			} else {
-				if (v instanceof AdapterView) {
-					if (v instanceof Spinner) {
-						Spinner spinner = (Spinner) v;
-						replaceSpinnerListeners(spinner);
-					} else {
-						AdapterView adapterView = (AdapterView) v;
-						if (!isSpinnerDropdownList(adapterView)) {
-							replaceAdapterViewListeners(adapterView);
-						}
-						// expandable list views are a special case.
-						if (adapterView instanceof ExpandableListView) {
-							ExpandableListView expandableListView = (ExpandableListView) adapterView;
-							replaceExpandableListVewListeners(expandableListView);
-						}
-						if (TestUtils.listenMotionEvents(mMotionEventViews, v)) {
-							replaceTouchListener(v);
-						}
+				if (!TestUtils.shouldBeIgnored(v) &&
+					!TestUtils.isInTabControl(v)) {
+					replaceViewListeners(v);
+				}
+			}
+			
+			// specific handlers for seekbars/progress bars/etc.
+			if (v instanceof SeekBar) {
+				SeekBar seekBar = (SeekBar) v;
+				replaceSeekBarListeners(seekBar);
+			}
+			if (v instanceof TabHost) {
+				TabHost tabHost = (TabHost) v;
+				replaceTabHostListeners(tabHost);
+			}
+			
+			// adapter view cases
+			if (v instanceof AdapterView) {
+				AdapterView adapterView = (AdapterView) v;
+				replaceHierarchyChangeListener(adapterView);
+				if (v instanceof Spinner) {
+					Spinner spinner = (Spinner) v;
+					replaceSpinnerListeners(spinner);
+				} else {
+					if (!isSpinnerDropdownList(adapterView)) {
+						replaceAdapterViewListeners(adapterView);
+					}
+					// expandable list views are a special case.
+					if (adapterView instanceof ExpandableListView) {
+						ExpandableListView expandableListView = (ExpandableListView) adapterView;
+						replaceExpandableListVewListeners(expandableListView);
+					}
+					if (TestUtils.listenMotionEvents(mMotionEventViews, v)) {
+						replaceTouchListener(v);
 					}
 				}
 			}
 			if (v instanceof EditText) {
 				TextView tv = (TextView) v;
+				if (tv.hasFocus()) {
+					setFocusedView(tv);
+				}
 				replaceEditTextListeners(tv);
 			}
 		} catch (Exception ex) {
@@ -250,11 +296,20 @@ public class ViewInterceptor {
 	 * @throws NoSuchFieldException
 	 */
 	public boolean replaceTouchListener(View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
-		View.OnTouchListener originalTouchListener = ListenerIntercept.getTouchListener(v);
-		if (!(originalTouchListener instanceof RecordOnTouchListener)) {
-			RecordOnTouchListener recordTouchListener = new RecordOnTouchListener(mEventRecorder, originalTouchListener);
-			v.setOnTouchListener(recordTouchListener);
-			return true;
+		
+		// if an ancestor has a click listener, then this view should not have one.
+		if (!RecordOnTouchListener.hasAncestorListenedToTouch(v)) {
+			View.OnTouchListener originalTouchListener = ListenerIntercept.getTouchListener(v);
+			
+			// only install the click listener if the view has overridden the onTouch() method, or has an OnTouchListener()
+			// or it's a primitive widget.
+			if (RecordOnTouchListener.hasOverriddenOnTouchMethod(v) || (originalTouchListener != null) || (!(v instanceof ViewGroup))) {
+				if (!(originalTouchListener instanceof RecordOnTouchListener)) {
+					RecordOnTouchListener recordTouchListener = new RecordOnTouchListener(mEventRecorder, originalTouchListener);
+					v.setOnTouchListener(recordTouchListener);
+					return true;
+				}
+			}
 		}
 		return false;
 	}
@@ -262,16 +317,92 @@ public class ViewInterceptor {
 	/**
 	 * replace this view's click listener
 	 * @param v view to replace listener for 
-	 * @return
+	 * @return true if a recording listener was set
 	 * @throws IllegalAccessException
 	 * @throws ClassNotFoundException
 	 * @throws NoSuchFieldException
 	 */
 	public boolean replaceClickListener(View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
-		View.OnClickListener originalClickListener = ListenerIntercept.getClickListener(v);
-		if (!(originalClickListener instanceof RecordOnClickListener)) {
-			RecordOnClickListener recordClickListener = new RecordOnClickListener(mEventRecorder, originalClickListener);
-			v.setOnClickListener(recordClickListener);
+		
+		// if an ancestor has a click listener, then this view should not have one.
+		if (!RecordOnClickListener.hasAncestorListenedToClick(v)) {
+			View.OnClickListener originalClickListener = ListenerIntercept.getClickListener(v);
+			
+			// only install the click listener if the view has overridden the onClick() method, or has an OnClickListener()
+			// or it's a primitive widget.  If the widget is a child of an adapter view, we can only override the click event
+			// if the adapter does not have a item click listener of its own and is just used for layout.
+			AdapterView adapterView = (AdapterView) TestUtils.getDescendantOfClass(v, AdapterView.class);
+			if (RecordOnClickListener.hasOverriddenOnClickMethod(v) || 
+				(originalClickListener != null) || 
+				(!(v instanceof ViewGroup) && ((adapterView == null) || !TestUtils.adapterHasListeners(adapterView)))) {
+				if (!(originalClickListener instanceof RecordOnClickListener)) {
+					RecordOnClickListener recordClickListener = new RecordOnClickListener(mEventRecorder, originalClickListener);
+					v.setOnClickListener(recordClickListener);
+					Log.i(TAG, "setting click listener for " + v + " " + RecordListener.getDescription(v));
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * replace the view's long click listener
+	 * @param v
+	 * @return
+	 * @throws IllegalAccessException
+	 * @throws ClassNotFoundException
+	 * @throws NoSuchFieldException
+	 */
+	public boolean replaceLongClickListener(View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {	
+		// if an ancestor has a click listener, then this view should not have one.
+		if (!RecordOnLongClickListener.hasAncestorListenedToLongClick(v)) {
+			View.OnLongClickListener originalLongClickListener = ListenerIntercept.getLongClickListener(v);
+			
+			// we do a null check here, because LongClick isn't handled by an overridden view method,
+			// only with a listener class
+			if ((originalLongClickListener != null) && !(originalLongClickListener instanceof RecordOnLongClickListener)) {
+				RecordOnLongClickListener recordLongClickListener = new RecordOnLongClickListener(mEventRecorder, originalLongClickListener);
+				v.setOnLongClickListener(recordLongClickListener);
+				return true;
+			}
+		}
+		return false;		
+	}
+
+	/**
+	 * replace the key listener for this view (NOTE: is this just the hardware key?
+	 * 
+	 * @param v
+	 * @return
+	 * @throws IllegalAccessException
+	 * @throws ClassNotFoundException
+	 * @throws NoSuchFieldException
+	 */
+	public boolean replaceKeyListener(View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {	
+		View.OnKeyListener originalKeyListener = ListenerIntercept.getKeyListener(v);
+		if ((originalKeyListener != null) && !(originalKeyListener instanceof RecordOnKeyListener)) {
+			RecordOnKeyListener recordKeyListener = new RecordOnKeyListener(mEventRecorder, originalKeyListener);
+			v.setOnKeyListener(recordKeyListener);
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * since adapters don't fire the layout listener when views are added or recycled, we have to intercept
+	 * their view hierarchy change
+	 * @param vg
+	 * @return
+	 * @throws IllegalAccessException
+	 * @throws ClassNotFoundException
+	 * @throws NoSuchFieldException
+	 */
+	public boolean replaceHierarchyChangeListener(ViewGroup vg) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {	
+		ViewGroup.OnHierarchyChangeListener originalHierarchyChangeListener = ListenerIntercept.getOnHierarchyChangeListener(vg);
+		if (!(originalHierarchyChangeListener instanceof InterceptOnHierarchyChangeListener)) {
+			InterceptOnHierarchyChangeListener interceptHierarchyChangeListener = new InterceptOnHierarchyChangeListener(mEventRecorder, this, originalHierarchyChangeListener);
+			vg.setOnHierarchyChangeListener(interceptHierarchyChangeListener);
 			return true;
 		}
 		return false;
@@ -314,23 +445,11 @@ public class ViewInterceptor {
 	 */
 	public void replaceViewListeners(View v) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
 		replaceClickListener(v);
-		View.OnLongClickListener originalLongClickListener = ListenerIntercept.getLongClickListener(v);
-		if (!(originalLongClickListener instanceof RecordOnClickListener)) {
-			RecordOnLongClickListener recordLongClickListener = new RecordOnLongClickListener(mEventRecorder, originalLongClickListener);
-			v.setOnLongClickListener(recordLongClickListener);
-		}
+		//replaceLongClickListener(v);
 		if (TestUtils.listenMotionEvents(mMotionEventViews, v)) {
-			View.OnTouchListener originalTouchListener = ListenerIntercept.getTouchListener(v);
-			if (!(originalTouchListener instanceof RecordOnTouchListener)) {
-				RecordOnTouchListener recordTouchListener = new RecordOnTouchListener(mEventRecorder, originalTouchListener);
-				v.setOnTouchListener(recordTouchListener);
-			}
+			replaceTouchListener(v);
 		}
-		View.OnKeyListener originalKeyListener = ListenerIntercept.getKeyListener(v);
-		if ((originalKeyListener != null) && !(originalKeyListener instanceof RecordOnKeyListener)) {
-			RecordOnKeyListener recordKeyListener = new RecordOnKeyListener(mEventRecorder, originalKeyListener);
-			v.setOnKeyListener(recordKeyListener);
-		}
+		// replaceKeyListener(v);
 	}
 	
 	/**
@@ -452,6 +571,7 @@ public class ViewInterceptor {
 	 * @param v view to recurse from.
 	 */
 	public void intercept(View v) {
+		// TEMPORARY
 		replaceListeners(v);
 		try {
 			if (v instanceof ViewGroup) {
@@ -700,5 +820,64 @@ public class ViewInterceptor {
 			}
 		}
 	}
-
-}
+	
+	
+	/**
+	 * handy runnable to intercept listeners on views.  Sometimes, we intercept an event, such as a child
+	 * added to a listview, but we actually want to perform the interception later, so 
+	 * @author matt2
+	 *
+	 */
+	public class InterceptViewRunnable implements Runnable {
+		protected View mView;
+		
+		public InterceptViewRunnable(View v) {
+			mView = v;
+		}
+		
+		public void run() {
+			ViewInterceptor.this.intercept(mView);
+		}
+	}
+	
+	public class RunUIQueuedRunnable implements Runnable {
+		protected Activity	mActivity;
+		protected Runnable 	mTargetRunnable;
+		
+		public RunUIQueuedRunnable(Activity activity, Runnable targetRunnable) {
+			mActivity = activity;
+			mTargetRunnable = targetRunnable;
+		}
+		
+		public void run() {
+			mActivity.runOnUiThread(mTargetRunnable);
+		}
+	}
+	
+	/**
+	 * create a background thread just to force the UI to run this in its run queue as opposed to immediately
+	 * if we're calling from the UI thread
+	 * @param runnable
+	 */
+	public void runDeferred(Activity activity, Runnable runnable) {
+		Thread backgroundThread = new Thread(new RunUIQueuedRunnable(activity, runnable));
+		backgroundThread.start();
+	}
+	
+	/**
+	 * variant which takes a view, rather than an activity, since an activity may not be in scope.s
+	 * @param v
+	 * @param runnable
+	 */
+	public boolean runDeferred(View v, Runnable runnable) {
+		Context c = v.getContext();
+		if (c instanceof Activity) {
+			Activity a = (Activity) c;
+			runDeferred(a, runnable);
+			return true;
+		} else {
+			Log.e(TAG, "run deferred called from view not part of an activity " + v);
+			return false;
+		}
+	}
+ }

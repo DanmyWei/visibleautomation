@@ -4,7 +4,7 @@ import android.view.View.OnFocusChangeListener;
 import android.widget.EditText;
 
 /** TODO: defunct: remove this class
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class InterceptFocusChangeListener implements OnFocusChangeListener {
 	protected EditText		mInterceptKeyView;

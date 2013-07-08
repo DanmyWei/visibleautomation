@@ -5,7 +5,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
+import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.ReflectionUtils;
 
 import android.view.View;
 import android.view.View.OnAttachStateChangeListener;
@@ -20,12 +22,13 @@ import android.view.View.OnLayoutChangeListener;
 import android.view.View.OnLongClickListener;
 import android.view.View.OnSystemUiVisibilityChangeListener;
 import android.view.View.OnTouchListener;
+import android.view.ViewParent;
 
 /**
  * recorder for view click events. This is probably called more than anything else in the world
  * TODO: This may be the cause of errors with toggle buttons
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  *
  */
 public class RecordOnClickListener extends RecordListener implements View.OnClickListener, IOriginalListener  {
@@ -108,5 +111,60 @@ public class RecordOnClickListener extends RecordListener implements View.OnClic
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * if an onCLickListener() is installed for a parent view, we should not install one for this view, since it
+	 * will prevent the parent one from getting fired
+	 * @param v
+	 * @return true if a parent has a click listener
+	 * @throws NoSuchFieldException exceptions thrown from Reflection utilities.
+	 * @throws IllegalAccessException
+	 * @throws ClassNotFoundException
+	 */
+	public static boolean hasAncestorListenedToClick(View v)  throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
+		if (v.getParent() instanceof View) {
+			v = (View) v.getParent();
+			while (v != v.getRootView()) {
+				OnClickListener onClickListener = (OnClickListener) ListenerIntercept.getClickListener(v);
+				// the parent's original click listener was stored in the record listener.  if the click listener
+				// hasn't been interecepted, then it will be
+				if (onClickListener != null) {
+					if (onClickListener instanceof RecordOnClickListener) {
+						if (((IOriginalListener) onClickListener).getOriginalListener() != null) {
+							return true;
+						}
+					} else {
+						return true;
+					}
+				}
+				
+				// if the parent overrode onClick(), then it will listen to the click events.
+				if (hasOverriddenOnClickMethod(v)) {
+					return true;
+				}
+				ViewParent vp = v.getParent();
+				if (vp instanceof View) {
+					v = (View) vp;
+				} else {
+					break;
+				}
+			}
+		}
+		return false;
+	}
+	
+	/**
+	 * has this view overridden the onClick() method?  if so, we're interested in recording its click events
+	 * @param v view to interrogate
+	 * @return
+	 */
+	public static boolean hasOverriddenOnClickMethod(View v) {
+		Class classWithOnClickMethod = ReflectionUtils.getClassForMethod(v, Constants.Methods.ON_CLICK);
+		if (classWithOnClickMethod != null) {
+			return !ViewReference.isAndroidClass(classWithOnClickMethod);
+		} else {
+			return false;
+		}
 	}
 }

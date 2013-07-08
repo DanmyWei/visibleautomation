@@ -13,7 +13,7 @@ import android.view.View;
 /**
  * utilities to access and set fields in objects via reflection
  * @author Matthew
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class ReflectionUtils {
 	protected final static String TAG = "ReflectionUtils";
@@ -100,6 +100,15 @@ public class ReflectionUtils {
 		return false;
 	}
 
+	/**
+	 * Given an object and a class, return all the fields in that class and any object that it contains which
+	 * are of that class (used only in testing, this should not be in the shipped product).  
+	 * It uses a "breadcrumb trail" to prevent circular references, but I've not tested it in practices
+	 * @param o
+	 * @param c
+	 * @return
+	 * @throws IllegalAccessException
+	 */
 	public static List<String> getMatchingFieldsByTypeRecursively(Object o, Class c) throws IllegalAccessException {
 		Stack<Class> breadcrumb = new Stack<Class>();
 		breadcrumb.push(o.getClass());
@@ -147,5 +156,29 @@ public class ReflectionUtils {
 		Method method = cls.getDeclaredMethod(methodName, parameterTypes);
 		Boolean b = (Boolean) method.invoke(object, args);
 		return b.booleanValue();
+	}
+	
+	/**
+	 * given a method name, find the class in which it is defined.  This is used to find the first ancestor which
+	 * defines this method.  For example, we want to find out if someone overrode the android onClick() method to 
+	 * determine if we want to attach an OnClickListener to this object
+	 * @param object object to search up from
+	 * @param methodName name of the method
+	 * @param types for the method parameters.
+	 * @return
+	 */
+	public static Class getClassForMethod(Object object, String methodName, Class ... methodParameters) {
+		Class c = object.getClass();
+		while (c != Object.class) {
+			try {
+				Method method = c.getDeclaredMethod(methodName, methodParameters);
+				if (method != null) {
+					return c;
+				}
+			} catch (NoSuchMethodException nsmex) {
+			}
+			c = c.getSuperclass();
+		}
+		return null;
 	}
 }

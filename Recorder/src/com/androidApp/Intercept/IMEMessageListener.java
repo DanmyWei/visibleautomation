@@ -17,7 +17,7 @@ import android.view.KeyEvent;
 /**
  * listen for up/down messages from our custom IME.
  * @author matthew
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class IMEMessageListener implements Runnable {
 	public static final String 	TAG = "IMEMessageListener";
@@ -25,8 +25,9 @@ public class IMEMessageListener implements Runnable {
 	public static final int 	CONNECT_TIMEOUT = 10000;
 	public static final int 	READ_TIMEOUT = 1000;
 	public static final int 	MAXMSG = 1024;
-	public static final String 	HIDE_IME = "hide_ime";
+	public static final String 	HIDE_IME = "hide_ime";							// messages sent from the custom soft keyboard
 	public static final String 	SHOW_IME = "show_ime";
+	public static final String  HIDE_IME_BACK_KEY = "hide_ime_back_key";
 	protected static boolean 	sfTerminate;					// terminate loop flag.
 	protected boolean 			mfKeyboardVisible = false;		// flag for IME visibility to others may ask
 	protected ViewInterceptor	mViewInterceptor;				// maintains currently focused view.
@@ -71,20 +72,27 @@ public class IMEMessageListener implements Runnable {
 					String msg = new String(buffer);
 					msg = msg.substring(0, numBytes);
 					mfKeyboardVisible = msg.equals(SHOW_IME);
-					if (mfKeyboardVisible) {
-						mEventRecorder.writeRecord(Constants.EventTags.SHOW_IME, mViewInterceptor.getFocusedView(), "IME displayed");
-					} else {
-		                if (mViewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_BACK) {
-		                    mEventRecorder.writeRecord(Constants.EventTags.HIDE_IME_BACK_KEY, mViewInterceptor.getFocusedView(), "IME hidden by back key pressed");
-		                    mViewInterceptor.setLastKeyAction(-1);
-		                } else {
-		                    mEventRecorder.writeRecord(Constants.EventTags.HIDE_IME, mViewInterceptor.getFocusedView(), "IME hidden");
-		                }
+					if (msg.equals(SHOW_IME)) {
+						/* sometimes we get multiple show_ime messages from the keyboard: TODO: make sure that it only sends
+						 * a show_ime message if it's transitioning from gone to visible.  (see SoftKeyboard.onShowInputRequested())
+						 * this flag-tracking method in a different process is a certain way to have state management issues.
+						 */
+						if (!mfKeyboardVisible) {
+							mEventRecorder.writeRecord(Constants.EventTags.SHOW_IME, mViewInterceptor.getFocusedView(), "IME displayed");
+						}
+						mfKeyboardVisible = true;
+					} else if (msg.equals(HIDE_IME)) {
+						if (mfKeyboardVisible) {	// see comment above
+							mEventRecorder.writeRecord(Constants.EventTags.HIDE_IME, mViewInterceptor.getFocusedView(), "IME hidden");
+						}
+						mfKeyboardVisible = false;
+					} else if (msg.equals(HIDE_IME_BACK_KEY)) {
+	                    mEventRecorder.writeRecord(Constants.EventTags.HIDE_IME_BACK_KEY, mViewInterceptor.getFocusedView(), "IME hidden by back key pressed");
+	                    mViewInterceptor.setLastKeyAction(-1);
+						mfKeyboardVisible = false;
 					}
-				}
-					
-			}
-			
+				}	
+			}	
 		} catch (Exception ex) {
 			Log.e(TAG, "an error occurred while trying to connect to the SoftKeyboard TCP listener " + ex.getMessage());
 			ex.printStackTrace();

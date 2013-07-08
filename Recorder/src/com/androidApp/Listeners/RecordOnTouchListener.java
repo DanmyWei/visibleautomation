@@ -6,19 +6,22 @@ import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.ReflectionUtils;
 
 
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewParent;
+import android.view.View.OnTouchListener;
 
 /**
  *  View.onTouchListener that listens to key events, and writes them to a file.
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  *
  */
-public class RecordOnTouchListener extends RecordListener implements View.OnTouchListener, IOriginalListener  {
-	protected View.OnTouchListener 	mOriginalOnTouchListener;
+public class RecordOnTouchListener extends RecordListener implements OnTouchListener, IOriginalListener  {
+	protected OnTouchListener 	mOriginalOnTouchListener;
 	protected boolean				mFirstEventFired;				// in ViewGroups, the listener does not receive ACTION_DOWN events.
 	
 	public RecordOnTouchListener(EventRecorder eventRecorder, View v) {
@@ -32,7 +35,7 @@ public class RecordOnTouchListener extends RecordListener implements View.OnTouc
 		}		
 	}
 	
-	public RecordOnTouchListener(EventRecorder eventRecorder, View.OnTouchListener originalTouchListener) {
+	public RecordOnTouchListener(EventRecorder eventRecorder, OnTouchListener originalTouchListener) {
 		super(eventRecorder);
 		mOriginalOnTouchListener = originalTouchListener;
 		mFirstEventFired = true;
@@ -60,6 +63,8 @@ public class RecordOnTouchListener extends RecordListener implements View.OnTouc
 					eventName = Constants.EventTags.TOUCH_UP;
 				} else if (event.getAction() == MotionEvent.ACTION_MOVE) {
 					eventName = Constants.EventTags.TOUCH_MOVE;
+				} else if (event.getAction() == MotionEvent.ACTION_CANCEL) {
+					eventName = Constants.EventTags.TOUCH_CANCEL;
 				}
 				
 				String description = getDescription(v);
@@ -87,5 +92,62 @@ public class RecordOnTouchListener extends RecordListener implements View.OnTouc
 		}
 		setEventBlock(false);
 		return fConsumeEvent;
+	}
+	
+
+	/**
+	 * if an onTouchListener() is installed for a parent view, we should not install one for this view, since it
+	 * will prevent the parent one from getting fired
+	 * @param v
+	 * @return true if a parent has a Touch listener
+	 * @throws NoSuchFieldException exceptions thrown from Reflection utilities.
+	 * @throws IllegalAccessException
+	 * @throws ClassNotFoundException
+	 */
+	public static boolean hasAncestorListenedToTouch(View v)  throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
+		if (v.getParent() instanceof View) {
+			v = (View) v.getParent();
+			while (v != v.getRootView()) {
+				OnTouchListener onTouchListener = (OnTouchListener) ListenerIntercept.getTouchListener(v);
+				// the parent's original Touch listener was stored in the record listener.  if the Touch listener
+				// hasn't been interecepted, then it will be
+				if (onTouchListener != null) {
+					if (onTouchListener instanceof RecordOnTouchListener) {
+						if (((IOriginalListener) onTouchListener).getOriginalListener() != null) {
+							return true;
+						}
+					} else {
+						return true;
+					}
+				}
+				
+				// if the parent overrode onTouch(), then it will listen to the Touch events.
+				if (hasOverriddenOnTouchMethod(v)) {
+					return true;
+				}
+				ViewParent vp = v.getParent();
+				if (vp instanceof View) {
+					v = (View) vp;
+				} else {
+					break;
+				}
+			}
+		}
+		return false;
+	}
+
+	
+	/**
+	 * has this view overridden the onTouch() method?  if so, we're interested in recording its touch events
+	 * @param v view to interrogate
+	 * @return
+	 */
+	public static boolean hasOverriddenOnTouchMethod(View v) {
+		Class classWithOnTouchMethod = ReflectionUtils.getClassForMethod(v, Constants.Methods.ON_TOUCH);
+		if (classWithOnTouchMethod != null) {
+			return !ViewReference.isAndroidClass(classWithOnTouchMethod);
+		} else {
+			return false;
+		}
 	}
 }

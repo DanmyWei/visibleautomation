@@ -18,10 +18,9 @@ import android.widget.PopupWindow;
 import android.widget.Toast;
 
 /**
- * window.callback record function to intercept stuff like back and home key events.  TODO: see if this cn be applied
- * universally
+ * window.callback record function to intercept stuff like back and home key events.  TODO: see if this can be applieduniversally
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  *
  */
 public class RecordWindowCallback extends RecordListener implements Window.Callback, IOriginalListener {

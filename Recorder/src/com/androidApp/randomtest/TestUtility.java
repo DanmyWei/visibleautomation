@@ -15,7 +15,7 @@ import android.widget.AbsListView;
 /**
  * grab bag of utility functions to support the random test framework
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  *
  */
 public class TestUtility {

@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import com.androidApp.Intercept.MagicFramePopup;
 import com.androidApp.Test.R;
 
 import android.app.Activity;
@@ -34,7 +35,7 @@ import android.widget.Gallery;
 /**
  * grab-bag of utilities to extract views from the android view tree.
  * @author Matthew
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class TestUtils {
 	private static final String TAG = "TestUtils";
@@ -439,7 +440,7 @@ public class TestUtils {
 		if (vRoot == v) {
 			return true;
 		}
-		if (vRoot.getClass() == cls) {
+		if (cls.isAssignableFrom(vRoot.getClass()) && vRoot.isShown()) {
 			target.mCountSoFar++;
 		}
 		if (vRoot instanceof ViewGroup) {
@@ -520,6 +521,34 @@ public class TestUtils {
 		return isDescendentOfClass(vp, v.getRootView(), AdapterView.class);
 	}
 	
+	/**
+	 * return the descendent of v whose type derives from c
+	 * @param v
+	 * @param c
+	 * @return
+	 */
+	public static View getDescendantOfClass(View v, Class<? extends View> c) {
+		return getDescendantOfClass(v.getParent(), v.getRootView(), c);
+	}
+	
+	public static View getDescendantOfClass(ViewParent vp, View rootView, Class<? extends View> c) {
+		if ((vp == null) || (vp == rootView)) {
+			return null;
+		} else if (c.isAssignableFrom(vp.getClass())) {
+			return (View) vp;
+		} else {
+			return getDescendantOfClass(vp.getParent(), rootView, c);
+		}
+	}	
+	
+	/**
+	 * does this list view have any listeners?
+	 * @param av
+	 * @return
+	 */
+	public static boolean adapterHasListeners(AdapterView av) {
+		return (av.getOnItemClickListener() != null) || (av.getOnItemSelectedListener() != null);
+	}
 	
 	/**
 	 * low-level events to this object should be ignored
@@ -601,6 +630,7 @@ public class TestUtils {
 					return false;
 				}
 			}
+			/*
 			if (v.canScrollHorizontally(-1)) {
 				return true;
 			}
@@ -613,6 +643,7 @@ public class TestUtils {
 			if (v.canScrollVertically(1)) {
 				return true;
 			}
+			*/
 		}
 		if (motionEventViewList != null) {
 			return motionEventViewList.contains(v);
@@ -835,9 +866,9 @@ public class TestUtils {
 	 * popup windows are slightly different than dialogs, so we have a separate path which polls for them
 	 * to set up in RecordTest
 	 * @param activity
-	 * @return
+	 * @return Object: because it can be a window or a popup window, and they don't inherit from each other
 	 */
-	public static PopupWindow findPopupWindow(Activity activity) {
+	public static WindowAndView findPopupWindow(Activity activity) {
 		try {
 			Class popupViewContainerClass = Class.forName(Constants.Classes.POPUP_VIEW_CONTAINER);
 			View[] views = ViewExtractor.getWindowDecorViews();
@@ -847,10 +878,13 @@ public class TestUtils {
 				// iterate through the set of decor windows.  The dialog may already have been presented.
 				for (int iView = 0; iView < numDecorViews; iView++) {
 					View v = views[iView];
-					if (TestUtils.isDialogOrPopup(activity, v)) {	
-						if (v.getClass() == popupViewContainerClass) {
-							PopupWindow popupWindow = (PopupWindow) ReflectionUtils.getFieldValue(v, popupViewContainerClass, Constants.Classes.THIS);
-							return popupWindow;
+					if (TestUtils.isDialogOrPopup(activity, v)) {
+						
+						// return null if we've already intercepted
+						if (!(v instanceof MagicFramePopup)) {
+							Object window = ReflectionUtils.getFieldValue(v, v.getClass(), Constants.Classes.THIS);
+							WindowAndView windowAndView = new WindowAndView(window, v);
+							return windowAndView;
 						}
 					}
 				}
@@ -901,6 +935,18 @@ public class TestUtils {
 	 */
 	public static boolean isPopupWindowEmpty(PopupWindow popupWindow) {
 		View contentView = popupWindow.getContentView();
+		ViewGroup contentViewGroup = (ViewGroup) contentView;
+		return contentViewGroup.getChildCount() == 0;
+	}
+	
+	/**
+	 * same, except for "window", not PopupWindow
+	 * @param window
+	 * @return
+	 */
+	public static boolean isWindowEmpty(Window window) {
+		ViewGroup decorView = (ViewGroup) window.getDecorView();
+		ViewGroup contentView = (ViewGroup) decorView.getChildAt(0);		
 		ViewGroup contentViewGroup = (ViewGroup) contentView;
 		return contentViewGroup.getChildCount() == 0;
 	}
@@ -1030,11 +1076,11 @@ public class TestUtils {
 	 * @throws ClassNotFoundException
 	 */
 	public static boolean isPopupDialogForSpinner(Dialog dialog, Spinner spinner) throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
-		Object spinnerPopup = FieldUtils.getFieldValue(spinner, Spinner.class, Constants.Fields.POPUP);
+		Object spinnerPopup = ReflectionUtils.getFieldValue(spinner, Spinner.class, Constants.Fields.POPUP);
 		if (spinnerPopup != null) {
 			Class spinnerDialogPopupClass = Class.forName(Constants.Classes.SPINNER_DIALOG_POPUP);
 			if (spinnerDialogPopupClass.equals(spinnerPopup.getClass())) {
-				Object spinnerPopupPopup = FieldUtils.getFieldValue(spinnerPopup, spinnerDialogPopupClass, Constants.Fields.POPUP);
+				Object spinnerPopupPopup = ReflectionUtils.getFieldValue(spinnerPopup, spinnerDialogPopupClass, Constants.Fields.POPUP);
 				return spinnerPopupPopup == dialog;
 			}
 		}

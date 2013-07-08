@@ -11,7 +11,7 @@ import android.widget.SeekBar;
 /**
  * record a change in a seekbar listener
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved. 
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class RecordSeekBarChangeListener extends RecordListener implements SeekBar.OnSeekBarChangeListener, IOriginalListener  {
 	protected SeekBar.OnSeekBarChangeListener 	mOriginalOnSeekBarChangeListener;

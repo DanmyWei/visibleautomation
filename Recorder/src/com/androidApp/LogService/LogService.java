@@ -22,7 +22,9 @@ import android.util.Log;
  * com.androidApp.test.log: write a log message to the specified file 
  * 		message: message to write
  * 		filename: filename to write to (on the /sdcard)
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
+ * TODO: we'll probably extend this to handle other requests that can't be done by instrumentation
+ * like setting flight mode and stuff
  */
 
 public class LogService extends IntentService {

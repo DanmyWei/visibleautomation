@@ -10,9 +10,9 @@ import android.widget.AdapterView;
 import android.widget.ExpandableListView;
 
 /**
- *  record item clicks for listviews
+ *  record item clicks for expandable list views, which expand and close groups
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class RecordOnChildClickListener extends RecordListener implements ExpandableListView.OnChildClickListener, IOriginalListener  {
 	protected ExpandableListView.OnChildClickListener	mOriginalChildClickListener;

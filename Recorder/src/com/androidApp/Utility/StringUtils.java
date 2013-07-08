@@ -12,7 +12,7 @@ import android.content.res.AssetManager;
 /**
  * grab bag of string utilties
  * @author Matthew
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class StringUtils {
 	
@@ -80,10 +80,34 @@ public class StringUtils {
 			char ch = s.charAt(ich);
 			if (escapeChars.indexOf(ch) != -1) {
 				sb.append(prefix);
+				sb.append(ch);
+			} else if (ch == '\n') {
+				sb.append("\n");
+			} else {
+				sb.append(ch);
 			}
-			sb.append(ch);
 		}
 		return sb.toString();
+	}
+	
+	/**
+	 * ellipsize a string
+	 * @param s string to ellipsize...
+	 * @param maxlenSpaces maximum length with spaces (not really, we start here)
+	 * @param maxlenNoSpaces maxmium length,really
+	 * @return ellipsized string...
+	 */
+	public static String ellipsizeString(String s, int maxlenSpaces, int maxlenNoSpaces) {
+		if (s.length() < maxlenNoSpaces) {
+			return s;
+		}
+		for (int ich = maxlenSpaces; ich < maxlenNoSpaces; ich++) {
+			char ch = s.charAt(ich);
+			if (Character.isWhitespace(ch) || (ch == '\n')) {
+				return s.substring(0, ich) + "...";
+			}
+		}
+		return s.substring(0, maxlenNoSpaces) + "...";
 	}
 
 	/**

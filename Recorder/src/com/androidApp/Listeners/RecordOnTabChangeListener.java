@@ -7,9 +7,9 @@ import com.androidApp.Utility.Constants;
 import android.widget.TabHost;
 
 /**
- * class for listening to action bar tab events
+ * class for listening to tab events (the old, non-actionbar style tab events)
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class RecordOnTabChangeListener extends RecordListener implements TabHost.OnTabChangeListener, IOriginalListener {
 	protected TabHost.OnTabChangeListener 	mOriginalTabListener;

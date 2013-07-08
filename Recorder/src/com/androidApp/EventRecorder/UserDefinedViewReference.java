@@ -19,6 +19,7 @@ import com.androidApp.Utility.Constants;
 /**
  * UserDefinedView Reference: used for identifying views for special treatment, such as motion events
  * views referenced by class, activity and class, activity class index, and activity and id.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  * @author matt2
  *
  */
@@ -171,10 +172,10 @@ public class UserDefinedViewReference {
 	
 	/**
 	 * same thing, except that a view is passed as well as the activity
-	 * @param activity
-	 * @param v
-	 * @param references
-	 * @return
+	 * @param activity activity to check against
+	 * @param v view to get reference for
+	 * @param references list of references to search against
+	 * @return list of matching views
 	 */
 	public static List<View> getMatchingViews(Activity activity, View v, List<UserDefinedViewReference> references) {
 		List<View> matchingViews = new ArrayList<View>();
@@ -186,10 +187,10 @@ public class UserDefinedViewReference {
 	/**
 	 * return the list of matching views
 	 * @param activity activity to match against
-	 * @param v
-	 * @param references
-	 * @param classTable
-	 * @param matchingViews
+	 * @param v (recursive) current view to check against
+	 * @param references list of references
+	 * @param classTable hashtable of classes and classcounts for fast reference
+	 * @param matchingViews (recursive) populate this list of views
 	 */
 	protected static void getMatchingViews(Activity activity,
 										   View v, 

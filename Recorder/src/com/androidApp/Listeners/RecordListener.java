@@ -3,6 +3,7 @@ package com.androidApp.Listeners;
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.FieldUtils;
+import com.androidApp.Utility.ReflectionUtils;
 import com.androidApp.Utility.StringUtils;
 import com.androidApp.Utility.TestUtils;
 import com.androidApp.Utility.ViewExtractor;
@@ -20,7 +21,7 @@ import android.widget.TextView;
 /**
  * base class for all listeners, implements common functions, retains reference to event recorder.
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  *
  */
 public class RecordListener {
@@ -106,14 +107,18 @@ public class RecordListener {
 		if (v instanceof TextView) {
 			TextView tv = (TextView) v;
 			if (tv.getText().length() > 0) {
-				return StringUtils.massageString(tv.getText().toString());
+				return StringUtils.ellipsizeString(StringUtils.massageString(tv.getText().toString()), 
+												   Constants.Sizes.MAX_TEXT_LEN, Constants.Sizes.REALLY_MAX_TEXT_LEN);
 			} else {
 				return Constants.Description.EMPTY_TEXT;
 			}
 		} else if (v instanceof ImageView) {
+			
+			// unfortunately, ImageViews don't retain the names of their bitmaps. That would be nice
 			return Constants.Description.IMAGE_VIEW;
 		} else if (v instanceof ViewGroup) {
 			ViewGroup vg = (ViewGroup) v;
+			// recurse over the children of the view group
 			StringBuffer sb = new StringBuffer();
 			for (int i = 0; i < vg.getChildCount(); i++) {
 				View vChild = vg.getChildAt(i);
@@ -130,10 +135,15 @@ public class RecordListener {
 					sb.append(getDescription(vChild));
 				}
 			}
+			
+			// if there was nothing of value, then just return this class name
 			if (sb.length() == 0) {
 				return v.getClass().getSimpleName();
 			} else {
-				return StringUtils.massageString(sb.toString());
+				
+				// beware of very long text...
+				return StringUtils.ellipsizeString(StringUtils.massageString(sb.toString()), 
+												   Constants.Sizes.MAX_TEXT_LEN, Constants.Sizes.REALLY_MAX_TEXT_LEN);
 			}
 		} else {
 			return v.getClass().getSimpleName();
@@ -145,14 +155,14 @@ public class RecordListener {
 		Dialog dialog = (Dialog) dialogInterface;
 		Window window = dialog.getWindow();
 		Class phoneWindowClass = Class.forName(Constants.Classes.PHONE_WINDOW);
-		String titleString = (String) FieldUtils.getFieldValue(window, phoneWindowClass, Constants.Fields.TITLE);
+		String titleString = (String) ReflectionUtils.getFieldValue(window, phoneWindowClass, Constants.Fields.TITLE);
 		if (titleString != null) {
 			return StringUtils.massageString(titleString);
 		} else {
 			View dialogView = window.getDecorView();
 			View dialogTitle = TestUtils.getChildByClassName(dialogView, Constants.Classes.DIALOG_TITLE_SIMPLE_NAME);
 			if (dialogTitle != null) {
-				titleString = (String) FieldUtils.getFieldValue(dialogTitle, TextView.class, Constants.Fields.TEXT);
+				titleString = (String) ReflectionUtils.getFieldValue(dialogTitle, TextView.class, Constants.Fields.TEXT);
 				if (!StringUtils.isEmpty(titleString)) {
 					return StringUtils.massageString(titleString);
 				} 

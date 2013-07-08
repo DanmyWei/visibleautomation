@@ -34,7 +34,7 @@ import android.widget.TextView;
 /**
  * random test generator, because I'm just way too lazy to sit there and poke at my device.
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  *
  */
 public class RandTest {

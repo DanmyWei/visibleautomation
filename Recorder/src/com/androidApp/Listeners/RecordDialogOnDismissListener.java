@@ -15,7 +15,7 @@ import android.widget.Spinner;
 /**
  * recorder wrapper to intercept dialog dismiss events
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 
 public class RecordDialogOnDismissListener extends RecordListener implements DialogInterface.OnDismissListener {
@@ -35,6 +35,10 @@ public class RecordDialogOnDismissListener extends RecordListener implements Dia
 		return mOriginalOnDismissListener;
 	}
 
+	/**
+	 * we check if the back key was recorded by the magic frame, and record that it was caused by the 
+	 * user pressing the back key, since dismiss can happen programmatically as well.
+	 */
 	public void onDismiss(DialogInterface dialog) {
 		boolean fReentryBlock = getReentryBlock();
 		if (!RecordListener.getEventBlock()) {

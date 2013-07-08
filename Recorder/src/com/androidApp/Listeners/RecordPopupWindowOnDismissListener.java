@@ -14,7 +14,7 @@ import android.view.View;
  * We have an exception case for popupWindows created by spinners, so the emitter can generate
  * autocomplete and other custom widget-specific code.
  * @author mattrey
- *Copyright (c) 2013 Matthew Reynods.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 
 public class RecordPopupWindowOnDismissListener extends RecordListener implements PopupWindow.OnDismissListener, IOriginalListener  {
@@ -50,6 +50,8 @@ public class RecordPopupWindowOnDismissListener extends RecordListener implement
 			try {
 				// clear the current popup window so it gets intercepted if it comes up again.
 				mViewInterceptor.setCurrentPopupWindow(null);
+				// differentiate between popups that have anchor views and popups that were dismissed using the 
+				// back key (recorded by MagicFrame)
 				if (mAnchorView == null) {
 					if (mViewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_BACK){
 						mEventRecorder.writeRecord(Constants.EventTags.DISMISS_POPUP_WINDOW_BACK_KEY, "dismiss popup window");					

@@ -13,7 +13,7 @@ import android.widget.PopupMenu;
 /**
  * recorder for popup menus menu item click
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  *
  */
 public class RecordPopupMenuOnMenuItemClickListener extends RecordListener implements PopupMenu.OnMenuItemClickListener, IOriginalListener  {
@@ -60,6 +60,14 @@ public class RecordPopupMenuOnMenuItemClickListener extends RecordListener imple
 		return false;
 	}
 
+	/**
+	 * can through the menuItem's parent menu to find the index of this menu item
+	 * @param menuItem target
+	 * @return target's index
+	 * @throws IllegalAccessException Exceptions thrown by ReflectionUtils
+	 * @throws NoSuchFieldException
+	 * @throws ClassNotFoundException
+	 */
 	protected static int getMenuItemIndex(MenuItem menuItem) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
 		Class menuItemImplClass = Class.forName(Constants.Classes.MENU_ITEM_IMPL);
 		Menu menu = (Menu) ReflectionUtils.getFieldValue(menuItem, menuItemImplClass, Constants.Fields.MENU);
