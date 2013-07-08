@@ -25,7 +25,6 @@ public class ResignAPK {
 	 * @throws IOException
 	 */
 	public static void resign(String packageName, String apkFile) throws IOException {
-		String androidHome = System.getenv(RecorderConstants.EnvironmentVariables.ANDROID_HOME);
 	    String zipfile = replaceExtension(apkFile, Constants.Extensions.ZIP);
 	    String[] pullResults = EclipseExec.getAdbCommandOutput("pull " + apkFile);
 	    Exec.executeShellCommand("rm -fr temp");

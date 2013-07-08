@@ -32,18 +32,18 @@ public class TestClassDialog {
 						"CreateRecorderPlugin",
 						"No matching packages for class " + className);
 			} else {
-				String packagePath = getPackagePath(mMatchingClass);
-				if (!EclipseExec.executeAdbCommand("pull " + packagePath)) {
+				mPackagePath = getPackagePath(mMatchingClass);
+				if (!EclipseExec.executeAdbCommand("pull " + mPackagePath)) {
 					MessageDialog.openInformation(
 							shell,
 							"CreateRecorderPlugin",
-							"failed to pull the APK from the device for package " + packagePath);
+							"failed to pull the APK from the device for package " + mPackagePath);
 				}
 				int ichEquals = mMatchingClass.indexOf("=");
 				if (ichEquals != -1) {
 					mMatchingClass = mMatchingClass.substring(ichEquals + 1);
 				}
-				return packagePath;
+				return mPackagePath;
 			}
 		}
 		return null;
