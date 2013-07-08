@@ -7,10 +7,12 @@ import com.jayway.android.robotium.solo.Solo;
 import android.test.ActivityInstrumentationTestCase2;
 import android.view.View;
 import java.util.ArrayList;
+import java.io.IOException;
 import junit.framework.TestCase;
 import android.app.Activity;
 import android.view.Surface;
 import android.widget.PopupWindow;
+import com.androidApp.util.PlaybackMotionEvents;
 
 public class %TESTCLASSNAME% extends ActivityInstrumentationTestCase2 {
   	private Solo 			solo;
@@ -36,7 +38,7 @@ public class %TESTCLASSNAME% extends ActivityInstrumentationTestCase2 {
 
   	public void setUp() throws Exception {
   	
-		robotiumUtils = new RobotiumUtils(getInstrumentation());
+		robotiumUtils = new RobotiumUtils(this.getClass(), getInstrumentation());
 		solo = new Solo(getInstrumentation(), getActivity());
   	}
   

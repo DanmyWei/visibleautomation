@@ -9,7 +9,7 @@ import java.util.List;
 
 /**
  * general string utilities
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class StringUtils {
   	/**
@@ -90,6 +90,11 @@ public class StringUtils {
 		for (int ich = 0; ich < s.length(); ich++) {
 			char ch = s.charAt(ich);
 			if (ch == prefix) {
+				// newline special case.
+				if ((ich < s.length() - 1) && (s.charAt(ich + 1) == 'n')) {
+					sb.append('\n');
+					ich++;
+				}
 				continue;
 			} 
 			sb.append(ch);

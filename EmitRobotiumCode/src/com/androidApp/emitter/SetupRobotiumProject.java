@@ -7,11 +7,12 @@ import java.io.OutputStream;
 import java.util.List;
 
 import com.androidApp.util.Constants;
+import com.androidApp.util.Exec;
 import com.androidApp.util.FileUtility;
 import com.androidApp.util.StringUtils;
 /*
  * utilities to set up a robotium project in eclipse
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class SetupRobotiumProject {
 	/**
@@ -33,6 +34,7 @@ public class SetupRobotiumProject {
 		public String mResDir = null;							// res
 		public String mAssetsDir = null;						// assets
 		public String mDrawableDir = null;						// res/drawable	
+		public String mSaveStateDir = null;						// savestate
 	}
 	/**
 	 * process the options into flags and values.
@@ -61,6 +63,7 @@ public class SetupRobotiumProject {
 	 * res/values - directory for strings and stuff
 	 * libs - directory for libraries (specifically the robotium jar)
 	 * assets - directory for motion event files
+	 * savestate - directory to retain files, shared preferences and databases.
 	 * @param dirname name of the output test class (also the name of the project)
 	 * @param testClassFilePath full path directory to output test class files
 	 */
@@ -82,6 +85,9 @@ public class SetupRobotiumProject {
 		dirs.mAssetsDir = dirname + File.separator + Constants.Dirs.ASSETS;
 		File assetsDir = new File(dirs.mAssetsDir);
 		fOK &= assetsDir.mkdir();
+		dirs.mSaveStateDir = dirname + File.separator + Constants.Dirs.ASSETS;
+		File saveStateDir = new File(dirs.mSaveStateDir);
+		fOK &= saveStateDir.mkdir();
 		return dirs;
 	}
 	
@@ -249,25 +255,17 @@ public class SetupRobotiumProject {
 	/**
 	 * pull the events file from /sdcard/events.txt if eventsFileName is "device"
 	 * @param eventsFileName
-	 * @return
+	 * @return "events.txt"
+	 * @throws EmitterException if the adb command failed to pull the events file from the device.
 	 */
-	public static String getEventsFile(String eventsFileName) {
+	public static String getEventsFile(String eventsFileName) throws EmitterException {
 		// if he specified device, use adb to pull the events file off the device.
 		if (eventsFileName.equals(Constants.Names.DEVICE)) {
-	       Process proc = null;
-	       String cmd = "adb pull /sdcard/events.txt";
-	       try {
-	            proc = Runtime.getRuntime().exec(cmd);
-	        } catch (IOException e) {
-	            System.err.println("failed to execute " + cmd + " " + e.getMessage());
-	            System.exit(-1);
-	        }
-	        try {
-	            int result = proc.waitFor();
-	        } catch (InterruptedException e) {
-	            System.err.println("interrupted executing " + cmd + " " + e.getMessage());
-	            System.exit(-1);
-	        }        
+			String androidSDK = System.getenv(Constants.Env.ANDROID_HOME);
+			String adbCmd = "pull /sdcard/events.txt";
+			if (!Exec.executeAdbCommand(androidSDK, adbCmd)) {
+				throw new EmitterException("failed to execute adb command " + adbCmd);
+			}
 		}
 		return Constants.Filenames.EVENTS;
 	}
@@ -278,7 +276,7 @@ public class SetupRobotiumProject {
 	 * @param assetDirName asset directory
 	 * @param testClassName
 	 * @param motionEvents
-	 * @throws IOException
+	 * @throws IOException if it can't write to files, EmitterException if it failed to create the motion events directory.
 	 */
 	public static void writeMotionEvents(String assetDirName, String testClassName, List<MotionEventList> motionEvents) throws IOException, EmitterException {
 		if (!motionEvents.isEmpty()) {

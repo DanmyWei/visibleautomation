@@ -11,15 +11,16 @@ import com.androidApp.util.StringUtils;
  * the class of the view, and its index relative to the root view, or a parent with a unique id, or for
  * text views, a string, and the unique id of its ancestor.
  * @author Matthew
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class ReferenceParser {
 	public enum ReferenceType {
-		ID,					// resource id (better be unique)
-		CLASS_INDEX,		// class index
-		CLASS_INDEX_ID,		// class index relative to ancestor ID
-		TEXT_ID,			// text and ancestor ID
-		UNKNOWN				// couldn't parse expression
+		ID,							// resource id (better be unique)
+		CLASS_INDEX,				// class index
+		INTERNAL_CLASS_INDEX,		// internal class index: contains private and public classes
+		CLASS_INDEX_ID,				// class index relative to ancestor ID
+		TEXT_ID,					// text and ancestor ID
+		UNKNOWN						// couldn't parse expression
 	}
 	
 	public enum TextType {
@@ -34,6 +35,7 @@ public class ReferenceParser {
 	
 	protected String 		mID;							// android ID of view (either hardcoded hex number or fully qualified resource id)
 	protected String 		mClass;							// view class (fully qualified)
+	protected String		mInternalClass;					// for Class.forName() internal class (fully qualified)
 	protected String		mText;							// hardcoded quoted string or fully qualified resource id
 	protected int 			mIndex;							// class index (if id != null, relative to ancestor, not to entire view hierarchy)
 	protected ReferenceType	mType;							// describes how to decompose the reference
@@ -54,6 +56,11 @@ public class ReferenceParser {
 			mType = ReferenceType.CLASS_INDEX;
 			mClass = parts.get(startIndex + 1);
 			mIndex = Integer.parseInt(parts.get(startIndex + 2));	
+		} else if (parts.get(startIndex).equals(Constants.INTERNAL_CLASS_INDEX)) {
+			mType = ReferenceType.INTERNAL_CLASS_INDEX;
+			mClass = parts.get(startIndex + 2);
+			mInternalClass = parts.get(startIndex + 1);
+			mIndex = Integer.parseInt(parts.get(startIndex + 3));
 		} else if (parts.get(startIndex).equals(Constants.CLASS_INDEX_ID)) {
 			mType = ReferenceType.CLASS_INDEX_ID;
 		} else if (parts.get(startIndex).equals(Constants.ID)) {
@@ -113,6 +120,10 @@ public class ReferenceParser {
 	
 	public String getClassName() {
 		return mClass;
+	}
+	
+	public String getInternalClassName() {
+		return mInternalClass;
 	}
 	
 	/**

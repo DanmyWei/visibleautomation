@@ -12,7 +12,8 @@ import com.androidApp.util.StringUtils;
 
 /** table used to generate unique identifiers on a per-class basis, and the import list, so we don't have to give the
  * entire class name when declaring the variable.
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
+ * TODO: actually use this properly
  */
 
 public class ClassTable {

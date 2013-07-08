@@ -13,8 +13,8 @@ import org.xml.sax.helpers.DefaultHandler;
 
 /**
  * @author Matthew
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
- *
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
+ * parse the project.xml file so we can get the project name.
  */
 public class ProjectParser extends Parser {
 	protected final String 	NAME_TAG = "projectDescription.name";

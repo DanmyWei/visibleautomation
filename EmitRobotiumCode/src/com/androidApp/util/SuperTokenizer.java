@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** like string tokenizer, except that delimiters between quotes aren't counted.  Characters are also escaped.
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 
 public class SuperTokenizer {

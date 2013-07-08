@@ -13,6 +13,7 @@ import com.androidApp.util.Constants;
 import com.androidApp.util.SuperTokenizer;
 
 /**
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved
  * for views which receive motion events, the recorder writes the ACTION_DOWN event, followed
  * by ACTION_MOVE events, terminated by an ACTION_UP event. The first event contains the view dimensions
  * then the rest contain the move and up event time and coordinates.  We read from the source until the 
@@ -79,7 +80,7 @@ public class MotionEventList {
 				mPoints.add(upEvent);
 				break;
 			} else {
-				throw new EmitterException("motion events: bad tag " + tokens.get(0));
+				break;
 			}
 			line = br.readLine();
 		} while (true);

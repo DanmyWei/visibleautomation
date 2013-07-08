@@ -11,8 +11,8 @@ import java.util.List;
 /** 
  * interface for all functions which emit code.
  * @author Matthew
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
- */
+  * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
+  */
 public interface IEmitCode {
 	
 	/**
