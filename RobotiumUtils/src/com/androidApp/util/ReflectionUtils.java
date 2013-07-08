@@ -10,7 +10,8 @@ import android.util.Log;
 /**
  * utility functions to extract and set fields in objects using java reflection
  * @author Matthew
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
+ *
  */
 public class ReflectionUtils {
 	protected final static String TAG = "ReflectionUtils";

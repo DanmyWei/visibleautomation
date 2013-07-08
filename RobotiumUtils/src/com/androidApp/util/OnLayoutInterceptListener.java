@@ -6,7 +6,7 @@ import android.view.ViewTreeObserver;
 /**
  * Layout lister so instrumentation can be notified of a layout as the result of an operation (like showing the keyboard)
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynods.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class OnLayoutInterceptListener implements ViewTreeObserver.OnGlobalLayoutListener {
 	protected static final String 	TAG = "OnLayoutInterceptListener";

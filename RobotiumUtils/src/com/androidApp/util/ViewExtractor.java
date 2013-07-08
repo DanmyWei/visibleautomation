@@ -16,7 +16,7 @@ import android.widget.PopupWindow;
 /**
  * class to extract views from the android view hierarchy.
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  *
  */
 public class ViewExtractor {
@@ -160,7 +160,7 @@ public class ViewExtractor {
 						String className = v.getClass().getCanonicalName();
 						if (className.equals(Constants.Classes.POPUP_VIEW_CONTAINER)) {
 							Class popupViewContainerClass = Class.forName(Constants.Classes.POPUP_VIEW_CONTAINER_CREATECLASS);
-							PopupWindow popupWindow = (PopupWindow) ListenerIntercept.getFieldValue(v, popupViewContainerClass, Constants.Classes.THIS);
+							PopupWindow popupWindow = (PopupWindow) ReflectionUtils.getFieldValue(v, popupViewContainerClass, Constants.Classes.THIS);
 							return popupWindow;
 						}
 					}

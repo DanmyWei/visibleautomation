@@ -1,5 +1,6 @@
 package com.androidApp.util;
 
+import java.io.IOException;
 import java.util.ArrayList;
 
 import com.jayway.android.robotium.solo.Solo;
@@ -12,6 +13,7 @@ import android.app.Instrumentation;
 import android.content.Context;
 import android.graphics.Rect;
 import android.os.SystemClock;
+import android.test.ActivityInstrumentationTestCase2;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -38,7 +40,7 @@ import android.widget.TabHost;
  * fired, or wait for a notification if it hasn't been fired yet. This will improve the performance of the tests, and their 
  * roboustness.
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  *
  */
 public class RobotiumUtils {
@@ -55,7 +57,10 @@ public class RobotiumUtils {
 	 * This has to be called before getActivity(), so it can intercept the first activity.
 	 * @param instrumentation
 	 */
-	public RobotiumUtils(Instrumentation instrumentation) {
+	public RobotiumUtils(Class<? extends ActivityInstrumentationTestCase2> testClass, Instrumentation instrumentation) throws IOException {
+		SaveState.restoreDatabases(instrumentation.getTargetContext(), testClass.getSimpleName());
+		SaveState.restoreLocalFiles(instrumentation.getTargetContext(), testClass.getSimpleName());
+		SaveState.restorePreferences(instrumentation.getTargetContext(), testClass.getSimpleName());
 		mInstrumentation = instrumentation;
 		sActivityMonitorRunnable = new ActivityMonitorRunnable(instrumentation);
 		Thread activityMonitorThread = new Thread(sActivityMonitorRunnable);
@@ -133,6 +138,11 @@ public class RobotiumUtils {
 		}
 	}	
 	
+	/**
+	 * when we scroll a list, the scroll request has to be run on the UI thread.
+	 * @author matt2
+	 *
+	 */
 	public class ScrollListRunnable implements Runnable {
 		protected AbsListView 	mAbsListView;
 		protected int			mItemIndex;
@@ -602,18 +612,42 @@ public class RobotiumUtils {
 		return webViewClient;
 	}	
 	
-	public static void waitForPageToLoad(WebView webView, String url, long timeoutMsec) throws TestException {
+	public void waitForPageToLoad(WebView webView, String url, long timeoutMsec) throws TestException {
 		try {
 			if (webView.getProgress() < 100) {
-				WebViewClient originalWebViewClient = RobotiumUtils.getWebViewClient(webView);
-				if (!(originalWebViewClient instanceof InterceptWebViewClient)) {
-					InterceptWebViewClient interceptWebViewClient = new InterceptWebViewClient(originalWebViewClient);
-					webView.setWebViewClient(interceptWebViewClient);
-					interceptWebViewClient.waitForPageLoad(url, timeoutMsec);
-				}
+				Activity a = (Activity) webView.getContext();
+				WaitRunnable waitRunnable = new WaitRunnable(a, new WaitForPageToLoadRunnable(webView, url, timeoutMsec));
+				waitRunnable.waitForCompletion(timeoutMsec);
 			}
 		} catch (Exception ex) {
 			throw new TestException(ex.getMessage());
+		}
+	}
+	
+	public class WaitForPageToLoadRunnable implements Runnable {
+		protected WebView 	mWebView;
+		protected String	mUrl;
+		protected long		mTimeoutMsec;
+		
+		public WaitForPageToLoadRunnable(WebView webView, String url, long timeoutMsec) {
+			mWebView = webView;
+			mUrl = url;
+			mTimeoutMsec = timeoutMsec;
+		}
+		
+		public void run() {
+			try {
+				WebViewClient originalWebViewClient = RobotiumUtils.getWebViewClient(mWebView);
+				if (!(originalWebViewClient instanceof InterceptWebViewClient)) {
+					InterceptWebViewClient interceptWebViewClient = new InterceptWebViewClient(originalWebViewClient);
+					mWebView.setWebViewClient(interceptWebViewClient);
+					interceptWebViewClient.waitForPageLoad(mUrl, mTimeoutMsec);
+				}
+			} catch (Exception ex) {
+				ex.printStackTrace();
+				//throw new TestException(ex.getMessage());
+			}
+			
 		}
 	}
 	

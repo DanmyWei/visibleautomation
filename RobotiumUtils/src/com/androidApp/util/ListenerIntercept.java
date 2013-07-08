@@ -8,7 +8,7 @@ import android.util.Log;
  * class which contains static functions used to obtain and set various listeners for android views, like
  * the onClickListener, onItemClickListener, etc).
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  *
  */
 public class ListenerIntercept {

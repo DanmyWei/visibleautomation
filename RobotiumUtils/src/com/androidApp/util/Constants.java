@@ -3,7 +3,7 @@ package com.androidApp.util;
 /**
  * constants  organized by purpose
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  *
  */
 public class Constants {

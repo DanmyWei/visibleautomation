@@ -17,11 +17,14 @@ import android.content.res.AssetManager;
 import android.os.SystemClock;
 
 /**
+ * Code to play back recorded motion events from an ASCII file, which contains the dimensions of the source view
+ * and a timestamp and coordinate for each view
+ * TODO: we really only need 1 unit of decimal precision here.
  * file format:
  * 720,176
  * 100447483,644.1054,79.82358
  * @author matt2
- *
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class PlaybackMotionEvents {
 	
@@ -54,9 +57,17 @@ public class PlaybackMotionEvents {
 		is.close();
 	}
 	
+	/**
+	 * read the motion events from an ASCII file
+	 * @param is InputStream (probably an asset actually
+	 * @throws IOException
+	 */
 	public void read(InputStream is) throws IOException {
 		BufferedReader br = new BufferedReader(new InputStreamReader(is));
 		String firstLine = br.readLine();
+		
+		// the first line contains the dimensions of the widget that the motion events were recorded on
+		// so we can scale them to the destination view.
 		if (firstLine != null) {
 			String[] tokens = firstLine.split(",");
 			mWidth = Integer.parseInt(tokens[0]);

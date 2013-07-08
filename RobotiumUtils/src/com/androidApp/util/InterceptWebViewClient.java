@@ -15,7 +15,7 @@ import android.webkit.WebViewClient;
 /**
  * wrapper for web view clients so we can wait on web view events.
  * @author Matthew
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class InterceptWebViewClient extends WebViewClient {
 	protected WebViewClient mOriginalWebViewClient;

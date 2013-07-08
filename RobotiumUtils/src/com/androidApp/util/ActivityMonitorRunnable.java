@@ -16,7 +16,7 @@ import android.view.Window;
  * waited for and queried from the testing thread.  We use WeakReference<> so we don't hold onto 
  * the activity, which would interfere with the application under test
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  *
  */
 public class ActivityMonitorRunnable implements Runnable {
@@ -283,6 +283,11 @@ public class ActivityMonitorRunnable implements Runnable {
 	}
 		
 	
+	/**
+	 * Runnable (on the UI thread) to add a layout intercept listener, which allows us to wait for layout events.
+	 * @author matt2
+	 *
+	 */
 	public class AddGlobalLayoutListenerRunnable implements Runnable {
 		protected Activity 					mActivity;
 		protected OnLayoutInterceptListener mListener;
