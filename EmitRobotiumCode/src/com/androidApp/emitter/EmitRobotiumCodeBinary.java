@@ -136,7 +136,7 @@ public class EmitRobotiumCodeBinary extends EmitRobotiumCodeSource {
 			String classPath = tokens.get(2);
 			String description = getDescription(tokens);
 			String fullDescription = "wait for activity " + description;
-			String goBackTemplate = FileUtility.readTemplate(Constants.Templates.GO_BACK_WAIT_ACTIVITY);
+			String goBackTemplate = FileUtility.readTemplate(Constants.Templates.BINARY_GO_BACK_WAIT_ACTIVITY);
 			goBackTemplate = goBackTemplate.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
 			goBackTemplate = goBackTemplate.replace(Constants.VariableNames.ACTIVITY_CLASS, classPath);
 			lines.add(new LineAndTokens(tokens, goBackTemplate));

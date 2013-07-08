@@ -76,6 +76,8 @@ public class IMEMessageListener implements Runnable {
 						/* sometimes we get multiple show_ime messages from the keyboard: TODO: make sure that it only sends
 						 * a show_ime message if it's transitioning from gone to visible.  (see SoftKeyboard.onShowInputRequested())
 						 * this flag-tracking method in a different process is a certain way to have state management issues.
+						 * the "handle back" in the IME code is called when the back key is pressed, whether the keyboard 
+						 * is up or down.
 						 */
 						if (!mfKeyboardVisible) {
 							mEventRecorder.writeRecord(Constants.EventTags.SHOW_IME, mViewInterceptor.getFocusedView(), "IME displayed");
@@ -87,8 +89,10 @@ public class IMEMessageListener implements Runnable {
 						}
 						mfKeyboardVisible = false;
 					} else if (msg.equals(HIDE_IME_BACK_KEY)) {
-	                    mEventRecorder.writeRecord(Constants.EventTags.HIDE_IME_BACK_KEY, mViewInterceptor.getFocusedView(), "IME hidden by back key pressed");
-	                    mViewInterceptor.setLastKeyAction(-1);
+						if (mfKeyboardVisible) {
+		                    mEventRecorder.writeRecord(Constants.EventTags.HIDE_IME_BACK_KEY, mViewInterceptor.getFocusedView(), "IME hidden by back key pressed");
+		                    mViewInterceptor.setLastKeyAction(-1);
+						}
 						mfKeyboardVisible = false;
 					}
 				}	
