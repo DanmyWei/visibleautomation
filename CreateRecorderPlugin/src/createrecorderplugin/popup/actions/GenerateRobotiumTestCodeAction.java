@@ -3,6 +3,7 @@ package createrecorderplugin.popup.actions;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.StringBufferInputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,14 +47,14 @@ import com.androidApp.util.FileUtility;
 
 import createproject.GenerateRobotiumTestCode;
 import createrecorder.util.EclipseUtility;
-import createrecorder.util.Exec;
+import createrecorder.util.EclipseExec;
 import createrecorder.util.RecorderConstants;
 
 /**
  * extract the events file from the device, and either create a new project, or add a test class to an
  * existing junit project which plays back the recording
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  *
  */
 public class GenerateRobotiumTestCodeAction implements IObjectActionDelegate {
@@ -75,6 +76,14 @@ public class GenerateRobotiumTestCodeAction implements IObjectActionDelegate {
 	public void setActivePart(IAction action, IWorkbenchPart targetPart) {
 		mShell = targetPart.getSite().getShell();
 	}
+
+	/**
+	 * @see IActionDelegate#selectionChanged(IAction, ISelection)
+	 */
+	public void selectionChanged(IAction action, ISelection selection) {
+		mSelection = (StructuredSelection) selection;
+	}
+
 	/**
 	 * @see IActionDelegate#run(IAction)
 	 * create the robotium recorder project
@@ -162,6 +171,7 @@ public class GenerateRobotiumTestCodeAction implements IObjectActionDelegate {
 				String projectFileOutput = testClassName + "." + Constants.Extensions.JAVA;
 				ICompilationUnit classFile = pack.createCompilationUnit(projectFileOutput, testCode, true, null);	
 				codeGenerator.writeMotionEvents(testProject, testClassName, motionEvents);
+				codeGenerator.saveStateFiles(Constants.Dirs.EXTERNAL_STORAGE, testClassName, manifestParser.getPackage(), testProject);
 				packRoot.close();
 			} catch (Exception ex) {
 				MessageDialog.openInformation(
@@ -185,12 +195,5 @@ public class GenerateRobotiumTestCodeAction implements IObjectActionDelegate {
 		fileDialog.setFilterExtensions(filerExtensions);
 		fileDialog.open();
 		return fileDialog;
-	}
-
-	/**
-	 * @see IActionDelegate#selectionChanged(IAction, ISelection)
-	 */
-	public void selectionChanged(IAction action, ISelection selection) {
-		mSelection = (StructuredSelection) selection;
 	}
 }

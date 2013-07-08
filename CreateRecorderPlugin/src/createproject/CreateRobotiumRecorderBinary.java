@@ -35,9 +35,9 @@ import createrecorder.util.EclipseUtility;
 import createrecorder.util.RecorderConstants;
 
 /**
- * given an eclipse project, create the unit test project which will record events for it.
+ * given an eclipse project, create the unit test project which will record events for it. (binary version)
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+  * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  *
  */
 public class CreateRobotiumRecorderBinary extends CreateRobotiumRecorder {
@@ -72,6 +72,11 @@ public class CreateRobotiumRecorderBinary extends CreateRobotiumRecorder {
 								IJavaProject 	javaProject, 
 								String			packageName,
 								String			startActivity) throws CoreException, IOException {
+		// strip the nasty dot they use in AndroidManifest.xml to prefix activities
+		int ichLastDot = startActivity.lastIndexOf('.');
+		if (ichLastDot != -1) {
+			startActivity = startActivity.substring(ichLastDot + 1);
+		}
 		String testClass = FileUtility.readTemplate(RecorderConstants.BINARY_TESTCLASS_TEMPLATE);
 		testClass = testClass.replace(Constants.VariableNames.CLASSPACKAGE, packageName);
 		testClass = testClass.replace(Constants.VariableNames.CLASSNAME, startActivity);

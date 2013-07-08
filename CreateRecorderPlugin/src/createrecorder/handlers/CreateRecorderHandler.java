@@ -15,6 +15,7 @@ import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.preferences.IPreferencesService;
@@ -32,14 +33,16 @@ import com.androidApp.parser.ManifestParser;
 import com.androidApp.parser.ProjectParser;
 import com.androidApp.parser.ProjectPropertiesScan;
 import com.androidApp.util.Constants;
+import com.androidApp.util.Exec;
 
 import createproject.CreateRobotiumRecorderBinary;
 import createrecorder.util.EclipseUtility;
-import createrecorder.util.Exec;
+import createrecorder.util.EclipseExec;
 import createrecorder.util.ManifestInformation;
 import createrecorder.util.PackageUtils;
 import createrecorder.util.Pair;
 import createrecorder.util.RecorderConstants;
+import createrecorder.util.ResignAPK;
 import createrecorder.util.TestClassDialog;
 import createrecorderplugin.popup.actions.CreateRobotiumRecorderAction;
 
@@ -47,7 +50,7 @@ import createrecorderplugin.popup.actions.CreateRobotiumRecorderAction;
  * Our sample handler extends AbstractHandler, an IHandler base class.
  * @see org.eclipse.core.commands.IHandler
  * @see org.eclipse.core.commands.AbstractHandler
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+  * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class CreateRecorderHandler extends AbstractHandler {
 	/**
@@ -61,7 +64,7 @@ public class CreateRecorderHandler extends AbstractHandler {
 	 * @return
 	 */
 	String[] getDevicePackages() {
-		return Exec.getAdbCommandOutput("shell pm list packages -3");
+		return EclipseExec.getAdbCommandOutput("shell pm list packages -3");
 	}
 	
 	/**
@@ -70,8 +73,14 @@ public class CreateRecorderHandler extends AbstractHandler {
 	public Object execute(ExecutionEvent event) throws ExecutionException {
 		IWorkbenchWindow window = HandlerUtil.getActiveWorkbenchWindowChecked(event);
 		Shell shell = window.getShell();
-		String packagePath = TestClassDialog.getTestClassDialog(shell, "Robotium Recorder", "Enter classpath of APK to record");
+		TestClassDialog testClassDialog = new TestClassDialog();
+		String packagePath = testClassDialog.getTestClassDialog(shell, "Visible Automation", "Enter classpath of APK to record");
 		if (packagePath != null) {	
+			try {
+				ResignAPK.resign(testClassDialog.mMatchingClass, PackageUtils.getPackageName(testClassDialog.mPackagePath));
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
 			IPreferencesService service = Platform.getPreferencesService();
 			String androidSDK = service.getString(RecorderConstants.ECLIPSE_ADT, RecorderConstants.ANDROID_SDK, null, null);
 			
@@ -114,6 +123,10 @@ public class CreateRecorderHandler extends AbstractHandler {
 	public void createProject(Shell shell, ManifestInformation manifestInformation) {
 		try {
 			String projectName = manifestInformation.mApplicationName;
+			int ichLastDot = manifestInformation.mApplicationName.lastIndexOf('.');
+			if (ichLastDot != -1) {
+				projectName = projectName.substring(ichLastDot + 1);
+			}
 	
 			// create the new project
 			String newProjectName = projectName + RecorderConstants.RECORDER_SUFFIX;

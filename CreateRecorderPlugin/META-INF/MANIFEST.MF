@@ -4,7 +4,7 @@ Bundle-Name: CreateRecorderPlugin
 Bundle-SymbolicName: CreateRecorderPlugin;singleton:=true
 Bundle-Version: 1.0.0.qualifier
 Bundle-ClassPath: libs/emitrobotiumcode.jar,
- CreateRecorderPlugin
+ CreateRecorderPlugin, .
 Bundle-Activator: createrecorderplugin.Activator
 Export-Package: com.androidApp.emitter,
  com.androidApp.util

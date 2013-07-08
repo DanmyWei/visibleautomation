@@ -38,7 +38,7 @@ import createrecorder.util.RecorderConstants;
 /**
  * given an eclipse project, create the unit test project which will record events for it.
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class CreateRobotiumRecorderAction implements IObjectActionDelegate {
 	

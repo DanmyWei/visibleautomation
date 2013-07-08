@@ -26,14 +26,14 @@ import com.androidApp.util.Constants;
 import com.androidApp.util.FileUtility;
 
 import createrecorder.util.EclipseUtility;
-import createrecorder.util.Exec;
+import createrecorder.util.EclipseExec;
 import createrecorder.util.RecorderConstants;
 
 /**
  * extract the events file from the device, and either create a new project, or add a test class to an
  * existing junit project which plays back the recording
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  *
  */
 public class GenerateRobotiumTestCodeBinary extends GenerateRobotiumTestCode {

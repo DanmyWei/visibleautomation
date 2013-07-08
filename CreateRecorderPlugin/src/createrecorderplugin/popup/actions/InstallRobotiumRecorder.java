@@ -15,11 +15,11 @@ import org.eclipse.ui.IWorkbenchPart;
 
 import com.androidApp.util.FileUtility;
 
-import createrecorder.util.Exec;
+import createrecorder.util.EclipseExec;
 
 /**
  * install the custom keyboard and log service components for recording.
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+  * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class InstallRobotiumRecorder implements IObjectActionDelegate {
 	
@@ -53,7 +53,7 @@ public class InstallRobotiumRecorder implements IObjectActionDelegate {
 			} catch (Exception ex) {
 				MessageDialog.openInformation(
 						mShell,
-						"RunRobotiumTest",
+						"Install Recorder",
 						"There was an exception running the test project " + ex.getMessage());
 				ex.printStackTrace();				
 			}

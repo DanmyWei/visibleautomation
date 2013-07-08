@@ -5,7 +5,7 @@ import org.xml.sax.helpers.DefaultHandler;
 
 /**
  * SAXParser DefaultHandler extension which maintains a stack of the XML tags
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+  * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 
 public class Parser extends DefaultHandler {

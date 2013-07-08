@@ -16,6 +16,8 @@ import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.Platform;
+import org.eclipse.core.runtime.preferences.IPreferencesService;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IPackageFragment;
 import org.eclipse.jdt.core.JavaModelException;
@@ -27,18 +29,18 @@ import com.androidApp.emitter.MotionEventList;
 import com.androidApp.emitter.IEmitCode.LineAndTokens;
 import com.androidApp.emitter.SetupRobotiumProject;
 import com.androidApp.util.Constants;
+import com.androidApp.util.Exec;
 import com.androidApp.util.FileUtility;
 
 import createrecorder.util.EclipseUtility;
-import createrecorder.util.Exec;
+import createrecorder.util.EclipseExec;
 import createrecorder.util.RecorderConstants;
 
 /**
  * extract the events file from the device, and either create a new project, or add a test class to an
  * existing junit project which plays back the recording
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
- *
+  * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class GenerateRobotiumTestCode {	
 	
@@ -188,7 +190,7 @@ public class GenerateRobotiumTestCode {
 	public String getEventsFile(String androidSdkPath, String eventsFilename) {
 		// if he specified device, use adb to pull the events file off the device.
 		if (eventsFilename.equals(Constants.Names.DEVICE)) {
-			Exec.executeAdbCommand("pull /sdcard/events.txt");
+			EclipseExec.executeAdbCommand("pull /sdcard/events.txt");
 		}
 		return Constants.Filenames.EVENTS;
 	}
@@ -242,4 +244,52 @@ public class GenerateRobotiumTestCode {
 			}
 		}
 	}
+	
+	/**
+	 * extract the saved state files from the device and save them under the "savestate" folder in the project
+	 * @param extDir hopefully /sdcard
+	 * @param testName name of the test driver (on the eclipse/host side)
+	 * @param packageName name of the package under test (on the device side)
+	 * @param testProject eclipse project
+	 * @throws CoreException couldn't create a folder
+	 * @throws IOException couldn't read a file
+	 */
+	public void saveStateFiles(String extDir, String testName, String packageName, IProject testProject) throws CoreException, IOException {
+		IPreferencesService service = Platform.getPreferencesService();
+		String androidSDK = service.getString(RecorderConstants.ECLIPSE_ADT, RecorderConstants.ANDROID_SDK, null, null);
+		IFolder saveStateFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.SAVESTATE);
+		IFolder saveStateTestNameFolder = EclipseUtility.createFolder(saveStateFolder, testName);
+		IFolder prefsFolder = EclipseUtility.createFolder(saveStateTestNameFolder, Constants.Dirs.SHARED_PREFS);
+		saveFiles(androidSDK, prefsFolder, extDir, packageName + File.separator + Constants.Dirs.SHARED_PREFS);
+		IFolder dbFolder = EclipseUtility.createFolder(saveStateTestNameFolder, Constants.Dirs.DATABASES);
+		saveFiles(androidSDK, dbFolder, extDir, packageName + File.separator + Constants.Dirs.DATABASES);
+		IFolder filesFolder = EclipseUtility.createFolder(saveStateTestNameFolder, Constants.Dirs.FILES);
+		saveFiles(androidSDK, filesFolder, extDir, packageName + File.separator + Constants.Dirs.FILES);
+	}
+	
+	/**
+	 * save a set of files from a directory on the device's external storage directory to a folder in eclipse
+	 * @param androidSDK location of the android SDK, so we can run adb
+	 * @param destFolder destination folder
+	 * @param extDir hopefully /sdcard
+	 * @param srcDir source directory under sdcard
+	 * @throws IOException if the file can't be read
+	 * @throws CoreException if the folder can't be created.
+	 */
+	public static void saveFiles(String androidSDK, IFolder destFolder, String extDir, String srcDir) throws IOException, CoreException {
+		String srcPath = extDir + File.separator + srcDir;
+		String adbLsCommand = "shell ls " + srcPath;
+		String[] files = Exec.getAdbCommandOutput(androidSDK, adbLsCommand);
+		for (String file : files) {
+			String deviceFile = srcPath + File.separator + file;
+			String adbPullCommand = "pull " + deviceFile + " " + Constants.Filenames.TEMPORARY_FILE;
+			Exec.executeAdbCommand(androidSDK, adbPullCommand);
+			IFile eclipseFile = destFolder.getFile(file);
+			InputStream fis = new FileInputStream(Constants.Filenames.TEMPORARY_FILE);
+			eclipseFile.create(fis, IFile.FORCE, null);
+			fis.close();
+		}
+	}
+
+
 }

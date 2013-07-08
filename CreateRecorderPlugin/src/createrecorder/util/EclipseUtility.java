@@ -26,7 +26,7 @@ import com.androidApp.util.StringUtils;
 
 /**
  * Utility functions for the eclipse plugin
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+  * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class EclipseUtility {
 

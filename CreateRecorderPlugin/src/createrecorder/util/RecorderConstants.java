@@ -1,8 +1,8 @@
 package createrecorder.util;
 
 /**
- * Constants for the plugin event recorder (these need to be broken into included classes)
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+ * Constants for the plugin event recorder (TODO: these need to be broken into included classes)
+  * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class RecorderConstants {
 	public static final String ALLTESTS_FILE = "AllTests.java";
@@ -28,4 +28,14 @@ public class RecorderConstants {
 	public static final String LOGSERVICE_APK = "LogService.apk";
 	public static final String LOGSERVICE_PACKAGE = "com.androidApp.logService";
 	public static final String EVENTRECORDERINTERFACE_JAR = "eventrecorderinterface.jar";
+	
+	// eclipse preference keys.
+	public static class Preferences {
+		public static final String RESIGN_APK = "resign_apk";
+	}
+	
+	public static class EnvironmentVariables {
+		public static final String ANDROID_HOME = "ANDROID_HOME";
+		public static final String HOME = "HOME";
+	}
 }

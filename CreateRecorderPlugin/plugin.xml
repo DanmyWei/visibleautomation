@@ -12,11 +12,10 @@
             namefilter="*"
             id="CreateRecorderPlugin.contribution1">
          <menu
-               label="Robotium Recorder"
+               label="Visible Automation"
                path="additions"
                id="CreateRecorderPlugin.menu1">
-            <separator
-                  name="group1">
+            <separator name="group1">
             </separator>
          </menu>
          <filter
@@ -24,21 +23,37 @@
                 value="com.android.ide.eclipse.adt.AndroidNature">
          </filter>
          <action
-               label="Create Robotium Recorder"
+               label="Create Test Recorder"
                class="createrecorderplugin.popup.actions.CreateRobotiumRecorderAction"
                menubarPath="CreateRecorderPlugin.menu1/group1"
                enablesFor="1"
-               id="CreateRecorderPlugin.newAction">
+               id="CreateRecorderPlugin.createRecorderAtion">
          </action>
         <action
-               label="Generate Robotium Test"
+               label="Generate JUnit Test"
                class="createrecorderplugin.popup.actions.GenerateRobotiumTestCodeAction"
                menubarPath="CreateRecorderPlugin.menu1/group1"
                enablesFor="1"
-               id="GenerateRobotiumTest.newAction">
+               id="GenerateRobotiumTest.createTestAction">
+         </action>
+        <action
+               label="Recorder Properties"
+               class="createrecorderplugin.popup.actions.RecorderPropertiesAction"
+               menubarPath="CreateRecorderPlugin.menu1/group1"
+               enablesFor="1"
+               id="GenerateRobotiumTest.propertiesAction">
+         </action>
+        <action
+               label="Install Saved State Files"
+               class="createrecorderplugin.popup.actions.RecorderStateFilesAction"
+               menubarPath="CreateRecorderPlugin.menu1/group1"
+               enablesFor="1"
+               id="GenerateRobotiumTest.stateFilesAction">
          </action>
       </objectContribution>
    </extension>
+   
+   <!-- project explorer context menu handlers -->
    <extension
          point="org.eclipse.ui.handlers">
       <handler
@@ -53,58 +68,67 @@
             commandId="CreateRecorderPlugin.createrecorder.commands.installRecorderCommand"
             class="createrecorder.handlers.InstallRecorderHandler">
       </handler>
-   </extension>
-      <extension
+  </extension>
+   
+   <!-- extensions specified for the top-level menu -->
+   <extension
          point="org.eclipse.ui.commands">
       <category
-            name="Robotium Recorder"
+            name="Visible Automation"
             id="CreateRecorderPlugin.createrecorder.commands.category">
       </category>
       <command
-            name="Create Robotium Recorder for binary .APK"
+            name="Create Test Recorder for binary .APK"
             categoryId="CreateRecorderPlugin.createrecorder.commands.category"
             id="CreateRecorderPlugin.createrecorder.commands.createRecorderCommand">
       </command>
       <command
-            name="Create Robotium Test for binary .APK"
+            name="Create JUnit Test for binary .APK"
             categoryId="CreateRecorderPlugin.createrecorder.commands.category"
             id="CreateRecorderPlugin.createrecorder.commands.createTestCommand">
       </command>
       <command
-            name="Install Robotium Recorder"
+            name="Install Test Recorder"
             categoryId="CreateRecorderPlugin.createrecorder.commands.category"
             id="CreateRecorderPlugin.createrecorder.commands.installRecorderCommand">
       </command>
    </extension>
    
+   <!-- extensions for the package explorer context menu. -->
    <extension
          point="org.eclipse.ui.menus">
       <menuContribution
             locationURI="menu:org.eclipse.ui.main.menu?after=additions">
          <menu
-               label="Robotium Recorder"
-               mnemonic="R"
+               label="Visible Automation"
+               mnemonic="V"
                id="CreateRecorderPlugin.createrecorder.menus.sampleMenu">
             <command
                   commandId="CreateRecorderPlugin.createrecorder.commands.createRecorderCommand"
-                  mnemonic="S"
+                  mnemonic="R"
                   id="CreateRecorderPlugin.createrecorder.menus.createRecorderCommand">
             </command>
             <command
                   commandId="CreateRecorderPlugin.createrecorder.commands.createTestCommand"
-                  mnemonic="S"
+                  mnemonic="T"
                   id="CreateRecorderPlugin.createrecorder.menus.createTestCommand">
+            </command>
+             <command
+                  commandId="CreateRecorderPlugin.createrecorder.commands.installRecorderCommand"
+                  mnemonic="I"
+                  id="CreateRecorderPlugin.createrecorder.menus.installRecorderCommand">
             </command>
          </menu>
       </menuContribution>
+      
+      <!-- contributions for the top level menu -->
       <menuContribution
             locationURI="toolbar:org.eclipse.ui.main.toolbar?after=additions">
          <toolbar
                id="CreateRecorderPlugin.createrecorder.toolbars.sampleToolbar">
             <command
                   commandId="CreateRecorderPlugin.createrecorder.commands.createRecorderCommand"
-                  icon="icons/sample.gif"
-                  tooltip="Create Robotium Recorder for Binary .apk"
+                  tooltip="Create Test Recorder for Binary .apk"
                   id="CreateRecorderPlugin.createrecorder.toolbars.createRecorderCommand">
                   <visibleWhen checkEnabled="false">
 			      	<iterate ifEmpty="false" operator="and">
@@ -122,9 +146,26 @@
             </command>
             <command
                   commandId="CreateRecorderPlugin.createrecorder.commands.createTestCommand"
-                  icon="icons/sample.gif"
-                  tooltip="Create Robotium Test for Binary .apk"
+                  tooltip="Create JUnit Test for Binary .apk"
                   id="CreateRecorderPlugin.createrecorder.toolbars.createTestCommand">
+                  <visibleWhen checkEnabled="false">
+			      	<iterate ifEmpty="false" operator="and">
+			        	<adapt type="org.eclipse.core.resources.IProject">
+			           		<test property="org.eclipse.core.resources.open">
+			           		</test> 
+			           		<test   
+			                 	forcePluginActivation="true"
+			                 	property="org.eclipse.core.resources.projectNature"
+			                 	value="com.android.ide.eclipse.adt.AndroidNature">
+			           		</test> 
+			        	</adapt>
+			     	</iterate>
+			  	</visibleWhen>
+            </command>
+           <command
+                  commandId="CreateRecorderPlugin.createrecorder.commands.installRecorderCommand"
+                  tooltip="Install Android Recorder"
+                  id="CreateRecorderPlugin.createrecorder.toolbars.installRecorderCommand">
                   <visibleWhen checkEnabled="false">
 			      	<iterate ifEmpty="false" operator="and">
 			        	<adapt type="org.eclipse.core.resources.IProject">

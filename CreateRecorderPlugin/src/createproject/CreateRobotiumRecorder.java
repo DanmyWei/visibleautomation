@@ -15,6 +15,8 @@ import org.eclipse.core.resources.IProject;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
+import org.eclipse.core.runtime.Platform;
+import org.eclipse.core.runtime.preferences.IPreferencesService;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IPackageFragment;
@@ -32,6 +34,8 @@ import com.androidApp.emitter.MotionEventList;
 import com.androidApp.parser.ManifestParser;
 import com.androidApp.parser.ProjectParser;
 import com.androidApp.parser.ProjectPropertiesScan;
+import com.androidApp.savestate.SaveStateException;
+import com.androidApp.util.Exec;
 import com.androidApp.util.FileUtility;
 import com.androidApp.util.Constants;
 import com.androidApp.util.StringUtils;
@@ -42,7 +46,7 @@ import createrecorder.util.RecorderConstants;
 /**
  * given an eclipse project, create the unit test project which will record events for it.
  * @author mattrey
- * Copyright (c) 2013 Matthew Reynolds.  All Rights Reserved.
+  * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  *
  */
 public class CreateRobotiumRecorder  {
