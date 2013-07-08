@@ -74,9 +74,18 @@ public class LatinKeyboardView extends KeyboardView {
     	Log.i(TAG, "onSizeChanged " + w + ", " + h + ", " + oldw + ", " + oldh);
     }
     
+    /**
+     * TODO:
+     * for some reason that I don't understand, neither my RecordWindowCallback, no the MagicFrame.onKeyPreIme() calls
+     * receive the BACK key when the IME is up (although the documentation says that they should). In theory, I should
+     * figure out why, but I've got a deliverable and I need to fix this now, so even though it's inconsistent, I'm sending
+     * HIDE_IME_BACK_KEY from the soft keyboard, rather than triggering the event from the last key listened to by
+     * the MagicFrame.onKeyPreIme()
+     */
     @Override
     public boolean handleBack() {
     	boolean f = super.handleBack();
+       	SoftKeyboard.getTCPListener().broadcast(SoftKeyboard.HIDE_IME_BACK_KEY);
     	Log.i(TAG, "handle back");
     	return f;
     }

@@ -63,6 +63,7 @@ public class SoftKeyboard extends InputMethodService
     static final boolean DEBUG = false;
 	public static final String SHOW_IME = "show_ime";
 	public static final String HIDE_IME = "hide_ime";
+	public static final String HIDE_IME_BACK_KEY = "hide_ime_back_key";
 	public static final int TCPPORT = 49152;
   
     /**
@@ -766,6 +767,10 @@ public class SoftKeyboard extends InputMethodService
     	Log.i(TAG, "onConfigureWindow");
     }
     
+/**
+ * TODO: This method sends an event to the listener whenever show input is REQUESTED, but not when it transitions
+ * from gone to visible, which is what we really want, because that kicks off the layout.
+ */
     public boolean onShowInputRequested (int flags, boolean configChange) {
     	boolean f = super.onShowInputRequested(flags, configChange);
     	Log.i(TAG, "onShowInputRequested");
