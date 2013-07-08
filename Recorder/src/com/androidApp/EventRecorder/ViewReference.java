@@ -219,11 +219,10 @@ public class ViewReference {
 			} else {
 				if (fInternalClass) {
 					int classIndex = TestUtils.classIndex(rootView, v);
-					return Constants.Reference.CLASS_INDEX + "," + usableClass.getCanonicalName() + "," + classIndex;
-
+					return Constants.Reference.INTERNAL_CLASS_INDEX + "," + v.getClass().getCanonicalName() + "," + usableClass.getCanonicalName() + "," + classIndex;
 				} else {
 					int classIndex = TestUtils.classIndex(rootView, v);
-					return Constants.Reference.INTERNAL_CLASS_INDEX + "," + v.getClass().getCanonicalName() + "," + usableClass.getCanonicalName() + "," + classIndex;
+					return Constants.Reference.CLASS_INDEX + "," + usableClass.getCanonicalName() + "," + classIndex;
 				}
 			}
 		}
