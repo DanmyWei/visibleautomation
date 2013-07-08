@@ -8,14 +8,14 @@ import com.androidApp.Test.RecordTest;
 import com.example.android.apis.ApiDemos;
 
 
-public class ApiDemosTest extends RecordTest<ApiDemos> {
+public class ApiDemosTest extends RecordTest<ApiDemos, ApiDemosTest> {
 
 	public ApiDemosTest() throws IOException {
-		super(ApiDemos.class);
+		super(ApiDemos.class, ApiDemosTest.class);
 	}
 	
 	public ApiDemosTest(Class<ApiDemos> activityClass) throws IOException {
-		super(activityClass);
+		super(activityClass, ApiDemosTest.class);
 	}
 	
 	@Override
@@ -26,5 +26,7 @@ public class ApiDemosTest extends RecordTest<ApiDemos> {
 	
 	public void setUp() throws Exception { 
 		super.setUp();
+		initialize(ApiDemos.class, ApiDemosTest.class);
+
 	}
 }
