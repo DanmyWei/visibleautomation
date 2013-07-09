@@ -136,7 +136,9 @@ public class ViewReference {
 	// is this view defined in the Android library?
 	public static boolean isAndroidClass(Class<? extends View> viewClass) {
 		String name = viewClass.getName();
-		return name.startsWith(Constants.Classes.ANDROID_WIDGET) || name.startsWith(Constants.Classes.ANDROID_VIEW);
+		return name.startsWith(Constants.Classes.ANDROID_WIDGET) || 
+			   name.startsWith(Constants.Classes.ANDROID_VIEW) || 
+			   name.startsWith(Constants.Classes.ANDROID_INTERNAL);
 	}
 	
 	// get a usable class name for our application
