@@ -68,7 +68,8 @@ public class Constants {
 		public static final String SCROLLING_TAB_CONTAINER_VIEW = "com.android.internal.widget.ScrollingTabContainerView";
 		public static final String HORIZONTAL_SCROLL_VIEW = "com.android.widget.HorizontalScrollView";
 		public static final String ANDROID_WIDGET = "com.android.widget";	
-		public static final String ANDROID_VIEW = "com.android.view";	
+		public static final String ANDROID_VIEW = "com.android.view";
+		public static final String ANDROID_INTERNAL = "com.android.internal";	
 		
 	}
 	

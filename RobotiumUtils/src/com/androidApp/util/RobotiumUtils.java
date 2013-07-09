@@ -614,11 +614,9 @@ public class RobotiumUtils {
 	
 	public void waitForPageToLoad(WebView webView, String url, long timeoutMsec) throws TestException {
 		try {
-			if (webView.getProgress() < 100) {
-				Activity a = (Activity) webView.getContext();
-				WaitRunnable waitRunnable = new WaitRunnable(a, new WaitForPageToLoadRunnable(webView, url, timeoutMsec));
-				waitRunnable.waitForCompletion(timeoutMsec);
-			}
+			Activity a = (Activity) webView.getContext();
+			WaitRunnable waitRunnable = new WaitRunnable(a, new WaitForPageToLoadRunnable(webView, url, timeoutMsec));
+			waitRunnable.waitForCompletion(timeoutMsec);
 		} catch (Exception ex) {
 			throw new TestException(ex.getMessage());
 		}
@@ -637,17 +635,18 @@ public class RobotiumUtils {
 		
 		public void run() {
 			try {
-				WebViewClient originalWebViewClient = RobotiumUtils.getWebViewClient(mWebView);
-				if (!(originalWebViewClient instanceof InterceptWebViewClient)) {
-					InterceptWebViewClient interceptWebViewClient = new InterceptWebViewClient(originalWebViewClient);
-					mWebView.setWebViewClient(interceptWebViewClient);
-					interceptWebViewClient.waitForPageLoad(mUrl, mTimeoutMsec);
+				// need to do the check here, because webviews complain about getting progress unless you get it from the UI thread.
+				if (mWebView.getProgress() < 100) {
+					WebViewClient originalWebViewClient = RobotiumUtils.getWebViewClient(mWebView);
+					if (!(originalWebViewClient instanceof InterceptWebViewClient)) {
+						InterceptWebViewClient interceptWebViewClient = new InterceptWebViewClient(originalWebViewClient);
+						mWebView.setWebViewClient(interceptWebViewClient);
+						interceptWebViewClient.waitForPageLoad(mUrl, mTimeoutMsec);
+					}
 				}
 			} catch (Exception ex) {
 				ex.printStackTrace();
-				//throw new TestException(ex.getMessage());
-			}
-			
+			}			
 		}
 	}
 	
@@ -658,8 +657,6 @@ public class RobotiumUtils {
 	 * @return
 	 */
 	public static Dialog waitForDialogToOpen(Activity activity, long timeoutMsec) {
-		long startTimeMillis = SystemClock.uptimeMillis();
-		long currentTimeMillis = startTimeMillis;
 		while (timeoutMsec > 0) {
 			Dialog dialog = ViewExtractor.findDialog(activity);
 			if (dialog != null) {

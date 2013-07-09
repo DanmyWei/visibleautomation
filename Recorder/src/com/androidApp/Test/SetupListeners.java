@@ -405,7 +405,7 @@ public class SetupListeners {
 		public void run() {
 			View contentView = mPopupWindow.getContentView();
 			if (contentView != null && !(contentView instanceof MagicFrame)) {
-				MagicFramePopup magicFramePopup = new MagicFramePopup(contentView.getContext(), mPopupWindow, mRecorder, mViewInterceptor);
+				//MagicFramePopup magicFramePopup = new MagicFramePopup(contentView.getContext(), mPopupWindow, mRecorder, mViewInterceptor);
 				SetupListeners.this.getViewInterceptor().interceptSpinnerPopupWindow(mPopupWindow);
 			}
 		}
@@ -425,7 +425,7 @@ public class SetupListeners {
 		public void run() {
 			View contentView = mPopupWindow.getContentView();
 			if (contentView != null && !(contentView instanceof MagicFrame)) {
-				MagicFramePopup magicFramePopup = new MagicFramePopup(contentView.getContext(), mPopupWindow, mRecorder, mViewInterceptor);
+				//MagicFramePopup magicFramePopup = new MagicFramePopup(contentView.getContext(), mPopupWindow, mRecorder, mViewInterceptor);
 				SetupListeners.this.getViewInterceptor().interceptAutocompleteDropdown(mPopupWindow);
 			}
 		}

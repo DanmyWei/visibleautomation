@@ -99,6 +99,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		boolean scrollsHaveHappened = false;				// we get a zillion scroll events.  We only care about the last one
 		int scrollFirstVisibleItem = 0;						// preserve scroll values so we can apply it on the last scroll.
 		int scrollListIndex = 0;							// track the current scroll index to write on the next non-scroll instruction
+		List<String> clickSpinnerDialogTokens = null;		// workaround for robotium, which selects spinners, but doesn't just click-dismiss
 		List<String> lastTextEntryTokens = null;			// to preserve the last text entry event
 		String line = br.readLine();	
 		int lineNumber = 0;									// track line number for errors
@@ -214,10 +215,14 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 						writeDismissAutoCompleteDropdown(tokens, lines);
 					} else if (action.equals(Constants.Events.DISMISS_POPUP_WINDOW_BACK_KEY)) {
 						writeDismissPopupWindowBackKey(tokens, lines);
+					} else if (action.equals(Constants.Events.CREATE_SPINNER_POPUP_DIALOG)) {
+						clickSpinnerDialogTokens = tokens;
 					} else if (action.equals(Constants.Events.DISMISS_SPINNER_DIALOG_BACK_KEY)) {
+						writeClick(clickSpinnerDialogTokens, lines);
 						writeGoBack(tokens, lines);
 						writeDismissDialog(tokens,lines);
 					} else if (action.equals(Constants.Events.DISMISS_SPINNER_POPUP_BACK_KEY)) {
+						writeClick(tokens, lines);
 						writeDismissPopupWindowBackKey(tokens, lines);
 					} else if (action.equals(Constants.Events.ROTATION)) {
 						writeRotation(tokens, lines);

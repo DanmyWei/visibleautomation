@@ -870,7 +870,6 @@ public class TestUtils {
 	 */
 	public static WindowAndView findPopupWindow(Activity activity) {
 		try {
-			Class popupViewContainerClass = Class.forName(Constants.Classes.POPUP_VIEW_CONTAINER);
 			View[] views = ViewExtractor.getWindowDecorViews();
 			if (views != null) {
 				int numDecorViews = views.length;
@@ -880,11 +879,15 @@ public class TestUtils {
 					View v = views[iView];
 					if (TestUtils.isDialogOrPopup(activity, v)) {
 						
-						// return null if we've already intercepted
+						// we need to check if the view is always a PhoneWindow$DecorView or PopupWindow$PopupViewContainer
 						if (!(v instanceof MagicFramePopup)) {
-							Object window = ReflectionUtils.getFieldValue(v, v.getClass(), Constants.Classes.THIS);
-							WindowAndView windowAndView = new WindowAndView(window, v);
-							return windowAndView;
+							try {
+								Object window = ReflectionUtils.getFieldValue(v, v.getClass(), Constants.Classes.THIS);
+								WindowAndView windowAndView = new WindowAndView(window, v);
+								return windowAndView;
+							} catch (Exception ex) {
+								ex.printStackTrace();
+							}
 						}
 					}
 				}

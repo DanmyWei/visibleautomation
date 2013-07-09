@@ -42,27 +42,21 @@ public class MagicFramePopup extends MagicFrame {
 			this.setLayoutParams(layoutParams);
 			mContentView = popupWindow.getContentView();
 			mPopupViewContainer = (FrameLayout) ReflectionUtils.getFieldValue(popupWindow, PopupWindow.class, Constants.Fields.POPUP_VIEW);
-		    WindowManager windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
-		    WindowManager.LayoutParams windowManagerLayoutParams = (WindowManager.LayoutParams) mPopupViewContainer.getLayoutParams();
-			windowManager.removeView(mPopupViewContainer);
-			this.addView(mPopupViewContainer);
-			windowManager.addView(this, windowManagerLayoutParams);
-			ReflectionUtils.setFieldValue(popupWindow, PopupWindow.class, Constants.Fields.POPUP_VIEW, this);
-			
-			// we have to bypass setContentView() because it does nothing if the window is already showing, which it is.
-			ReflectionUtils.setFieldValue(popupWindow, PopupWindow.class, Constants.Fields.CONTENT_VIEW, mPopupViewContainer);
-			this.requestLayout();
+			mPopupViewContainer.removeView(mContentView);
+			this.addView(mContentView);
+			mPopupViewContainer.addView(this);
+            // we have to bypass setContentView() because it does nothing if the window is already showing, which it is.
+            ReflectionUtils.setFieldValue(popupWindow, PopupWindow.class, Constants.Fields.CONTENT_VIEW, this);
+			mPopupViewContainer.requestLayout();
+			this.requestFocus();
 		} catch (Exception ex) {
 			recorder.writeException(ex,  "trying to intercept popup window");
 		}
-		init();
 	}
 	
-	/**
-	 * onKeyPreIme() doesn't fire for PopupWindows
-	 */
+	  
     @Override
-    public boolean dispatchKeyEvent(KeyEvent event) {
+    public boolean dispatchKeyEventPreIme(KeyEvent event) {
 		Log.i(TAG, "dispatch intercepted key event " + MagicFrame.keyEventToString(event));
 		try {
 			if ((mRecorder != null) && (mViewInterceptor != null)) {
@@ -73,6 +67,7 @@ public class MagicFramePopup extends MagicFrame {
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
-		return mPopupViewContainer.dispatchKeyEvent(event);
+		return super.dispatchKeyEventPreIme(event);
     }
+  
 }

@@ -99,11 +99,10 @@ public class MagicFrame extends FrameLayout {
 		instrumentation.runOnMainSync(runnable);
 	}
 
-	/**
-	 * intercept the back, menu, and home keys.
-	 */
-	@Override 
-	public boolean onKeyPreIme (int keyCode, KeyEvent event){
+	  
+    @Override
+    public boolean dispatchKeyEventPreIme(KeyEvent event) {
+		Log.i(TAG, "dispatch intercepted key event " + MagicFrame.keyEventToString(event));
 		try {
 			if ((mRecorder != null) && (mViewInterceptor != null)) {
 				recordKeyEvent(event);
@@ -113,8 +112,8 @@ public class MagicFrame extends FrameLayout {
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
-		return false;
-	}
+		return mContentView.dispatchKeyEventPreIme(event);
+    }
 
     // actually record the key event. Only record on ACTION_UP. sometimes the window doesn't exist anymore if it's ACTION_DOWN
 	// also, just check for a null view anyway
