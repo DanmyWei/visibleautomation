@@ -1,0 +1,3 @@
+		// %DESCRIPTION%
+		solo.goBack();
+		TestCase.assertTrue(robotiumUtils.waitForActivity((Class<? extends Activity>) Class.forName("%ACTIVITY_CLASS%"), ACTIVITY_WAIT_MSEC));

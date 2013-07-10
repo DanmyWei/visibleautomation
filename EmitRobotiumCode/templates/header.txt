@@ -16,7 +16,7 @@ import android.view.Surface;
 import android.widget.PopupWindow;
 import android.widget.ExpandableListView;
 
-public class %TESTCLASSNAME% extends ActivityInstrumentationTestCase2<%CLASSNAME%> {
+public class %TESTCLASSNAME% extends ActivityInstrumentationTestCase2<%CLASSNAME%,%TESTCLASSNAME%> {
   	private Solo 			solo;
   	private RobotiumUtils	robotiumUtils;
   	protected static final int ACTIVITY_WAIT_MSEC = 5000;		// wait 5 seconds for new activities by default
@@ -24,6 +24,7 @@ public class %TESTCLASSNAME% extends ActivityInstrumentationTestCase2<%CLASSNAME
 	protected static final int DIALOG_CLOSE_TIMEOUT = 5000;		// wait 5 seconds for dialogs to close.
 	protected static final int DIALOG_OPEN_TIMEOUT = 5000;		// wait 5 seconds for dialogs to open.
   	protected static final int VIEW_WAIT_MSEC = 5000;			// wait 5 seconds for views to appear
+
   	public %TESTCLASSNAME%() {
 		super("%CLASSPATH%", %CLASSNAME%.class);
   	}
