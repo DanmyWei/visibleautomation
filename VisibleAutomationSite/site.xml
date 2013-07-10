@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <description name="Visible Automation" url="www.visibleautomation.com">
+      Visible Automation Android Recorder Plugin
+   </description>
+   <feature url="features/VisibleAutomationFeature_1.0.0.visibleautomation.jar" id="VisibleAutomationFeature" version="1.0.0.visibleautomation"/>
+   <category-def name="Visible_Automation_Eclipse_Category" label="Visible Automation Eclipse Tools">
+      <description>
+         Tools for recording android applications under Eclipse
+      </description>
+   </category-def>
+</site>
