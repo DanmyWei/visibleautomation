@@ -31,7 +31,8 @@ public class RobotiumRecorderLogService extends IntentService {
 	protected static String TAG = "LogService";
 	public static final String INITIALIZE = "com.androidApp.LogService.initialize";
 	public static final String FILENAME = "filename";
-	public static final String LOG = "com.androidApp.LogService.log";
+	public static final String LOG = "com.androidApp.LogService.log";				// write to log file
+	public static final String CONFIG = "com.androidApp.LogService.config";			// append to config file
 	public static final String MESSAGE = "message";
 
 	public RobotiumRecorderLogService() {
@@ -57,11 +58,11 @@ public class RobotiumRecorderLogService extends IntentService {
 			File extDir = Environment.getExternalStorageDirectory();
 			File path = new File(extDir, logfileName);
 			Log.d(TAG, "deleting " + path);
-			path.delete();
+			path.delete();			
 		} else if (requestType.equals(LOG)) {
 			final String message = intent.getStringExtra(MESSAGE);
 			final String logfileName = intent.getStringExtra(FILENAME);
-			writeLog(logfileName,message);
+			writeLog(logfileName, message);
 		} 
 	}
 	
