@@ -34,7 +34,8 @@ public abstract class RecordTest<T extends Activity, S extends RecordTest> exten
 	protected static Class<? extends Activity>	sActivityClass;						// class under test
 	protected List<UserDefinedViewReference>	mMotionEventViewReferences = null;	// user-defined references to listen for motion events
 	protected List<String>						mInterstitialActivities = null;		// user-defined list of activities which start by random, such as ads & stuff
-    public RecordTest(Class<T> activityClass, Class<S> activityTestClass) throws IOException {
+ 
+	public RecordTest(Class<T> activityClass, Class<S> activityTestClass) throws IOException {
         super(activityClass);
         sActivityClass = activityClass;
     }	
@@ -78,5 +79,9 @@ public abstract class RecordTest<T extends Activity, S extends RecordTest> exten
 	
 	public List<UserDefinedViewReference> getMotionEventViewReferences() {
 		return mMotionEventViewReferences;
+	}
+	
+	public List<String> getInterstitialActivityNames() {
+		return mInterstitialActivities;
 	}
 }

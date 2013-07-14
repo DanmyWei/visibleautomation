@@ -6,6 +6,7 @@ import java.util.TimerTask;
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.Listeners.RecordOnFocusChangeListener;
+import com.androidApp.Test.ActivityInterceptor.ActivityState;
 import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.TestUtils;
@@ -80,6 +81,9 @@ public class MagicFrame extends FrameLayout {
 		this.setFocusable(true);
 		this.setFocusableInTouchMode(true);
 		this.requestFocus();
+		this.setClipChildren(false);
+		this.setClipToPadding(false);
+		this.setMeasureAllChildren(true);
 		mRecorder = recorder;
 		mContentView = contentView;
 		mViewInterceptor = viewInterceptor;
@@ -90,12 +94,15 @@ public class MagicFrame extends FrameLayout {
 	/**
 	 * wrapper to insert the magic frame.
 	 * @param instrumentation - so we can run the runnable synchronized on the UI thread
-	 * @param activity - activity to get the window for
+	 * @param activityState - activity, list of magic overlays for this activity
 	 * @param viewInterceptor - for intercepting events on views.
 	 * @param recorder event recorder.
 	 */
-	public static void insertMagicFrame(Instrumentation instrumentation, Activity activity, EventRecorder recorder, ViewInterceptor viewInterceptor) {
-		InsertMagicFrameRunnable runnable = new InsertMagicFrameRunnable(activity, recorder, viewInterceptor);
+	public static void insertMagicFrame(Instrumentation instrumentation, 
+									    ActivityState 	activityState, 
+									    EventRecorder 	recorder, 
+									    ViewInterceptor viewInterceptor) {
+		InsertMagicFrameRunnable runnable = new InsertMagicFrameRunnable(activityState, recorder, viewInterceptor);
 		instrumentation.runOnMainSync(runnable);
 	}
 

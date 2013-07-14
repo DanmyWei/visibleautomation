@@ -20,6 +20,7 @@ import android.content.res.AssetManager;
  * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class FileUtils {
+	protected static int BUFFER_SIZE = 1024;
 	
 	// return the number of lines in the file
 	public static int numLines(InputStream is) throws IOException {
@@ -74,7 +75,7 @@ public class FileUtils {
 		is.close();
 		return lines;
 	}
-	
+		
 	/**
 	 * because we have to include the recorder as a jar file, we can't use assets and resources
 	 * @param cls class to get resource names
@@ -90,6 +91,42 @@ public class FileUtils {
 		String[] lines = FileUtils.readLines(is, nLines);
 		is.close();
 		return lines;
+	}
+	
+	/**
+	 * read a binary resource, like an image or something like that
+	 * @param cls jar class
+	 * @param resourceName name of the resource to read
+	 * @return binary data
+	 * @throws IOException
+	 */
+	public static byte[] readJarBinaryResource(Class cls, String resourceName) throws IOException {
+		InputStream is = cls.getResourceAsStream(resourceName);
+		
+		// read the size of the resource.
+		int size = 0;
+		int bytesRead = 0;
+		do {
+			byte[] buffer = new byte[BUFFER_SIZE];
+			bytesRead = is.read(buffer);
+			if (bytesRead > 0) {
+				size += bytesRead;
+			}
+		} while (bytesRead > 0);
+		is.close();
+		is = cls.getResourceAsStream(resourceName);
+		// then read the data in chunks
+		byte[] allData = new byte[size];
+		int offset = 0;
+		do {
+			int bytesToRead = (offset + BUFFER_SIZE < size) ? BUFFER_SIZE : size - offset;
+			bytesRead = is.read(allData, offset, bytesToRead);
+			if (bytesRead > 0) {
+				offset += bytesRead;
+			}
+		} while (offset < size);
+		is.close();
+		return allData;
 	}
 	
 	/**

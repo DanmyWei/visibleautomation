@@ -217,6 +217,14 @@ public class Constants {
 		public static final String CHILD_CLICK = "child_click";
 		public static final String CREATE_FLOATING_WINDOW = "create_floating_window";
 		public static final String TOUCH_CANCEL = "touch_cancel";
+		public static final String INTERSTITIAL_ACTIVITY = "interstitial_activity";
+		public static final String IGNORE_EVENTS = "ignore_events";
+		public static final String MOTION_EVENTS = "motion_events";
+		public static final String COPY_TEXT = "copy_text";
+		public static final String PASTE_TEXT = "paste_text";
+		public static final String SELECT_BY_TEXT = "select_by_text";
+		public static final String CHECK = "check";
+		public static final String UNCHECK = "uncheck";
 	}
 	
 	// description strings 
@@ -256,5 +264,24 @@ public class Constants {
 	
 	public static class Files {
 		public static final String EVENTS = "events.txt";
+	}
+	
+	// TODO: this needs to be read from a resource file, but jar files cannot access android resource files
+	public static class DisplayStrings {
+		public static final String VISIBLE_AUTOMATION = "Visible Automation";
+		public static final String IGNORE_EVENTS = "Ignore Events";
+		public static final String COPY_TEXT = "Copy Text To Variable";
+		public static final String PASTE_TEXT = "Paste Text From Variable";
+		public static final String SELECT_BY_TEXT = "Select Items By Text";
+		public static final String CHECK = "Check";
+		public static final String UNCHECK = "Uncheck";
+		public static final String MOTION_EVENTS = "Listen to Motion Events";
+	}
+	
+	// when ViewDirectives should be applied during record and playback.
+	public static class When {
+		public static final String ON_ACTIVITY_START = "on_activity_start";
+		public static final String ON_ACTIVITY_END = "on_activity_end";
+		public static final String ON_VALUE_CHANGE = "on_value_change";
 	}
 }

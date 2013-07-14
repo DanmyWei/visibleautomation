@@ -10,6 +10,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.LinearLayout;
 
 import com.androidApp.EventRecorder.EventRecorder;
+import com.androidApp.Test.ActivityInterceptor;
 import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 
@@ -21,11 +22,13 @@ import com.androidApp.Utility.Constants;
  *
  */
 public class InsertMagicFrameRunnable implements Runnable {
-	protected Window			mWindow;					// window containing views of interest
-	protected EventRecorder 	mRecorder;					// event recorder interface
-	protected ViewInterceptor 	mViewInterceptor;			// to intercept the views contained in the window
-	
-	public InsertMagicFrameRunnable(Activity activity, EventRecorder recorder, ViewInterceptor viewInterceptor) {
+	protected Window							mWindow;					// window containing views of interest
+	protected EventRecorder 					mRecorder;					// event recorder interface
+	protected ViewInterceptor 					mViewInterceptor;			// to intercept the views contained in the window
+	protected ActivityInterceptor.ActivityState mActivityState;				// containts activity and magic overlay list
+	public InsertMagicFrameRunnable(ActivityInterceptor.ActivityState activityState, EventRecorder recorder, ViewInterceptor viewInterceptor) {
+		mActivityState = activityState;
+		Activity activity = activityState.getActivity();
 		mWindow = activity.getWindow();
 		mRecorder = recorder;
 		mViewInterceptor = viewInterceptor;
@@ -37,13 +40,18 @@ public class InsertMagicFrameRunnable implements Runnable {
 	public void run() {
 		try {
 			ViewGroup decorView = (ViewGroup) mWindow.getDecorView();
-			ViewGroup contentView = (ViewGroup) decorView.getChildAt(0);		
+			ViewGroup contentView = (ViewGroup) decorView.getChildAt(0);
+			MagicFrame magicFrame = new MagicFrame(mWindow.getContext(), contentView, 0, mRecorder, mViewInterceptor);
+			MagicOverlay.addMagicOverlay(magicFrame, mRecorder, mActivityState);
+			/*
 			if (contentView instanceof ViewGroup) {
 				for (int iChild = 0; iChild < contentView.getChildCount(); iChild++) {
 					View realContentView = (View) contentView.getChildAt(iChild);
 					MagicFrame magicFrame = new MagicFrame(mWindow.getContext(), realContentView, iChild, mRecorder, mViewInterceptor);
+					MagicOverlay.addMagicOverlay(magicFrame, mRecorder, mActivityState);
 				} 
 			}
+			*/
 		} catch (Exception ex) {
 			mRecorder.writeException(ex, "attempting to insert magic frame");
 		}

@@ -39,13 +39,14 @@ public class UserDefinedViewReference {
 		}
 	}
 	
-	protected ReferenceEnum 			mReferenceType;
-	protected String					mViewClassName;
-	protected Class<? extends View>		mViewClass;
-	protected String					mActivityName;
-	protected Class<? extends Activity> mActivityClass;
-	protected int						mClassIndex;
-	protected int						mID;
+	protected ReferenceEnum 			mReferenceType;		// how the reference is specified
+	protected String					mViewClassName;		// view.class.name
+	protected Class<? extends View>		mViewClass;			// view class
+	protected String					mActivityName;		// activity.class.name
+	protected Class<? extends Activity> mActivityClass;		// activity class
+	protected int						mClassIndex;		// index in view hierarchy filtered by class
+	protected int						mID;				// android resource ID
+	protected int						mTokenCount;		// # of tokens consumed in parsing
 	
 	// accessors
 	public ReferenceEnum referenceType() {
@@ -73,6 +74,14 @@ public class UserDefinedViewReference {
 	}
 	
 	/**
+	 * how many tokens were parsed for this reference?
+	 * @return
+	 */
+	public int getTokenCount() {
+		return mTokenCount;
+	}
+	
+	/**
 	 * parse a UserDefinedViewReference from a string
 	 * view_by_class: classname
 	 * view_by_activity_class: activity, classname
@@ -81,37 +90,56 @@ public class UserDefinedViewReference {
 	 * @param referenceLine
 	 */
 	public UserDefinedViewReference(String referenceLine) throws ReferenceException, ClassNotFoundException {
-		StringTokenizer strtok = new StringTokenizer(referenceLine, ":");
-		String type = strtok.nextToken();
-		String reference = strtok.nextToken();
-		if (reference == null) {
-			throw new ReferenceException("failed to parse reference from " + referenceLine);
-		}
-		StringTokenizer strtokRef = new StringTokenizer(reference, ",");
+		String[] tokens = referenceLine.split("[:,]");
+		String type = tokens[0];
 		if (type.equals(ReferenceEnum.VIEW_BY_CLASS.mName)) {
 			mReferenceType = ReferenceEnum.VIEW_BY_CLASS;
 			mActivityName = null;
 			mActivityClass = null;
-			mViewClassName = strtokRef.nextToken().trim();
+			mViewClassName = tokens[1].trim();
 			mViewClass = (Class<? extends View>) Class.forName(mViewClassName);
+			mTokenCount = 2;
 		} else if (type.equals(ReferenceEnum.VIEW_BY_ACTIVITY_CLASS.mName)) {
 			mReferenceType = ReferenceEnum.VIEW_BY_CLASS;
-			mActivityName = strtokRef.nextToken().trim();
+			mActivityName = tokens[1].trim();
 			mActivityClass = (Class<? extends Activity>) Class.forName(mActivityName);
-			mViewClassName = strtokRef.nextToken();
+			mViewClassName = tokens[2].trim();
 			mViewClass = (Class<? extends View>) Class.forName(mViewClassName);
+			mTokenCount = 3;
 		} else if (type.equals(ReferenceEnum.VIEW_BY_ACTIVITY_CLASS_INDEX.mName)) {
 			mReferenceType = ReferenceEnum.VIEW_BY_CLASS;
-			mActivityName = strtokRef.nextToken().trim();
+			mActivityName = tokens[1].trim();
 			mActivityClass = (Class<? extends Activity>) Class.forName(mActivityName);
-			mViewClassName = strtokRef.nextToken().trim();
+			mViewClassName = tokens[2].trim();
 			mViewClass = (Class<? extends View>) Class.forName(mViewClassName);
-			mClassIndex = Integer.parseInt(strtokRef.nextToken());
+			mClassIndex = Integer.parseInt(tokens[3].trim());
+			mTokenCount = 4;
 		} else if (type.equals(ReferenceEnum.VIEW_BY_ACTIVITY_ID.mName)) {
 			mReferenceType = ReferenceEnum.VIEW_BY_CLASS;
-			mActivityName = strtokRef.nextToken().trim();
+			mActivityName = tokens[1].trim();
 			mActivityClass = (Class<? extends Activity>) Class.forName(mActivityName);
-			mID = Integer.parseInt(strtokRef.nextToken().trim());
+			mID = Integer.parseInt(tokens[2].trim());
+			mTokenCount = 3;
+		}
+	}
+	/**
+	 * view_by_class: classname
+	 * view_by_activity_class: activity, classname
+	 * view_by_activity_class_index: activity, classname, index
+	 * view_by_activity_id: activity, id
+	 */
+	public String toString() {
+		switch (mReferenceType) {
+		case VIEW_BY_CLASS:
+			return ReferenceEnum.VIEW_BY_CLASS.mName + ":" + mViewClassName;
+		case VIEW_BY_ACTIVITY_CLASS:
+			return ReferenceEnum.VIEW_BY_ACTIVITY_CLASS.mName + ":" + mActivityName + "," + mViewClassName;
+		case VIEW_BY_ACTIVITY_CLASS_INDEX:
+			return ReferenceEnum.VIEW_BY_ACTIVITY_CLASS.mName + ":" + mActivityName + "," + mViewClassName + "," + Integer.toString(mClassIndex);
+		case VIEW_BY_ACTIVITY_ID:
+			return ReferenceEnum.VIEW_BY_ACTIVITY_ID.mName + ":" + mActivityName + "," + Integer.toString(mID);	
+		default:
+			return "bogus reference"; 		// TODO: throw exception
 		}
 	}
 	

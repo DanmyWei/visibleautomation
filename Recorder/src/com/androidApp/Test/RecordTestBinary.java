@@ -6,6 +6,8 @@ import java.io.InputStream;
 import java.util.List;
 
 import com.androidApp.EventRecorder.UserDefinedViewReference;
+import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.FileUtils;
 import com.androidApp.Utility.SaveState;
 
 import android.app.Activity;
@@ -33,6 +35,7 @@ public abstract class RecordTestBinary<T extends RecordTestBinary> extends Activ
 	protected SetupListeners					mSetupListeners;
 	protected static Class<? extends Activity>	sActivityClass;
 	protected List<UserDefinedViewReference>	mMotionEventViewReferences = null;	// user-defined references to listen for motion events
+	protected List<String>						mInterstitialActivities = null;		// user-defined list of activities which start by random, such as ads & stuff
 	
 	public RecordTestBinary(String activityName, Class<T> activityTestClass) throws IOException {
 		super(sActivityClass);
@@ -40,6 +43,12 @@ public abstract class RecordTestBinary<T extends RecordTestBinary> extends Activ
         	InputStream isMotionEvents = activityTestClass.getResourceAsStream("/raw/motion_event_views.txt");
         	mMotionEventViewReferences = UserDefinedViewReference.readViewReferences(isMotionEvents);
         } catch (Exception ex) {
+        }
+        try {
+        	InputStream isInterstitialActivities = getInstrumentation().getContext().getAssets().open(Constants.Asset.INTERSTITIAL_ACTIVITIES);
+        	mInterstitialActivities = FileUtils.readLines(isInterstitialActivities);
+        } catch (Exception ex) {
+        	Log.i(TAG, "did not read any user-defined interstitial activities");
         }
 	}
 		
@@ -62,5 +71,10 @@ public abstract class RecordTestBinary<T extends RecordTestBinary> extends Activ
 	public List<UserDefinedViewReference> getMotionEventViewReferences() {
 		return mMotionEventViewReferences;
 	}
+	
+	public List<String> getInterstitialActivityNames() {
+		return mInterstitialActivities;
+	}
+
 }
 

@@ -445,7 +445,7 @@ public class ViewInterceptor {
 	 */
 	public void replaceViewListeners(View v) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
 		replaceClickListener(v);
-		//replaceLongClickListener(v);
+		replaceLongClickListener(v);
 		if (TestUtils.listenMotionEvents(mMotionEventViews, v)) {
 			replaceTouchListener(v);
 		}

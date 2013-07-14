@@ -10,5 +10,6 @@ import com.androidApp.EventRecorder.UserDefinedViewReference;
   * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public interface IRecordTest {
-	List<UserDefinedViewReference> getMotionEventViewReferences();
+	List<UserDefinedViewReference> getMotionEventViewReferences();		// listen to motion events in these views
+	List<String> getInterstitialActivityNames();						// interstitial activities have special case handlers
 }

@@ -79,7 +79,7 @@ public class RecordOnLongClickListener extends RecordListener implements OnLongC
 		if (v.getParent() instanceof View) {
 			v = (View) v.getParent();
 			while (v != v.getRootView()) {
-				OnLongClickListener onLongClickListener = (OnLongClickListener) ListenerIntercept.getClickListener(v);
+				OnLongClickListener onLongClickListener = (OnLongClickListener) ListenerIntercept.getLongClickListener(v);
 				// the parent's originallong click listener was stored in the record listener.  if the click listener
 				// hasn't been interecepted, then it will be
 				if (onLongClickListener != null) {

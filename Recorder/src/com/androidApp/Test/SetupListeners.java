@@ -385,7 +385,7 @@ public class SetupListeners {
 		
 		public void run() {
 			if (mView != null && !(mView instanceof MagicFrame)) {
-				MagicFrame magic = new MagicFrame(mView.getContext(), mView, 0, mRecorder, mViewInterceptor);
+				//MagicFrame magic = new MagicFrame(mView.getContext(), mView, 0, mRecorder, mViewInterceptor);
 				SetupListeners.this.getViewInterceptor().intercept(mView);
 			}
 		}

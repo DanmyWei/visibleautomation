@@ -1,10 +1,13 @@
 package com.androidApp.Test;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Stack;
 
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.Intercept.InsertRecordWindowCallbackRunnable;
+import com.androidApp.Intercept.MagicOverlay;
 import com.androidApp.Intercept.ViewInsertRecordWindowCallbackRunnable;
 import com.androidApp.Intercept.MagicFrame;
 import com.androidApp.Listeners.RecordListener;
@@ -52,11 +55,12 @@ public class ActivityInterceptor {
 	 * @author Matthew
 	 *
 	 */
-	protected class ActivityState {
+	public class ActivityState {
 		protected WeakReference<Activity> 		mActivityRef;			// so we don't hold onto activity when it's destroyed.
 		protected int							mRotation;				// to track orientation
 		protected Class<? extends Activity>		mClass;					// activity class
 		protected String						mActivityName;			// activity name
+		protected List<MagicOverlay>			mMagicOverlayList;		// list of overlays used in this activity
 		
 		public ActivityState(Activity activity) {
 			mActivityRef = new WeakReference<Activity>(activity);
@@ -64,10 +68,20 @@ public class ActivityInterceptor {
 			mRotation = display.getRotation();
 			mClass = activity.getClass();
 			mActivityName = activity.toString();
+			mMagicOverlayList = new ArrayList<MagicOverlay>();
 		}
 		
 		public Activity getActivity() {
 			return mActivityRef.get();
+		}
+		
+		
+		public void addMagicOverlay(MagicOverlay magicOverlay) {
+			mMagicOverlayList.add(magicOverlay);
+		}
+		
+		public List<MagicOverlay> getMagicOverlayList() {
+			return mMagicOverlayList;
 		}
 		
 		// NOTE: this isn't the best test in the world.  Sometimes activities get finished, and the WeakReference it nulled out. 
@@ -265,7 +279,7 @@ public class ActivityInterceptor {
 		if (activityB != activityA) {
 			recorder.writeRecord(Constants.EventTags.EXCEPTION, "first activities did not match");
 		} else {
-			MagicFrame.insertMagicFrame(mInstrumentation, activityA, recorder, viewInterceptor);
+			MagicFrame.insertMagicFrame(mInstrumentation, peekActivityOnStack(), recorder, viewInterceptor);
 		}
 	}
 	
@@ -286,7 +300,7 @@ public class ActivityInterceptor {
 			if (activityBAgain != activityB) {
 				recorder.writeRecord(Constants.EventTags.EXCEPTION, "rotated activities did not match");
 			}
-			MagicFrame.insertMagicFrame(mInstrumentation, activityB, recorder, viewInterceptor);
+			MagicFrame.insertMagicFrame(mInstrumentation, peekActivityOnStack(), recorder, viewInterceptor);
 		}
 	}
 	
@@ -366,7 +380,7 @@ public class ActivityInterceptor {
 		mInstrumentation.runOnMainSync(new InterceptActivityRunnable(activityB));
 		String logMsg =  activityB.getClass().getName() + "," + activityB.toString();
 		recorder.writeRecord(Constants.EventTags.ACTIVITY_FORWARD, logMsg);
-		MagicFrame.insertMagicFrame(mInstrumentation, activityB, recorder, viewInterceptor);
+		MagicFrame.insertMagicFrame(mInstrumentation, peekActivityOnStack(), recorder, viewInterceptor);
 	}
 
 	/**
