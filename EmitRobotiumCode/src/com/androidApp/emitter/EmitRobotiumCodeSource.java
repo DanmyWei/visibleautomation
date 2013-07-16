@@ -235,7 +235,8 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 					} else if (action.equals(Constants.Events.SELECT_TAB)) {
 						selectTab(tokens, lines);
 					} else if (action.equals(Constants.Events.ON_PAGE_FINISHED)) {
-						waitForPageToLoad(tokens, lines);
+						// TODO: TEMPORARY for DEMO
+						// waitForPageToLoad(tokens, lines);
 					} else if (action.equals(Constants.Events.TOUCH_DOWN) || action.equals(Constants.Events.TOUCH_MOVE)) {
 						// we have to listen for the first "touch move", not just touch down, because scroll containers
 						// don't actually fire the TouchEvent listener for TOUCH_DOWN because it dispatches the event

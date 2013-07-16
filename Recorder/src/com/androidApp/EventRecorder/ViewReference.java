@@ -79,8 +79,20 @@ public class ViewReference {
 		mRIDList.add(rdotid);
 	}
 	
+	public List<Object> getIDList() {
+		return mRIDList;
+	}
+	
 	public void addRdotString(Object rdotstring) {
 		mRStringList.add(rdotstring);
+	}
+	
+	public List<Object> getStringList() {
+		return mRStringList;
+	}
+	
+	public boolean getBinary() {
+		return mfBinary;
 	}
 
 	/** 
@@ -142,7 +154,13 @@ public class ViewReference {
 	}
 	
 	// get a usable class name for our application
-	protected Class<? extends View> getUsableClass(Context context, View v, boolean fBinary) throws IOException {
+	public Class<? extends View> getUsableClass(Context context, View v, boolean fBinary) throws IOException {
+		
+		// in some cases, the view sends an event before any activity is initialized, so we initialize the field utilities here
+		// initialize the view reference with an activity so we can read the appropriate whitelist for the target application's SDK
+		if (mFieldUtils == null) {
+			mFieldUtils = new FieldUtils(mInstrumentation.getContext(), v.getContext());
+		}
 		Class<? extends View> viewClass = ViewReference.getVisibleClass(v);
 		if ((fBinary || isAndroidClass(viewClass)) && !mFieldUtils.isWhiteListedAndroidClass(viewClass)) {
 			viewClass = (Class<? extends View>) mFieldUtils.getPublicClassForAndroidInternalClass(viewClass);
@@ -175,12 +193,6 @@ public class ViewReference {
 	 * @return
 	 */
 	public String getReference(View v) throws IllegalAccessException, IOException {
-		
-		// in some cases, the view sends an event before any activity is initialized, so we initialize the field utilities here
-		// initialize the view reference with an activity so we can read the appropriate whitelist for the target application's SDK
-		if (mFieldUtils == null) {
-			mFieldUtils = new FieldUtils(mInstrumentation.getContext(), v.getContext());
-		}
 		Class<? extends View> usableClass = getUsableClass(mInstrumentation.getContext(), v, mfBinary);
 		boolean fInternalClass = (usableClass != v.getClass());
 	

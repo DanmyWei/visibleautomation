@@ -1,6 +1,10 @@
 package com.androidApp.EventRecorder;
 
 import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.androidApp.Utility.Constants;
@@ -56,6 +60,25 @@ public class ViewDirective {
 		if (tokens.length > startToken + 2) {
 			mVariable = tokens[startToken + 2];
 		}
+	}
+	
+	/**
+	 * read the list of view directives from a stream
+	 * @param is input stream
+	 * @return list of view references
+	 * @throws ClassNotFoundException thrown if the view class in a UserDefinedViewReference can't be found
+	 * @throws ReferenceException symbol resolution error.
+	 * @throws IOException
+	 */
+	public static List<ViewDirective> readViewDirectiveList(InputStream is) throws ClassNotFoundException, ReferenceException, IOException {
+		BufferedReader br = new BufferedReader(new InputStreamReader(is));
+		List<ViewDirective> viewDirectiveList = new ArrayList<ViewDirective>();
+		String line = null;
+		while ((line = br.readLine()) != null) {
+			ViewDirective viewDirective = new ViewDirective(line);
+			viewDirectiveList.add(viewDirective);
+		}
+		return viewDirectiveList;
 	}
 	
 	/**

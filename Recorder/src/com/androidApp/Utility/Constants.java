@@ -29,6 +29,8 @@ public class Constants {
 		public static final String VIEW_BY_ACTIVITY_CLASS = "activity_view_class";
 		public static final String VIEW_BY_ACTIVITY_CLASS_INDEX = "activity_view_class_index";
 		public static final String VIEW_BY_ACTIVITY_ID = "activity_view_id";
+		public static final String VIEW_BY_ACTIVITY_INTERNAL_CLASS = "activity_view_internal_class";
+		public static final String VIEW_BY_ACTIVITY_INTERNAL_CLASS_INDEX = "activity_view_internal_class_index";
 	}
 	
 	// classes used in reflection
@@ -249,6 +251,8 @@ public class Constants {
 		public static final String WHITELIST = "whitelist-android";	
 		public static final String USER_MOTION_EVENT_VIEWS = "user_motion_event_views.txt";
 		public static final String INTERSTITIAL_ACTIVITIES = "interstitial_activities.txt";
+		public static final String VIEW_DIRECTIVES = "view_directives.txt";
+		public static final String INTERSTITIAL_ACTIVITY_LIST = "interstitial_activities.txt";
 	}
 	
 	public static class Methods {
@@ -276,6 +280,11 @@ public class Constants {
 		public static final String CHECK = "Check";
 		public static final String UNCHECK = "Uncheck";
 		public static final String MOTION_EVENTS = "Listen to Motion Events";
+		public static final String OK = "OK";
+		public static final String CANCEL = "Cancel";
+		public static final String VARIABLE_NOT_FOUND = "Variable not found";
+		public static final String VIEW_NOT_TEXT_VIEW = "The selected view is not a text view";
+		public static final String VIEW_REFERENCE_FAILED = "Failed to generate view reference";
 	}
 	
 	// when ViewDirectives should be applied during record and playback.

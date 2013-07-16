@@ -323,18 +323,15 @@ public class ViewInterceptor {
 	 * @throws NoSuchFieldException
 	 */
 	public boolean replaceClickListener(View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
+		View.OnClickListener originalClickListener = ListenerIntercept.getClickListener(v);
 		
-		// if an ancestor has a click listener, then this view should not have one.
-		if (!RecordOnClickListener.hasAncestorListenedToClick(v)) {
-			View.OnClickListener originalClickListener = ListenerIntercept.getClickListener(v);
-			
-			// only install the click listener if the view has overridden the onClick() method, or has an OnClickListener()
-			// or it's a primitive widget.  If the widget is a child of an adapter view, we can only override the click event
-			// if the adapter does not have a item click listener of its own and is just used for layout.
-			AdapterView adapterView = (AdapterView) TestUtils.getDescendantOfClass(v, AdapterView.class);
-			if (RecordOnClickListener.hasOverriddenOnClickMethod(v) || 
-				(originalClickListener != null) || 
-				(!(v instanceof ViewGroup) && ((adapterView == null) || !TestUtils.adapterHasListeners(adapterView)))) {
+		// if the view has a click listener, or if it's a primitive widget and none of its ancestors have defined
+		// a click listener, and it is not a child of an adapter, or the adapter doesn't have any listeners of
+		// its own, then we can record the click
+		AdapterView adapterView = (AdapterView) TestUtils.getDescendantOfClass(v, AdapterView.class);
+		if ((originalClickListener != null) || 
+			(!(v instanceof ViewGroup) && !RecordOnClickListener.hasAncestorListenedToClick(v))) {
+			if ((adapterView == null) || !TestUtils.adapterHasListeners(adapterView)) {
 				if (!(originalClickListener instanceof RecordOnClickListener)) {
 					RecordOnClickListener recordClickListener = new RecordOnClickListener(mEventRecorder, originalClickListener);
 					v.setOnClickListener(recordClickListener);
@@ -417,7 +414,7 @@ public class ViewInterceptor {
 	public static boolean isSpinnerDropdownList(AdapterView adapterView) throws ClassNotFoundException {
 		Adapter adapter = adapterView.getAdapter();
 		Class spinnerAdapterClass = Class.forName(Constants.Classes.SPINNER_ADAPTER);
-		return (adapter.getClass() == spinnerAdapterClass);
+		return ((adapter != null) && (adapter.getClass() == spinnerAdapterClass));
 	}
 
 	/**

@@ -139,10 +139,6 @@ public class RecordOnClickListener extends RecordListener implements View.OnClic
 					}
 				}
 				
-				// if the parent overrode onClick(), then it will listen to the click events.
-				if (hasOverriddenOnClickMethod(v)) {
-					return true;
-				}
 				ViewParent vp = v.getParent();
 				if (vp instanceof View) {
 					v = (View) vp;
@@ -152,19 +148,5 @@ public class RecordOnClickListener extends RecordListener implements View.OnClic
 			}
 		}
 		return false;
-	}
-	
-	/**
-	 * has this view overridden the onClick() method?  if so, we're interested in recording its click events
-	 * @param v view to interrogate
-	 * @return
-	 */
-	public static boolean hasOverriddenOnClickMethod(View v) {
-		Class classWithOnClickMethod = ReflectionUtils.getClassForMethod(v, Constants.Methods.ON_CLICK);
-		if (classWithOnClickMethod != null) {
-			return !ViewReference.isAndroidClass(classWithOnClickMethod);
-		} else {
-			return false;
-		}
 	}
 }

@@ -280,16 +280,16 @@ public class GenerateRobotiumTestCode {
 		String srcPath = extDir + File.separator + srcDir;
 		String adbLsCommand = "shell ls " + srcPath;
 		String[] files = Exec.getAdbCommandOutput(androidSDK, adbLsCommand);
-		for (String file : files) {
-			String deviceFile = srcPath + File.separator + file;
-			String adbPullCommand = "pull " + deviceFile + " " + Constants.Filenames.TEMPORARY_FILE;
-			Exec.executeAdbCommand(androidSDK, adbPullCommand);
-			IFile eclipseFile = destFolder.getFile(file);
-			InputStream fis = new FileInputStream(Constants.Filenames.TEMPORARY_FILE);
-			eclipseFile.create(fis, IFile.FORCE, null);
-			fis.close();
+		if (!files[0].contains(RecorderConstants.NO_SUCH_FILE_OR_DIRECTORY)) {
+			for (String file : files) {
+				String deviceFile = srcPath + File.separator + file;
+				String adbPullCommand = "pull " + deviceFile + " " + Constants.Filenames.TEMPORARY_FILE;
+				Exec.executeAdbCommand(androidSDK, adbPullCommand);
+				IFile eclipseFile = destFolder.getFile(file);
+				InputStream fis = new FileInputStream(Constants.Filenames.TEMPORARY_FILE);
+				eclipseFile.create(fis, IFile.FORCE, null);
+				fis.close();
+			}
 		}
 	}
-
-
 }

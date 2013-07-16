@@ -43,6 +43,7 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 /**
@@ -57,10 +58,12 @@ import android.widget.TextView;
 public class MagicOverlay extends View implements OnGestureListener {
 	protected static final String					TAG = "MagicOverlay";
 	protected static final float					FLING_THRESHOLD = 4000.0F;
+	protected static final int						MIN_TEXT_OFFSET = 100;	// draw view class text above/below view
 	protected ImageView 							mButton;				// button to display magic overlays
 	protected GestureDetector 						mGestureDetector;		// for swipe to hide overlays
 	protected Paint									mBackgroundPaint;		// paint grey overlay
 	protected Paint									mViewPaint;				// paint green border around current view.
+	protected Paint									mTextPaint;				// solid color for label of view clss
 	protected EventRecorder							mRecorder;				// to record events
 	protected ClickMode								mMode;					// top-level or view mode
 	protected View									mContentView;			// content referenced by this overlay
@@ -69,6 +72,7 @@ public class MagicOverlay extends View implements OnGestureListener {
 	protected boolean								mfEnabled;				// slid-in
 	protected Rect									mCurrentViewRect;		// performance onDraw()
 	protected Rect									mOverlayViewRect;		// perf onDraw() to detect if in our overlay.
+	protected DirectiveDialogs						mDirectiveDialogs;		// context dialogs to issue directives.
 	
 	protected enum ClickMode {
 		BASE,
@@ -127,14 +131,16 @@ public class MagicOverlay extends View implements OnGestureListener {
 			mButton = createButton(context, contentView);
 			mButton.setOnClickListener(new SlideInClickListener());
 		}
-		mBackgroundPaint = createBackgroundPaint();
-		mViewPaint = createViewPaint();
+		mBackgroundPaint = MagicOverlay.createBackgroundPaint();
+		mViewPaint = MagicOverlay.createViewPaint();
+		mTextPaint = MagicOverlay.createTextPaint();
 		mCurrentViewRect = new Rect();
 		mOverlayViewRect = new Rect();
 		mGestureDetector = new GestureDetector(context, this);
 		mMode = ClickMode.BASE;
 		mCurrentView = null;
 		mfEnabled = false;
+		mDirectiveDialogs = new DirectiveDialogs(this);
 	}
 	
 	public static Paint createBackgroundPaint() {
@@ -150,7 +156,42 @@ public class MagicOverlay extends View implements OnGestureListener {
 		viewPaint.setColor(0xff00ff00);
 		viewPaint.setStyle(Style.STROKE);
 		viewPaint.setStrokeWidth(2.0F);
+		viewPaint.setTextSize(32.0F);
 		return viewPaint;
+	}
+	
+	public static Paint createTextPaint() {
+		Paint viewPaint = new Paint();
+		viewPaint.setColor(0xff00ff00);
+		viewPaint.setStyle(Style.FILL);
+		viewPaint.setStrokeWidth(2.0F);
+		viewPaint.setTextSize(32.0F);
+		return viewPaint;
+	}
+	
+	// accessors
+	public EventRecorder getEventRecorder() {
+		return mRecorder;
+	}
+	
+	public View getCurrentView() {
+		return mCurrentView;
+	}
+	
+	public ActivityInterceptor.ActivityState getActivityState() {
+		return mActivityState;
+	}
+	
+	public ClickMode getClickMode() {
+		return mMode;
+	}
+	
+	public void setClickMode(ClickMode mode) {
+		mMode = mode;
+	}
+	
+	public void resetCurrentView() {
+		mCurrentView = mContentView;
 	}
 	
 	/**
@@ -193,11 +234,11 @@ public class MagicOverlay extends View implements OnGestureListener {
 		@Override
 		public void onClick(View v) {
 			for (MagicOverlay overlay : mActivityState.getMagicOverlayList()) {
-				MagicFrame magicFrame = (MagicFrame) overlay.getParent();
 				FrameLayout.LayoutParams overlayLayoutParams = (FrameLayout.LayoutParams) MagicOverlay.this.getLayoutParams();
 				overlayLayoutParams.setMargins(0, 0, 0, 0);
 				MagicOverlay.this.setX(MagicOverlay.this.mContentView.getX());
 /*
+ * for some reason, the slide-in animaton doesn't work
 				TranslateAnimation slideInAnimation = new TranslateAnimation(TranslateAnimation.RELATIVE_TO_SELF, 1.0F,
 																			 TranslateAnimation.RELATIVE_TO_SELF, 0.0F,
 																			 TranslateAnimation.RELATIVE_TO_SELF, 0.0F,
@@ -235,7 +276,7 @@ public class MagicOverlay extends View implements OnGestureListener {
 	/**
 	 * when the slide is complete, reset the left coordinate of the specified overlay
 	 * @author matt2
-	 *
+	 * TODO: unused: there's problems with the animation
 	 */
 	protected class SlideCompleteRunnable implements Runnable {
 		protected MagicOverlay 	mOverlay;
@@ -272,18 +313,7 @@ public class MagicOverlay extends View implements OnGestureListener {
 		}
 	}
 			
-	/**
-	 * create a selection dialog from an array of strings
-	 * @return AlertDialog builder
-	 */
 	
-	protected Dialog createSelectionDialog(String[] items, DialogInterface.OnClickListener listener) {
-		AlertDialog.Builder builder = new AlertDialog.Builder(MagicOverlay.this.getContext());
-		builder.setItems(items,  listener);
-		builder.setTitle("Visible Automation");
-		return builder.create();
-	}
-
 	public boolean onTouchEvent(MotionEvent me) {
 		if (!mGestureDetector.onTouchEvent(me)) {
 			return false;
@@ -296,114 +326,9 @@ public class MagicOverlay extends View implements OnGestureListener {
 		return true;
 	}
 
-	
-	public class OnBaseDialogSelectionListener implements DialogInterface.OnClickListener {
-
-		@Override
-		public void onClick(DialogInterface dialog, int which) {
-			if (which == 0) {
-				String logMsg =  mActivityState.getActivity().getClass().getName();
-				MagicOverlay.this.mRecorder.writeRecord(Constants.EventTags.INTERSTITIAL_ACTIVITY, logMsg);
-			} else if (which == 1) {
-				// go into view selection mode
-				MagicOverlay.this.mMode = ClickMode.VIEW_SELECT;
-				mCurrentView = mContentView;
-			}
-		}	
-	}
-	
-	public class OnTextViewSelectionListener implements DialogInterface.OnClickListener {
-
-		@Override
-		public void onClick(DialogInterface dialog, int which) {
-			if (which == 0) {
-				mRecorder.writeRecord(Constants.EventTags.IGNORE_EVENTS, mCurrentView);
-			} else if (which == 1) {
-				mRecorder.writeRecord(Constants.EventTags.MOTION_EVENTS, mCurrentView);
-			} else if (which == 2) {
-				mRecorder.writeRecord(Constants.EventTags.COPY_TEXT, mCurrentView);
-			}
-		}
-	}
-	
-	public class OnListSelectionListener implements DialogInterface.OnClickListener {
-
-		@Override
-		public void onClick(DialogInterface dialog, int which) {
-			if (which == 0) {
-				mRecorder.writeRecord(Constants.EventTags.IGNORE_EVENTS, mCurrentView);
-			} else if (which == 1) {
-				mRecorder.writeRecord(Constants.EventTags.MOTION_EVENTS, mCurrentView);
-			} else if (which == 2) {
-				mRecorder.writeRecord(Constants.EventTags.SELECT_BY_TEXT, mCurrentView);
-			}
-		}
-	}
-
-	public class OnEditTextSelectionListener implements DialogInterface.OnClickListener {
-
-		@Override
-		public void onClick(DialogInterface dialog, int which) {
-			if (which == 0) {
-				mRecorder.writeRecord(Constants.EventTags.IGNORE_EVENTS, mCurrentView);
-			} else if (which == 1) {
-				mRecorder.writeRecord(Constants.EventTags.MOTION_EVENTS, mCurrentView);
-			} else if (which == 2) {
-				mRecorder.writeRecord(Constants.EventTags.COPY_TEXT, mCurrentView);
-			} else if (which == 3) {
-				mRecorder.writeRecord(Constants.EventTags.PASTE_TEXT, mCurrentView);
-			}
-		}
-	}
-
-	public class OnCompoundButtonSelectionListener implements DialogInterface.OnClickListener {
-
-		@Override
-		public void onClick(DialogInterface dialog, int which) {
-			if (which == 0) {
-				mRecorder.writeRecord(Constants.EventTags.IGNORE_EVENTS, mCurrentView);
-			} else if (which == 1) {
-				mRecorder.writeRecord(Constants.EventTags.MOTION_EVENTS, mCurrentView);
-			} else if (which == 2) {
-				mRecorder.writeRecord(Constants.EventTags.CHECK, mCurrentView);
-			} else if (which == 3) {
-				mRecorder.writeRecord(Constants.EventTags.UNCHECK, mCurrentView);
-			}
-		}
-	}
-
-	
 	@Override
 	public void onLongPress(MotionEvent e) {
-		if (mMode == ClickMode.VIEW_SELECT) {
-			if (mCurrentView instanceof TextView) {
-				String[] textViewItems = new String[] { Constants.DisplayStrings.IGNORE_EVENTS, 
-													 	Constants.DisplayStrings.MOTION_EVENTS,
-													    Constants.DisplayStrings.COPY_TEXT };
-				Dialog dialog = createSelectionDialog(textViewItems, new OnTextViewSelectionListener());
-				dialog.show();
-			} else if (mCurrentView instanceof AbsListView) {
-				String[] listViewItems = new String[] { Constants.DisplayStrings.IGNORE_EVENTS,
-														Constants.DisplayStrings.MOTION_EVENTS,
-														Constants.DisplayStrings.SELECT_BY_TEXT };
-				Dialog dialog = createSelectionDialog(listViewItems, new OnListSelectionListener());
-				dialog.show();	
-			} else if (mCurrentView instanceof CompoundButton) {
-				String[] compoundButtonItems = new String[] { Constants.DisplayStrings.IGNORE_EVENTS,
-															  Constants.DisplayStrings.MOTION_EVENTS,
-															  Constants.DisplayStrings.CHECK,
-															  Constants.DisplayStrings.UNCHECK };
-				Dialog dialog = createSelectionDialog(compoundButtonItems, new OnCompoundButtonSelectionListener());
-				dialog.show();	
-			} else if (mCurrentView instanceof EditText) {
-				String[] editTextItems = new String[] { Constants.DisplayStrings.IGNORE_EVENTS, 
-														Constants.DisplayStrings.MOTION_EVENTS,
-					    								Constants.DisplayStrings.COPY_TEXT,
-					    								Constants.DisplayStrings.PASTE_TEXT};
-				Dialog dialog = createSelectionDialog(editTextItems, new OnBaseDialogSelectionListener());
-				dialog.show();				
-			}
-		} 	
+		mDirectiveDialogs.viewDialog(MagicOverlay.this.getContext(), e);
 	}
 	
 	@Override
@@ -419,7 +344,7 @@ public class MagicOverlay extends View implements OnGestureListener {
 	public boolean onSingleTapUp(MotionEvent e) {
 		if (mMode == ClickMode.BASE) {
 			String[] baseItems = new String[] { "Interstitial Activity", "View Selection" };
-			Dialog dialog = createSelectionDialog(baseItems, new OnBaseDialogSelectionListener());
+			Dialog dialog = mDirectiveDialogs.createSelectionDialog(MagicOverlay.this.getContext(), baseItems, mDirectiveDialogs.new OnBaseDialogSelectionListener());
 			dialog.show();
 		} else if (mMode == ClickMode.VIEW_SELECT) {
 			Rect currentViewRect = new Rect();
@@ -466,6 +391,9 @@ public class MagicOverlay extends View implements OnGestureListener {
 		return false;
 	}
 	
+	/**
+	 * draw a rectangle around the current view, with a label of the view class
+	 */
 	@Override
 	public void onDraw(Canvas canvas) {
 		Rect rt = new Rect(0, 0, getWidth(), getHeight());
@@ -479,38 +407,20 @@ public class MagicOverlay extends View implements OnGestureListener {
 				mOverlayViewRect.contains(mCurrentViewRect.right, mCurrentViewRect.bottom)) {
 				mCurrentViewRect.offset(-mOverlayViewRect.left, -mOverlayViewRect.top);
 				canvas.drawRect(mCurrentViewRect, mViewPaint);
+				String text = mCurrentView.getClass().getSimpleName();
+
+				if (mCurrentViewRect.top > MIN_TEXT_OFFSET) {
+					// top above
+					canvas.drawText(mCurrentView.getClass().getSimpleName(), mCurrentViewRect.left, mCurrentViewRect.top, mTextPaint);					
+				} else if (mOverlayViewRect.bottom - mCurrentViewRect.bottom > MIN_TEXT_OFFSET) {
+					// below above.
+					canvas.drawText(mCurrentView.getClass().getSimpleName(), mCurrentViewRect.left, mCurrentViewRect.bottom + mViewPaint.getTextSize(), mTextPaint);					
+				} else {
+					// top below
+					canvas.drawText(mCurrentView.getClass().getSimpleName(), mCurrentViewRect.left, mCurrentViewRect.top + mViewPaint.getTextSize(), mTextPaint);										
+				}
 			}				
 		}
 		super.onDraw(canvas);
 	}
-	
-
-	/**
-	 * match our measurements to that of the content view.
-	 */
-
-	/*
-	@Override	
-	protected void onMeasure (int widthMeasureSpec, int heightMeasureSpec) {
-		int contentWidth = mContentView.getMeasuredWidth();
-		int contentHeight = mContentView.getMeasuredHeight();
-		setMeasuredDimension(contentWidth, contentHeight);
-	}
-
-	
-	@Override
-	protected void onLayout (boolean changed, int left, int top, int right, int bottom) {
-		if (mfEnabled) {
-			setLeft(mContentView.getLeft());
-			setTop(mContentView.getTop());
-			setRight(mContentView.getRight());
-			setBottom(mContentView.getBottom());
-		} else {
-			setLeft(mContentView.getRight());
-			setTop(mContentView.getTop());
-			setRight(mContentView.getRight() + mContentView.getWidth());
-			setBottom(mContentView.getBottom());
-		}
-	}
-	*/
 }

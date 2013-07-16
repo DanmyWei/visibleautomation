@@ -10,11 +10,14 @@ import java.util.List;
 import java.util.StringTokenizer;
 
 import android.app.Activity;
+import android.app.Instrumentation;
+import android.content.Context;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.TestUtils;
 
 /**
  * UserDefinedView Reference: used for identifying views for special treatment, such as motion events
@@ -28,7 +31,9 @@ public class UserDefinedViewReference {
 		VIEW_BY_CLASS(Constants.Reference.VIEW_BY_CLASS, 0x1),
 		VIEW_BY_ACTIVITY_CLASS(Constants.Reference.VIEW_BY_ACTIVITY_CLASS, 0x2),
 		VIEW_BY_ACTIVITY_CLASS_INDEX(Constants.Reference.VIEW_BY_ACTIVITY_CLASS_INDEX, 0x3),
-		VIEW_BY_ACTIVITY_ID(Constants.Reference.VIEW_BY_ACTIVITY_ID, 0x4);
+		VIEW_BY_ACTIVITY_INTERNAL_CLASS(Constants.Reference.VIEW_BY_ACTIVITY_INTERNAL_CLASS, 0x4),
+		VIEW_BY_ACTIVITY_INTERNAL_CLASS_INDEX(Constants.Reference.VIEW_BY_ACTIVITY_INTERNAL_CLASS_INDEX, 0x5),
+		VIEW_BY_ACTIVITY_ID(Constants.Reference.VIEW_BY_ACTIVITY_ID, 0x6);
 		
 		public String mName;
 		public int mValue;
@@ -39,15 +44,111 @@ public class UserDefinedViewReference {
 		}
 	}
 	
-	protected ReferenceEnum 			mReferenceType;		// how the reference is specified
-	protected String					mViewClassName;		// view.class.name
-	protected Class<? extends View>		mViewClass;			// view class
-	protected String					mActivityName;		// activity.class.name
-	protected Class<? extends Activity> mActivityClass;		// activity class
-	protected int						mClassIndex;		// index in view hierarchy filtered by class
-	protected int						mID;				// android resource ID
-	protected int						mTokenCount;		// # of tokens consumed in parsing
+	protected ReferenceEnum 			mReferenceType;				// how the reference is specified
+	protected String					mViewClassName;				// view.class.name
+	protected Class<? extends View>		mViewClass;					// view class
+	protected String					mViewInternalClassName;		// internal view.class.name
+	protected Class<? extends View>		mViewInternalClass;			// internal view class
+	protected String					mActivityName;				// activity.class.name
+	protected Class<? extends Activity> mActivityClass;				// activity class
+	protected int						mClassIndex;				// index in view hierarchy filtered by class
+	protected int						mID;						// android resource ID
+	protected int						mTokenCount;				// # of tokens consumed in parsing
 	
+	/**
+	 * parse a UserDefinedViewReference from a string
+	 * view_by_class: classname
+	 * view_by_activity_class: activity, classname
+	 * view_by_activity_class_index: activity, classname, index
+	 * view_by_activity_id: activity, id
+	 * @param referenceLine
+	 */
+	public UserDefinedViewReference(String referenceLine) throws ReferenceException, ClassNotFoundException {
+		String[] tokens = referenceLine.split("[:,]");
+		String type = tokens[0];
+		if (type.equals(ReferenceEnum.VIEW_BY_CLASS.mName)) {
+			mReferenceType = ReferenceEnum.VIEW_BY_CLASS;
+			mActivityName = null;
+			mActivityClass = null;
+			mViewClassName = tokens[1].trim();
+			mViewClass = (Class<? extends View>) Class.forName(mViewClassName);
+			mTokenCount = 2;
+		} else if (type.equals(ReferenceEnum.VIEW_BY_ACTIVITY_CLASS.mName)) {
+			mReferenceType = ReferenceEnum.VIEW_BY_ACTIVITY_CLASS;
+			mActivityName = tokens[1].trim();
+			mActivityClass = (Class<? extends Activity>) Class.forName(mActivityName);
+			mViewClassName = tokens[2].trim();
+			mViewClass = (Class<? extends View>) Class.forName(mViewClassName);
+			mTokenCount = 3;
+		} else if (type.equals(ReferenceEnum.VIEW_BY_ACTIVITY_INTERNAL_CLASS.mName)) {
+			mReferenceType = ReferenceEnum.VIEW_BY_ACTIVITY_INTERNAL_CLASS;
+			mActivityName = tokens[1].trim();
+			mActivityClass = (Class<? extends Activity>) Class.forName(mActivityName);
+			mViewClassName = tokens[2].trim();
+			mViewClass = (Class<? extends View>) Class.forName(mViewClassName);
+			mTokenCount = 3;
+		} else if (type.equals(ReferenceEnum.VIEW_BY_ACTIVITY_CLASS_INDEX.mName)) {
+			mReferenceType = ReferenceEnum.VIEW_BY_ACTIVITY_CLASS_INDEX;
+			mActivityName = tokens[1].trim();
+			mActivityClass = (Class<? extends Activity>) Class.forName(mActivityName);
+			mViewClassName = tokens[2].trim();
+			mViewClass = (Class<? extends View>) Class.forName(mViewClassName);
+			mClassIndex = Integer.parseInt(tokens[3].trim());
+			mTokenCount = 4;
+		} else if (type.equals(ReferenceEnum.VIEW_BY_ACTIVITY_CLASS_INDEX.mName)) {
+			mReferenceType = ReferenceEnum.VIEW_BY_ACTIVITY_INTERNAL_CLASS_INDEX;
+			mActivityName = tokens[1].trim();
+			mActivityClass = (Class<? extends Activity>) Class.forName(mActivityName);
+			mViewClassName = tokens[2].trim();
+			mViewClass = (Class<? extends View>) Class.forName(mViewClassName);
+			mClassIndex = Integer.parseInt(tokens[3].trim());
+			mTokenCount = 4;
+		} else if (type.equals(ReferenceEnum.VIEW_BY_ACTIVITY_ID.mName)) {
+			mReferenceType = ReferenceEnum.VIEW_BY_ACTIVITY_ID;
+			mActivityName = tokens[1].trim();
+			mActivityClass = (Class<? extends Activity>) Class.forName(mActivityName);
+			mID = Integer.parseInt(tokens[2].trim());
+			mTokenCount = 3;
+		}
+	}
+	
+	/**
+	 * similar to ViewRefernce: TODO: Consolidate these functions
+	 * @param v
+	 */
+	public UserDefinedViewReference(Instrumentation instrumentation, ViewReference viewReference, View v, Activity activity) throws IOException {
+		Class<? extends View> usableClass = (Class<? extends View>) viewReference.getUsableClass(instrumentation.getContext(), v, viewReference.getBinary());
+		boolean fInternalClass = (usableClass != v.getClass());
+		
+		// first, try the id, and verify that it is unique.
+		int id = v.getId();
+		View rootView = v.getRootView();
+		mActivityName = activity.getClass().getName();
+		mActivityClass = activity.getClass();
+		if (id != 0) {
+			int idCount = TestUtils.idCount(rootView, id);
+			if (idCount == 1) {
+				mReferenceType = ReferenceEnum.VIEW_BY_ACTIVITY_ID;
+				mID = id;
+			}
+		} else {
+			// not-to-special case for everyone else.
+			if (fInternalClass) {
+				mReferenceType = ReferenceEnum.VIEW_BY_ACTIVITY_INTERNAL_CLASS_INDEX;
+				mViewClassName = usableClass.getName();
+				mViewClass = usableClass;
+				mViewInternalClassName = v.getClass().getName();
+				mViewInternalClass = v.getClass();
+			} else {
+				mReferenceType = ReferenceEnum.VIEW_BY_ACTIVITY_CLASS_INDEX;
+				mViewClassName = usableClass.getName();
+				mViewClass = usableClass;
+			}
+		}
+	}
+
+	public UserDefinedViewReference(View v, Activity activity) {
+	}
 	// accessors
 	public ReferenceEnum referenceType() {
 		return mReferenceType;
@@ -79,48 +180,6 @@ public class UserDefinedViewReference {
 	 */
 	public int getTokenCount() {
 		return mTokenCount;
-	}
-	
-	/**
-	 * parse a UserDefinedViewReference from a string
-	 * view_by_class: classname
-	 * view_by_activity_class: activity, classname
-	 * view_by_activity_class_index: activity, classname, index
-	 * view_by_activity_id: activity, id
-	 * @param referenceLine
-	 */
-	public UserDefinedViewReference(String referenceLine) throws ReferenceException, ClassNotFoundException {
-		String[] tokens = referenceLine.split("[:,]");
-		String type = tokens[0];
-		if (type.equals(ReferenceEnum.VIEW_BY_CLASS.mName)) {
-			mReferenceType = ReferenceEnum.VIEW_BY_CLASS;
-			mActivityName = null;
-			mActivityClass = null;
-			mViewClassName = tokens[1].trim();
-			mViewClass = (Class<? extends View>) Class.forName(mViewClassName);
-			mTokenCount = 2;
-		} else if (type.equals(ReferenceEnum.VIEW_BY_ACTIVITY_CLASS.mName)) {
-			mReferenceType = ReferenceEnum.VIEW_BY_CLASS;
-			mActivityName = tokens[1].trim();
-			mActivityClass = (Class<? extends Activity>) Class.forName(mActivityName);
-			mViewClassName = tokens[2].trim();
-			mViewClass = (Class<? extends View>) Class.forName(mViewClassName);
-			mTokenCount = 3;
-		} else if (type.equals(ReferenceEnum.VIEW_BY_ACTIVITY_CLASS_INDEX.mName)) {
-			mReferenceType = ReferenceEnum.VIEW_BY_CLASS;
-			mActivityName = tokens[1].trim();
-			mActivityClass = (Class<? extends Activity>) Class.forName(mActivityName);
-			mViewClassName = tokens[2].trim();
-			mViewClass = (Class<? extends View>) Class.forName(mViewClassName);
-			mClassIndex = Integer.parseInt(tokens[3].trim());
-			mTokenCount = 4;
-		} else if (type.equals(ReferenceEnum.VIEW_BY_ACTIVITY_ID.mName)) {
-			mReferenceType = ReferenceEnum.VIEW_BY_CLASS;
-			mActivityName = tokens[1].trim();
-			mActivityClass = (Class<? extends Activity>) Class.forName(mActivityName);
-			mID = Integer.parseInt(tokens[2].trim());
-			mTokenCount = 3;
-		}
 	}
 	/**
 	 * view_by_class: classname
