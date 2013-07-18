@@ -121,6 +121,10 @@ public class EventRecorder extends EventRecorderInterface {
 		mViewDirectiveList.add(viewDirective);
 	}
 	
+	public void addInterstitialActivity(Activity activity) {
+		mInterstitialActivityList.add(activity.getClass());
+	}
+	
 	/**
 	 * get the list of view directives for this activity, and this phase of execution.
 	 * @param activity activity to filter on
@@ -129,14 +133,35 @@ public class EventRecorder extends EventRecorderInterface {
 	 */
 	public List<ViewDirective> getMatchingViewDirectives(Activity activity, ViewDirective.When when) {
 		List<ViewDirective> filteredList = new ArrayList<ViewDirective>();
-		Class activityClass = activity.getClass();
 		for (ViewDirective viewDirective : mViewDirectiveList) {
-			if (viewDirective.mViewReference.mActivityClass.isAssignableFrom(activityClass) && (viewDirective.mWhen == when)) {
+			UserDefinedViewReference reference = viewDirective.getReference();
+			if (reference.matchActivity(activity) && (viewDirective.mWhen == when)) {
 				filteredList.add(viewDirective);
 			}
 		}
 		return filteredList;
 	}	
+	
+	/**
+	 * does this view, its preorder index, and the operation. match a directive in the list of view directives?
+	 * @param view view to match
+	 * @param viewIndex index of the view in a preorder traversal of the view hierarchy 
+	 * @param operation view directive operation
+	 * @param viewDirectiveList list of directives for this activity (filtered)
+	 * @return
+	 */
+	public boolean matchViewDirective(View 					      	view, 
+									  int						  	viewIndex,
+									  ViewDirective.ViewOperation 	operation,
+									  ViewDirective.When			when,
+									  List<ViewDirective> 		  	viewDirectiveList) {
+		for (ViewDirective viewDirective : viewDirectiveList) {
+			if (viewDirective.match(view, viewIndex, operation, when)) {
+				return true;
+			}
+		}
+		return false;
+	}
 	
 	// wrapper for wrapper to write a record with an event, time view description, and message to the system	
 	public void writeRecord(String event, View v, String message) {

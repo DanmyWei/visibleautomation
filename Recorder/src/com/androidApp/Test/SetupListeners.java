@@ -218,7 +218,7 @@ public class SetupListeners {
 											View vChild = vg.getChildAt(0);
 											viewInterceptor.setCurrentFloatingWindow(windowAndView.mWindow);
 											recorder.writeRecord(Constants.EventTags.CREATE_FLOATING_WINDOW, "create floating window");
-											instrumentation.runOnMainSync(new InterceptViewRunnable(vChild));
+											instrumentation.runOnMainSync(viewInterceptor.new InterceptViewRunnable(vChild));
 										}
 									}
 								}
@@ -366,27 +366,7 @@ public class SetupListeners {
 			ViewGroup contentView = (ViewGroup) decorView.getChildAt(0);		
 			if (contentView != null && !(contentView instanceof MagicFrame)) {
 				MagicFrame magic = new MagicFrame(contentView.getContext(), contentView, 0, mRecorder, mViewInterceptor);
-				SetupListeners.this.getViewInterceptor().intercept(contentView);
-			}
-		}
-	}
-	
-	/**
-	 * same, except for just views.
-	 * @author matt2
-	 *
-	 */
-	protected class InterceptViewRunnable implements Runnable {
-		protected View mView;
-		
-		public InterceptViewRunnable(View view) {
-			mView = view;
-		}
-		
-		public void run() {
-			if (mView != null && !(mView instanceof MagicFrame)) {
-				//MagicFrame magic = new MagicFrame(mView.getContext(), mView, 0, mRecorder, mViewInterceptor);
-				SetupListeners.this.getViewInterceptor().intercept(mView);
+				SetupListeners.this.getViewInterceptor().intercept((Activity) contentView.getContext(), contentView);
 			}
 		}
 	}

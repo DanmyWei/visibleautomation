@@ -150,7 +150,10 @@ public class ViewReference {
 		String name = viewClass.getName();
 		return name.startsWith(Constants.Classes.ANDROID_WIDGET) || 
 			   name.startsWith(Constants.Classes.ANDROID_VIEW) || 
-			   name.startsWith(Constants.Classes.ANDROID_INTERNAL);
+			   name.startsWith(Constants.Classes.ANDROID_INTERNAL) ||
+			   name.startsWith(Constants.Classes.COM_ANDROID_WIDGET) || 
+			   name.startsWith(Constants.Classes.COM_ANDROID_VIEW) || 
+			   name.startsWith(Constants.Classes.COM_ANDROID_INTERNAL);
 	}
 	
 	// get a usable class name for our application

@@ -35,6 +35,7 @@ public class IMEMessageListener implements Runnable {
 	
 	public IMEMessageListener(ViewInterceptor viewInterceptor, EventRecorder eventRecorder) {
 		sfTerminate = false;
+		mfKeyboardVisible = false;
 		mViewInterceptor = viewInterceptor;
 		mEventRecorder = eventRecorder;
 	}
@@ -71,7 +72,6 @@ public class IMEMessageListener implements Runnable {
 				if (fSuccessfulRead && (numBytes > 0)) {
 					String msg = new String(buffer);
 					msg = msg.substring(0, numBytes);
-					mfKeyboardVisible = msg.equals(SHOW_IME);
 					if (msg.equals(SHOW_IME)) {
 						/* sometimes we get multiple show_ime messages from the keyboard: TODO: make sure that it only sends
 						 * a show_ime message if it's transitioning from gone to visible.  (see SoftKeyboard.onShowInputRequested())

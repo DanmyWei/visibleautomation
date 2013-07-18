@@ -52,11 +52,11 @@ public class RecordAutoCompleteDropdownOnDismissListener extends RecordListener 
 	 */
 	public void onDismiss() {
 		boolean fReentryBlock = getReentryBlock();
+		// clear the current popup window so it gets intercepted if it comes up again.
+		mViewInterceptor.setCurrentPopupWindow(null);
 		if (!RecordListener.getEventBlock()) {
 			setEventBlock(true);
 			try {
-				// clear the current popup window so it gets intercepted if it comes up again.
-				mViewInterceptor.setCurrentPopupWindow(null);
 				if (mViewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_BACK){
 					mEventRecorder.writeRecord(Constants.EventTags.DISMISS_AUTOCOMPLETE_DROPDOWN_BACK_KEY, mAnchorView, "dismiss autocomplete dropdown window");					
 				} else {

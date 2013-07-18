@@ -272,6 +272,38 @@ public class UserDefinedViewReference {
 	}
 	
 	/**
+	 * does this activity class match the class specified in the reference, or does the reference apply to all activities?
+	 * @param a activity
+	 * @return true if it matches
+	 */
+	public boolean matchActivity(Activity a) {
+		return (this.referenceType() == ReferenceEnum.VIEW_BY_CLASS) || getActivityClass().isAssignableFrom(a.getClass());
+	}
+	
+	/**
+	 * does this view match this user defined view reference
+	 * @param v view to match
+	 * @param viewClassIndex index of class through a pre-order traversal of the view hierarchy
+	 * @return true on match, false otherwise
+	 */
+	public boolean matchView(View v, int viewClassIndex) {
+		Class<? extends View> viewClass = v.getClass();
+		Class<? extends View> refViewClass = this.getViewClass();
+		switch (this.referenceType()) {
+			case VIEW_BY_CLASS: 
+				return refViewClass.isAssignableFrom(viewClass);
+			case VIEW_BY_ACTIVITY_CLASS:
+				return refViewClass.isAssignableFrom(viewClass);
+			case VIEW_BY_ACTIVITY_CLASS_INDEX:
+				return refViewClass.isAssignableFrom(viewClass) && (viewClassIndex == this.getClassIndex());
+			case VIEW_BY_ACTIVITY_ID:
+				return this.getID() == v.getId();
+			default:
+				return false;
+		}
+	}
+	
+	/**
 	 * return the list of matching views
 	 * @param activity activity to match against
 	 * @param v (recursive) current view to check against
@@ -285,47 +317,18 @@ public class UserDefinedViewReference {
 										   Hashtable<Class,ClassCount> classTable, 
 										   List<View> matchingViews) {
 		for (UserDefinedViewReference reference : references) {
-			Class<? extends View> viewClass = v.getClass();
-			Class<? extends View> refViewClass = reference.getViewClass();
-			Class<? extends Activity> activityClass = activity.getClass();
-			Class<? extends Activity> refActivityClass = reference.getActivityClass();
-			switch (reference.referenceType()) {
-				case VIEW_BY_CLASS: 
-				{
-					if (refViewClass.isAssignableFrom(viewClass)) {
-						matchingViews.add(v);
-					}
+			ClassCount classCount = classTable.get(v.getClass());
+			int viewClassIndex = (classCount != null) ? classCount.mCount : 0;
+			if (reference.matchActivity(activity)) {
+				if (reference.matchView(v, viewClassIndex)) {
+					matchingViews.add(v);
 				}
-				break;
-				case VIEW_BY_ACTIVITY_CLASS:
-				{
-					if (refViewClass.isAssignableFrom(viewClass) && refActivityClass.isAssignableFrom(activityClass)) {
-						matchingViews.add(v);
-					}
-				}
-				break;
-				case VIEW_BY_ACTIVITY_CLASS_INDEX:
-				{
-					if (refViewClass.isAssignableFrom(viewClass) && refActivityClass.isAssignableFrom(activityClass)) {
-						ClassCount classCount = classTable.get(v.getClass());
-						if (((classCount == null) && (reference.getClassIndex() == 0)) || (classCount.mCount == reference.getClassIndex())) {
-							matchingViews.add(v);
-						}
-					}
-				}
-				break;
-				case VIEW_BY_ACTIVITY_ID:
-				{
-					if (refActivityClass.isAssignableFrom(activityClass) && reference.getID() == v.getId()) {
-						matchingViews.add(v);
-					}
-				}
-				break;
 			}
 		}
 		ClassCount classCount = classTable.get(v.getClass());
 		if (classCount == null) {
 			classCount = new ClassCount(1);
+			classTable.put(v.getClass(), classCount);
 		} else {
 			classCount.mCount++;
 		}

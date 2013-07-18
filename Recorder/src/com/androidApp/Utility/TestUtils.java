@@ -19,6 +19,7 @@ import android.os.Build;
 import android.util.Log;
 import android.view.ContextThemeWrapper;
 import android.view.View;
+import android.widget.ImageView;
 import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.view.Window;
@@ -31,6 +32,9 @@ import android.widget.TabHost;
 import android.widget.TextView;
 import android.widget.ScrollView;
 import android.widget.Gallery;
+
+import com.androidApp.Intercept.MagicOverlay;
+import com.androidApp.Intercept.MagicFrame;
 
 /**
  * grab-bag of utilities to extract views from the android view tree.
@@ -561,6 +565,17 @@ public class TestUtils {
 			   className.equals(Constants.Classes.SCROLLING_TAG_CONTAINER_TAB_VIEW);
 	}
 	
+	/**
+	 * don't intercept it if it's one of ours.
+	 * @param v
+	 * @return true if it's one of ours.
+	 */
+	public static boolean isVisibleAutomationView(View v) {
+		return ((v instanceof MagicFrame) || 
+				(v instanceof MagicOverlay) || 
+				((v instanceof ImageView) && (v.getId() == MagicOverlay.MAGIC_BUTTON_ID)));
+	}
+	
 	public static boolean isScrollingTextView(TextView tv) throws IllegalAccessException, NoSuchFieldException {
 		return ReflectionUtils.getFieldBoolean(tv, TextView.class, Constants.Fields.HORIZONTALLY_SCROLLING);
 	}
@@ -880,15 +895,9 @@ public class TestUtils {
 					if (TestUtils.isDialogOrPopup(activity, v)) {
 						
 						// we need to check if the view is always a PhoneWindow$DecorView or PopupWindow$PopupViewContainer
-						if (!(v instanceof MagicFramePopup)) {
-							try {
-								Object window = ReflectionUtils.getFieldValue(v, v.getClass(), Constants.Classes.THIS);
-								WindowAndView windowAndView = new WindowAndView(window, v);
-								return windowAndView;
-							} catch (Exception ex) {
-								ex.printStackTrace();
-							}
-						}
+						Object window = ReflectionUtils.getFieldValue(v, v.getClass(), Constants.Classes.THIS);
+						WindowAndView windowAndView = new WindowAndView(window, v);
+						return windowAndView;
 					}
 				}
 			}

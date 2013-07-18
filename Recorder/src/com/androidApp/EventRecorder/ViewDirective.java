@@ -7,6 +7,8 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
+import android.view.View;
+
 import com.androidApp.Utility.Constants;
 
 /**
@@ -23,7 +25,9 @@ public class ViewDirective {
 		UNCHECK,				// <view_reference>,uncheck,<when>
 		MOTION_EVENTS,			// <view_reference>,motion_events,on_activity_start
 		IGNORE_EVENTS,			// <view_reference>,ignore_events,on_activity_start
-		SELECT_BY_TEXT			// <view_reference>,select_by_text,on_activity_start
+		SELECT_BY_TEXT,			// <view_reference>,select_by_text,on_activity_start
+		ENTER_TEXT_BY_KEY		// <view_reference>,enter_text_by_key,on_actvity_start		
+		
 	}
 	public enum When {
 		ON_ACTIVITY_START,		// perform the operation when the activity starts
@@ -43,6 +47,18 @@ public class ViewDirective {
 		mOperation = operation;
 		mWhen = when;
 		mVariable = variable;
+	}
+	
+	public UserDefinedViewReference getReference() {
+		return mViewReference;
+	}
+	
+	public ViewOperation getOperation() {
+		return mOperation;
+	}
+	
+	public When getWhen() {
+		return mWhen;
 	}
 	
 	/**
@@ -79,6 +95,36 @@ public class ViewDirective {
 			viewDirectiveList.add(viewDirective);
 		}
 		return viewDirectiveList;
+	}
+
+	/**
+	 * does this view match the view reference, requested operation, and when?
+	 * @param v
+	 * @param viewIndex
+	 * @param op
+	 * @param when
+	 * @return
+	 */
+	public boolean match(View v, int viewIndex, ViewOperation op, When when) {
+		return mViewReference.matchView(v, viewIndex) && (mOperation == op) && (mWhen == when);
+	}
+	
+	/**
+	 * match against a list of view directives.
+	 * @param v
+	 * @param viewIndex
+	 * @param op
+	 * @param when
+	 * @param viewDirectiveList
+	 * @return
+	 */
+	public static boolean match(View v, int viewIndex, ViewOperation op, When when, List<ViewDirective> viewDirectiveList) {
+		for (ViewDirective viewDirective : viewDirectiveList) {
+			if (viewDirective.match(v, viewIndex, op, when)) {
+				return true;
+			}
+		}
+		return false;
 	}
 	
 	/**

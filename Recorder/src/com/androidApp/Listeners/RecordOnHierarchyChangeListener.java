@@ -10,6 +10,7 @@ import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.ReflectionUtils;
 
+import android.app.Activity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewGroup.OnHierarchyChangeListener;
@@ -52,7 +53,8 @@ public class RecordOnHierarchyChangeListener extends RecordListener implements O
 
 	@Override
 	public void onChildViewAdded(View parent, View child) {
-		mViewInterceptor.intercept(child);
+		Activity activity = (Activity) parent.getContext();
+		mViewInterceptor.intercept(activity, child);
 		
 	}
 

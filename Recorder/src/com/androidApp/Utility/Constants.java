@@ -69,9 +69,12 @@ public class Constants {
 		public static final String SPINNER_DROPDOWN_ADAPTER = "android.widget.Spinner$DropDownAdapter";	
 		public static final String SCROLLING_TAB_CONTAINER_VIEW = "com.android.internal.widget.ScrollingTabContainerView";
 		public static final String HORIZONTAL_SCROLL_VIEW = "com.android.widget.HorizontalScrollView";
-		public static final String ANDROID_WIDGET = "com.android.widget";	
-		public static final String ANDROID_VIEW = "com.android.view";
-		public static final String ANDROID_INTERNAL = "com.android.internal";	
+		public static final String ANDROID_WIDGET = "android.widget";	
+		public static final String ANDROID_VIEW = "android.view";
+		public static final String ANDROID_INTERNAL = "android.internal";
+		public static final String COM_ANDROID_WIDGET = "com.android.widget";	
+		public static final String COM_ANDROID_VIEW = "com.android.view";
+		public static final String COM_ANDROID_INTERNAL = "com.android.internal";
 		
 	}
 	
@@ -227,6 +230,7 @@ public class Constants {
 		public static final String SELECT_BY_TEXT = "select_by_text";
 		public static final String CHECK = "check";
 		public static final String UNCHECK = "uncheck";
+		public static final String ENTER_TEXT_BY_KEY = "enter_text_by_key";
 	}
 	
 	// description strings 
@@ -285,6 +289,7 @@ public class Constants {
 		public static final String VARIABLE_NOT_FOUND = "Variable not found";
 		public static final String VIEW_NOT_TEXT_VIEW = "The selected view is not a text view";
 		public static final String VIEW_REFERENCE_FAILED = "Failed to generate view reference";
+		public static final String INSERT_BY_CHARACTER = "Insert text by keys";
 	}
 	
 	// when ViewDirectives should be applied during record and playback.

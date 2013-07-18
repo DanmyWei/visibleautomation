@@ -58,21 +58,22 @@ import android.widget.TextView;
 public class MagicOverlay extends View implements OnGestureListener {
 	protected static final String					TAG = "MagicOverlay";
 	protected static final float					FLING_THRESHOLD = 4000.0F;
-	protected static final int						MIN_TEXT_OFFSET = 100;	// draw view class text above/below view
-	protected ImageView 							mButton;				// button to display magic overlays
-	protected GestureDetector 						mGestureDetector;		// for swipe to hide overlays
-	protected Paint									mBackgroundPaint;		// paint grey overlay
-	protected Paint									mViewPaint;				// paint green border around current view.
-	protected Paint									mTextPaint;				// solid color for label of view clss
-	protected EventRecorder							mRecorder;				// to record events
-	protected ClickMode								mMode;					// top-level or view mode
-	protected View									mContentView;			// content referenced by this overlay
-	protected View									mCurrentView;			// currently selected view of ALL overlays
-	protected ActivityInterceptor.ActivityState		mActivityState;			// contains list of active overlays
-	protected boolean								mfEnabled;				// slid-in
-	protected Rect									mCurrentViewRect;		// performance onDraw()
-	protected Rect									mOverlayViewRect;		// perf onDraw() to detect if in our overlay.
-	protected DirectiveDialogs						mDirectiveDialogs;		// context dialogs to issue directives.
+	protected static final int						MIN_TEXT_OFFSET = 100;			// draw view class text above/below view
+	public static final int							MAGIC_BUTTON_ID = 0xdeadbeef;	// so we defeat event intercept
+	protected ImageView 							mButton;						// button to display magic overlays
+	protected GestureDetector 						mGestureDetector;				// for swipe to hide overlays
+	protected Paint									mBackgroundPaint;				// paint grey overlay
+	protected Paint									mViewPaint;						// paint green border around current view.
+	protected Paint									mTextPaint;						// solid color for label of view class
+	protected EventRecorder							mRecorder;						// to record events
+	protected ClickMode								mMode;							// top-level or view mode
+	protected View									mContentView;					// content referenced by this overlay
+	protected View									mCurrentView;					// currently selected view of ALL overlays
+	protected ActivityInterceptor.ActivityState		mActivityState;					// contains list of active overlays
+	protected boolean								mfEnabled;						// slid-in
+	protected Rect									mCurrentViewRect;				// performance onDraw()
+	protected Rect									mOverlayViewRect;				// perf onDraw() to detect if in our overlay.
+	protected DirectiveDialogs						mDirectiveDialogs;				// context dialogs to issue directives.
 	
 	protected enum ClickMode {
 		BASE,
@@ -204,6 +205,7 @@ public class MagicOverlay extends View implements OnGestureListener {
 	public static ImageView createButton(Context context, View contentView) throws IOException {
 		// scale the button to the screen size
 		ImageView button = new ImageView(context);
+		button.setId(MAGIC_BUTTON_ID);
 		byte[] buttonData = FileUtils.readJarBinaryResource(MagicOverlay.class, "/raw/left_arrow_button.png");
 		Bitmap buttonBmp = BitmapFactory.decodeByteArray(buttonData, 0, buttonData.length);
 		WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
