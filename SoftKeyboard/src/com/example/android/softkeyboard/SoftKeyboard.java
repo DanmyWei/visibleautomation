@@ -62,7 +62,9 @@ public class SoftKeyboard extends InputMethodService
         implements KeyboardView.OnKeyboardActionListener {
     static final boolean DEBUG = false;
 	public static final String SHOW_IME = "show_ime";
+	public static final String SEND_KEY = "send_key";
 	public static final String HIDE_IME = "hide_ime";
+	public static final String ACK = "ack";
 	public static final String HIDE_IME_BACK_KEY = "hide_ime_back_key";
 	public static final int TCPPORT = 49152;
   
@@ -553,6 +555,16 @@ public class SoftKeyboard extends InputMethodService
 
     public void onKey(int primaryCode, int[] keyCodes) {
     	Log.i(TAG, "onKey");
+    	sTCPListener.broadcast(SEND_KEY);
+    	try {
+    		String s = sTCPListener.readAck();
+    		if (!s.equals(ACK)) {
+    			Log.d(TAG, "onKey acknowledgement wrong " + s);
+    		}
+    	} catch (Exception ex) {
+    		Log.d(TAG, "threw an exception waiting for onKey acknowledgement");
+    	}
+
         if (isWordSeparator(primaryCode)) {
             // Handle separator
             if (mComposing.length() > 0) {

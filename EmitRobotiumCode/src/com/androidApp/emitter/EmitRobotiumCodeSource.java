@@ -27,16 +27,21 @@ import com.androidApp.util.SuperTokenizer;
  * TODO: add mLastEventWasCreateDialog for the same thing
  */
 public class EmitRobotiumCodeSource implements IEmitCode {
-	protected int mViewVariableIndex = 0;					// incremented for unique view variable names
-	protected int mActivityVariableIndex = 0;				// incremented for unique activity variable names
-	protected int mMotionEventVariableIndex = 0;			// incremented for unique motion event file names
-	protected String mTargetClassPath = null;				// class path of initial activity.	
-	protected String mTargetPackage = null;					// package name that the recorder pulled from the app
-	private boolean mLastEventWasWaitForActivity = false;	// want to do a waitForView for next event.
-	protected String mCurrentActivityName = null;			// current activity name (from activity transition)
-	protected String mActivityVariable = null;				// variable name for this activity
-	protected boolean mfActivityMatches = false;			// new activity has same name as current activity
-		
+	protected int 			mViewVariableIndex = 0;					// incremented for unique view variable names
+	protected int 			mActivityVariableIndex = 0;				// incremented for unique activity variable names
+	protected int 			mMotionEventVariableIndex = 0;			// incremented for unique motion event file names
+	protected String 		mTargetClassPath = null;				// class path of initial activity.	
+	protected String 		mTargetPackage = null;					// package name that the recorder pulled from the app
+	private boolean 		mLastEventWasWaitForActivity = false;	// want to do a waitForView for next event.
+	protected String 		mCurrentActivityName = null;			// current activity name (from activity transition)
+	protected String 		mActivityVariable = null;				// variable name for this activity
+	protected boolean 		mfActivityMatches = false;				// new activity has same name as current activity
+	protected int 			mCurrentInsertionPoint = 0;				// current text insertion point to track when reset by user
+	protected int			mStartInsertionPoint = 0;				// start insertion (for when we insert multichar)
+	protected StringBuffer 	mCurrentText = new StringBuffer();		// for tracking text entry
+	protected boolean		mfFirstKey = true;						// latch for text entry start
+	protected boolean		mfFirstDeleteKey = true;				// latch for first Delete key
+	
 	public EmitRobotiumCodeSource() {
 	}	
 		
@@ -129,7 +134,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 				// command, we wait until a scroll happens on another listview, or a different event
 				// has occurred, and we scroll to the last list item that was recorded.
 				if (scrollsHaveHappened) {
-					if (!action.equals(Constants.Events.SCROLL)) {
+					if (!Constants.UserEvent.SCROLL.equals(action)) {
 						writeScroll(scrollListIndex, scrollFirstVisibleItem, tokens, lines);
 						scrollsHaveHappened = false;
 					} else {
@@ -141,21 +146,12 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 							scrollsHaveHappened = false;
 						}
 					}
-				}
-				
-				// since the recorder spews TextWatcher events after each key press, we're really only interested
-				// in the last one. We detect it by saving each event, then writing it out when either a non-textwatcher
-				// event comes in or a textwatcher event on a different view.
-				if (!action.equals(Constants.Events.AFTER_TEXT) && !action.equals(Constants.Events.BEFORE_TEXT) && (lastTextEntryTokens != null)) {
-					writeEnterText(lastTextEntryTokens, lines);
-					lastTextEntryTokens = null;
-				}
-				
+				}				
 				
 				// then everything else is switched on the event name.
-				if (action.equals(Constants.Events.PACKAGE)) {
+				if (action.equals(Constants.ActivityEvent.PACKAGE.equals(action))) {
 					mTargetPackage = tokens.get(2);
-				} else if (action.equals(Constants.Events.ACTIVITY_FORWARD)) {
+				} else if (Constants.ActivityEvent.ACTIVITY_FORWARD.equals(action)) {
 					if (mTargetClassPath == null) {
 						mTargetClassPath = tokens.get(2);
 					}
@@ -165,7 +161,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 					} else {
 						writeWaitForActivity(tokens, lines);
 					}
-				} else if (action.equals(Constants.Events.ACTIVITY_BACK) || action.equals(Constants.Events.ACTIVITY_BACK_KEY)) {
+				} else if (Constants.ActivityEvent.ACTIVITY_BACK.equals(action) || Constants.UserEvent.ACTIVITY_BACK_KEY.equals(action)) {
 					
 					// I think this is technically incorrect, since the "back" event doesn't always happen from the back key
 					// but some other event like a click, and we should use a different template
@@ -176,68 +172,88 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 					}
 					mLastEventWasWaitForActivity = true;
 				} else {
-					if (action.equals(Constants.Events.ITEM_CLICK)) {
+					if (Constants.UserEvent.ITEM_CLICK.equals(action)) {
 						writeItemClick(tokens, lines);
-					} else if (action.equals(Constants.Events.POPUP_MENU_ITEM_CLICK)) {
+					} else if (Constants.UserEvent.POPUP_MENU_ITEM_CLICK.equals(action)) {
 						writePopupMenuItemClick(tokens, lines);
-					} else if (action.equals(Constants.Events.ITEM_SELECTED)) {
+					} else if (Constants.UserEvent.ITEM_SELECTED.equals(action)) {
 						writeItemSelected(tokens, lines);
-					} else if (action.equals(Constants.Events.GROUP_CLICK)) {
+					} else if (Constants.UserEvent.GROUP_CLICK.equals(action)) {
 						writeGroupClick(tokens, lines);
-					} else if (action.equals(Constants.Events.GROUP_CLICK)) {
+					} else if (Constants.UserEvent.GROUP_CLICK.equals(action)) {
 						writeChildClick(tokens, lines);
-					} else if (action.equals(Constants.Events.SCROLL)) {
+					} else if (Constants.UserEvent.SCROLL.equals(action)) {
 						scrollFirstVisibleItem = Integer.parseInt(tokens.get(2));
 						scrollsHaveHappened = true;
 						scrollListIndex = Integer.parseInt(tokens.get(7));
-					} else if (action.equals(Constants.Events.CLICK)) {
+					} else if (Constants.UserEvent.CLICK.equals(action)) {
 						writeClick(tokens, lines);
-					} else if (action.equals(Constants.Events.DISMISS_DIALOG)) {
+					} else if (Constants.SystemEvent.DISMISS_DIALOG.equals(action)) {
 						writeDismissDialog(tokens, lines);
-					} else if (action.equals(Constants.Events.CANCEL_DIALOG)) {
+					} else if (Constants.UserEvent.CANCEL_DIALOG.equals(action)) {
 						writeCancelDialog(tokens, lines);
-					} else if (action.equals(Constants.Events.CREATE_DIALOG)) {
+					} else if (Constants.SystemEvent.CREATE_DIALOG.equals(action)) {
 						writeCreateDialog(tokens, lines);
-					} else if (action.equals(Constants.Events.SHOW_IME)) {
+					} else if (Constants.SystemEvent.SHOW_IME.equals(action)) {
 						writeShowIME(tokens, lines);
-					} else if (action.equals(Constants.Events.HIDE_IME)) {
+					} else if (Constants.SystemEvent.HIDE_IME.equals(action) ||
+							   Constants.UserEvent.HIDE_IME_BACK_KEY.equals(action)) {
 						writeHideIME(tokens, lines);
-					} else if (action.equals(Constants.Events.AFTER_TEXT)) {
-						if (lastTextEntryTokens != null) {
-							ReferenceParser lastViewRef = new ReferenceParser(lastTextEntryTokens, 6);
-							ReferenceParser currentViewRef = new ReferenceParser(tokens, 6);
-							if (!currentViewRef.equals(lastViewRef)) {
-								writeEnterText(lastTextEntryTokens, lines);
-							}	
+					} else if (Constants.UserEvent.BEFORE_TEXT.equals(action) || 
+							   Constants.UserEvent.BEFORE_TEXT_KEY.equals(action)) {
+						if (mfFirstKey) {
+							mCurrentInsertionPoint = Integer.parseInt(tokens.get(3));
+							mStartInsertionPoint = mCurrentInsertionPoint;
+							mfFirstKey = false;
+							mfFirstDeleteKey = true;
 						}
-						lastTextEntryTokens = tokens;
-					} else if (action.equals(Constants.Events.DISMISS_AUTOCOMPLETE_DROPDOWN)) {
+					} else if (Constants.UserEvent.AFTER_TEXT_KEY.equals(action)) {
+						if (!addChangeToCurrentText(tokens, lines)) {			
+							String nextAction = nextTokens.get(0);
+							// if the next event isn't a before_text_key event, and it's some kind of other user event,
+							// then spit out the text.  We don't spit in all cases, because a system event (like an
+							// autocorrect dropdown appearing/disappearing might happen, and it doesn't affect text entry)
+							if (!Constants.UserEvent.BEFORE_TEXT_KEY.equals(nextAction) && (mCurrentText.length() > 0)) {
+								writeEnterTextByKey(tokens, lines, mStartInsertionPoint, mCurrentText.toString());
+								mCurrentText = new StringBuffer();
+								mfFirstKey = true;
+							}
+						}
+					} else if (Constants.UserEvent.AFTER_TEXT.equals(action)) {
+						// if the next event isn't "before_text", then spit out the text in a solo.enterText() call
+						String nextAction = nextTokens.get(0);
+						if (!Constants.UserEvent.BEFORE_TEXT.equals(nextAction)) {
+							writeEnterText(tokens, lines);
+						}	
+					} else if (Constants.SystemEvent.AFTER_SET_TEXT.equals(action)) {
+						writeWaitForText(tokens, lines);
+					} else if (Constants.SystemEvent.DISMISS_AUTOCOMPLETE_DROPDOWN.equals(action)) {
 						writeDismissAutoCompleteDropdown(tokens, lines);
-					} else if (action.equals(Constants.Events.DISMISS_POPUP_WINDOW_BACK_KEY)) {
+					} else if (Constants.UserEvent.DISMISS_POPUP_WINDOW_BACK_KEY.equals(action)) {
 						writeDismissPopupWindowBackKey(tokens, lines);
-					} else if (action.equals(Constants.Events.CREATE_SPINNER_POPUP_DIALOG)) {
+					} else if (Constants.SystemEvent.CREATE_SPINNER_POPUP_DIALOG.equals(action)) {
 						clickSpinnerDialogTokens = tokens;
-					} else if (action.equals(Constants.Events.DISMISS_SPINNER_DIALOG_BACK_KEY)) {
+					} else if (Constants.UserEvent.DISMISS_SPINNER_DIALOG_BACK_KEY.equals(action)) {
 						writeClick(clickSpinnerDialogTokens, lines);
 						writeGoBack(tokens, lines);
 						writeDismissDialog(tokens,lines);
-					} else if (action.equals(Constants.Events.DISMISS_SPINNER_POPUP_BACK_KEY)) {
+					} else if (Constants.UserEvent.DISMISS_SPINNER_POPUP_BACK_KEY.equals(action)) {
 						writeClick(tokens, lines);
 						writeDismissPopupWindowBackKey(tokens, lines);
-					} else if (action.equals(Constants.Events.ROTATION)) {
+					} else if (Constants.SystemEvent.ROTATION.equals(action)) {
 						writeRotation(tokens, lines);
-					} else if (action.equals(Constants.Events.MENU_ITEM_CLICK)) {
+					} else if (Constants.UserEvent.MENU_ITEM_CLICK.equals(action)) {
 						writeMenuItemClick(tokens, lines);
-					} else if (action.equals(Constants.Events.EXCEPTION)) {
+					} else if (Constants.SystemEvent.EXCEPTION.equals(action)) {
 						writeException(tokens, lines);
-					} else if (action.equals(Constants.Events.SELECT_ACTIONBAR_TAB)) {
+					} else if (Constants.UserEvent.SELECT_ACTIONBAR_TAB.equals(action)) {
 						selectActionBarTab(tokens, lines);
-					} else if (action.equals(Constants.Events.SELECT_TAB)) {
+					} else if (Constants.UserEvent.SELECT_TAB.equals(action)) {
 						selectTab(tokens, lines);
-					} else if (action.equals(Constants.Events.ON_PAGE_FINISHED)) {
+					} else if (Constants.SystemEvent.ON_PAGE_FINISHED.equals(action)) {
 						// TODO: TEMPORARY for DEMO
 						// waitForPageToLoad(tokens, lines);
-					} else if (action.equals(Constants.Events.TOUCH_DOWN) || action.equals(Constants.Events.TOUCH_MOVE)) {
+					} else if (Constants.UserEvent.TOUCH_DOWN.equals(action) || Constants.UserEvent.TOUCH_MOVE.equals(action)) {
 						// we have to listen for the first "touch move", not just touch down, because scroll containers
 						// don't actually fire the TouchEvent listener for TOUCH_DOWN because it dispatches the event
 						// to a child object, and does not call View.dispatchTouchEvent() for the scrolling view.
@@ -269,16 +285,17 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	 */
 	protected boolean checkActivityTransition(List<String> tokens, List<String> nextTokens, List<LineAndTokens> lines) throws IOException {
 		// if it's the first "activity_forward", then it's the class
-		if (tokens.get(0).equals(Constants.Events.ACTIVITY_FORWARD)) {
+		if (Constants.ActivityEvent.ACTIVITY_FORWARD.equals(tokens.get(0))) {
 			if (mTargetClassPath == null) {
 				mTargetClassPath =  tokens.get(2);
 				mCurrentActivityName = tokens.get(2);
 			}
 		}
-		if (nextTokens.size() > 2) {		
-			if (nextTokens.get(0).equals(Constants.Events.ACTIVITY_FORWARD) || 
-			    nextTokens.get(0).equals(Constants.Events.ACTIVITY_BACK) || 
-			    nextTokens.get(0).equals(Constants.Events.ACTIVITY_BACK_KEY)) {
+		if (nextTokens.size() > 2) {
+			String nextAction = nextTokens.get(0);
+			if (Constants.ActivityEvent.ACTIVITY_FORWARD.equals(nextAction) || 
+			    Constants.ActivityEvent.ACTIVITY_BACK.equals(nextAction) || 
+			    Constants.UserEvent.ACTIVITY_BACK_KEY.equals(nextAction)) {
 				String nextActivityName = nextTokens.get(2);
 				mfActivityMatches = nextActivityName.equals(mCurrentActivityName);
 				if (mfActivityMatches) {
@@ -582,6 +599,39 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	}
 	
 	/**
+	 * write out the waitForText command:
+	 * after_set_text:53749054,"text",1,0,1,id,com.example.android.apis.R$id.edit,android.widget.AutoCompleteTextView
+	 * @param tokens parsed from a line in events.txt
+	 * @param lines output list of java instructions
+	 * @throws IOException if the template file can't be read
+	 */
+	public void writeWaitForText(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
+		ReferenceParser ref = new ReferenceParser(tokens, 6);
+		String description = getDescription(tokens);
+		String fullDescription = "click on " + description;
+		String text = tokens.get(2);
+		if (mLastEventWasWaitForActivity) {
+			writeWaitForView(tokens, 2, lines);
+			mLastEventWasWaitForActivity = false;
+		} 
+		if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
+			String clickInViewTemplate =  writeViewIDCommand(Constants.Templates.WAIT_FOR_TEXT_ID, ref, fullDescription);
+			clickInViewTemplate = clickInViewTemplate.replace(Constants.VariableNames.TEXT, text);
+			lines.add(new LineAndTokens(tokens, clickInViewTemplate));
+		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
+			String clickInClassIndexTemplate = writeViewClassIndexCommand(Constants.Templates.WAIT_FOR_TEXT_CLASS_INDEX, ref, fullDescription);
+			clickInClassIndexTemplate = clickInClassIndexTemplate.replace(Constants.VariableNames.TEXT, text);
+			lines.add(new LineAndTokens(tokens, clickInClassIndexTemplate));
+		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.INTERNAL_CLASS_INDEX) {
+			String clickInInternalClassIndexTemplate = writeViewInternalClassIndexCommand(Constants.Templates.WAIT_FOR_TEXT_INTERNAL_CLASS_INDEX, ref, fullDescription);
+			clickInInternalClassIndexTemplate = clickInInternalClassIndexTemplate.replace(Constants.VariableNames.TEXT, text);
+			lines.add(new LineAndTokens(tokens, clickInInternalClassIndexTemplate));
+		} else {
+			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
+		}
+	}
+	
+	/**
 	 * write out the dismiss_autocomplete_dropdown
 	 * @param tokens
 	 * @param lines
@@ -746,6 +796,127 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	}
 	
 	/**
+	 * index:  start, count, after
+	 * before_text_key: This method is called to notify you that, within s, the count characters beginning at start have just replaced old text that had length before. 
+	 * after_text_key: This method is called to notify you that, within s, the count characters beginning at start are about to be replaced by new text with length after
+	 * before_text_key:53749054,"t",1,0,1,id,com.example.android.apis.R$id.edit,android.widget.AutoCompleteTextView,t
+	 * after_text_key:53749094,"th",1,0,1,id,com.example.android.apis.R$id.edit,android.widget.AutoCompleteTextView,th
+	 * before_text_key:53750798,"th",0,2,8,id,com.example.android.apis.R$id.edit,android.widget.AutoCompleteTextView,th
+	 * after_text_key:53750835,"Thailand",0,2,8,id,com.example.android.apis.R$id.edit,android.widget.AutoCompleteTextView,Thailand
+	 * In the specific 0,2,8 case, the entire text string is being changed.  It could be a past call, it could be from an autocomplete dropdown, we don't know.
+	 * we have to update the insertion point
+	 * modifies mCurrentText
+	 * @param textInsertionPoint: point where the text is being inserted
+	 * 
+	 * @return true if the text was committed (i.e. the "write" was written) 
+	 */
+	public boolean addChangeToCurrentText(List<String> 				afterTextTokens, 
+										  List<LineAndTokens> 		lines) throws IOException, EmitterException {
+		int newInsertionPoint = Integer.parseInt(afterTextTokens.get(3));
+		int replaceCount = Integer.parseInt(afterTextTokens.get(4));
+		int newCharacterCount = Integer.parseInt(afterTextTokens.get(5));
+
+		String newString = StringUtils.unescapeString(StringUtils.stripQuotes(afterTextTokens.get(2)), '\\');
+		
+		// if the new characterCount > 0, then insertion, otherwise deleting characters.
+		if (newCharacterCount > 0) {
+			
+			// just append the characters to the current string to enter if the insertion point hasn't changed.
+			String insertChars = newString.substring(newInsertionPoint, newInsertionPoint + newCharacterCount);
+			boolean fLastCharWasDel = false;
+			if (mCurrentText.length() >= 2) {
+				fLastCharWasDel = (mCurrentText.charAt(mCurrentText.length() - 1) == 'b') && (mCurrentText.charAt(mCurrentText.length() - 2) == '\\');
+			}
+			if (newInsertionPoint == mCurrentInsertionPoint || ((newInsertionPoint == mCurrentInsertionPoint + 1) && fLastCharWasDel)) { 
+				mCurrentText.append(insertChars);
+				mCurrentInsertionPoint += insertChars.length();
+				if (fLastCharWasDel) {
+					mCurrentInsertionPoint++;
+				}
+			} else {
+				// somehow, the insertion point was reset, and we should output the text, then reset the current text to what was just entered.  
+				// Since this is usally kicked off by some kind of system event, I'm not sure this case will happen
+				writeEnterTextByKey(afterTextTokens, lines, mStartInsertionPoint, mCurrentText.toString());
+				mfFirstKey = true;
+				mCurrentText = new StringBuffer(insertChars);
+				mCurrentInsertionPoint = newInsertionPoint;
+				return true;
+			}
+		} else {
+			
+			// insert backspaces in the current text if the insertion point moved backward by the correct amount
+			// set text resets insertion point in autocomplete case.
+			if (newInsertionPoint == mCurrentInsertionPoint || ((newInsertionPoint == mCurrentInsertionPoint - 1) && mfFirstDeleteKey)) {
+				// off-by-1 issue if the first key entered is a backspace. it's reported as 13, when it
+				// should be 14, because we're replacing N characters at I with 0 characters.  Since we
+				// decrement mCurrentInsertionPoint right away, this shouldn't happen twice
+				if (mfFirstDeleteKey) {
+					mStartInsertionPoint++;
+					mfFirstDeleteKey = false;
+				}
+				for (int iDel = 0; iDel < replaceCount; iDel++) {
+					mCurrentText.append("\\b");
+				}
+				mCurrentInsertionPoint -= replaceCount;
+			} else {
+				// somehow, the insertion point was reset, and we should output the text.  Since this is usally kicked off by some kind of 
+				// system event, I'm not sure this case will happen
+				writeEnterTextByKey(afterTextTokens, lines, mStartInsertionPoint, mCurrentText.toString());
+				mfFirstKey = true;
+				mCurrentInsertionPoint = newInsertionPoint;
+				// reset the insertion point, and output a bunch of backspaces.
+				mCurrentText = new StringBuffer();
+				for (int iDel = 0; iDel < replaceCount; iDel++) {
+					mCurrentText.append("\\b");
+				}
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	/**
+	 * same as writeEnterText, except calls the key-by-key robotiumUtils function, with an insert index
+	 * after_text_key:6702330,this,3,0,1,id,com.example.android.apis.R$id.edit,android.widget.AutoCompleteTextView
+	 * after_text_key:time,text,startposition,beforechars,countchars,[view reference]
+	 * @param tokens parsed from a line in events.txt
+	 * @param lines output list of java instructions
+	 * @param insertIndex insertion index
+	 * @param text text to enter
+	 * @throws IOException if the template file can't be read
+	 */
+	public void writeEnterTextByKey(List<String> tokens, List<LineAndTokens> lines, int insertIndex, String text) throws IOException, EmitterException {
+		ReferenceParser ref = new ReferenceParser(tokens, 6);
+		String description = getDescription(tokens);
+		String fullDescription = "enter text in " + description;
+		/* why is this commented out?  Is this written by the caller? Verify and remove if so.
+		if (sLastEventWasWaitForActivity) {
+			writeWaitForView(tokens, 6, lines);
+			sLastEventWasWaitForActivity = false;
+		} 
+		*/
+		if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
+			String enterTextClassIndexTemplate = writeViewClassIndexCommand(Constants.Templates.EDIT_TEXT_KEY_CLASS_INDEX, ref, fullDescription);
+			enterTextClassIndexTemplate = enterTextClassIndexTemplate.replace(Constants.VariableNames.TEXT, text);
+			enterTextClassIndexTemplate = enterTextClassIndexTemplate.replace(Constants.VariableNames.INSERT, Integer.toString(insertIndex));
+			lines.add(new LineAndTokens(tokens, enterTextClassIndexTemplate));
+		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.INTERNAL_CLASS_INDEX) {
+			String enterTextClassIndexTemplate = writeViewInternalClassIndexCommand(Constants.Templates.EDIT_TEXT_KEY_INTERNAL_CLASS_INDEX, ref, fullDescription);
+			enterTextClassIndexTemplate = enterTextClassIndexTemplate.replace(Constants.VariableNames.TEXT, text);
+			enterTextClassIndexTemplate = enterTextClassIndexTemplate.replace(Constants.VariableNames.INSERT, Integer.toString(insertIndex));
+			lines.add(new LineAndTokens(tokens, enterTextClassIndexTemplate));
+		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
+			String id = ref.getID();
+			String enterTextIDTemplate = writeViewIDCommand(Constants.Templates.EDIT_TEXT_KEY_ID, ref, fullDescription);
+			enterTextIDTemplate = enterTextIDTemplate.replace(Constants.VariableNames.TEXT, text);
+			enterTextIDTemplate = enterTextIDTemplate.replace(Constants.VariableNames.INSERT, Integer.toString(insertIndex));
+			lines.add(new LineAndTokens(tokens, enterTextIDTemplate));
+		} else {
+			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
+		}
+	}
+	
+	/**
 	 * write an enterText command from the data from the text watcher
 	 * after_text:6702330,this,3,0,1,id,com.example.android.apis.R$id.edit,android.widget.AutoCompleteTextView
 	 * after_text:time,text,startposition,beforechars,countchars,[view reference]
@@ -756,6 +927,16 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 
 	public void writeEnterText(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
 		String text =  StringUtils.unescapeString(StringUtils.stripQuotes(tokens.get(2)), '\\');
+		writeEnterText(tokens, lines, text);
+	} 
+	/**
+	 * same, except that the text is passed explicitly
+	 * @param tokens parsed from a line in events.txt
+	 * @param lines output list of java instructions
+	 * @throws IOException if the template file can't be read
+	 */
+	
+	public void writeEnterText(List<String> tokens, List<LineAndTokens> lines, String text) throws IOException, EmitterException {
 		ReferenceParser ref = new ReferenceParser(tokens, 6);
 		String description = getDescription(tokens);
 		String fullDescription = "enter text in " + description;

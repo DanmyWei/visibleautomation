@@ -535,4 +535,14 @@ public class ListenerIntercept {
 	public static OnHierarchyChangeListener getOnHierarchyChangeListener(ViewGroup vg)  throws NoSuchFieldException, IllegalAccessException {
 		return (OnHierarchyChangeListener) ReflectionUtils.getFieldValue(vg, ViewGroup.class, Constants.Fields.ON_HIERARCHY_CHANGE_LISTENER);
 	}
+	
+	public static TextView.OnEditorActionListener getOnEditorActionListener(TextView tv) throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
+		Object inputContentType = ReflectionUtils.getFieldValue(tv, TextView.class, Constants.Fields.INPUT_CONTENT_TYPE);
+		if (inputContentType != null) {
+			Class inputContentTypeClass = Class.forName(Constants.Classes.INPUT_CONTENT_TYPE);
+			TextView.OnEditorActionListener editorActionListener = (TextView.OnEditorActionListener) ReflectionUtils.getFieldValue(inputContentType, inputContentTypeClass, Constants.Fields.ON_EDITOR_ACTION_LISTENER);
+			return editorActionListener;
+		} 
+		return null;
+	}
 }

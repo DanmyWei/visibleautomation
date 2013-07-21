@@ -2,6 +2,7 @@ package com.androidApp.Intercept;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -27,7 +28,10 @@ public class IMEMessageListener implements Runnable {
 	public static final int 	MAXMSG = 1024;
 	public static final String 	HIDE_IME = "hide_ime";							// messages sent from the custom soft keyboard
 	public static final String 	SHOW_IME = "show_ime";
+	public static final String 	SEND_KEY = "send_key";
+	public static final String 	ACK = "acks";
 	public static final String  HIDE_IME_BACK_KEY = "hide_ime_back_key";
+	public static boolean		sfKeyHit;
 	protected static boolean 	sfTerminate;					// terminate loop flag.
 	protected boolean 			mfKeyboardVisible = false;		// flag for IME visibility to others may ask
 	protected ViewInterceptor	mViewInterceptor;				// maintains currently focused view.
@@ -38,6 +42,7 @@ public class IMEMessageListener implements Runnable {
 		mfKeyboardVisible = false;
 		mViewInterceptor = viewInterceptor;
 		mEventRecorder = eventRecorder;
+		sfKeyHit = false;
 	}
 	
 	public boolean isKeyboardVisible() {
@@ -50,6 +55,14 @@ public class IMEMessageListener implements Runnable {
 	public static void terminate() {
 		sfTerminate = true;
 	}
+
+	public static boolean wasKeyHit() {
+		return sfKeyHit;
+	}
+	
+	public static void setWasKeyHit(boolean f) {
+		sfKeyHit = f;
+	}
 	
 	/**
 	 * background thread to read the socket and see if the IME transmitted show or hide IME messages. 
@@ -61,6 +74,7 @@ public class IMEMessageListener implements Runnable {
 			SocketAddress sockAddr = new InetSocketAddress(InetAddress.getLocalHost(), IME_BROADCAST_PORT);
 			socket.setSoTimeout(READ_TIMEOUT);
 			InputStream is = socket.getInputStream();
+			OutputStream os = socket.getOutputStream();
 			while (!sfTerminate) {
 				boolean fSuccessfulRead = true;
 				int numBytes = 0;
@@ -94,6 +108,11 @@ public class IMEMessageListener implements Runnable {
 		                    mViewInterceptor.setLastKeyAction(-1);
 						}
 						mfKeyboardVisible = false;
+					} else if (msg.equals(SEND_KEY)) {
+						setWasKeyHit(true);
+						os.write(ACK.getBytes());
+						// we need to send an acknowledgement to force a a round trip before android sends the key event
+						// in order to prevent a race condition.
 					}
 				}	
 			}	

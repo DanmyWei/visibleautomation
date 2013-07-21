@@ -1,13 +1,20 @@
 package com.androidApp.Listeners;
 
+import java.util.List;
+
 import com.androidApp.EventRecorder.EventRecorder;
+import com.androidApp.EventRecorder.ViewDirective;
 import com.androidApp.EventRecorder.ViewReference;
+import com.androidApp.Intercept.IMEMessageListener;
+import com.androidApp.Intercept.MagicFrame;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.StringUtils;
 
 import android.os.SystemClock;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
+import android.view.View;
 import android.widget.TextView;
 
 /*
@@ -18,11 +25,16 @@ import android.widget.TextView;
  * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class RecordTextChangedListener extends RecordListener implements TextWatcher {
-	protected TextView				mTextView;
-
+	private static final String TAG = "RecordTextChangedListener";
+	protected TextView		mTextView;
+	protected int			mViewIndex;				// for preorder traversal match
+	protected boolean		mfEnterTextByKey;
+	protected boolean		mfBeforeFired = false;
+	
 	public RecordTextChangedListener(EventRecorder eventRecorder, TextView textView) {
 		super(eventRecorder);
 		mTextView = textView;
+		mfEnterTextByKey = false;
 	}
 	
 	// since these methods are called in a chain, rather than wrapping the native listeners, we don't need to block re-entrancy
@@ -31,30 +43,56 @@ public class RecordTextChangedListener extends RecordListener implements TextWat
 	}
 
 	public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-		if (!RecordListener.getEventBlock()) {
-			setEventBlock(true);
-			try {
-				String description = getDescription(mTextView);
-				String logString = '\"' + StringUtils.escapeString(s.toString(), "\"", '\\') + '\"' + "," + start + "," +  count + "," + after + "," + mEventRecorder.getViewReference().getReference(mTextView) + "," + description;
-				mEventRecorder.writeRecord(Constants.EventTags.BEFORE_TEXT, logString);
-			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, mTextView, " before text changed");
-			}	
-		}
+		try {
+			String description = getDescription(mTextView);
+			String reference = mEventRecorder.getViewReference().getReference(mTextView);
+			String massagedString = StringUtils.escapeString(s.toString(), "\"", '\\').replace("\n", "\\n");
+			String logString = '\"' + massagedString + '\"' + "," + start + "," +  count + "," + after + "," + reference + "," + description;
+			if (!RecordListener.getEventBlock() && IMEMessageListener.wasKeyHit()) {
+				mfBeforeFired = true;
+				setEventBlock(true);
+				if (mfEnterTextByKey ||
+				    mEventRecorder.matchViewDirective(mTextView, mViewIndex, ViewDirective.ViewOperation.ENTER_TEXT_BY_KEY,
+													  ViewDirective.When.ALWAYS)) {
+					mEventRecorder.writeRecord(Constants.EventTags.BEFORE_TEXT_KEY, logString);
+					mfEnterTextByKey = true;
+				} else {
+					mEventRecorder.writeRecord(Constants.EventTags.BEFORE_TEXT, logString);
+				}
+			} else {
+				mEventRecorder.writeRecord(Constants.EventTags.BEFORE_SET_TEXT, logString);
+			}
+		} catch (Exception ex) {
+			mEventRecorder.writeException(ex, mTextView, " before text changed");
+		}	
 	}
 
 	// We can scan the stack to see if the calling method is TextWatcher.afterTextChanged()
 	public void onTextChanged(CharSequence s, int start, int before, int count) {
-		if (!RecordListener.getEventBlock()) {
-			setEventBlock(true);
-			try {
-				String description = getDescription(mTextView);
-				String massagedString = StringUtils.escapeString(s.toString(), "\"", '\\').replace("\n", "\\n");
-				String logString = '\"' + massagedString + '\"' + "," + start + "," + before + "," + count + "," + mEventRecorder.getViewReference().getReference(mTextView) + "," + description;
-				mEventRecorder.writeRecord(Constants.EventTags.AFTER_TEXT, logString);
-			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, mTextView, "on text changed");
-			}	
-		}
+		try {
+			String description = getDescription(mTextView);
+			String reference = mEventRecorder.getViewReference().getReference(mTextView);
+			String massagedString = StringUtils.escapeString(s.toString(), "\"", '\\').replace("\n", "\\n");
+			String logString = '\"' + massagedString + '\"' + "," + start + "," + before + "," + count + "," + reference + "," + description;
+			if (!RecordListener.getEventBlock() && IMEMessageListener.wasKeyHit()) {
+				if (!mfBeforeFired) {
+					Log.d(TAG, "before not fired in text change listener");
+				}
+				mfBeforeFired = false;
+				IMEMessageListener.setWasKeyHit(false);
+				setEventBlock(true);
+				if (mfEnterTextByKey ||
+					    mEventRecorder.matchViewDirective(mTextView, mViewIndex, ViewDirective.ViewOperation.ENTER_TEXT_BY_KEY,
+														  ViewDirective.When.ALWAYS)) {
+					mEventRecorder.writeRecord(Constants.EventTags.AFTER_TEXT_KEY, logString);
+				} else {
+					mEventRecorder.writeRecord(Constants.EventTags.AFTER_TEXT, logString);
+				}
+			} else {
+				mEventRecorder.writeRecord(Constants.EventTags.AFTER_SET_TEXT, logString);
+			}
+		} catch (Exception ex) {
+			mEventRecorder.writeException(ex, mTextView, "on text changed");
+		}	
 	}
 }

@@ -27,6 +27,7 @@ import android.view.ViewParent;
 public class InterceptOnHierarchyChangeListener extends RecordListener implements OnHierarchyChangeListener, IOriginalListener  {
 	protected OnHierarchyChangeListener 	mOriginalOnHierarchyChangeListener;
 	protected ViewInterceptor 				mViewInterceptor;
+	protected Activity						mActivity;
 	
 	/**
 	 * constructor: get the original hierarchy change listener, and wrap it with this
@@ -34,9 +35,10 @@ public class InterceptOnHierarchyChangeListener extends RecordListener implement
 	 * @param viewInterceptor view interceptor
 	 * @param vg actually an AdapterView, but we're trying to be general here
 	 */
-	public InterceptOnHierarchyChangeListener(EventRecorder eventRecorder, ViewInterceptor viewInterceptor, ViewGroup vg) {
+	public InterceptOnHierarchyChangeListener(Activity activity, EventRecorder eventRecorder, ViewInterceptor viewInterceptor, ViewGroup vg) {
 		super(eventRecorder);
 		mViewInterceptor = viewInterceptor;
+		mActivity = activity;
 		try {
 			mOriginalOnHierarchyChangeListener = ListenerIntercept.getOnHierarchyChangeListener(vg);
 			vg.setOnHierarchyChangeListener(this);
@@ -51,10 +53,12 @@ public class InterceptOnHierarchyChangeListener extends RecordListener implement
 	 * @param viewInterceptor view interceptor
 	 * @param orginalOnHierarchyChangeListener original change listener (may be null)
 	 */
-	public InterceptOnHierarchyChangeListener(EventRecorder 				eventRecorder, 
+	public InterceptOnHierarchyChangeListener(Activity 						activity, 
+											  EventRecorder 				eventRecorder, 
 										   	  ViewInterceptor 				viewInterceptor, 
 										   	  OnHierarchyChangeListener 	orginalOnHierarchyChangeListener) {
 		super(eventRecorder);
+		mActivity = activity;
 		mViewInterceptor  = viewInterceptor;
 		mOriginalOnHierarchyChangeListener = orginalOnHierarchyChangeListener;
 	}
@@ -71,9 +75,8 @@ public class InterceptOnHierarchyChangeListener extends RecordListener implement
 	 */
 	@Override
 	public void onChildViewAdded(View parent, View child) {
-		Activity activity = (Activity) parent.getContext();
-		if (!mViewInterceptor.runDeferred(parent, mViewInterceptor.new InterceptViewRunnable(child))) {
-			mViewInterceptor.intercept(activity, child);
+		if (!mViewInterceptor.runDeferred(parent, mViewInterceptor.new InterceptViewRunnable(mActivity, child))) {
+			mViewInterceptor.intercept(mActivity, child);
 		}
 		if (mOriginalOnHierarchyChangeListener != null) {
 			mOriginalOnHierarchyChangeListener.onChildViewAdded(parent, child);

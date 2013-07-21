@@ -18,57 +18,121 @@ public class Constants {
 	public static final String TEXT = "text";
 	public static final String TEXT_ID = "text_id";
 	public static final String CLASS_INDEX = "class_index";
-	public static final Object INTERNAL_CLASS_INDEX = "internal_class_index";
+	public static final String INTERNAL_CLASS_INDEX = "internal_class_index";
 	
 	// environment variables
 	public static class Env {
 		public static final String ANDROID_HOME = "ANDROID_HOME";
 	}
-	// event tags
-	public static class Events {
-		public static final String PACKAGE = "package";
-		public static final String ENTER_TEXT = "enter_text";
-		public static final String BEFORE_TEXT = "before_text";
-		public static final String AFTER_TEXT = "after_text";
-		public static final String CHECKED = "checked";
-		public static final String CLICK = "click";
-		public static final String TOUCH_UP = "touch_up";
-		public static final String TOUCH_DOWN = "touch_down";
-		public static final String TOUCH_MOVE = "touch_move";
-		public static final String SCROLL = "scroll";
-		public static final String SEEKBAR_CHANGE = "seekbar_change";
-		public static final String ITEM_CLICK = "item_click";
-		public static final String ITEM_LONG_CLICK = "item_long_click";
-		public static final String ACTIVITY_FORWARD = "activity_forward";
-		public static final String ACTIVITY_BACK = "activity_back";
-		public static final String ACTIVITY_BACK_KEY = "activity_back_key";
-		public static final String CLASS = "class";	
-		public static final String DISMISS_DIALOG = "dismiss_dialog";
-		public static final String DISMISS_DIALOG_BACK_KEY = "dismiss_dialog_back_key";
-		public static final String CANCEL_DIALOG = "cancel_dialog";
-		public static final String ITEM_SELECTED = "item_selected";
-		public static final String SHOW_IME = "show_ime";	
-		public static final String HIDE_IME = "hide_ime";	
-		public static final String DISMISS_AUTOCOMPLETE_DROPDOWN = "dismiss_autocomplete_dropdown";
-		public static final String CREATE_POPUP_WINDOW = "create_popup_window";
-		public static final String DISMISS_POPUP_WINDOW = "dismiss_popup_window";
-		public static final String DISMISS_POPUP_WINDOW_BACK_KEY = "dismiss_popup_window_back_key";
-		public static final String ROTATION = "rotation";
-		public static final String MENU_ITEM_CLICK = "menu_item_click";
-		public static final String POPUP_MENU_ITEM_CLICK = "popup_menu_item_click";
-		public static final String EXCEPTION = "exception";
-		public static final String SELECT_ACTIONBAR_TAB = "select_actionbar_tab";
-		public static final String CREATE_SPINNER_POPUP_WINDOW = "create_spinner_popup_window";
-		public static final String ON_PAGE_FINISHED = "on_page_finished";
-		public static final String CREATE_DIALOG = "create_dialog";
-		public static final String CREATE_SPINNER_POPUP_DIALOG = "create_spinner_popup_dialog";
-		public static final String DISMISS_SPINNER_DIALOG_BACK_KEY = "dismiss_spinner_dialog_back_key";
-		public static final String DISMISS_SPINNER_POPUP_BACK_KEY = "dismiss_spinner_popup_window_back_key";
-		public static final String SELECT_TAB = "select_tab";
-		public static final String CHILD_CLICK = "child_click";
-		public static final String GROUP_CLICK = "group_click";
+	
+	// events which were initiated by the user
+	public enum UserEvent {
+		BEFORE_TEXT("before_text"),
+		BEFORE_TEXT_KEY("before_text_key"),
+		AFTER_TEXT("after_text"),
+		AFTER_TEXT_KEY("after_text_key"),
+		CLICK("click"),
+		TOUCH_UP("touch_up"),
+		TOUCH_DOWN("touch_down"),
+		TOUCH_MOVE("touch_move"),
+		SCROLL("scroll"),
+		SEEKBAR_CHANGE("seekbar_change"),
+		ITEM_CLICK("item_click"),
+		ITEM_LONG_CLICK("item_long_click"),		
+		DISMISS_DIALOG_BACK_KEY("dismiss_dialog_back_key"),
+		CANCEL_DIALOG("cancel_dialog"),
+		ITEM_SELECTED("item_selected"),
+		DISMISS_POPUP_WINDOW_BACK_KEY("dismiss_popup_window_back_key"),
+		MENU_ITEM_CLICK("menu_item_click"),
+		POPUP_MENU_ITEM_CLICK("popup_menu_item_click"),
+		SELECT_ACTIONBAR_TAB("select_actionbar_tab"),
+		DISMISS_SPINNER_DIALOG_BACK_KEY("dismiss_spinner_dialog_back_key"),
+		DISMISS_SPINNER_POPUP_BACK_KEY("dismiss_spinner_popup_window_back_key"),
+		SELECT_TAB("select_tab"),
+		CHILD_CLICK("child_click"),
+		GROUP_CLICK("group_click"),
+		HIDE_IME_BACK_KEY("hide_ime_back_key"),	
+		ACTIVITY_BACK_KEY("activity_back_key");
+		
+		public final String mEventName;		
+		private UserEvent(String s) {
+			mEventName = s;
+		}
+		
+		public boolean equals(String s) {
+			return mEventName.equals(s);
+		}
+		
+		public static boolean isUserEvent(String s) {
+			for (UserEvent event : UserEvent.values()) {
+				if (event.equals(s)) {
+					return true;
+				}
+			}
+			return false;
+		}
 	}
 	
+	// activity transition events
+	public enum ActivityEvent {
+		PACKAGE("package"),
+		ACTIVITY_FORWARD("activity_forward"),
+		ACTIVITY_BACK("activity_back");
+		
+		public final String mEventName;		
+		private ActivityEvent(String s) {
+			mEventName = s;
+		}
+		
+		public boolean equals(String s) {
+			return mEventName.equals(s);
+		}
+		
+		public static boolean isAcivityEvent(String s) {
+			for (ActivityEvent event : ActivityEvent.values()) {
+				if (event.equals(s)) {
+					return true;
+				}
+			}
+			return false;
+		}
+	}	
+	
+	// events which are sent by the system
+	public enum SystemEvent {
+		DISMISS_DIALOG("dismiss_dialog"),
+		SHOW_IME("show_ime"),	
+		HIDE_IME("hide_ime"),	
+		DISMISS_AUTOCOMPLETE_DROPDOWN("dismiss_autocomplete_dropdown"),
+		CREATE_POPUP_WINDOW("create_popup_window"),
+		DISMISS_POPUP_WINDOW("dismiss_popup_window"),
+		ROTATION("rotation"),
+		EXCEPTION("exception"),
+		CREATE_SPINNER_POPUP_WINDOW("create_spinner_popup_window"),
+		ON_PAGE_FINISHED("on_page_finished"),
+		CREATE_DIALOG("create_dialog"),
+		CREATE_SPINNER_POPUP_DIALOG("create_spinner_popup_dialog"), 
+		AFTER_SET_TEXT("after_set_text");
+				
+		public final String mEventName;		
+		private SystemEvent(String s) {
+			mEventName = s;
+		}
+		
+		public boolean equals(String s) {
+			return mEventName.equals(s);
+		}
+		
+		public static boolean isSystemEvent(String s) {
+			for (SystemEvent event : SystemEvent.values()) {
+				if (event.equals(s)) {
+					return true;
+				}
+			}
+			return false;
+		}
+	}
+		
 	public static class Templates {
 
 		// template file names
@@ -96,6 +160,9 @@ public class Constants {
 		public static final String EDIT_TEXT_ID = "edit_text_id.txt";
 		public static final String EDIT_TEXT_CLASS_INDEX = "edit_text_class_index.txt";
 		public static final String EDIT_TEXT_INTERNAL_CLASS_INDEX = "edit_text_internal_class_index";
+		public static final String EDIT_TEXT_KEY_ID = "edit_text_key_id.txt";
+		public static final String EDIT_TEXT_KEY_CLASS_INDEX = "edit_text_key_class_index.txt";
+		public static final String EDIT_TEXT_KEY_INTERNAL_CLASS_INDEX = "edit_text_key_internal_class_index";
 		public static final String WAIT_FOR_VIEW_ID = "wait_for_view_id.txt";
 		public static final String WAIT_FOR_VIEW_CLASS_INDEX = "wait_for_view_class_index.txt";
 		public static final String WAIT_FOR_VIEW_INTERNAL_CLASS_INDEX = "wait_for_view_internal_class_index.txt";
@@ -154,6 +221,9 @@ public class Constants {
 		public static final String CLICK_EXPANDABLE_LIST_GROUP_CLASS_INDEX = "click_expandable_list_group_class_index.txt";
 		public static final String CLICK_EXPANDABLE_LIST_GROUP_INTERNAL_CLASS_INDEX = "click_expandable_list_group_internal_class_index.txt";
 		public static final String CLICK_EXPANDABLE_LIST_GROUP_ID = "click_expandable_list_group_id.txt";
+		public static final String WAIT_FOR_TEXT_ID = "wait_for_text_id.txt";
+		public static final String WAIT_FOR_TEXT_CLASS_INDEX = "wait_for_text_class_index.txt";
+		public static final String WAIT_FOR_TEXT_INTERNAL_CLASS_INDEX = "wait_for_text_internal_class_index.txt";
 		
 	}
 	
@@ -185,12 +255,13 @@ public class Constants {
 		public static final String MIN_SDK_VERSION = "%MIN_SDK_VERSION%";
 		public static final String MODE = "%MODE%";
 		public static final String TESTPACKAGE = "%TESTPACKAGE%";
-		public static final CharSequence TAB_INDEX = "%TAB_INDEX%";
-		public static final CharSequence URL = "%URL%";
-		public static final CharSequence TAB_ID = "%TAB_ID%";
-		public static final CharSequence UNIQUE_NAME = "%UNIQUE_NAME%";
-		public static final CharSequence INTERNAL_CLASS = "%INTERNAL_CLASS%";
-		public static final CharSequence CLASS_VARIABLE_INDEX = "%CLASS_VARIABLE_INDEX%";
+		public static final String TAB_INDEX = "%TAB_INDEX%";
+		public static final String URL = "%URL%";
+		public static final String TAB_ID = "%TAB_ID%";
+		public static final String UNIQUE_NAME = "%UNIQUE_NAME%";
+		public static final String INTERNAL_CLASS = "%INTERNAL_CLASS%";
+		public static final String CLASS_VARIABLE_INDEX = "%CLASS_VARIABLE_INDEX%";
+		public static final String INSERT = "%INSERT%";
 
 	}
 	

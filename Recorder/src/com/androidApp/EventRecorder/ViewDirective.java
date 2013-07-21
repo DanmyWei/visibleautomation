@@ -33,6 +33,11 @@ public class ViewDirective {
 		ON_ACTIVITY_START,		// perform the operation when the activity starts
 		ON_VALUE_CHANGE,		// perform the operation when the view value is changed
 		ON_ACTIVITY_END,		// perform the operation when the activity exits
+		ALWAYS;					// for properties.  Always applies
+		
+		public boolean match(When a) {
+			return (a == this) || (a == ALWAYS) || (this == ALWAYS);
+		}
 	}
 	protected UserDefinedViewReference 	mViewReference;
 	protected String					mVariable;
@@ -106,7 +111,7 @@ public class ViewDirective {
 	 * @return
 	 */
 	public boolean match(View v, int viewIndex, ViewOperation op, When when) {
-		return mViewReference.matchView(v, viewIndex) && (mOperation == op) && (mWhen == when);
+		return mViewReference.matchView(v, viewIndex) && (mOperation == op) && (mWhen.match(when));
 	}
 	
 	/**
@@ -163,6 +168,8 @@ public class ViewDirective {
 			return ViewOperation.IGNORE_EVENTS;
 		} else if (s.equals(Constants.EventTags.SELECT_BY_TEXT)) {
 			return ViewOperation.SELECT_BY_TEXT;
+		} else if (s.equals(Constants.EventTags.ENTER_TEXT_BY_KEY)) {
+			return ViewOperation.ENTER_TEXT_BY_KEY;
 		}else {
 			throw new ReferenceException("unable to parse operation from " + s);
 		}
@@ -184,6 +191,8 @@ public class ViewDirective {
 			return Constants.EventTags.IGNORE_EVENTS;
 		case SELECT_BY_TEXT:
 			return Constants.EventTags.SELECT_BY_TEXT;
+		case ENTER_TEXT_BY_KEY:
+			return Constants.EventTags.ENTER_TEXT_BY_KEY;
 		default:
 			throw new ReferenceException("view operation " + operation + " unknown");
 		}
@@ -202,6 +211,8 @@ public class ViewDirective {
 			return When.ON_ACTIVITY_END;
 		} else if (s.equals(Constants.When.ON_VALUE_CHANGE)) {
 			return When.ON_VALUE_CHANGE;
+		} else if (s.equals(Constants.When.ALWAYS)) {
+			return When.ALWAYS;
 		} else {
 			throw new ReferenceException("unable to parse when from " + s);
 		}
@@ -215,6 +226,8 @@ public class ViewDirective {
 			return Constants.When.ON_VALUE_CHANGE;
 		case ON_ACTIVITY_END:
 			return Constants.When.ON_ACTIVITY_END;
+		case ALWAYS:
+			return Constants.When.ALWAYS;
 		default:
 			throw new ReferenceException("when " + when + " unknown");
 		}

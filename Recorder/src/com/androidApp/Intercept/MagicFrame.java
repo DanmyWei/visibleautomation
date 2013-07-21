@@ -37,28 +37,12 @@ import android.widget.Toast;
  */
 public class MagicFrame extends FrameLayout {
 	private static final String 		TAG = "MagicFrame";
-	protected static final int			POINT_SIZE = 30;
-	protected static final int			POINT_DECREMENT = 3;
-	protected static final int			TIMER_MSEC = 50;
-	protected Point 					mTouchPoint = null;
-	protected static Timer 				sTimer = null;
-	protected TimerTask					mTimerTask = null;
-	protected int						mSize = 0;
-	protected Paint						mPaint;
 	protected EventRecorder				mRecorder;
 	protected ViewInterceptor			mViewInterceptor;					// to log key events for activity/ime dismissal.
 	protected View						mContentView;						// actual content view being masked
-	protected Rect						mHitRect;							// so we don't reallocate recursively while finding the target hit rect.
 
 	// initialize the timer and paint so we can draw touch events for debugging.
 	protected void init() {
-		if (sTimer == null) {
-			sTimer = new Timer();
-		}
-		mPaint = new Paint();
-		mPaint.setStrokeWidth(10.0f);
-		mPaint.setColor(0xffff0000);
-		mHitRect = new Rect();
 		setWillNotDraw(false);
 		setId(android.R.id.content);		
 	}
@@ -105,7 +89,6 @@ public class MagicFrame extends FrameLayout {
 		InsertMagicFrameRunnable runnable = new InsertMagicFrameRunnable(activityState, recorder, viewInterceptor);
 		instrumentation.runOnMainSync(runnable);
 	}
-
 	  
     @Override
     public boolean dispatchKeyEventPreIme(KeyEvent event) {
@@ -161,22 +144,6 @@ public class MagicFrame extends FrameLayout {
 			} 
 	    }
     }
-  
-    /*
-	@Override
-	public boolean onInterceptTouchEvent(MotionEvent event) {
-		if (event.getAction() == MotionEvent.ACTION_DOWN) {			
-			if ((mRecorder != null) && mRecorder.getVisualDebug()) {
-				mTouchPoint = new Point((int) event.getX(), (int) event.getY());
-				mSize = POINT_SIZE;
-				mTimerTask = new TouchTimerTask();
-				sTimer.schedule(mTimerTask, TIMER_MSEC, TIMER_MSEC);
-			}
-		}
-		return false;
-	}
-	*/
-
     /**
      *  for debugging purposes
      * @param keyEvent
@@ -217,49 +184,4 @@ public class MagicFrame extends FrameLayout {
 			focusedView.requestFocus();
 		}
 	}
-
-	/**
-	 * cancel the debugging draw timer if we're detatched from the window
-	 */
-	public void onDetachedFromWindow() {
-		if (mTimerTask != null) {	
-			mTimerTask.cancel();
-		}
-	}
-	/**
-	 * for visual debugging.
-	 */
-	@Override
-	public void onDraw(Canvas c) {
-		if ((mTouchPoint != null) && (mPaint != null) && (c != null)) {			
-			c.drawLine(mTouchPoint.x - mSize, mTouchPoint.y - mSize, mTouchPoint.x + mSize, mTouchPoint.y + mSize, mPaint);
-			c.drawLine(mTouchPoint.x + mSize, mTouchPoint.y - mSize, mTouchPoint.x - mSize, mTouchPoint.y + mSize, mPaint);
-		}
-	}
-
-	/**
-	 * for visual debugging.
-	 * The problem with this is that the timer can keep firing long after the activity is finished, and it throws a coniption fit.
-	 * @author Matthew
-	 *
-	 */
-	protected class TouchTimerTask extends TimerTask {
-
-		@Override
-		public void run() {
-			mSize -= POINT_DECREMENT;
-			if (mSize <= 0) {
-				mTouchPoint = null;
-			}
-			MagicFrame.this.post(new Runnable() {
-				public void run() {
-					MagicFrame.this.invalidate();
-				}
-			});
-			if (mSize <= 0) {
-				this.cancel();
-			}
-		}	
-	}
-		
 }

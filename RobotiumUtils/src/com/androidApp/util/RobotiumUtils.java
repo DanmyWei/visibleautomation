@@ -15,7 +15,10 @@ import android.graphics.Rect;
 import android.os.SystemClock;
 import android.test.ActivityInstrumentationTestCase2;
 import android.util.Log;
+import android.view.KeyCharacterMap;
+import android.view.KeyEvent;
 import android.view.View;
+import android.widget.TextView;
 import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.view.WindowManager;
@@ -26,6 +29,7 @@ import android.widget.AbsListView;
 import android.widget.Adapter;
 import android.widget.AdapterView;
 import android.widget.AutoCompleteTextView;
+import android.widget.EditText;
 import android.widget.ExpandableListView;
 import android.widget.ListView;
 import android.widget.PopupWindow;
@@ -45,13 +49,14 @@ import android.widget.TabHost;
  */
 public class RobotiumUtils {
 	private static final String TAG = "RobotiumUtils";
-	protected static int ACTIVITY_POLL_INTERVAL_MSEC = 1000;			// interval for activity existence polling
-	protected static int VIEW_TIMEOUT_MSEC = 5000;						// time to wait for view to be visible
-	protected static int VIEW_POLL_INTERVAL_MSEC = 1000;				// poll interval for view existence
-	protected static int WAIT_INCREMENT_MSEC = 100;						// poll interval for wait timers.
-	protected static int WAIT_SCROLL_MSEC = 2000;						// wait at most this long for a scroll to complete
-	protected static ActivityMonitorRunnable	sActivityMonitorRunnable = null;
-	protected Instrumentation					mInstrumentation;
+	protected static int ACTIVITY_POLL_INTERVAL_MSEC = 1000;						// interval for activity existence polling
+	protected static int VIEW_TIMEOUT_MSEC = 5000;									// time to wait for view to be visible
+	protected static int VIEW_POLL_INTERVAL_MSEC = 1000;							// poll interval for view existence
+	protected static int WAIT_INCREMENT_MSEC = 100;									// poll interval for wait timers.
+	protected static int WAIT_SCROLL_MSEC = 2000;									// wait at most this long for a scroll to complete
+	protected static int TEXT_FOCUS_TIMEOUT_MSEC = 5000;							// time to wait for text focus (obviously should be much shorter than this
+	protected static ActivityMonitorRunnable	sActivityMonitorRunnable = null;	// so we can "expect" activity transitions
+	protected Instrumentation					mInstrumentation;					// instrumentation handle
 
 	/**
 	 * This has to be called before getActivity(), so it can intercept the first activity.
@@ -155,6 +160,26 @@ public class RobotiumUtils {
 		public void run() {
 			mAbsListView.smoothScrollToPosition(mItemIndex);
 		}
+	}
+	
+	/**
+	 * wait for a specified string to appear in an edit text (usually from setText). We need this because
+	 * enter text key-by-key specifies an insert point, and 
+	 * @param editText edit text view to wait on
+	 * @param stringToWaitFor string to wait for
+	 * @param waitMsec timeout to wait
+	 * @return true if the text appeared
+	 */
+	public boolean waitForText(EditText editText, String stringToWaitFor, int waitMsec) {
+		while (waitMsec > 0) {
+			String text = editText.getText().toString();
+			if (text.equals(stringToWaitFor)) {
+				return true;
+			}
+			RobotiumUtils.sleep(VIEW_POLL_INTERVAL_MSEC);
+			waitMsec -= VIEW_POLL_INTERVAL_MSEC;
+		}
+		return false;
 	}
 	
 	/**
@@ -668,5 +693,72 @@ public class RobotiumUtils {
 			timeoutMsec -= WAIT_INCREMENT_MSEC;
 		}
 		return null;
+	}
+	
+	/**
+	 * unfortunatey, KeyCharacterMap returns null for backspace, so we have to improvise.  Chances are
+	 * that there are other codes that don't work as well, so we'll have to find them as we go along
+	 * TODO: pre-allocate the keyCharactermap for performance
+	 * @param s
+	 * @return
+	 * @throws TestException
+	 */
+	public int[] getKeyEventCodes(String s) throws TestException {
+		KeyCharacterMap keyCharacterMap = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD);
+		int[] keyEventCodes = new int[s.length()];
+		char[] charvec = new char[1];
+		for (int ich = 0; ich < s.length(); ich++) {
+			if (s.charAt(ich) == '\b') {
+				keyEventCodes[ich] = KeyEvent.KEYCODE_DEL;
+			} else {
+				charvec[0] = s.charAt(ich);
+				KeyEvent keyEventsForKey[] = keyCharacterMap.getEvents(charvec);
+				if (keyEventsForKey == null) {
+					throw new TestException("failed to find keycod mapping for character" + charvec[0]);
+				}
+				keyEventCodes[ich] = keyEventsForKey[0].getKeyCode();
+			}
+		}
+		return keyEventCodes;
+	}
+	
+	/**
+	 * enter text key by key.  Much more reliable than just setting text directly
+	 * TODO: check that \b maps to KEYCODE_DEL
+	 * @param editText  edit text to send characters to 
+	 * @param insert  insertion point
+	 * @param text text to insert
+	 */
+	public void enterText(EditText editText, int insert, String text) throws TestException {
+		KeyCharacterMap keyCharacterMap = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD);
+		int[] keyEventCodes = getKeyEventCodes(text);
+		// set the focus to the view, then set the requested insert start point
+		Activity a = (Activity) editText.getContext();
+		WaitRunnable waitRunnable = new WaitRunnable(a, new SetTextInsertionRunnable(editText, insert));
+		waitRunnable.waitForCompletion(TEXT_FOCUS_TIMEOUT_MSEC);
+		// send the actual key events.
+		for (int keyEventCode : keyEventCodes) {
+			mInstrumentation.sendKeyDownUpSync(keyEventCode);	
+		}
+	}
+	
+	/**
+	 * set the focus and insertion point of this text control
+	 * @author matt2
+	 *
+	 */
+	protected class SetTextInsertionRunnable implements Runnable {
+		protected EditText	 mEditText;
+		protected int		 mInsertionPt;
+		
+		public SetTextInsertionRunnable(EditText editText, int insertionPt) {
+			mEditText = editText;
+			mInsertionPt = insertionPt;
+		}
+		
+		public void run() {
+			mEditText.requestFocus();
+			mEditText.setSelection(mInsertionPt);
+		}
 	}
 }

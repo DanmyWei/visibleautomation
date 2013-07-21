@@ -645,20 +645,6 @@ public class TestUtils {
 					return false;
 				}
 			}
-			/*
-			if (v.canScrollHorizontally(-1)) {
-				return true;
-			}
-			if (v.canScrollVertically(-1)) {
-				return true;
-			}
-			if (v.canScrollHorizontally(1)) {
-				return true;
-			}
-			if (v.canScrollVertically(1)) {
-				return true;
-			}
-			*/
 		}
 		if (motionEventViewList != null) {
 			return motionEventViewList.contains(v);

@@ -1,6 +1,7 @@
 package com.androidApp.tcpListener;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -65,5 +66,19 @@ public class TCPListener implements Runnable {
 		for (Socket socket : removeList) {
 			mSocketList.remove(socket);
 		}
+	}
+	
+	/**
+	 * read an acknowledgement to force a roundtrip
+	 * @return
+	 * @throws IOException
+	 */
+	public String readAck() throws IOException {
+		Socket socket = mSocketList.get(0);
+		InputStream is = socket.getInputStream();
+		byte[] buffer = new byte[256];
+		int numBytes = is.read(buffer);
+		String msg = new String(buffer);
+		return msg.substring(0, numBytes);	
 	}
 }

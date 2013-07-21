@@ -139,7 +139,7 @@ public class SetupListeners {
 					if ((activity != null) && (viewInterceptor != null)) {
 						Dialog dialog = TestUtils.findDialog(activity);
 						if ((dialog != null) && (dialog != viewInterceptor.getCurrentDialog())) {
-							instrumentation.runOnMainSync(new InterceptDialogRunnable(dialog, recorder, viewInterceptor));
+							instrumentation.runOnMainSync(new InterceptDialogRunnable(activity, dialog, recorder, viewInterceptor));
 							viewInterceptor.setCurrentDialog(dialog);
 							// TODO: placeholder until I can put together a description for dialogs
 							View contentView = TestUtils.getDialogContentView(dialog);
@@ -203,7 +203,7 @@ public class SetupListeners {
 											instrumentation.runOnMainSync(new InterceptSpinnerPopupWindowRunnable(popupWindow));
 										} else if (TestUtils.isAutoCompleteWindow(popupWindow)) {
 											recorder.writeRecord(Constants.EventTags.CREATE_AUTOCOMPLETE_DROPDOWN, anchorView, "create autocomplete dropdown");
-											instrumentation.runOnMainSync(new InterceptAutoCompleteDropdownRunnable(popupWindow));
+											instrumentation.runOnMainSync(new InterceptAutoCompleteDropdownRunnable(activity, popupWindow));
 										} else {
 											recorder.writeRecord(Constants.EventTags.CREATE_POPUP_WINDOW, "create popup window");
 											instrumentation.runOnMainSync(new InterceptPopupWindowRunnable(popupWindow));
@@ -218,7 +218,7 @@ public class SetupListeners {
 											View vChild = vg.getChildAt(0);
 											viewInterceptor.setCurrentFloatingWindow(windowAndView.mWindow);
 											recorder.writeRecord(Constants.EventTags.CREATE_FLOATING_WINDOW, "create floating window");
-											instrumentation.runOnMainSync(viewInterceptor.new InterceptViewRunnable(vChild));
+											instrumentation.runOnMainSync(viewInterceptor.new InterceptViewRunnable(activity, vChild));
 										}
 									}
 								}
@@ -309,11 +309,13 @@ public class SetupListeners {
 		protected Dialog 			mDialog;
 		protected EventRecorder		mRecorder;
 		protected ViewInterceptor	mViewInterceptor;
+		protected Activity			mActivity;
 		
-		public InterceptDialogRunnable(Dialog dialog, EventRecorder recorder, ViewInterceptor viewInterceptor) {
+		public InterceptDialogRunnable(Activity activity, Dialog dialog, EventRecorder recorder, ViewInterceptor viewInterceptor) {
 			mDialog = dialog;
 			mRecorder = recorder;
 			mViewInterceptor = viewInterceptor;
+			mActivity = activity;
 		}
 		
 		public void run() {
@@ -324,7 +326,7 @@ public class SetupListeners {
 				if (TestUtils.isSpinnerDialog(contentView)) {
 					mViewInterceptor.interceptSpinnerDialog(mDialog);
 				} else {
-					mViewInterceptor.interceptDialog(mDialog);
+					mViewInterceptor.interceptDialog(mActivity, mDialog);
 				}
 			} catch (Exception ex) {
 				mRecorder.writeException(ex, "Intercepting dialog");
@@ -346,7 +348,7 @@ public class SetupListeners {
 			View contentView = mPopupWindow.getContentView();
 			if (contentView != null && !(contentView instanceof MagicFrame)) {
 				MagicFramePopup magicFramePopup = new MagicFramePopup(contentView.getContext(), mPopupWindow, mRecorder, mViewInterceptor);
-				SetupListeners.this.getViewInterceptor().interceptPopupWindow(mPopupWindow);
+				SetupListeners.this.getViewInterceptor().interceptPopupWindow(mRecorder, mPopupWindow);
 			}
 		}
 	}
@@ -398,15 +400,17 @@ public class SetupListeners {
 	 */
 	protected class InterceptAutoCompleteDropdownRunnable implements Runnable {
 		protected PopupWindow mPopupWindow;
+		protected Activity mActivity;
 		
-		public InterceptAutoCompleteDropdownRunnable(PopupWindow popupWindow) {
+		public InterceptAutoCompleteDropdownRunnable(Activity activity, PopupWindow popupWindow) {
 			mPopupWindow = popupWindow;
+			mActivity = activity;
 		}
+		
 		public void run() {
 			View contentView = mPopupWindow.getContentView();
 			if (contentView != null && !(contentView instanceof MagicFrame)) {
-				//MagicFramePopup magicFramePopup = new MagicFramePopup(contentView.getContext(), mPopupWindow, mRecorder, mViewInterceptor);
-				SetupListeners.this.getViewInterceptor().interceptAutocompleteDropdown(mPopupWindow);
+				SetupListeners.this.getViewInterceptor().interceptAutocompleteDropdown(mActivity, mPopupWindow);
 			}
 		}
 	}

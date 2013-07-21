@@ -150,12 +150,33 @@ public class EventRecorder extends EventRecorderInterface {
 	 * @param viewDirectiveList list of directives for this activity (filtered)
 	 * @return
 	 */
+	public static boolean matchViewDirective(View 					      	view, 
+											 int						  	viewIndex,
+											 ViewDirective.ViewOperation 	operation,
+											 ViewDirective.When				when,
+											 List<ViewDirective> 		  	viewDirectiveList) {
+		for (ViewDirective viewDirective : viewDirectiveList) {
+			if (viewDirective.match(view, viewIndex, operation, when)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+
+	/**
+	 * match against the internal list
+	 * @param view
+	 * @param viewIndex
+	 * @param operation
+	 * @param when
+	 * @return
+	 */
 	public boolean matchViewDirective(View 					      	view, 
 									  int						  	viewIndex,
 									  ViewDirective.ViewOperation 	operation,
-									  ViewDirective.When			when,
-									  List<ViewDirective> 		  	viewDirectiveList) {
-		for (ViewDirective viewDirective : viewDirectiveList) {
+									  ViewDirective.When			when) {
+		for (ViewDirective viewDirective : mViewDirectiveList) {
 			if (viewDirective.match(view, viewIndex, operation, when)) {
 				return true;
 			}

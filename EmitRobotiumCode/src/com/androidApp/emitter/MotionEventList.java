@@ -66,13 +66,14 @@ public class MotionEventList {
 			
 			SuperTokenizer st = new SuperTokenizer(line, "\"", ":,", '\\');
 			List<String> tokens = st.toList();
-			if (tokens.get(0).equals(Constants.Events.TOUCH_MOVE)) {
+			String action = tokens.get(0);
+			if (Constants.UserEvent.TOUCH_MOVE.equals(action)) {
 				eventTimeMsec = Long.parseLong(tokens.get(1));
 				eventX = Float.parseFloat(tokens.get(2));
 				eventY = Float.parseFloat(tokens.get(3));
 				MotionEventPoint moveEvent = new MotionEventPoint(eventTimeMsec, eventX, eventY);
 				mPoints.add(moveEvent);
-			} else if (tokens.get(0).equals(Constants.Events.TOUCH_UP)) { 
+			} else if (Constants.UserEvent.TOUCH_UP.equals(action)) { 
 				eventTimeMsec = Long.parseLong(tokens.get(1));
 				eventX = Float.parseFloat(tokens.get(2));
 				eventY = Float.parseFloat(tokens.get(3));

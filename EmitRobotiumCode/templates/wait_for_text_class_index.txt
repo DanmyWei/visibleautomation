@@ -1,0 +1,4 @@
+		// %DESCRIPTION%
+		%CLASSPATH% view%VARIABLE_INDEX% = (%CLASSPATH%) solo.getView(%CLASSPATH%.class, %VIEW_INDEX%);
+		TestCase.assertTrue(robotiumUtils.waitForText(view%VARIABLE_INDEX%, %TEXT%, VIEW_WAIT_MSEC));
+		

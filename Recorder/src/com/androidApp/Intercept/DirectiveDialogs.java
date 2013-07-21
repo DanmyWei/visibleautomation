@@ -24,6 +24,7 @@ import com.androidApp.EventRecorder.ViewDirective.ViewOperation;
 import com.androidApp.EventRecorder.ViewDirective.When;
 import com.androidApp.Intercept.MagicOverlay.ClickMode;
 import com.androidApp.Test.ActivityInterceptor;
+import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 
 /**
@@ -97,8 +98,13 @@ public class DirectiveDialogs {
 					recorder.addViewDirective(ignoreDirective);
 				} else if (which == 1) {
 					DirectiveDialogs.this.getEventRecorder().writeRecord(Constants.EventTags.MOTION_EVENTS, currentView);
-					ViewDirective ignoreDirective = new ViewDirective(ref, ViewOperation.IGNORE_EVENTS, When.ON_ACTIVITY_START, null);
-					recorder.addViewDirective(ignoreDirective);
+					ViewDirective motionDirective = new ViewDirective(ref, ViewOperation.MOTION_EVENTS, When.ON_ACTIVITY_START, null);
+					recorder.addViewDirective(motionDirective);
+					try {
+						ViewInterceptor.replaceTouchListener(recorder, currentView);
+					} catch (Exception ex) {
+						recorder.writeException(ex, "replace touch listener in directive dialog");
+					}
 				} else if (which == 2) {
 					DirectiveDialogs.this.getEventRecorder().writeRecord(Constants.EventTags.COPY_TEXT, currentView);
 					Dialog newDialog = createTextEntryDialog(currentView.getContext(), Constants.DisplayStrings.COPY_TEXT, new CopyDialogClickListener());
@@ -200,6 +206,11 @@ public class DirectiveDialogs {
 				} else if (which == 1) {
 					recorder.writeRecord(Constants.EventTags.MOTION_EVENTS, currentView);
 					ViewDirective motionDirective = new ViewDirective(ref, ViewOperation.MOTION_EVENTS, When.ON_ACTIVITY_START, null);
+					try {
+						ViewInterceptor.replaceTouchListener(recorder, currentView);
+					} catch (Exception ex) {
+						recorder.writeException(ex, "replace touch listener in directive dialog");
+					}
 					recorder.addViewDirective(motionDirective);
 				} else if (which == 2) {
 					recorder.writeRecord(Constants.EventTags.SELECT_BY_TEXT, currentView);
@@ -235,6 +246,11 @@ public class DirectiveDialogs {
 					recorder.writeRecord(Constants.EventTags.MOTION_EVENTS, currentView);
 					ViewDirective motionDirective = new ViewDirective(ref, ViewOperation.MOTION_EVENTS, When.ON_ACTIVITY_START, null);
 					recorder.addViewDirective(motionDirective);
+					try {
+						ViewInterceptor.replaceTouchListener(recorder, currentView);
+					} catch (Exception ex) {
+						recorder.writeException(ex, "replace touch listener in directive dialog");
+					}
 				} else if (which == 2) {
 					recorder.writeRecord(Constants.EventTags.COPY_TEXT, currentView);
 					Dialog newDialog = createTextEntryDialog(currentView.getContext(), Constants.DisplayStrings.COPY_TEXT, new CopyDialogClickListener());
@@ -246,7 +262,7 @@ public class DirectiveDialogs {
 				} else if (which == 4) {
 					ViewDirective keyDirective = new ViewDirective(ref, ViewOperation.ENTER_TEXT_BY_KEY, When.ON_ACTIVITY_START, null);
 					recorder.addViewDirective(keyDirective);
-				}
+				} 
 			} catch (IOException ioex) {
 				DirectiveDialogs.setErrorLabel(alertDialog, Constants.DisplayStrings.VIEW_REFERENCE_FAILED);
 			}

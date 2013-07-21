@@ -75,6 +75,7 @@ public class Constants {
 		public static final String COM_ANDROID_WIDGET = "com.android.widget";	
 		public static final String COM_ANDROID_VIEW = "com.android.view";
 		public static final String COM_ANDROID_INTERNAL = "com.android.internal";
+		public static final String INPUT_CONTENT_TYPE = "android.widget.TextView$InputContentType";
 		
 	}
 	
@@ -137,6 +138,8 @@ public class Constants {
 		public static final String ONCHILD_CLICK_LISTENER = "mOnChildClickListener";
 		public static final String HORIZONTALLY_SCROLLING = "mHorizontallyScrolling";
 		public static final String ON_HIERARCHY_CHANGE_LISTENER = "mOnHierarchyChangeListener";
+		public static final String INPUT_CONTENT_TYPE = "mInputContentType";
+		public static final String ON_EDITOR_ACTION_LISTENER = "onEditorActionListener";
 
 	}
 	
@@ -152,7 +155,9 @@ public class Constants {
 		public static final String UNKNOWN = "unknown";
 		public static final String ENTER_TEXT = "enter_text";
 		public static final String BEFORE_TEXT = "before_text";
+		public static final String BEFORE_TEXT_KEY = "before_text_key";
 		public static final String AFTER_TEXT = "after_text";
+		public static final String AFTER_TEXT_KEY = "after_text_key";
 		public static final String CHECKED = "checked";
 		public static final String CLICK = "click";
 		public static final String TOUCH_UP = "touch_up";
@@ -231,6 +236,8 @@ public class Constants {
 		public static final String CHECK = "check";
 		public static final String UNCHECK = "uncheck";
 		public static final String ENTER_TEXT_BY_KEY = "enter_text_by_key";
+		public static final String BEFORE_SET_TEXT = "before_set_text";
+		public static final String AFTER_SET_TEXT = "after_set_text";
 	}
 	
 	// description strings 
@@ -297,5 +304,6 @@ public class Constants {
 		public static final String ON_ACTIVITY_START = "on_activity_start";
 		public static final String ON_ACTIVITY_END = "on_activity_end";
 		public static final String ON_VALUE_CHANGE = "on_value_change";
+		public static final String ALWAYS = "always";
 	}
 }
