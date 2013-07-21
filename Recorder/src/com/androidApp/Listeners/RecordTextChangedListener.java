@@ -48,7 +48,7 @@ public class RecordTextChangedListener extends RecordListener implements TextWat
 			String reference = mEventRecorder.getViewReference().getReference(mTextView);
 			String massagedString = StringUtils.escapeString(s.toString(), "\"", '\\').replace("\n", "\\n");
 			String logString = '\"' + massagedString + '\"' + "," + start + "," +  count + "," + after + "," + reference + "," + description;
-			if (!RecordListener.getEventBlock() && IMEMessageListener.wasKeyHit()) {
+			if (!RecordListener.getEventBlock() && (IMEMessageListener.getOutstandingKeyCount() > 0)) {
 				mfBeforeFired = true;
 				setEventBlock(true);
 				if (mfEnterTextByKey ||
@@ -74,12 +74,12 @@ public class RecordTextChangedListener extends RecordListener implements TextWat
 			String reference = mEventRecorder.getViewReference().getReference(mTextView);
 			String massagedString = StringUtils.escapeString(s.toString(), "\"", '\\').replace("\n", "\\n");
 			String logString = '\"' + massagedString + '\"' + "," + start + "," + before + "," + count + "," + reference + "," + description;
-			if (!RecordListener.getEventBlock() && IMEMessageListener.wasKeyHit()) {
+			if (!RecordListener.getEventBlock() && (IMEMessageListener.getOutstandingKeyCount() > 0)) {
 				if (!mfBeforeFired) {
 					Log.d(TAG, "before not fired in text change listener");
 				}
 				mfBeforeFired = false;
-				IMEMessageListener.setWasKeyHit(false);
+				IMEMessageListener.decrementOutstandingKeyCount();
 				setEventBlock(true);
 				if (mfEnterTextByKey ||
 					    mEventRecorder.matchViewDirective(mTextView, mViewIndex, ViewDirective.ViewOperation.ENTER_TEXT_BY_KEY,

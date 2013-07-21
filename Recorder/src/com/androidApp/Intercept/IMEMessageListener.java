@@ -17,6 +17,18 @@ import android.view.KeyEvent;
 
 /**
  * listen for up/down messages from our custom IME.
+ * IMPORTANT NOTE: This is reliant on the SoftKeyboard and RecordOnTextChangedListener for communication and reference counting
+ * When the user hits a key in the soft keyboard, it sends a TCP message to the IMEMessageListener, so we can differentiate between
+ * keys entered by the user from the IME, and text set programmatically in EditText.  Normally, I would use a listener, like KeyListener
+ * untl I saw this jaw-dropping note in the android docs:
+ * from http://developer.android.com/reference/android/text/method/KeyListener.html:
+ * Key presses on soft input methods are not required to trigger the methods in this listener, and are in fact discouraged to do so. 
+ * The default android keyboard will not trigger these for any key to any application targetting Jelly Bean or later, and will only deliver it 
+ * for some key presses to applications targetting Ice Cream Sandwich or earlier.
+ * So, we force a a round trip with the android Soft keyboard (TODO: and we need to throw some kind of visible error if it isn't connected),
+ * then we increment a keycounter, which is then decremented by RecordTextChangeListener.  The problem is when we send a key and RecordTextChangedListener
+ * ISN'T fired, so we'll keep incrementing the key counter, and won't recognize programmatic setText() events.  So, we need to do something
+ * (probably look at the current edit text in focus and check its OnTextChangedListener list) to ensure that the key counter is decremented correctly)
  * @author matthew
  * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
@@ -29,9 +41,9 @@ public class IMEMessageListener implements Runnable {
 	public static final String 	HIDE_IME = "hide_ime";							// messages sent from the custom soft keyboard
 	public static final String 	SHOW_IME = "show_ime";
 	public static final String 	SEND_KEY = "send_key";
-	public static final String 	ACK = "acks";
+	public static final String 	ACK = "ack";
 	public static final String  HIDE_IME_BACK_KEY = "hide_ime_back_key";
-	public static boolean		sfKeyHit;
+	public static int			sfOutstandingKeyCount;			// number of keys which have been read, but not processed.
 	protected static boolean 	sfTerminate;					// terminate loop flag.
 	protected boolean 			mfKeyboardVisible = false;		// flag for IME visibility to others may ask
 	protected ViewInterceptor	mViewInterceptor;				// maintains currently focused view.
@@ -42,7 +54,7 @@ public class IMEMessageListener implements Runnable {
 		mfKeyboardVisible = false;
 		mViewInterceptor = viewInterceptor;
 		mEventRecorder = eventRecorder;
-		sfKeyHit = false;
+		sfOutstandingKeyCount = 0;
 	}
 	
 	public boolean isKeyboardVisible() {
@@ -56,12 +68,16 @@ public class IMEMessageListener implements Runnable {
 		sfTerminate = true;
 	}
 
-	public static boolean wasKeyHit() {
-		return sfKeyHit;
+	public static int getOutstandingKeyCount() {
+		return sfOutstandingKeyCount;
 	}
 	
-	public static void setWasKeyHit(boolean f) {
-		sfKeyHit = f;
+	public static void incrementOutstandingKeyCount() {
+		sfOutstandingKeyCount++;
+	}
+	
+	public static void decrementOutstandingKeyCount() {
+		sfOutstandingKeyCount--;
 	}
 	
 	/**
@@ -109,7 +125,8 @@ public class IMEMessageListener implements Runnable {
 						}
 						mfKeyboardVisible = false;
 					} else if (msg.equals(SEND_KEY)) {
-						setWasKeyHit(true);
+						incrementOutstandingKeyCount();
+						Log.i(TAG, "received send_key");
 						os.write(ACK.getBytes());
 						// we need to send an acknowledgement to force a a round trip before android sends the key event
 						// in order to prevent a race condition.
