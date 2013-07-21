@@ -554,7 +554,8 @@ public class SoftKeyboard extends InputMethodService
     // Implementation of KeyboardViewListener
 
     public void onKey(int primaryCode, int[] keyCodes) {
-    	Log.i(TAG, "onKey");
+    	Log.i(TAG, "onKey " + primaryCode);
+
     	sTCPListener.broadcast(SEND_KEY);
     	try {
     		String s = sTCPListener.readAck();
