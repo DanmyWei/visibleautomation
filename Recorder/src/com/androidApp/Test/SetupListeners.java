@@ -13,6 +13,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.Menu;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -21,6 +22,7 @@ import android.widget.PopupWindow;
 import android.widget.Spinner;
 
 import com.androidApp.EventRecorder.EventRecorder;
+import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.EventRecorder.ReferenceException;
 import com.androidApp.Intercept.IMEMessageListener;
 import com.androidApp.Intercept.InterceptKeyViewMenu;
@@ -57,7 +59,7 @@ public class SetupListeners {
 	protected String						mActivityName;						// TODO: probably should be the class of the activity under test
 	protected IMEMessageListener			mIMEMessageListener;				// to listen to IME up/down events
 	protected IRecordTest					mRecordTest;						// so we can pass info from the top-level recorder
-
+	protected Class							mExpandedMenuViewClass;				// a pseudo-dialog used for ersatz overflow menus
 	
 	/** 
 	 * constructor: copy the instrumentation reference, the start activity, and the recorder
@@ -74,6 +76,7 @@ public class SetupListeners {
 		mInstrumentation = instrumentation;
 		mActivityName = activityClass.getCanonicalName();
 		mRecordTest = recordTest;
+		mExpandedMenuViewClass = Class.forName(Constants.Classes.EXPANDED_MENU_VIEW);
 		setUp(activityClass, fBinary);
 	}
 	
@@ -87,7 +90,7 @@ public class SetupListeners {
 	 */
 	public void initRecorder(Context context, boolean fBinary) throws IOException, ReferenceException, ClassNotFoundException {
 		mContext = context;
-		mRecorder = new EventRecorder(mInstrumentation, mContext, Constants.Files.EVENTS, fBinary);
+		mRecorder = new EventRecorder(mInstrumentation, mContext, Constants.Files.EVENTS, Constants.Files.VIEW_DIRECTIVES, fBinary);
 		mViewInterceptor = new ViewInterceptor(mRecorder, mRecordTest);
 		mIMEMessageListener = new IMEMessageListener(mViewInterceptor, mRecorder);
 		Thread thread = new Thread(mIMEMessageListener);
@@ -216,9 +219,11 @@ public class SetupListeners {
 										ViewGroup vg = (ViewGroup) windowAndView.mView;
 										if (vg.getChildCount() > 0) {
 											View vChild = vg.getChildAt(0);
+											
+											// rather than an extension submenu, sometimes it comes up as another
 											viewInterceptor.setCurrentFloatingWindow(windowAndView.mWindow);
 											recorder.writeRecord(Constants.EventTags.CREATE_FLOATING_WINDOW, "create floating window");
-											instrumentation.runOnMainSync(viewInterceptor.new InterceptViewRunnable(activity, vChild));
+											instrumentation.runOnMainSync(new InterceptFloatingWindowRunnable(activity, vChild, windowAndView.mWindow));
 										}
 									}
 								}
@@ -346,12 +351,42 @@ public class SetupListeners {
 		
 		public void run() {
 			View contentView = mPopupWindow.getContentView();
-			if (contentView != null && !(contentView instanceof MagicFrame)) {
-				MagicFramePopup magicFramePopup = new MagicFramePopup(contentView.getContext(), mPopupWindow, mRecorder, mViewInterceptor);
-				SetupListeners.this.getViewInterceptor().interceptPopupWindow(mRecorder, mPopupWindow);
+			if (contentView != null) {
+				SetupListeners.this.getViewInterceptor().interceptPopupWindow(SetupListeners.this.mRecorder, mPopupWindow);
 			}
 		}
 	}
+	
+	/**
+	 * List InterceptPopupWindow, except that people have rolled their own windows
+	 * @author matt2
+	 *
+	 */
+	public class InterceptFloatingWindowRunnable implements Runnable {
+		protected View mView;
+		protected Activity mActivity;
+		protected Object mFloatingWindow;
+		
+		public InterceptFloatingWindowRunnable(Activity activity, View v, Object floatingWindow) {
+			mView = v;
+			mActivity = activity;
+			mFloatingWindow = floatingWindow;
+		}
+		
+		public void run() {
+			try {
+				SetupListeners.this.getViewInterceptor().intercept(mActivity, mView);
+				/*
+				 * this shit ain't happenin'
+				 */
+				//FieldUtils.listFieldsDebug(mFloatingWindow.getClass());
+				//SetupListeners.this.getViewInterceptor().interceptFloatingWindow(SetupListeners.this.getRecorder(), mFloatingWindow);
+			} catch (Exception ex) {
+				SetupListeners.this.mRecorder.writeException(ex, "while trying to intercept view");
+			}
+		}
+	}
+
 
 	/**
 	 * same, except for intercepting "popup" windows

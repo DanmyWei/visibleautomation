@@ -51,8 +51,6 @@ public class Constants {
 		public static final String DROPDOWN_LISTVIEW = "android.widget.ListPopupWindow$DropDownListView";
 		public static final String MENU_POPUP_HELPER = "com.android.internal.view.menu.MenuPopupHelper";
 		public static final String MENU_ITEM_IMPL = "com.android.internal.view.menu.MenuItemImpl";
-		public static final String ACTION_MENU_PRESENTER = "com.android.internal.view.menu.ActionMenuPresenter$OverflowPopup";
-		public static final String OVERFLOW_MENU_BUTTON = "com.android.internal.view.menu.ActionMenuPresenter$OverflowMenuButton";
 		public static final String SCROLLING_TAG_CONTAINER_TAB_VIEW = "com.android.internal.widget.ScrollingTabContainerView$TabView";
 		public static final String EXPANDED_MENU_VIEW = "com.android.internal.view.menu.ExpandedMenuView";	
 		public static final String ACTIONBAR_CONTAINER = "com.android.internal.widget.ActionBarContainer";
@@ -76,7 +74,13 @@ public class Constants {
 		public static final String COM_ANDROID_VIEW = "com.android.view";
 		public static final String COM_ANDROID_INTERNAL = "com.android.internal";
 		public static final String INPUT_CONTENT_TYPE = "android.widget.TextView$InputContentType";
-		
+		public static final String ACTION_MENU_PRESENTER = "com.android.internal.view.menu.ActionMenuPresenter";
+		public static final String OVERFLOW_MENU_BUTTON = "com.android.internal.view.menu.ActionMenuPresenter$OverflowMenuButton";
+		public static final String ACTION_BUTTON_SUBMENU = "com.android.internal.view.menu.ActionMenuPresenter$ActionButtonSubmenu";
+		public static final String POPUP_PRESENTER_CALLBACK = "com.android.internal.view.menu.ActionMenuPresenter$PopupPresenterCallback";
+		public static final String ALERT_CONTROLLER_ALERT_PARAMS = "com.android.internal.app.AlertController$AlertParams$3";
+		public static final String MENU_DIALOG_HELPER = "MenuDialogHelper";
+		public static final String SUBMENU_BUILDER = "com.android.internal.view.menu.SubMenuBuilder";	
 	}
 	
 	// listener field names
@@ -140,6 +144,10 @@ public class Constants {
 		public static final String ON_HIERARCHY_CHANGE_LISTENER = "mOnHierarchyChangeListener";
 		public static final String INPUT_CONTENT_TYPE = "mInputContentType";
 		public static final String ON_EDITOR_ACTION_LISTENER = "onEditorActionListener";
+		public static final String POPUP_PRESENTER_CALLBACK = "mPopupPresenterCallback";
+		public static final String MENU_CLICK_LISTENER = "mClickListener";
+		public static final String ONCLICK_LISTENER = "mOnClickListener";
+		public static final String ITEMS = "mItems";
 
 	}
 	
@@ -238,6 +246,7 @@ public class Constants {
 		public static final String ENTER_TEXT_BY_KEY = "enter_text_by_key";
 		public static final String BEFORE_SET_TEXT = "before_set_text";
 		public static final String AFTER_SET_TEXT = "after_set_text";
+		public static final String CREATE_EXPANDED_MENU_VIEW = "create_expanded_menu_view";
 	}
 	
 	// description strings 
@@ -279,6 +288,7 @@ public class Constants {
 	
 	public static class Files {
 		public static final String EVENTS = "events.txt";
+		public static final String VIEW_DIRECTIVES = "view_directives.txt";
 	}
 	
 	// TODO: this needs to be read from a resource file, but jar files cannot access android resource files

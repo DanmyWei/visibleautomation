@@ -42,11 +42,16 @@ public class EventRecorder extends EventRecorderInterface {
 	 * @param instrumentation instrumentation handle
 	 * @param context context of application being tested
 	 * @param recordFileName output filename on the sdcard
+	 * @param directiveFileName name of directive file
 	 * @param fBinary target application is binary: Object references must be resolved to android public classes
 	 * @throws IOException
 	 */
-	public EventRecorder(Instrumentation instrumentation, Context context, String recordFileName, boolean fBinary) throws ReferenceException, ClassNotFoundException, IOException {
-		super(context, recordFileName);
+	public EventRecorder(Instrumentation 	instrumentation, 
+					     Context 			context, 
+						 String 			recordFileName, 
+						 String 			directiveFileName, 
+						 boolean 			fBinary) throws ReferenceException, ClassNotFoundException, IOException {
+		super(context, recordFileName, directiveFileName);
 		mContext = context;
 		mInstrumentation = instrumentation;
 		mViewReference = new ViewReference(instrumentation, fBinary);
@@ -103,6 +108,7 @@ public class EventRecorder extends EventRecorderInterface {
 	public void setVisualDebug(boolean f) {
 		mfVisualDebug = f;
 	}
+
 		
 	// write a record to the output
 	public synchronized void writeRecord(String s)  {
@@ -119,6 +125,8 @@ public class EventRecorder extends EventRecorderInterface {
 	
 	public void addViewDirective(ViewDirective viewDirective) {
 		mViewDirectiveList.add(viewDirective);
+		writeLog(mDirectiveFileName, viewDirective.toString());
+		
 	}
 	
 	public void addInterstitialActivity(Activity activity) {

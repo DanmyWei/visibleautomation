@@ -19,6 +19,8 @@ public class Constants {
 	public static final String TEXT_ID = "text_id";
 	public static final String CLASS_INDEX = "class_index";
 	public static final String INTERNAL_CLASS_INDEX = "internal_class_index";
+	public static final String MAIN = "main";
+	public static final String INTERSTITIAL_ACTIVITY_HANDLER = "InterstitialActivityHandler";
 	
 	// environment variables
 	public static class Env {
@@ -77,7 +79,8 @@ public class Constants {
 	public enum ActivityEvent {
 		PACKAGE("package"),
 		ACTIVITY_FORWARD("activity_forward"),
-		ACTIVITY_BACK("activity_back");
+		ACTIVITY_BACK("activity_back"), 
+		INTERSTITIAL_ACTIVITY("interstitial_activity");
 		
 		public final String mEventName;		
 		private ActivityEvent(String s) {
@@ -159,10 +162,10 @@ public class Constants {
 		public static final String GO_BACK = "go_back.txt";
 		public static final String EDIT_TEXT_ID = "edit_text_id.txt";
 		public static final String EDIT_TEXT_CLASS_INDEX = "edit_text_class_index.txt";
-		public static final String EDIT_TEXT_INTERNAL_CLASS_INDEX = "edit_text_internal_class_index";
+		public static final String EDIT_TEXT_INTERNAL_CLASS_INDEX = "edit_text_internal_class_index.txt";
 		public static final String EDIT_TEXT_KEY_ID = "edit_text_key_id.txt";
 		public static final String EDIT_TEXT_KEY_CLASS_INDEX = "edit_text_key_class_index.txt";
-		public static final String EDIT_TEXT_KEY_INTERNAL_CLASS_INDEX = "edit_text_key_internal_class_index";
+		public static final String EDIT_TEXT_KEY_INTERNAL_CLASS_INDEX = "edit_text_key_internal_class_index.txt";
 		public static final String WAIT_FOR_VIEW_ID = "wait_for_view_id.txt";
 		public static final String WAIT_FOR_VIEW_CLASS_INDEX = "wait_for_view_class_index.txt";
 		public static final String WAIT_FOR_VIEW_INTERNAL_CLASS_INDEX = "wait_for_view_internal_class_index.txt";
@@ -224,6 +227,7 @@ public class Constants {
 		public static final String WAIT_FOR_TEXT_ID = "wait_for_text_id.txt";
 		public static final String WAIT_FOR_TEXT_CLASS_INDEX = "wait_for_text_class_index.txt";
 		public static final String WAIT_FOR_TEXT_INTERNAL_CLASS_INDEX = "wait_for_text_internal_class_index.txt";
+		public static final String INTERSTITIAL_HEADER = "interstitial_header.txt";
 		
 	}
 	
@@ -289,6 +293,8 @@ public class Constants {
 		public static final String ROBOTIUM_JAR = "robotium-solo-4.1.1-SNAPSHOT.jar";
 		public static final String ANDROID_SUPPORT_JAR = "android-support-v13.jar";
 		public static final String TEMPORARY_FILE = "temp.txt";
+		public static final String VIEW_DIRECTIVES = "view_directives.txt";
+		public static final String NONE = "none";
 	}
 	
 	// output directories

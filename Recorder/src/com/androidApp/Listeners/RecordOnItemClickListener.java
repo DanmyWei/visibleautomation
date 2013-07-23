@@ -1,10 +1,14 @@
 package com.androidApp.Listeners;
+import java.util.List;
+
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.ReflectionUtils;
 
 import android.os.SystemClock;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 
@@ -46,7 +50,7 @@ public class RecordOnItemClickListener extends RecordListener implements Adapter
 		if (!RecordListener.getEventBlock()) {
 			setEventBlock(true);
 			try {
-				mEventRecorder.writeRecord(Constants.EventTags.ITEM_CLICK, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
+				mEventRecorder.writeRecord(Constants.EventTags.ITEM_CLICK, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));	
 			} catch (Exception ex) {
 				mEventRecorder.writeException(ex, view, "item click");
 			}	

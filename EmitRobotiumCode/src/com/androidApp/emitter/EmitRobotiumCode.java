@@ -8,10 +8,15 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
+import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
+import com.androidApp.emitter.IEmitCode.LineAndTokens;
 import com.androidApp.parser.ProjectPropertiesScan;
 import com.androidApp.savestate.SaveState;
 import com.androidApp.savestate.SaveStateException;
@@ -41,7 +46,7 @@ public class EmitRobotiumCode {
 	 */
 	public static void main(String[] args) throws FileNotFoundException, IOException, EmitterException, SaveStateException {
 		if (args.length < 2) {
-			System.err.println("usage: EmitRobotium [events.txt|device] <target-project-name> [binary]");
+			System.err.println("usage: EmitRobotium [events.txt|device] [view_directives.txt|device|none] <target-project-name> [binary]");
 			System.err.println("events.txt is the output file from the recorder");
 			System.err.println("device pulls the events.txt file from /sdcard/events.txt");
 			System.err.println("<target-project-name> is the name of the project to instrument via robotium");
@@ -54,7 +59,8 @@ public class EmitRobotiumCode {
 			System.exit(-1);
 		}
 		String eventsFileName = args[0];
-		String targetProject = args[1];
+		String viewDirectiveFileName = args[1];
+		String targetProject = args[2];
 		boolean fBinary = false;
 		if (args.length == 3) {
 			fBinary = args[2].equals("binary");
@@ -73,18 +79,22 @@ public class EmitRobotiumCode {
 		File projectPropertiesFile = new File(targetProject,  Constants.Filenames.PROJECT_PROPERTIES_FILENAME);
 		ProjectPropertiesScan projectPropertiesScan = null;
 		try {
-				projectPropertiesScan = new ProjectPropertiesScan(projectPropertiesFile);
+			projectPropertiesScan = new ProjectPropertiesScan(projectPropertiesFile);
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
 
 		// grab the events file
 		eventsFileName = SetupRobotiumProject.getEventsFile(eventsFileName);
+		if (!viewDirectiveFileName.equals(Constants.Filenames.NONE)) {
+			viewDirectiveFileName = SetupRobotiumProject.getViewDirectivesFile(viewDirectiveFileName);
+		}
 		
+		// grab the 
 		// generate the test code.
 		List<MotionEventList> motionEvents = new ArrayList<MotionEventList>();
-		List<EmitRobotiumCodeSource.LineAndTokens> lines = emitter.generateTestCode(emitter, eventsFileName, motionEvents);
-
+		Hashtable<String, List<LineAndTokens>> outputCode = emitter.generateTestCode(emitter, eventsFileName, motionEvents);
+		List<LineAndTokens> mainCode = outputCode.get(Constants.MAIN);
 		if (emitter.getApplicationClassPath() == null) {
 			System.err.println("unable to generate output code, no activity reference");
 			System.exit(-1);
@@ -110,11 +120,11 @@ public class EmitRobotiumCode {
 		emitter.writeHeader(emitter.getApplicationClassPath(), testClassPath, testClassName, emitter.getApplicationClassName(), bw);
 		if (options.mfWriteFunctions) {
 			SplitFunction splitter = new SplitFunction(options.mMinLines);
-			splitter.writeFunctions(bw, "test" + targetProject, 0, lines);
+			splitter.writeFunctions(bw, "test" + targetProject, 0, mainCode);
 			emitter.writeClassTrailer(bw);
 		} else {
 			emitter.writeFunctionHeader(bw);
-			emitter.writeLines(bw, lines);
+			emitter.writeLines(bw, mainCode);
 			emitter.writeTrailer(bw);
 		}
 		
@@ -146,6 +156,17 @@ public class EmitRobotiumCode {
 			SetupRobotiumProject.moveOutputCodeToPackage(packageFilePath, outputCodeFileName, testClassName);
 		} else {
 			System.err.println("no activity class specified");
+		}
+		for (Entry<String, List<LineAndTokens>> entry : outputCode.entrySet()) {
+			String activityClassName = entry.getKey();
+			if (!activityClassName.equals(Constants.MAIN)) {
+				String activityName = StringUtils.getNameFromClassPath(activityClassName);
+				String interstitialHandlerName = Constants.INTERSTITIAL_ACTIVITY_HANDLER + activityName;
+				String interstitialHandlerFile = interstitialHandlerName + File.separator + Constants.Extensions.JAVA;
+				List<LineAndTokens> code = entry.getValue();
+				BufferedWriter bwHandler = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(interstitialHandlerFile)));
+				emitter.writeInterstitialHandler(bwHandler, testClassPath, interstitialHandlerName, code);
+			}
 		}
 	}
 	

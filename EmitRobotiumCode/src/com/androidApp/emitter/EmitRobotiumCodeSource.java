@@ -9,6 +9,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 
@@ -36,11 +37,10 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	protected String 		mCurrentActivityName = null;			// current activity name (from activity transition)
 	protected String 		mActivityVariable = null;				// variable name for this activity
 	protected boolean 		mfActivityMatches = false;				// new activity has same name as current activity
-	protected int 			mCurrentInsertionPoint = 0;				// current text insertion point to track when reset by user
 	protected int			mStartInsertionPoint = 0;				// start insertion (for when we insert multichar)
 	protected StringBuffer 	mCurrentText = new StringBuffer();		// for tracking text entry
 	protected boolean		mfFirstKey = true;						// latch for text entry start
-	protected boolean		mfFirstDeleteKey = true;				// latch for first Delete key
+	protected static int	sLineNumber = 0;						// track line # throughout recursions
 	
 	public EmitRobotiumCodeSource() {
 	}	
@@ -83,11 +83,12 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	 * @throws IOException
 	 * @throws EmitterException
 	 */
-	public List<LineAndTokens> generateTestCode(IEmitCode emitter, String eventsFileName, List<MotionEventList> motionEvents) throws FileNotFoundException, IOException, EmitterException {
-		List<LineAndTokens> lines = new ArrayList<LineAndTokens>();
+	public Hashtable<String, List<LineAndTokens>> generateTestCode(IEmitCode emitter, String eventsFileName, List<MotionEventList> motionEvents) throws FileNotFoundException, IOException, EmitterException {
+		Hashtable<String, List<LineAndTokens>> outputCode = new Hashtable<String, List<LineAndTokens>>();
 		BufferedReader br = new BufferedReader(new FileReader(eventsFileName));
-		emitter.emit(br, lines, motionEvents);
-		return lines;
+		List<LineAndTokens> mainLines = emitter.emit(br, outputCode, motionEvents, false);
+		outputCode.put(Constants.MAIN, mainLines);
+		return outputCode;
 	}
 
 	
@@ -95,24 +96,28 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	 * actually emit robotium code from a recorded file
 	 * TODO: change this so it returns the target class path and class name, not modifying statics
 	 * @param br BufferedReader on events.txt file
+	 * @param appOutput application output class: lines for main and interstitial activities.
 	 * @param lines output lines
 	 * @throws IOException
 	 * @throws EmitterException
 	 */
 	@Override
-	public void emit(BufferedReader br, List<LineAndTokens> lines, List<MotionEventList> motionEvents) throws IOException, EmitterException {
+	public List<LineAndTokens> emit(BufferedReader 							br, 
+									Hashtable<String, List<LineAndTokens>>	outputCode,
+									List<MotionEventList> 					motionEvents,
+									boolean									fInterstitialActivity) throws IOException, EmitterException {
 		boolean scrollsHaveHappened = false;				// we get a zillion scroll events.  We only care about the last one
 		int scrollFirstVisibleItem = 0;						// preserve scroll values so we can apply it on the last scroll.
 		int scrollListIndex = 0;							// track the current scroll index to write on the next non-scroll instruction
 		List<String> clickSpinnerDialogTokens = null;		// workaround for robotium, which selects spinners, but doesn't just click-dismiss
-		List<String> lastTextEntryTokens = null;			// to preserve the last text entry event
 		String line = br.readLine();	
-		int lineNumber = 0;									// track line number for errors
+		int sLineNumber = 0;												// track line number for errors
+		List<LineAndTokens> lines = new ArrayList<LineAndTokens>();		// output code for this scope
 		do {
 			if (line == null) {
 				break;
 			}
-			lineNumber++;
+			sLineNumber++;
 			try {
 				String nextLine = br.readLine();
 				// syntax is event:time,arguments,separated,by,commas
@@ -149,9 +154,17 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 				}				
 				
 				// then everything else is switched on the event name.
-				if (action.equals(Constants.ActivityEvent.PACKAGE.equals(action))) {
+				if (Constants.ActivityEvent.PACKAGE.equals(action)) {
 					mTargetPackage = tokens.get(2);
+				} else if (Constants.ActivityEvent.INTERSTITIAL_ACTIVITY.equals(action)) {
+					String newActivityName = tokens.get(2);
+					List<LineAndTokens> activityLines = emit(br, outputCode, motionEvents, true);
+					outputCode.put(newActivityName, activityLines);
 				} else if (Constants.ActivityEvent.ACTIVITY_FORWARD.equals(action)) {
+					// if we're in an interstitial, that means that it's time to go.
+					if (fInterstitialActivity) {
+						return lines;
+					}
 					if (mTargetClassPath == null) {
 						mTargetClassPath = tokens.get(2);
 					}
@@ -162,7 +175,14 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 						writeWaitForActivity(tokens, lines);
 					}
 				} else if (Constants.ActivityEvent.ACTIVITY_BACK.equals(action) || Constants.UserEvent.ACTIVITY_BACK_KEY.equals(action)) {
-					
+					// the handler is responsible for managing the activity transtion, but we do need to record the 
+					// fact that the user used the back key to get out if he
+					if (fInterstitialActivity) {
+						if (Constants.UserEvent.ACTIVITY_BACK_KEY.equals(action)) {
+							writeGoBack(tokens, lines);
+							return lines;
+						}
+					}
 					// I think this is technically incorrect, since the "back" event doesn't always happen from the back key
 					// but some other event like a click, and we should use a different template
 					if ((tokens.size() > 2) && mfActivityMatches) {
@@ -201,11 +221,8 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 						writeHideIME(tokens, lines);
 					} else if (Constants.UserEvent.BEFORE_TEXT.equals(action) || 
 							   Constants.UserEvent.BEFORE_TEXT_KEY.equals(action)) {
-						if (mfFirstKey) {
-							mCurrentInsertionPoint = Integer.parseInt(tokens.get(3));
-							mStartInsertionPoint = mCurrentInsertionPoint;
-							mfFirstKey = false;
-							mfFirstDeleteKey = true;
+						if (mCurrentText.length() == 0) {
+							mStartInsertionPoint = Integer.parseInt(tokens.get(3));
 						}
 					} else if (Constants.UserEvent.AFTER_TEXT_KEY.equals(action)) {
 						if (!addChangeToCurrentText(tokens, lines)) {			
@@ -216,7 +233,6 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 							if (!Constants.UserEvent.BEFORE_TEXT_KEY.equals(nextAction) && (mCurrentText.length() > 0)) {
 								writeEnterTextByKey(tokens, lines, mStartInsertionPoint, mCurrentText.toString());
 								mCurrentText = new StringBuffer();
-								mfFirstKey = true;
 							}
 						}
 					} else if (Constants.UserEvent.AFTER_TEXT.equals(action)) {
@@ -265,12 +281,13 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 				}
 				line = nextLine;
 			} catch (Exception ex) {
-				System.err.println("error parsing line " + lineNumber);
+				System.err.println("error parsing line " + sLineNumber);
 				System.err.println("line = " + line);
 				ex.printStackTrace();
 				System.exit(-1);
 			}
 		} while (true);
+		return lines;
 	}
 	
 	/**
@@ -810,69 +827,73 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	 * 
 	 * @return true if the text was committed (i.e. the "write" was written) 
 	 */
+	protected static int numberActualCharsAdded(StringBuffer currentText) {
+		int charCount = 0;
+		int ich = 0;
+		while (ich < currentText.length()) {
+			if (ich < currentText.length() - 1) {
+				if (currentText.charAt(ich) == '\\') {
+					if (currentText.charAt(ich + 1) == 'b') {
+						charCount--;
+					} else {
+						charCount++;
+					}
+					ich++;
+				} else {
+					charCount++;
+				}	
+			} else {
+				charCount++;
+			}	
+			ich++;
+		}
+		return charCount;
+	}
+	
 	public boolean addChangeToCurrentText(List<String> 				afterTextTokens, 
 										  List<LineAndTokens> 		lines) throws IOException, EmitterException {
 		int newInsertionPoint = Integer.parseInt(afterTextTokens.get(3));
 		int replaceCount = Integer.parseInt(afterTextTokens.get(4));
 		int newCharacterCount = Integer.parseInt(afterTextTokens.get(5));
+		boolean fCursorChanged = false;
 
-		String newString = StringUtils.unescapeString(StringUtils.stripQuotes(afterTextTokens.get(2)), '\\');
+		// take the escaped characters from the token (such as newline), and turn them back into their literal characters, so the
+		// indexing is done correctly
+		String unescapedString = StringUtils.unescapeString(StringUtils.stripQuotes(afterTextTokens.get(2)), '\\');
 		
 		// if the new characterCount > 0, then insertion, otherwise deleting characters.
 		if (newCharacterCount > 0) {
 			
 			// just append the characters to the current string to enter if the insertion point hasn't changed.
-			String insertChars = newString.substring(newInsertionPoint, newInsertionPoint + newCharacterCount);
-			boolean fLastCharWasDel = false;
-			if (mCurrentText.length() >= 2) {
-				fLastCharWasDel = (mCurrentText.charAt(mCurrentText.length() - 1) == 'b') && (mCurrentText.charAt(mCurrentText.length() - 2) == '\\');
-			}
-			if (newInsertionPoint == mCurrentInsertionPoint || ((newInsertionPoint == mCurrentInsertionPoint + 1) && fLastCharWasDel)) { 
-				mCurrentText.append(insertChars);
-				mCurrentInsertionPoint += insertChars.length();
-				if (fLastCharWasDel) {
-					mCurrentInsertionPoint++;
-				}
-			} else {
+			String unescapedNewChars = unescapedString.substring(newInsertionPoint, newInsertionPoint + newCharacterCount);
+			String insertChars = StringUtils.escapeString(unescapedNewChars, "\t\n", '\\');
+			if (mCurrentText.length() == 0) {
+				mStartInsertionPoint = newInsertionPoint;
+			} else if (newInsertionPoint != mStartInsertionPoint + numberActualCharsAdded(mCurrentText)) {
 				// somehow, the insertion point was reset, and we should output the text, then reset the current text to what was just entered.  
-				// Since this is usally kicked off by some kind of system event, I'm not sure this case will happen
-				writeEnterTextByKey(afterTextTokens, lines, mStartInsertionPoint, mCurrentText.toString());
-				mfFirstKey = true;
-				mCurrentText = new StringBuffer(insertChars);
-				mCurrentInsertionPoint = newInsertionPoint;
-				return true;
+				// Since this is usually kicked off by some kind of system event, I'm not sure this case will happen
+				writeEnterTextByKey(afterTextTokens, lines, mStartInsertionPoint, mCurrentText.toString());				
+				fCursorChanged = true;
+				mStartInsertionPoint = newInsertionPoint;
+				mCurrentText = new StringBuffer();
 			}
+			mCurrentText.append(insertChars);
 		} else {
-			
 			// insert backspaces in the current text if the insertion point moved backward by the correct amount
 			// set text resets insertion point in autocomplete case.
-			if (newInsertionPoint == mCurrentInsertionPoint || ((newInsertionPoint == mCurrentInsertionPoint - 1) && mfFirstDeleteKey)) {
-				// off-by-1 issue if the first key entered is a backspace. it's reported as 13, when it
-				// should be 14, because we're replacing N characters at I with 0 characters.  Since we
-				// decrement mCurrentInsertionPoint right away, this shouldn't happen twice
-				if (mfFirstDeleteKey) {
-					mStartInsertionPoint++;
-					mfFirstDeleteKey = false;
-				}
-				for (int iDel = 0; iDel < replaceCount; iDel++) {
-					mCurrentText.append("\\b");
-				}
-				mCurrentInsertionPoint -= replaceCount;
-			} else {
-				// somehow, the insertion point was reset, and we should output the text.  Since this is usally kicked off by some kind of 
-				// system event, I'm not sure this case will happen
+			if (mCurrentText.length() == 0) {
+				mStartInsertionPoint = newInsertionPoint + replaceCount;
+			} else if (newInsertionPoint + replaceCount != mStartInsertionPoint + numberActualCharsAdded(mCurrentText)) {
 				writeEnterTextByKey(afterTextTokens, lines, mStartInsertionPoint, mCurrentText.toString());
-				mfFirstKey = true;
-				mCurrentInsertionPoint = newInsertionPoint;
-				// reset the insertion point, and output a bunch of backspaces.
+				fCursorChanged = true;
+				mStartInsertionPoint = newInsertionPoint + replaceCount;
 				mCurrentText = new StringBuffer();
-				for (int iDel = 0; iDel < replaceCount; iDel++) {
-					mCurrentText.append("\\b");
-				}
-				return true;
+			}
+			for (int iDel = 0; iDel < replaceCount; iDel++) {
+				mCurrentText.append("\\b");
 			}
 		}
-		return false;
+		return fCursorChanged;
 	}
 	
 	/**
@@ -1234,7 +1255,6 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	
 	public String writeViewClassIndexCommand(String templateFile, ReferenceParser ref, String fullDescription) throws IOException {
 		String template = FileUtility.readTemplate(templateFile);
-		int classIndex = ref.getIndex();
 		template = template.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
 		template = template.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mViewVariableIndex++));
 		template = template.replace(Constants.VariableNames.CLASSPATH, ref.getClassName());
@@ -1244,7 +1264,6 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	
 	public String writeViewInternalClassIndexCommand(String templateFile, ReferenceParser ref, String fullDescription) throws IOException {
 		String template = FileUtility.readTemplate(templateFile);
-		int classIndex = ref.getIndex();
 		template = template.replace(Constants.VariableNames.DESCRIPTION, fullDescription);
 		template = template.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mViewVariableIndex++));
 		template = template.replace(Constants.VariableNames.CLASSPATH, ref.getClassName());
@@ -1310,4 +1329,29 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		lines.add(new LineAndTokens(tokens, template));
 		mMotionEventVariableIndex++;
 	}
+	
+	/**
+	 * write out the lines into the handler for an interstitial activity
+	 * @param bw buffered writer
+	 * @param testPackageName output package
+	 * @param activityName name of the interstitialActivityHandler
+	 * @param lines output lines from emit()
+	 * @throws IOException
+	 */
+	
+	public void writeInterstitialHandler(BufferedWriter 		bw, 
+										 String 				testPackageName,
+										 String 				activityName, 
+										 List<LineAndTokens> 	lines) throws IOException {
+		String header = FileUtility.readTemplate(Constants.Templates.INTERSTITIAL_HEADER);
+		header = header.replace(Constants.VariableNames.TESTPACKAGE, testPackageName);
+		header = header.replace(Constants.VariableNames.TESTCLASSNAME, activityName);
+		bw.write(header);
+		for (LineAndTokens line : lines) {
+			bw.write(line.mOutputLine);
+		}
+		String trailer = FileUtility.readTemplate(Constants.Templates.TRAILER);
+		bw.write(trailer);
+	}
+
 }

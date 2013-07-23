@@ -9,8 +9,11 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.StringBufferInputStream;
+import java.util.Hashtable;
 import java.util.List;
+import java.util.Map.Entry;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
@@ -31,6 +34,7 @@ import com.androidApp.emitter.SetupRobotiumProject;
 import com.androidApp.util.Constants;
 import com.androidApp.util.Exec;
 import com.androidApp.util.FileUtility;
+import com.androidApp.util.StringUtils;
 
 import createrecorder.util.EclipseUtility;
 import createrecorder.util.EclipseExec;
@@ -213,8 +217,7 @@ public class GenerateRobotiumTestCode {
 		emitter.writeLines(bw, lines);
 		emitter.writeTrailer(bw);
 		bw.close();
-	}
-	
+	}	
 	
 	/**
 	 * write the motion events to files under the test class name. We need to use subdirectories to differentiate
@@ -289,6 +292,28 @@ public class GenerateRobotiumTestCode {
 				InputStream fis = new FileInputStream(Constants.Filenames.TEMPORARY_FILE);
 				eclipseFile.create(fis, IFile.FORCE, null);
 				fis.close();
+			}
+		}
+	}
+	
+	public static void writeInterstitalHandlers(IPackageFragment 						pack,
+												IEmitCode								emitter,
+												Hashtable<String, List<LineAndTokens>> outputCode,
+											    String 									testClassPath) throws IOException, CoreException {
+		// create the handler files for the interstitial activities used in this test
+		for (Entry<String, List<LineAndTokens>> entry : outputCode.entrySet()) {
+			String activityClassName = entry.getKey();
+			if (!activityClassName.equals(Constants.MAIN)) {
+				String activityName = StringUtils.getNameFromClassPath(activityClassName);
+				String interstitialHandlerName = Constants.INTERSTITIAL_ACTIVITY_HANDLER + activityName;
+				String interstitialHandlerFile = interstitialHandlerName + File.separator + Constants.Extensions.JAVA;
+				List<LineAndTokens> code = entry.getValue();
+				BufferedWriter bwHandler = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(Constants.Filenames.OUTPUT)));
+				emitter.writeInterstitialHandler(bwHandler, testClassPath, interstitialHandlerName, code);
+				String testCode = FileUtility.readToString(new FileInputStream(Constants.Filenames.OUTPUT));
+				
+				// what about the case where the interstitial file already exists
+				ICompilationUnit classFile = pack.createCompilationUnit(interstitialHandlerFile, testCode, true, null);
 			}
 		}
 	}

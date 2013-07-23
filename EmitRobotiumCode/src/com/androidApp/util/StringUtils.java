@@ -79,7 +79,15 @@ public class StringUtils {
 			if (escapeChars.indexOf(ch) != -1) {
 				sb.append(prefix);
 			}
-			sb.append(ch);
+			if (ch == '\n') {
+				sb.append('n');
+			} else if (ch == '\t') {
+				sb.append('t');
+			} else if (ch == '\b') {
+				sb.append('b');
+			} else {
+				sb.append(ch);
+			}
 		}
 		return sb.toString();
 	}
@@ -91,8 +99,15 @@ public class StringUtils {
 			char ch = s.charAt(ich);
 			if (ch == prefix) {
 				// newline special case.
-				if ((ich < s.length() - 1) && (s.charAt(ich + 1) == 'n')) {
-					sb.append('\n');
+				if (ich < s.length() - 1) {
+					char nextCh = s.charAt(ich + 1);
+					if (nextCh == 'n') {
+						sb.append('\n');
+					} else if (nextCh == 'b') {
+						sb.append('\b');
+					} else if (nextCh == 't') {
+						sb.append('\t');
+					}
 					ich++;
 				}
 				continue;

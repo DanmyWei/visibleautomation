@@ -1,11 +1,13 @@
 package com.androidApp.emitter;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
 
+import com.androidApp.emitter.IEmitCode.LineAndTokens;
 import com.androidApp.util.Constants;
 import com.androidApp.util.Exec;
 import com.androidApp.util.FileUtility;
@@ -262,12 +264,29 @@ public class SetupRobotiumProject {
 		// if he specified device, use adb to pull the events file off the device.
 		if (eventsFileName.equals(Constants.Names.DEVICE)) {
 			String androidSDK = System.getenv(Constants.Env.ANDROID_HOME);
-			String adbCmd = "pull /sdcard/events.txt";
+			String adbCmd = "pull /sdcard/events.txt";				// TODO: constant
 			if (!Exec.executeAdbCommand(androidSDK, adbCmd)) {
 				throw new EmitterException("failed to execute adb command " + adbCmd);
 			}
 		}
 		return Constants.Filenames.EVENTS;
+	}
+	/**
+	 * pull the viewDirectives file 
+	 * @param eventsFileName
+	 * @return "events.txt"
+	 * @throws EmitterException if the adb command failed to pull the events file from the device.
+	 */
+	public static String getViewDirectivesFile(String viewDirectivesFileName) throws EmitterException {
+		// if he specified device, use adb to pull the events file off the device.
+		if (viewDirectivesFileName.equals(Constants.Names.DEVICE)) {
+			String androidSDK = System.getenv(Constants.Env.ANDROID_HOME);
+			String adbCmd = "pull /sdcard/view_directives.txt";			// TODO: constant
+			if (!Exec.executeAdbCommand(androidSDK, adbCmd)) {
+				return null;
+			}
+		}
+		return Constants.Filenames.VIEW_DIRECTIVES;
 	}
 	
 	/**

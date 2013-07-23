@@ -37,9 +37,8 @@ public class RecordTextChangedListener extends RecordListener implements TextWat
 		mfEnterTextByKey = false;
 	}
 	
-	// since these methods are called in a chain, rather than wrapping the native listeners, we don't need to block re-entrancy
 	public void afterTextChanged(Editable editable) {
-		setEventBlock(true);
+		setEventBlock(false);
 	}
 
 	public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -74,7 +73,7 @@ public class RecordTextChangedListener extends RecordListener implements TextWat
 			String reference = mEventRecorder.getViewReference().getReference(mTextView);
 			String massagedString = StringUtils.escapeString(s.toString(), "\"", '\\').replace("\n", "\\n");
 			String logString = '\"' + massagedString + '\"' + "," + start + "," + before + "," + count + "," + reference + "," + description;
-			if (!RecordListener.getEventBlock() && (IMEMessageListener.getOutstandingKeyCount() > 0)) {
+			if ((!RecordListener.getEventBlock() || mfBeforeFired) && (IMEMessageListener.getOutstandingKeyCount() > 0)) {
 				if (!mfBeforeFired) {
 					Log.d(TAG, "before not fired in text change listener");
 				}

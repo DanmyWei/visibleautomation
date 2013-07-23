@@ -5,6 +5,8 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Hashtable;
 import java.util.List;
 
 
@@ -29,11 +31,15 @@ public interface IEmitCode {
 			mOutputLine = outputLine;
 		}
 	}	
+	
 	String getApplicationClassPath();
 	String getApplicationClassName();
 	String getApplicationPackage();
-	List<LineAndTokens> generateTestCode(IEmitCode emitter, String eventsFileName, List<MotionEventList> motionEvents) throws FileNotFoundException, IOException, EmitterException;
-	void emit(BufferedReader br, List<LineAndTokens> lines, List<MotionEventList> motionEvents) throws IOException, EmitterException;
+	Hashtable<String, List<LineAndTokens>> generateTestCode(IEmitCode emitter, String eventsFileName, List<MotionEventList> motionEvents) throws FileNotFoundException, IOException, EmitterException;
+	public List<LineAndTokens> emit(BufferedReader 							br, 
+									Hashtable<String, List<LineAndTokens>>	outputCode,
+									List<MotionEventList> 					motionEvents,
+									boolean									fInterstitialActivity) throws IOException, EmitterException;
 	String getDescription(List<String> tokens);
 	void writeFunctionHeader(BufferedWriter bw) throws IOException;
 	void writeException(List<String> tokens, List<LineAndTokens> lines) throws IOException;
@@ -71,4 +77,8 @@ public interface IEmitCode {
 	String writeViewIDCommand(String templateFile, ReferenceParser ref, String fullDescription) throws IOException;
 	String writeViewClassIndexCommand(String templateFile, ReferenceParser ref, String fullDescription) throws IOException;
 	void waitForPageToLoad(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
+	void writeInterstitialHandler(BufferedWriter 		bw, 
+								  String 				testPackageName,
+								  String 				activityName, 
+								  List<LineAndTokens> 	lines) throws IOException;
 }

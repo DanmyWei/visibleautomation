@@ -1,5 +1,6 @@
 package com.androidApp.Listeners;
 import com.androidApp.EventRecorder.EventRecorder;
+import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 
@@ -122,13 +123,33 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 	@Override
 	public boolean onMenuOpened(int featureId, Menu menu) {
 		Log.i(TAG, "onMenuOpened featureId = " + featureId);
+		if (menu != null) {
+			try {
+				for (int iItem = 0; iItem < menu.size(); iItem++) {
+					MenuItem menuItem = menu.getItem(iItem);
+					MenuItem.OnMenuItemClickListener originalClickListener = ListenerIntercept.getOnMenuItemClickListener(menuItem);
+					if (!(originalClickListener instanceof RecordOnMenuItemClickListener)) {
+						RecordOnMenuItemClickListener recordOnMenuItemClickListener = new RecordOnMenuItemClickListener(mEventRecorder, originalClickListener);
+						menuItem.setOnMenuItemClickListener(recordOnMenuItemClickListener);
+					}
+				}
+			} catch (Exception ex) {
+				mEventRecorder.writeException(ex, "while attempting to intercept menu on click listener");
+			}
+		}
 		return mOriginalCallback.onMenuOpened(featureId, menu);
 	}
 
 	@Override
 	public boolean onMenuItemSelected(int featureId, MenuItem item) {
 		Log.i(TAG, "onMenuItemSelected featureId = " + featureId);
-		mEventRecorder.writeRecord(Constants.EventTags.MENU_ITEM_CLICK, Integer.toString(item.getItemId()));
+		/*
+		String message = Integer.toString(item.getItemId());
+		if (item.getTitle() != null) {
+			message += "," + item.getTitle();
+		}
+		mEventRecorder.writeRecord(Constants.EventTags.MENU_ITEM_CLICK, message);
+		*/
 		return mOriginalCallback.onMenuItemSelected(featureId, item);
 	}
 
