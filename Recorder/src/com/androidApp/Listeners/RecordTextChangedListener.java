@@ -59,7 +59,10 @@ public class RecordTextChangedListener extends RecordListener implements TextWat
 					mEventRecorder.writeRecord(Constants.EventTags.BEFORE_TEXT, logString);
 				}
 			} else {
-				mEventRecorder.writeRecord(Constants.EventTags.BEFORE_SET_TEXT, logString);
+				// programmatic..this gets written as a wait.
+				if (mTextView.getVisibility() == View.VISIBLE) {
+					mEventRecorder.writeRecord(Constants.EventTags.BEFORE_SET_TEXT, logString);
+				}
 			}
 		} catch (Exception ex) {
 			mEventRecorder.writeException(ex, mTextView, " before text changed");

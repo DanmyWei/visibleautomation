@@ -625,24 +625,24 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	public void writeWaitForText(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
 		ReferenceParser ref = new ReferenceParser(tokens, 6);
 		String description = getDescription(tokens);
-		String fullDescription = "click on " + description;
+		String fullDescription = "wait for text " + description;
 		String text = tokens.get(2);
 		if (mLastEventWasWaitForActivity) {
 			writeWaitForView(tokens, 2, lines);
 			mLastEventWasWaitForActivity = false;
 		} 
 		if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
-			String clickInViewTemplate =  writeViewIDCommand(Constants.Templates.WAIT_FOR_TEXT_ID, ref, fullDescription);
-			clickInViewTemplate = clickInViewTemplate.replace(Constants.VariableNames.TEXT, text);
-			lines.add(new LineAndTokens(tokens, clickInViewTemplate));
+			String waitForTextTemplate =  writeViewIDCommand(Constants.Templates.WAIT_FOR_TEXT_ID, ref, fullDescription);
+			waitForTextTemplate = waitForTextTemplate.replace(Constants.VariableNames.TEXT, text);
+			lines.add(new LineAndTokens(tokens, waitForTextTemplate));
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
-			String clickInClassIndexTemplate = writeViewClassIndexCommand(Constants.Templates.WAIT_FOR_TEXT_CLASS_INDEX, ref, fullDescription);
-			clickInClassIndexTemplate = clickInClassIndexTemplate.replace(Constants.VariableNames.TEXT, text);
-			lines.add(new LineAndTokens(tokens, clickInClassIndexTemplate));
+			String waitClassIndexTemplate = writeViewClassIndexCommand(Constants.Templates.WAIT_FOR_TEXT_CLASS_INDEX, ref, fullDescription);
+			waitClassIndexTemplate = waitClassIndexTemplate.replace(Constants.VariableNames.TEXT, text);
+			lines.add(new LineAndTokens(tokens, waitClassIndexTemplate));
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.INTERNAL_CLASS_INDEX) {
-			String clickInInternalClassIndexTemplate = writeViewInternalClassIndexCommand(Constants.Templates.WAIT_FOR_TEXT_INTERNAL_CLASS_INDEX, ref, fullDescription);
-			clickInInternalClassIndexTemplate = clickInInternalClassIndexTemplate.replace(Constants.VariableNames.TEXT, text);
-			lines.add(new LineAndTokens(tokens, clickInInternalClassIndexTemplate));
+			String waitInternalClassIndexTemplate = writeViewInternalClassIndexCommand(Constants.Templates.WAIT_FOR_TEXT_INTERNAL_CLASS_INDEX, ref, fullDescription);
+			waitInternalClassIndexTemplate = waitInternalClassIndexTemplate.replace(Constants.VariableNames.TEXT, text);
+			lines.add(new LineAndTokens(tokens, waitInternalClassIndexTemplate));
 		} else {
 			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
 		}

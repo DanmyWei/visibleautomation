@@ -61,6 +61,9 @@ public class MagicFramePopup extends MagicFrame {
 		try {
 			if ((mRecorder != null) && (mViewInterceptor != null)) {
 				recordKeyEvent(event);
+				if (event.getKeyCode() == KeyEvent.KEYCODE_BACK) {
+					mViewInterceptor.setLastKeyAction(KeyEvent.KEYCODE_BACK);
+				}
 			} else {
 				Log.i(TAG, "dispatchKeyEventPreIme viewInterceptor = " + mViewInterceptor + " recorder = " + mRecorder);
 			}

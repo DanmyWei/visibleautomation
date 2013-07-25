@@ -1,0 +1,20 @@
+activity_forward:89688538,com.example.android.apis.ApiDemos,com.example.android.apis.ApiDemos@419151d8
+package:89690309,com.example.android.apis
+scroll:89718156,0,10,11,class_index,android.widget.ListView,0,1st ListView
+scroll:89718196,1,10,11,class_index,android.widget.ListView,0,1st ListView
+scroll:89718243,1,10,11,class_index,android.widget.ListView,0,1st ListView
+item_click:89719292,10,class_index,android.widget.ListView,0,Views
+activity_forward:89720268,com.example.android.apis.ApiDemos,com.example.android.apis.ApiDemos@418b8e60
+item_click:89722796,4,class_index,android.widget.ListView,0,Controls
+activity_forward:89723747,com.example.android.apis.ApiDemos,com.example.android.apis.ApiDemos@418ecc48
+item_click:89726072,2,class_index,android.widget.ListView,0,3  Holo Light Theme
+activity_forward:89759286,com.example.android.apis.view.Controls3,com.example.android.apis.view.Controls3@4197cb18
+get_focus:89777704,id,com.example.android.apis.R$id.edit,android.widget.EditText
+lose_focus:89777755,id,com.example.android.apis.R$id.edit,android.widget.EditText
+get_focus:89777791,id,com.example.android.apis.R$id.edit,android.widget.EditText
+lose_focus:89777822,id,com.example.android.apis.R$id.edit,android.widget.EditText
+get_focus:89777991,id,com.example.android.apis.R$id.edit,android.widget.EditText
+lose_focus:89778026,id,com.example.android.apis.R$id.edit,android.widget.EditText
+get_focus:89778066,id,com.example.android.apis.R$id.edit,android.widget.EditText
+hide_ime_back_key:89781045,id,com.example.android.apis.R$id.edit,android.widget.EditText,IME hidden by back key pressed
+create_spinner_popup_window:89858587,id,com.example.android.apis.R$id.spinner1,android.widget.Spinner,create spinner popup window

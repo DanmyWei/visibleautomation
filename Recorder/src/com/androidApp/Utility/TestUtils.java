@@ -771,6 +771,13 @@ public class TestUtils {
 		
 	}
 
+	/**
+	 * is this view in the same context as the activity, but has a different window? Then it is contained in a popup window
+	 * and may or may not be a dialog.
+	 * @param a the activity
+	 * @param v a PhoneWindow$DecorView or PopupContainerView or something like that
+	 * @return true, or maybe false.  probably true, though
+	 */
 	public static boolean isDialogOrPopup(Activity a, View v) {
 		if (v != null) {
 			Context viewContext = v.getContext();
@@ -831,6 +838,27 @@ public class TestUtils {
 	}
 	
 	/**
+	 * given a PhoneWindow$DecorView, see if it has a WindowCallback which derives from Dialog.  If so, then return that
+	 * dialog, otherwise return null.
+	 * @param phoneWindowDecorView PhoneWindow$DecorView
+	 * @return Dialog or null;
+	 */
+	public static Dialog getDialog(View phoneWindowDecorView) {
+		try {
+			Class<? extends View> phoneDecorViewClass = (Class<? extends View>) Class.forName(Constants.Classes.PHONE_DECOR_VIEW);
+			if (phoneWindowDecorView.getClass() == phoneDecorViewClass) {
+				Window phoneWindow = (Window) ReflectionUtils.getFieldValue(phoneWindowDecorView, phoneDecorViewClass, Constants.Classes.THIS);
+				Window.Callback callback = phoneWindow.getCallback();
+				if (callback instanceof Dialog) {
+					Dialog dialog = (Dialog) callback;
+					return dialog;
+				}
+			}
+		} catch (Exception ex) {
+		}
+		return null;
+	}
+	/**
 	 * see if this activity has popped up a dialog.
 	 * @param activity activity to test
 	 * @return Dialog or null
@@ -846,14 +874,10 @@ public class TestUtils {
 				for (int iView = 0; iView < numDecorViews; iView++) {
 					View v = views[iView];
 					if (TestUtils.isDialogOrPopup(activity, v)) {	
-						if (v.getClass() == phoneDecorViewClass) {
-							Window phoneWindow = (Window) ReflectionUtils.getFieldValue(v, phoneDecorViewClass, Constants.Classes.THIS);
-							Window.Callback callback = phoneWindow.getCallback();
-							if (callback instanceof Dialog) {
-								Dialog dialog = (Dialog) callback;
-								return dialog;
-							}
-						} 
+						Dialog dialog = getDialog(v);
+						if (dialog != null) {
+							return dialog;
+						}
 					}
 				}
 			}
@@ -879,11 +903,13 @@ public class TestUtils {
 				for (int iView = 0; iView < numDecorViews; iView++) {
 					View v = views[iView];
 					if (TestUtils.isDialogOrPopup(activity, v)) {
-						
-						// we need to check if the view is always a PhoneWindow$DecorView or PopupWindow$PopupViewContainer
-						Object window = ReflectionUtils.getFieldValue(v, v.getClass(), Constants.Classes.THIS);
-						WindowAndView windowAndView = new WindowAndView(window, v);
-						return windowAndView;
+						// dialogs are handled in the other case.
+						Dialog dialog = getDialog(v);
+						if (dialog == null) {
+							Object window = ReflectionUtils.getFieldValue(v, v.getClass(), Constants.Classes.THIS);
+							WindowAndView windowAndView = new WindowAndView(window, v);
+							return windowAndView;
+						}
 					}
 				}
 			}
@@ -1196,5 +1222,4 @@ public class TestUtils {
 		}
 		return null;
 	}
-
 }

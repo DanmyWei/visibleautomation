@@ -21,6 +21,7 @@ import android.widget.AdapterView;
 import android.widget.CompoundButton;
 import android.widget.ExpandableListView;
 import android.widget.ListPopupWindow;
+import android.widget.NumberPicker;
 import android.widget.PopupMenu;
 import android.widget.PopupWindow;
 import android.widget.SeekBar;
@@ -495,6 +496,10 @@ public class ListenerIntercept {
 	
 	public static void setFloatingWindowOnDismissListener(Object floatingWindow, PopupWindow.OnDismissListener dismissListener) throws NoSuchFieldException, SecurityException, IllegalAccessException  {
 		ReflectionUtils.setFieldValue(floatingWindow, floatingWindow.getClass(),  Constants.Fields.POPUP_WINDOW_ON_DISMISS_LISTENER, dismissListener);
+	}
+	
+	public static NumberPicker.OnValueChangeListener getValueChangeListener(NumberPicker numberPicker) throws NoSuchFieldException, IllegalAccessException {
+		return (NumberPicker.OnValueChangeListener) ReflectionUtils.getFieldValue(numberPicker, NumberPicker.class, Constants.Fields.ON_VALUE_CHANGE_LISTENER);
 	}
 
 

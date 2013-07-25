@@ -9,6 +9,7 @@ import com.androidApp.Listeners.RecordOnFocusChangeListener;
 import com.androidApp.Test.ActivityInterceptor.ActivityState;
 import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.ReflectionUtils;
 import com.androidApp.Utility.TestUtils;
 
 import android.app.Activity;
@@ -24,6 +25,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewManager;
+import android.view.ViewParent;
 import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -74,6 +76,35 @@ public class MagicFrame extends FrameLayout {
 		init();
 		insertInterceptor(contentView, index);
 	}
+	
+	/**
+	 * variant for ViewRootImpl
+	 * @param context
+	 * @param viewRootImpl
+	 * @param recorder
+	 * @param viewInterceptor
+	 * @throws ClassNotFoundException
+	 * @throws NoSuchFieldException
+	 * @throws IllegalAccessException
+	 */
+	public MagicFrame(Context context, ViewParent viewRootImpl, EventRecorder recorder, ViewInterceptor viewInterceptor) throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException{
+		super(context);
+		this.setFocusable(true);
+		this.setFocusableInTouchMode(true);
+		this.requestFocus();
+		this.setClipChildren(false);
+		this.setClipToPadding(false);
+		this.setMeasureAllChildren(true);
+		mRecorder = recorder;
+		Class viewRootImplClass = Class.forName(Constants.Classes.VIEW_ROOT_IMPL);
+		mContentView = (View) ReflectionUtils.getFieldValue(viewRootImpl, viewRootImplClass, Constants.Fields.VIEW);
+		ReflectionUtils.setFieldValue(viewRootImpl, viewRootImplClass, Constants.Fields.VIEW, this);
+		ReflectionUtils.setFieldValue(mContentView, View.class, Constants.Fields.PARENT, null);
+		this.addView(mContentView);
+		mViewInterceptor = viewInterceptor;
+		init();
+		//insertInterceptor(mContentView, 0);
+	}
 		
 	/**
 	 * wrapper to insert the magic frame.
@@ -102,6 +133,7 @@ public class MagicFrame extends FrameLayout {
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
+		mViewInterceptor.setLastKeyAction(event.getKeyCode());
 		return mContentView.dispatchKeyEventPreIme(event);
     }
 

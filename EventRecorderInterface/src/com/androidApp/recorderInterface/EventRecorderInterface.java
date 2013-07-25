@@ -22,11 +22,13 @@ public class EventRecorderInterface {
 	protected static final String	TAG = "EventRecorder";
 	protected Context				mContext;										// to send requests to service
 	protected String				mRecordFileName;								// name of the file in the sdcard
+	protected String				mDirectiveFileName;								// file for view directives
 	
 	// constructor which opens the recording file, which is stashed somewhere on the sdcard.
-	public EventRecorderInterface(Context context, String recordFileName) {	
+	public EventRecorderInterface(Context context, String recordFileName, String directiveFileName) {	
 		mContext = context;
 		mRecordFileName = recordFileName;
+		mDirectiveFileName = directiveFileName;
         Intent i = new Intent(LOGSERVICE_INITIALIZE);
         i.putExtra(LOGSERVICE_FILENAME, mRecordFileName);
         mContext.startService(i);

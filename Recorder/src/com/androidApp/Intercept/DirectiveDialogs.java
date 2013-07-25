@@ -35,9 +35,10 @@ import com.androidApp.Utility.Constants;
  */
 public class DirectiveDialogs {
 	protected static final String	TAG = "DirectiveDialogs";
-	protected static final int		EDIT_TEXT_ID = 0x1001;	// id of edit text in dialog
-	protected static final int		LABEL_ID = 0x1002;		// id of edit text in dialog
-	protected MagicOverlay 			mMagicOverlay;
+	protected static final int		EDIT_TEXT_ID = 0x1001;			// id of edit text in dialog
+	protected static final int		LABEL_ID = 0x1002;				// id of edit text in dialog
+	protected MagicOverlay 			mMagicOverlay;					// to get the current view selection.
+	protected static Dialog			sCurrentDialog;					// so we don't intercept ourselves
 	
 	public DirectiveDialogs(MagicOverlay magicOverlay) {
 		mMagicOverlay = magicOverlay;
@@ -65,6 +66,22 @@ public class DirectiveDialogs {
 	
 	public void setClickMode(MagicOverlay.ClickMode clickMode) {
 		mMagicOverlay.setClickMode(clickMode);
+	}
+	
+	/**
+	 * is it one of ours?  Please don't record it.
+	 * @return
+	 */
+	public static Dialog getCurrentDialog() {
+		return sCurrentDialog;
+	}
+	
+	/**
+	 * this HAS TO BE CALLED WHENEVER WE CREATE A DIALOG, OTHERWISE WE WILL INTERCEPT OURSELVES!
+	 * @param dialog
+	 */
+	protected static void setCurrentDialog(Dialog dialog) {
+		sCurrentDialog = dialog;
 	}
 	
 	public class OnBaseDialogSelectionListener implements DialogInterface.OnClickListener {
@@ -358,7 +375,10 @@ public class DirectiveDialogs {
 		builder.setTitle(Constants.DisplayStrings.VISIBLE_AUTOMATION);
 		builder.setPositiveButton(Constants.DisplayStrings.OK, listener);
 		builder.setNegativeButton(Constants.DisplayStrings.CANCEL, listener);
-		return builder.create();
+		Dialog dialog = builder.create();
+		// prevent intercepting ourselves
+		setCurrentDialog(dialog);
+		return dialog;
 	}
 	
 	// set the error label in the alert dialog
@@ -378,7 +398,10 @@ public class DirectiveDialogs {
 		AlertDialog.Builder builder = new AlertDialog.Builder(context);
 		builder.setItems(items,  listener);
 		builder.setTitle(Constants.DisplayStrings.VISIBLE_AUTOMATION);
-		return builder.create();
+		Dialog dialog = builder.create();
+		// prevent intercepting ourselves
+		setCurrentDialog(dialog);
+		return dialog;
 	}
 	
 	/**

@@ -171,6 +171,27 @@ public class ViewReference {
 		return viewClass;
 	}
 	
+	/**
+	 * FOR THE SAKE OF ALMIGHTY FUCKING GOD! In the number picker theres a custom edit text (NumberPicker.CustomEditText), which
+	 * is marked as public, but it's not accessible from the android headers, which normally wouldn't anally rape us, but the 
+	 * real fucking catch with this one is that Class.forName() on it fucking fails, so the generated test code faceplants. So
+	 * what we have to do, even though it's a PUBLIC class is to call Class.forName() on it as we go up superclasses,
+	 * and see if it doesn't throw a FUCKING EXCEPTION
+	 * @param v the view, which apparently might be of a class that you can't get to with Class.forFuckingName()
+	 * @return the Class that can be actually referenced by the view.
+	 */
+	public Class<? extends View> getAllocatableClass(View v) {
+		Class viewClass = v.getClass();
+		while (viewClass != View.class) {
+			try {
+				Class c = Class.forName(viewClass.getCanonicalName());
+				break;
+			} catch (ClassNotFoundException cnfex) {
+				viewClass = viewClass.getSuperclass();
+			}
+		}
+		return viewClass;
+	}
 	
 	/**
 	 * TODO: this documentation is out of date.
@@ -196,8 +217,9 @@ public class ViewReference {
 	 * @return
 	 */
 	public String getReference(View v) throws IllegalAccessException, IOException {
+		Class<? extends View> allocatableClass = getAllocatableClass(v);
 		Class<? extends View> usableClass = getUsableClass(mInstrumentation.getContext(), v, mfBinary);
-		boolean fInternalClass = (usableClass != v.getClass());
+		boolean fInternalClass = (usableClass != allocatableClass);
 	
 		// first, try the id, and verify that it is unique.
 		int id = v.getId();
@@ -236,7 +258,7 @@ public class ViewReference {
 			} else {
 				if (fInternalClass) {
 					int classIndex = TestUtils.classIndex(rootView, v);
-					return Constants.Reference.INTERNAL_CLASS_INDEX + "," + v.getClass().getCanonicalName() + "," + usableClass.getCanonicalName() + "," + classIndex;
+					return Constants.Reference.INTERNAL_CLASS_INDEX + "," + allocatableClass.getCanonicalName() + "," + usableClass.getCanonicalName() + "," + classIndex;
 				} else {
 					int classIndex = TestUtils.classIndex(rootView, v);
 					return Constants.Reference.CLASS_INDEX + "," + usableClass.getCanonicalName() + "," + classIndex;

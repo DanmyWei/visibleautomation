@@ -81,6 +81,7 @@ public class Constants {
 		public static final String ALERT_CONTROLLER_ALERT_PARAMS = "com.android.internal.app.AlertController$AlertParams$3";
 		public static final String MENU_DIALOG_HELPER = "MenuDialogHelper";
 		public static final String SUBMENU_BUILDER = "com.android.internal.view.menu.SubMenuBuilder";	
+		public static final String VIEW_ROOT_IMPL = "android.view.ViewRootImpl";
 	}
 	
 	// listener field names
@@ -148,6 +149,9 @@ public class Constants {
 		public static final String MENU_CLICK_LISTENER = "mClickListener";
 		public static final String ONCLICK_LISTENER = "mOnClickListener";
 		public static final String ITEMS = "mItems";
+		public static final String VIEW = "mView";
+		public static final String PARENT = "mParent";
+		public static final String ON_VALUE_CHANGE_LISTENER = "mOnValueChangeListener";
 
 	}
 	
@@ -247,6 +251,7 @@ public class Constants {
 		public static final String BEFORE_SET_TEXT = "before_set_text";
 		public static final String AFTER_SET_TEXT = "after_set_text";
 		public static final String CREATE_EXPANDED_MENU_VIEW = "create_expanded_menu_view";
+		public static final String VALUE_CHANGE = "value_change";
 	}
 	
 	// description strings 

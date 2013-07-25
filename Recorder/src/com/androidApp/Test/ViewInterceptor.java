@@ -29,6 +29,7 @@ import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.ExpandableListView;
 import android.widget.LinearLayout;
+import android.widget.NumberPicker;
 import android.widget.PopupMenu;
 import android.widget.PopupWindow;
 import android.widget.SeekBar;
@@ -66,6 +67,7 @@ import com.androidApp.Listeners.RecordOnMenuItemClickListener;
 import com.androidApp.Listeners.RecordOnScrollListener;
 import com.androidApp.Listeners.RecordOnTabChangeListener;
 import com.androidApp.Listeners.RecordOnTouchListener;
+import com.androidApp.Listeners.RecordOnValueChangeListener;
 import com.androidApp.Listeners.RecordPopupMenuOnMenuItemClickListener;
 import com.androidApp.Listeners.RecordPopupWindowOnDismissListener;
 import com.androidApp.Listeners.RecordSeekBarChangeListener;
@@ -276,6 +278,10 @@ public class ViewInterceptor {
 			if (v instanceof TabHost) {
 				TabHost tabHost = (TabHost) v;
 				replaceTabHostListeners(mEventRecorder, tabHost);
+			}
+			if (v instanceof NumberPicker) {
+				NumberPicker numberPicker = (NumberPicker) v;
+				replaceNumberPickerListener(mEventRecorder, numberPicker);
 			}
 			
 			// adapter view cases
@@ -530,6 +536,15 @@ public class ViewInterceptor {
 		if (!(originalTabChangeListener instanceof RecordOnTabChangeListener)) {
 			RecordOnTabChangeListener recordOnTabChangeListener = new RecordOnTabChangeListener(eventRecorder, originalTabChangeListener, tabHost);
 			tabHost.setOnTabChangedListener(recordOnTabChangeListener);
+		}
+	}
+	
+	
+	public static void replaceNumberPickerListener(EventRecorder eventRecorder, NumberPicker numberPicker) throws IllegalAccessException, NoSuchFieldException {
+		NumberPicker.OnValueChangeListener originalValueChangeListener = ListenerIntercept.getValueChangeListener(numberPicker);
+		if (!(originalValueChangeListener instanceof RecordOnValueChangeListener)) {
+			RecordOnValueChangeListener recordOnValueChangeListener = new RecordOnValueChangeListener(eventRecorder, originalValueChangeListener, numberPicker);
+			numberPicker.setOnValueChangedListener(recordOnValueChangeListener);
 		}
 	}
 	

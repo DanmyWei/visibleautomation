@@ -30,7 +30,6 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 	protected static final String 	TAG = "RecordWindowCallback";
 	protected Window.Callback 		mOriginalCallback;
 	protected ViewInterceptor		mViewInterceptor;
-	protected static boolean		sfKeyHit;				// to communicate with OnTextChangedListener
 	
 	public RecordWindowCallback(EventRecorder 	eventRecorder, 
 							    ViewInterceptor	viewInterceptor,
@@ -60,16 +59,8 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 				break;
 			} 
 		}
-		setWasKeyHit(true);
+		mViewInterceptor.setLastKeyAction(event.getKeyCode());
 		return mOriginalCallback.dispatchKeyEvent(event);
-	}
-
-	public static boolean wasKeyHit() {
-		return sfKeyHit;
-	}
-	
-	public static void setWasKeyHit(boolean f) {
-		sfKeyHit = f;
 	}
 
 	@Override
