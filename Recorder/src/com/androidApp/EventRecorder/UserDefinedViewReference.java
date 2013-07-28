@@ -86,6 +86,8 @@ public class UserDefinedViewReference {
 			mActivityClass = (Class<? extends Activity>) Class.forName(mActivityName);
 			mViewClassName = tokens[2].trim();
 			mViewClass = (Class<? extends View>) Class.forName(mViewClassName);
+			mViewInternalClassName = tokens[3].trim();
+			mViewInternalClass = (Class<? extends View>) Class.forName(mViewInternalClassName);
 			mTokenCount = 3;
 		} else if (type.equals(ReferenceEnum.VIEW_BY_ACTIVITY_CLASS_INDEX.mName)) {
 			mReferenceType = ReferenceEnum.VIEW_BY_ACTIVITY_CLASS_INDEX;
@@ -95,14 +97,16 @@ public class UserDefinedViewReference {
 			mViewClass = (Class<? extends View>) Class.forName(mViewClassName);
 			mClassIndex = Integer.parseInt(tokens[3].trim());
 			mTokenCount = 4;
-		} else if (type.equals(ReferenceEnum.VIEW_BY_ACTIVITY_CLASS_INDEX.mName)) {
+		} else if (type.equals(ReferenceEnum.VIEW_BY_ACTIVITY_INTERNAL_CLASS_INDEX.mName)) {
 			mReferenceType = ReferenceEnum.VIEW_BY_ACTIVITY_INTERNAL_CLASS_INDEX;
 			mActivityName = tokens[1].trim();
 			mActivityClass = (Class<? extends Activity>) Class.forName(mActivityName);
 			mViewClassName = tokens[2].trim();
 			mViewClass = (Class<? extends View>) Class.forName(mViewClassName);
 			mClassIndex = Integer.parseInt(tokens[3].trim());
-			mTokenCount = 4;
+			mViewInternalClassName = tokens[4].trim();
+			mViewInternalClass = (Class<? extends View>) Class.forName(mViewInternalClassName);
+			mTokenCount = 5;
 		} else if (type.equals(ReferenceEnum.VIEW_BY_ACTIVITY_ID.mName)) {
 			mReferenceType = ReferenceEnum.VIEW_BY_ACTIVITY_ID;
 			mActivityName = tokens[1].trim();
@@ -130,21 +134,22 @@ public class UserDefinedViewReference {
 			if (idCount == 1) {
 				mReferenceType = ReferenceEnum.VIEW_BY_ACTIVITY_ID;
 				mID = id;
+				return;
 			}
+		} 
+		// not-to-special case for everyone else.
+		if (fInternalClass) {
+			mReferenceType = ReferenceEnum.VIEW_BY_ACTIVITY_INTERNAL_CLASS_INDEX;
+			mViewClassName = usableClass.getName();
+			mViewClass = usableClass;
+			mViewInternalClassName = v.getClass().getName();
+			mViewInternalClass = v.getClass();
 		} else {
-			// not-to-special case for everyone else.
-			if (fInternalClass) {
-				mReferenceType = ReferenceEnum.VIEW_BY_ACTIVITY_INTERNAL_CLASS_INDEX;
-				mViewClassName = usableClass.getName();
-				mViewClass = usableClass;
-				mViewInternalClassName = v.getClass().getName();
-				mViewInternalClass = v.getClass();
-			} else {
-				mReferenceType = ReferenceEnum.VIEW_BY_ACTIVITY_CLASS_INDEX;
-				mViewClassName = usableClass.getName();
-				mViewClass = usableClass;
-			}
+			mReferenceType = ReferenceEnum.VIEW_BY_ACTIVITY_CLASS_INDEX;
+			mViewClassName = usableClass.getName();
+			mViewClass = usableClass;
 		}
+
 	}
 
 	public UserDefinedViewReference(View v, Activity activity) {
@@ -174,6 +179,11 @@ public class UserDefinedViewReference {
 		return mViewClass;
 	}
 	
+	public Class<? extends View> getInternalViewClass() {
+		return mViewInternalClass;
+	}
+	
+	
 	/**
 	 * how many tokens were parsed for this reference?
 	 * @return
@@ -195,6 +205,10 @@ public class UserDefinedViewReference {
 			return ReferenceEnum.VIEW_BY_ACTIVITY_CLASS.mName + ":" + mActivityName + "," + mViewClassName;
 		case VIEW_BY_ACTIVITY_CLASS_INDEX:
 			return ReferenceEnum.VIEW_BY_ACTIVITY_CLASS.mName + ":" + mActivityName + "," + mViewClassName + "," + Integer.toString(mClassIndex);
+		case VIEW_BY_ACTIVITY_INTERNAL_CLASS_INDEX:
+			return ReferenceEnum.VIEW_BY_ACTIVITY_INTERNAL_CLASS_INDEX.mName + ":" + mActivityName + "," + mViewClassName + "," + Integer.toString(mClassIndex) + "," + mViewInternalClassName;
+		case VIEW_BY_ACTIVITY_INTERNAL_CLASS:
+			return ReferenceEnum.VIEW_BY_ACTIVITY_INTERNAL_CLASS.mName + ":" + mActivityName + "," + mViewClassName + "," + mViewInternalClassName;
 		case VIEW_BY_ACTIVITY_ID:
 			return ReferenceEnum.VIEW_BY_ACTIVITY_ID.mName + ":" + mActivityName + "," + Integer.toString(mID);	
 		default:
@@ -289,13 +303,20 @@ public class UserDefinedViewReference {
 	public boolean matchView(View v, int viewClassIndex) {
 		Class<? extends View> viewClass = v.getClass();
 		Class<? extends View> refViewClass = this.getViewClass();
+		Class<? extends View> internalRefViewClass = null;
 		switch (this.referenceType()) {
 			case VIEW_BY_CLASS: 
 				return refViewClass.isAssignableFrom(viewClass);
 			case VIEW_BY_ACTIVITY_CLASS:
 				return refViewClass.isAssignableFrom(viewClass);
+			case VIEW_BY_ACTIVITY_INTERNAL_CLASS:
+				internalRefViewClass = this.getInternalViewClass();
+				return internalRefViewClass.isAssignableFrom(viewClass);		
 			case VIEW_BY_ACTIVITY_CLASS_INDEX:
 				return refViewClass.isAssignableFrom(viewClass) && (viewClassIndex == this.getClassIndex());
+			case VIEW_BY_ACTIVITY_INTERNAL_CLASS_INDEX:
+				internalRefViewClass = this.getInternalViewClass();
+				return internalRefViewClass.isAssignableFrom(viewClass) && (viewClassIndex == this.getClassIndex());
 			case VIEW_BY_ACTIVITY_ID:
 				return this.getID() == v.getId();
 			default:

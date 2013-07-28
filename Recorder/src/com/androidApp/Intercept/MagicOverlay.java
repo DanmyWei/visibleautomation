@@ -90,28 +90,33 @@ public class MagicOverlay extends View implements OnGestureListener {
 		View contentView = magicFrame.getChildAt(0);
 
 		// don't display the button for action bars
-		Class<? extends View> actionBarContainerClass = (Class<? extends View>) Class.forName(Constants.Classes.ACTION_BAR_CONTAINER);
-		boolean fDisplayButton = !actionBarContainerClass.isAssignableFrom(contentView.getClass());
-		MagicOverlay createOverlay = new MagicOverlay(magicFrame, fDisplayButton, activityState, recorder, contentView);
-		activityState.addMagicOverlay(createOverlay);
-		
-		// we sort of have to fix our layout, since we're offscreen or onscreen depending on mfEnabled. This means, of course.
-		// that we need to be created before the content is laid out.
-		FrameLayout.LayoutParams overlayLayoutParams = new FrameLayout.LayoutParams(contentView.getMeasuredWidth(), contentView.getMeasuredHeight());
-		overlayLayoutParams.setMargins(contentView.getMeasuredWidth(), 0, 0, 0);
-		createOverlay.setLayoutParams(overlayLayoutParams);
-		createOverlay.setBackgroundColor(0x0);
-		createOverlay.setWillNotDraw(false);
-		createOverlay.bringToFront();
-		createOverlay.setFocusable(true);
-		createOverlay.setActivated(true);
-		createOverlay.setEnabled(true);
-		magicFrame.addView(createOverlay);
-		if (createOverlay.getButton() != null) {
-			magicFrame.addView(createOverlay.getButton());
-			createOverlay.getButton().bringToFront();
+		// FAIL FAIL FAIL FAIL
+		try {
+			Class<? extends View> actionBarContainerClass = (Class<? extends View>) Class.forName(Constants.Classes.ACTION_BAR_CONTAINER);
+			boolean fDisplayButton = !actionBarContainerClass.isAssignableFrom(contentView.getClass());
+			MagicOverlay createOverlay = new MagicOverlay(magicFrame, fDisplayButton, activityState, recorder, contentView);
+			activityState.addMagicOverlay(createOverlay);
+			
+			// we sort of have to fix our layout, since we're offscreen or onscreen depending on mfEnabled. This means, of course.
+			// that we need to be created before the content is laid out.
+			FrameLayout.LayoutParams overlayLayoutParams = new FrameLayout.LayoutParams(contentView.getMeasuredWidth(), contentView.getMeasuredHeight());
+			overlayLayoutParams.setMargins(contentView.getMeasuredWidth(), 0, 0, 0);
+			createOverlay.setLayoutParams(overlayLayoutParams);
+			createOverlay.setBackgroundColor(0x0);
+			createOverlay.setWillNotDraw(false);
+			createOverlay.bringToFront();
+			createOverlay.setFocusable(true);
+			createOverlay.setActivated(true);
+			createOverlay.setEnabled(true);
+			magicFrame.addView(createOverlay);
+			if (createOverlay.getButton() != null) {
+				magicFrame.addView(createOverlay.getButton());
+				createOverlay.getButton().bringToFront();
+			}
+			magicFrame.requestLayout();
+		} catch (Exception ex) {
+			ex.printStackTrace();
 		}
-		magicFrame.requestLayout();
 	}
 	
 	public MagicOverlay(Context context) {

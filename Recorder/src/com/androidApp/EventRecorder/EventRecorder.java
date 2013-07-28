@@ -9,6 +9,7 @@ import java.util.Hashtable;
 import java.util.List;
 
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.TestUtils;
 import com.androidApp.recorderInterface.EventRecorderInterface;
 
 import android.app.Activity;
@@ -194,9 +195,12 @@ public class EventRecorder extends EventRecorderInterface {
 	
 	// wrapper for wrapper to write a record with an event, time view description, and message to the system	
 	public void writeRecord(String event, View v, String message) {
-		long time = SystemClock.uptimeMillis();
 		try {
-			writeRecord(event + ":" + time + "," + getViewReference().getReference(v) + "," + message);
+			long time = SystemClock.uptimeMillis();
+			int viewIndex = TestUtils.classIndex(v.getRootView(), v);
+			if (!matchViewDirective(v, viewIndex, ViewDirective.ViewOperation.IGNORE_EVENTS, ViewDirective.When.ALWAYS)) {
+				writeRecord(event + ":" + time + "," + getViewReference().getReference(v) + "," + message);
+			}
 		} catch (Exception ex) {
 			writeRecord(Constants.EventTags.EXCEPTION, "while getting reference for view in event " + event + " " + message);
 		}
@@ -204,9 +208,12 @@ public class EventRecorder extends EventRecorderInterface {
 	
 	// yet another wrapper with just a view to be described.
 	public void writeRecord(String event, View v) {
-		long time = SystemClock.uptimeMillis();
 		try {
-			writeRecord(event + ":" + time + "," + getViewReference().getReference(v));
+			long time = SystemClock.uptimeMillis();
+			int viewIndex = TestUtils.classIndex(v.getRootView(), v);
+			if (!matchViewDirective(v, viewIndex, ViewDirective.ViewOperation.IGNORE_EVENTS, ViewDirective.When.ALWAYS)) {
+				writeRecord(event + ":" + time + "," + getViewReference().getReference(v));
+			}
 		} catch (Exception ex) {
 			writeException(ex,  "while getting reference for view in event " + event);
 		}

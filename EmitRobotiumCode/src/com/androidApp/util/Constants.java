@@ -54,7 +54,8 @@ public class Constants {
 		CHILD_CLICK("child_click"),
 		GROUP_CLICK("group_click"),
 		HIDE_IME_BACK_KEY("hide_ime_back_key"),	
-		ACTIVITY_BACK_KEY("activity_back_key");
+		ACTIVITY_BACK_KEY("activity_back_key"), 
+		GET_FOCUS("get_focus");
 		
 		public final String mEventName;		
 		private UserEvent(String s) {
@@ -228,6 +229,12 @@ public class Constants {
 		public static final String WAIT_FOR_TEXT_CLASS_INDEX = "wait_for_text_class_index.txt";
 		public static final String WAIT_FOR_TEXT_INTERNAL_CLASS_INDEX = "wait_for_text_internal_class_index.txt";
 		public static final String INTERSTITIAL_HEADER = "interstitial_header.txt";
+		public static final String ACTIIVTY_HANDLER = "activity_handler.txt";
+		public static final String ACTIIVTY_HANDLER_BINARY = "activity_handler_binary.txt";
+		public static final String IMPORT = "import.txt";
+		public static final String REQUEST_FOCUS_ID = "request_focus_id.txt";
+		public static final String REQUEST_FOCUS_CLASS_INDEX = "request_focus_class_index.txt";
+		public static final String REQUEST_FOCUS_INTERNAL_CLASS_INDEX = "request_focus_internal_class_index.txt";
 		
 	}
 	
@@ -266,6 +273,11 @@ public class Constants {
 		public static final String INTERNAL_CLASS = "%INTERNAL_CLASS%";
 		public static final String CLASS_VARIABLE_INDEX = "%CLASS_VARIABLE_INDEX%";
 		public static final String INSERT = "%INSERT%";
+		public static final String ACTIVITY_HANDLERS = "%ACTIVITY_HANDLERS%";
+		public static final String HANDLER = "%HANDLER%";
+		public static final String HANDLER_IMPORTS = "%HANDLER_IMPORTS%";
+		public static final String INSERTION_START = "%INSERTION_START%";
+		public static final String INSERTION_END = "%INSERTION_END%";
 
 	}
 	
@@ -312,6 +324,7 @@ public class Constants {
 		public static final String FILES = "files";
 		public static final String SAVESTATE = "savestate";
 		public static final String EXTERNAL_STORAGE = "/sdcard";
+		public static final String HANDLERS = "handlers";
 	}
 	
 	// executables

@@ -37,6 +37,7 @@ public interface IEmitCode {
 	String getApplicationPackage();
 	Hashtable<String, List<LineAndTokens>> generateTestCode(IEmitCode emitter, String eventsFileName, List<MotionEventList> motionEvents) throws FileNotFoundException, IOException, EmitterException;
 	public List<LineAndTokens> emit(BufferedReader 							br, 
+									String									line,
 									Hashtable<String, List<LineAndTokens>>	outputCode,
 									List<MotionEventList> 					motionEvents,
 									boolean									fInterstitialActivity) throws IOException, EmitterException;
@@ -70,7 +71,14 @@ public interface IEmitCode {
 	void writeItemSelected(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
 	void writeChildClick(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
 	void writeGroupClick(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
-	void writeHeader(String classPath, String testPackage, String testClassName, String className, BufferedWriter bw) throws IOException;
+	void writeHeader(String 		classPath, 
+					 String 		testPackage, 
+					 String 		testClassName, 
+					 List<String> 	interstitialActivities, 
+					 List<String> 	interstitialActivityHandlers, 
+					 String 		className, 
+					 BufferedWriter bw) throws IOException;
+	String writeActivityHandlers(List<String> handlerNames, List<String> activityNames) throws IOException;
 	void writeTrailer(BufferedWriter bw) throws IOException;
 	void writeClassTrailer(BufferedWriter bw) throws IOException;
 	void writeLines(BufferedWriter bw, List<LineAndTokens> lines) throws IOException;

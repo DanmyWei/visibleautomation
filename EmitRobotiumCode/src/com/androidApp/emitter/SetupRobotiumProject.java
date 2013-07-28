@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.androidApp.emitter.IEmitCode.LineAndTokens;
@@ -29,15 +30,51 @@ public class SetupRobotiumProject {
 	
 	/**
 	 * retains directories
+	 * create the directories required by the test project
+	 * src - source directory
+	 * src/path/to/test/java/package - directory that the java file is actually written into
+	 * res - resources directory
+	 * res/drawable - directory for icons and stuff
+	 * res/values - directory for strings and stuff
+	 * libs - directory for libraries (specifically the robotium jar)
+	 * assets - directory for motion event files
+	 * savestate - directory to retain files, shared preferences and databases.
+	 * @param dirname name of the output test class (also the name of the project)
+	 * @param testClassFilePath full path directory to output test class files
 	 */
 	public class Dirs {
-		public String mSrcDir = null;							// src
-		public String mLibDir = null;							// lib
-		public String mResDir = null;							// res
-		public String mAssetsDir = null;						// assets
-		public String mDrawableDir = null;						// res/drawable	
-		public String mSaveStateDir = null;						// savestate
+		public File mSrcDir = null;							// src
+		public File mLibDir = null;							// lib
+		public File mResDir = null;							// res
+		public File mAssetsDir = null;						// assets
+		public File mDrawableDir = null;					// res/drawable	
+		public File mSaveStateDir = null;					// savestate
+		public File mPackageDir = null;						// src/path/to/testclass
+		public File mHandlerDir = null;						// src/path/to/testclss/handlers
+		
+		public Dirs(String dirname, String testClassFilePath) {
+			mSrcDir = new File(dirname + File.separator + Constants.Dirs.SRC);
+			mPackageDir = new File(testClassFilePath);
+			mHandlerDir = new File(mPackageDir + File.separator + Constants.Dirs.HANDLERS);
+			mLibDir = new File(dirname + File.separator + Constants.Dirs.LIBS);
+			mResDir = new File(dirname + File.separator + Constants.Dirs.RES);
+			mDrawableDir = new File(mResDir + File.separator + Constants.Dirs.DRAWABLE);
+			mAssetsDir = new File(dirname + File.separator + Constants.Dirs.ASSETS);
+			mSaveStateDir = new File(dirname + File.separator + Constants.Dirs.SAVESTATE);
+		}
+		
+		public boolean createDirectories() {
+			boolean fOK = mPackageDir.mkdirs();
+			fOK &= mHandlerDir.mkdirs();
+			fOK &= mLibDir.mkdirs();
+			fOK &= mResDir.mkdirs();
+			fOK &= mDrawableDir.mkdirs();
+			fOK &= mAssetsDir.mkdirs();
+			fOK &= mSaveStateDir.mkdirs();
+			return fOK;
+		}
 	}
+	
 	/**
 	 * process the options into flags and values.
 	 * @param args
@@ -54,44 +91,7 @@ public class SetupRobotiumProject {
 		}
 		return options;
 	}
-	
-	
-	/**
-	 * create the directories required by the test project
-	 * src - source directory
-	 * src/path/to/test/java/package - directory that the java file is actually written into
-	 * res - resources directory
-	 * res/drawable - directory for icons and stuff
-	 * res/values - directory for strings and stuff
-	 * libs - directory for libraries (specifically the robotium jar)
-	 * assets - directory for motion event files
-	 * savestate - directory to retain files, shared preferences and databases.
-	 * @param dirname name of the output test class (also the name of the project)
-	 * @param testClassFilePath full path directory to output test class files
-	 */
-	public Dirs createDirectories(String dirname, String testClassFilePath) throws IOException {
-		Dirs dirs = new Dirs();
-		boolean fOK = true;
-		dirs.mSrcDir = dirname + File.separator + Constants.Dirs.SRC;
-		File packageDir = new File(testClassFilePath);
-		fOK = packageDir.mkdirs();
-		dirs.mLibDir = dirname + File.separator + Constants.Dirs.LIBS;
-		File libdir = new File(dirs.mLibDir);
-		fOK &= libdir.mkdirs();
-		dirs.mResDir = dirname + File.separator + Constants.Dirs.RES;
-		File resdir = new File(dirs.mResDir);
-		fOK &= resdir.mkdir();
-		dirs.mDrawableDir = resdir.getPath() + File.separator + Constants.Dirs.DRAWABLE;
-		File drawabledir = new File(dirs.mDrawableDir);
-		fOK &= drawabledir.mkdir();
-		dirs.mAssetsDir = dirname + File.separator + Constants.Dirs.ASSETS;
-		File assetsDir = new File(dirs.mAssetsDir);
-		fOK &= assetsDir.mkdir();
-		dirs.mSaveStateDir = dirname + File.separator + Constants.Dirs.ASSETS;
-		File saveStateDir = new File(dirs.mSaveStateDir);
-		fOK &= saveStateDir.mkdir();
-		return dirs;
-	}
+
 	
 	/**
 	 * copy the output file to the package, since we don't know the package name until we've read the first activity
@@ -167,7 +167,7 @@ public class SetupRobotiumProject {
 	 * @throws IOException
 	 */
 	public static void writeResources(Dirs dirs, String dirname) throws IOException {
-		FileUtility.writeResource(Constants.Filenames.LAUNCHER_PNG, dirs.mDrawableDir);
+		FileUtility.writeResource(Constants.Filenames.LAUNCHER_PNG, dirs.mDrawableDir.getAbsolutePath());
 	}
 	
 	/**
@@ -243,7 +243,7 @@ public class SetupRobotiumProject {
 	 * @param libraryDir libs directory
 	 * @throws IOException if the template can't be found
 	 */
-	public static void copyLibraries(String libraryDir) throws IOException {
+	public static void copyLibraries(File libraryDir) throws IOException {
 		byte[] jarData = FileUtility.readBinaryTemplate(Constants.Filenames.UTILITY_JAR);
 		FileOutputStream fos = new FileOutputStream(libraryDir + File.separator + Constants.Filenames.UTILITY_JAR);
 		fos.write(jarData, 0, jarData.length);
@@ -311,5 +311,41 @@ public class SetupRobotiumProject {
 				os.close();
 			}
 		}
+	}
+	
+	/**
+	 * return the list of handler names by stripping the .java extension.
+	 * @param handlerDir directory containing handler .java files
+	 * @return list of handler names.
+	 */
+	public static List<String> getHandlerNames(File handlerDir) {
+		String[] files = handlerDir.list();
+		List<String> functionNames = new ArrayList<String>();
+		for (String file : files) {
+			if (file.endsWith(Constants.Extensions.JAVA)) {
+				String functionName = file.substring(0, file.length() - 5);
+				functionNames.add(functionName);
+			}
+		}
+		return functionNames;
+	}
+	
+	/**
+	 * return the list of activities that the handlers are registered for by stripping the .java extension
+	 * and the InterstitialActivityHandler prefix.
+	 * @param handlerDir
+	 * @return
+	 */
+	public static List<String> getHandlerActivityNames(File handlerDir) {
+		String[] files = handlerDir.list();
+		List<String> functionNames = new ArrayList<String>();
+		for (String file : files) {
+			if (file.endsWith(Constants.Extensions.JAVA) && file.startsWith(Constants.INTERSTITIAL_ACTIVITY_HANDLER)) {
+				int prefixLength = Constants.INTERSTITIAL_ACTIVITY_HANDLER.length();
+				String activityName = file.substring(0, file.length() - 5).substring(prefixLength);
+				functionNames.add(activityName);
+			}
+		}
+		return functionNames;
 	}
 }

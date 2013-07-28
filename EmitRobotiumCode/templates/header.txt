@@ -1,6 +1,7 @@
 package %TESTPACKAGE%;
 
 import %CLASSPATH%;
+%HANDLER_IMPORTS%
 import com.androidApp.util.RobotiumUtils;
 import com.androidApp.util.PlaybackMotionEvents;
 import com.androidApp.util.ViewExtractor;
@@ -19,12 +20,12 @@ import android.widget.ExpandableListView;
 public class %TESTCLASSNAME% extends ActivityInstrumentationTestCase2<%CLASSNAME%> {
   	private Solo 			solo;
   	private RobotiumUtils	robotiumUtils;
-  	protected static final int ACTIVITY_WAIT_MSEC = 5000;		// wait 5 seconds for new activities by default
+  	protected static final int ACTIVITY_WAIT_MSEC = 30000;		// wait 5 seconds for new activities by default
   	protected static final int WEBVIEW_WAIT_MSEC = 10000;		// wait 10 seconds for URL load by default
 	protected static final int DIALOG_CLOSE_TIMEOUT = 5000;		// wait 5 seconds for dialogs to close.
 	protected static final int DIALOG_OPEN_TIMEOUT = 5000;		// wait 5 seconds for dialogs to open.
   	protected static final int VIEW_WAIT_MSEC = 5000;			// wait 5 seconds for views to appear
-
+	protected static final String TESTCLASSNAME = %TESTCLASSNAME%.class.getSimpleName();	// for motion event directory reference
   	public %TESTCLASSNAME%() {
 		super("%CLASSPATH%", %CLASSNAME%.class);
   	}
@@ -32,6 +33,7 @@ public class %TESTCLASSNAME% extends ActivityInstrumentationTestCase2<%CLASSNAME
   	public void setUp() throws Exception {
 		robotiumUtils = new RobotiumUtils(%TESTCLASSNAME%.class, getInstrumentation());
 		solo = new Solo(getInstrumentation(), getActivity());
+  		%ACTIVITY_HANDLERS%
   	}
   
    	@Override

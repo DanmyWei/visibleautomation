@@ -54,7 +54,7 @@ public class RecordOnHierarchyChangeListener extends RecordListener implements O
 	@Override
 	public void onChildViewAdded(View parent, View child) {
 		Activity activity = (Activity) parent.getContext();
-		mViewInterceptor.intercept(activity, child);
+		mViewInterceptor.callIntercept(activity, child);
 		
 	}
 

@@ -41,7 +41,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	protected StringBuffer 	mCurrentText = new StringBuffer();		// for tracking text entry
 	protected boolean		mfFirstKey = true;						// latch for text entry start
 	protected static int	sLineNumber = 0;						// track line # throughout recursions
-	
+	protected String 		mNextLine;								// next line to save for caller.
 	public EmitRobotiumCodeSource() {
 	}	
 		
@@ -86,7 +86,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	public Hashtable<String, List<LineAndTokens>> generateTestCode(IEmitCode emitter, String eventsFileName, List<MotionEventList> motionEvents) throws FileNotFoundException, IOException, EmitterException {
 		Hashtable<String, List<LineAndTokens>> outputCode = new Hashtable<String, List<LineAndTokens>>();
 		BufferedReader br = new BufferedReader(new FileReader(eventsFileName));
-		List<LineAndTokens> mainLines = emitter.emit(br, outputCode, motionEvents, false);
+		List<LineAndTokens> mainLines = emitter.emit(br, null, outputCode, motionEvents, false);
 		outputCode.put(Constants.MAIN, mainLines);
 		return outputCode;
 	}
@@ -96,6 +96,8 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	 * actually emit robotium code from a recorded file
 	 * TODO: change this so it returns the target class path and class name, not modifying statics
 	 * @param br BufferedReader on events.txt file
+	 * @param line line read from caller (br is sequential)
+	 * @param nextLine line after line read from caller
 	 * @param appOutput application output class: lines for main and interstitial activities.
 	 * @param lines output lines
 	 * @throws IOException
@@ -103,23 +105,26 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	 */
 	@Override
 	public List<LineAndTokens> emit(BufferedReader 							br, 
+									String									line,
 									Hashtable<String, List<LineAndTokens>>	outputCode,
 									List<MotionEventList> 					motionEvents,
 									boolean									fInterstitialActivity) throws IOException, EmitterException {
-		boolean scrollsHaveHappened = false;				// we get a zillion scroll events.  We only care about the last one
-		int scrollFirstVisibleItem = 0;						// preserve scroll values so we can apply it on the last scroll.
-		int scrollListIndex = 0;							// track the current scroll index to write on the next non-scroll instruction
-		List<String> clickSpinnerDialogTokens = null;		// workaround for robotium, which selects spinners, but doesn't just click-dismiss
-		String line = br.readLine();	
-		int sLineNumber = 0;												// track line number for errors
+		boolean scrollsHaveHappened = false;							// we get a zillion scroll events.  We only care about the last one
+		int scrollFirstVisibleItem = 0;									// preserve scroll values so we can apply it on the last scroll.
+		int scrollListIndex = 0;										// track the current scroll index to write on the next non-scroll instruction
+		List<String> clickSpinnerDialogTokens = null;					// workaround for robotium, which selects spinners, but doesn't just click-dismiss
+		int sLineNumber = 0;											// track line number for errors
 		List<LineAndTokens> lines = new ArrayList<LineAndTokens>();		// output code for this scope
+		if (line == null) {
+			line = br.readLine();
+		}
 		do {
 			if (line == null) {
 				break;
 			}
 			sLineNumber++;
 			try {
-				String nextLine = br.readLine();
+				mNextLine = br.readLine();
 				// syntax is event:time,arguments,separated,by,commas
 				SuperTokenizer st = new SuperTokenizer(line, "\"", ":,", '\\');
 				List<String> tokens = st.toList();
@@ -127,8 +132,8 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 				// we peek at the next line to see if it's an activity_forward or an activity back, and save the activity name so it can be 
 				// waited for.
 				List<String> nextTokens = null;
-				if (nextLine != null) {
-					SuperTokenizer stNext = new SuperTokenizer(nextLine, "\"", ":,", '\\');
+				if (mNextLine != null) {
+					SuperTokenizer stNext = new SuperTokenizer(mNextLine, "\"", ":,", '\\');
 					nextTokens = stNext.toList();
 					checkActivityTransition(tokens, nextTokens, lines);
 				}
@@ -158,7 +163,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 					mTargetPackage = tokens.get(2);
 				} else if (Constants.ActivityEvent.INTERSTITIAL_ACTIVITY.equals(action)) {
 					String newActivityName = tokens.get(2);
-					List<LineAndTokens> activityLines = emit(br, outputCode, motionEvents, true);
+					List<LineAndTokens> activityLines = emit(br, mNextLine, outputCode, motionEvents, true);
 					outputCode.put(newActivityName, activityLines);
 				} else if (Constants.ActivityEvent.ACTIVITY_FORWARD.equals(action)) {
 					// if we're in an interstitial, that means that it's time to go.
@@ -243,6 +248,8 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 						}	
 					} else if (Constants.SystemEvent.AFTER_SET_TEXT.equals(action)) {
 						writeWaitForText(tokens, lines);
+					} else if (Constants.UserEvent.GET_FOCUS.equals(action)) {
+						writeGetFocus(tokens, lines);
 					} else if (Constants.SystemEvent.DISMISS_AUTOCOMPLETE_DROPDOWN.equals(action)) {
 						writeDismissAutoCompleteDropdown(tokens, lines);
 					} else if (Constants.UserEvent.DISMISS_POPUP_WINDOW_BACK_KEY.equals(action)) {
@@ -274,12 +281,12 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 						// don't actually fire the TouchEvent listener for TOUCH_DOWN because it dispatches the event
 						// to a child object, and does not call View.dispatchTouchEvent() for the scrolling view.
 						// there may be a way around this
-						writeMotionEvents(tokens, nextLine, getApplicationClassName(), br, motionEvents, lines);
+						writeMotionEvents(tokens, mNextLine, getApplicationClassName(), br, motionEvents, lines);
 						// read the line after touch_up
-						nextLine = br.readLine();
+						mNextLine = br.readLine();
 					}
 				}
-				line = nextLine;
+				line = mNextLine;
 			} catch (Exception ex) {
 				System.err.println("error parsing line " + sLineNumber);
 				System.err.println("line = " + line);
@@ -647,6 +654,44 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
 		}
 	}
+	/**
+	 * write out the get_focus command:
+	 * get_focus:60065592,internal_class_index,android.widget.EditText,1,0,0
+	 * @param tokens parsed from a line in events.txt
+	 * @param lines output list of java instructions
+	 * @throws IOException if the template file can't be read
+	 */
+	public void writeGetFocus(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
+		ReferenceParser ref = new ReferenceParser(tokens, 2);
+		String description = getDescription(tokens);
+		String fullDescription = "get focus " + description;
+		String text = tokens.get(2);
+		String insertionStartIndex = tokens.get(tokens.size() - 2);
+		String insertionEndIndex = tokens.get(tokens.size() - 1);
+		if (mLastEventWasWaitForActivity) {
+			writeWaitForView(tokens, 2, lines);
+			mLastEventWasWaitForActivity = false;
+		} 
+		if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
+			String requestFocusTemplate =  writeViewIDCommand(Constants.Templates.REQUEST_FOCUS_ID, ref, fullDescription);
+			requestFocusTemplate = requestFocusTemplate.replace(Constants.VariableNames.INSERTION_START, insertionStartIndex);
+			requestFocusTemplate = requestFocusTemplate.replace(Constants.VariableNames.INSERTION_END, insertionEndIndex);
+			lines.add(new LineAndTokens(tokens, requestFocusTemplate));
+		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
+			String requestFocusClassIndexTemplate = writeViewClassIndexCommand(Constants.Templates.REQUEST_FOCUS_CLASS_INDEX, ref, fullDescription);
+			requestFocusClassIndexTemplate = requestFocusClassIndexTemplate.replace(Constants.VariableNames.INSERTION_START, insertionStartIndex);
+			requestFocusClassIndexTemplate = requestFocusClassIndexTemplate.replace(Constants.VariableNames.INSERTION_END, insertionEndIndex);
+			lines.add(new LineAndTokens(tokens, requestFocusClassIndexTemplate));
+		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.INTERNAL_CLASS_INDEX) {
+			String requestFocusInternalClassIndexTemplate = writeViewInternalClassIndexCommand(Constants.Templates.REQUEST_FOCUS_INTERNAL_CLASS_INDEX, ref, fullDescription);
+			requestFocusInternalClassIndexTemplate = requestFocusInternalClassIndexTemplate.replace(Constants.VariableNames.INSERTION_START, insertionStartIndex);
+			requestFocusInternalClassIndexTemplate = requestFocusInternalClassIndexTemplate.replace(Constants.VariableNames.INSERTION_END, insertionEndIndex);
+			lines.add(new LineAndTokens(tokens, requestFocusInternalClassIndexTemplate));
+		} else {
+			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
+		}
+	}
+	
 	
 	/**
 	 * write out the dismiss_autocomplete_dropdown
@@ -722,11 +767,11 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		if (rotation == 0) {
 			orientationConstant = "Surface.ROTATION_0";
 		} else if (rotation == 90) {
-			orientationConstant = "Surface.ROTATION_0";
+			orientationConstant = "Surface.ROTATION_90";
 		} else if (rotation == 180) {
-			orientationConstant = "Surface.ROTATION_0";
+			orientationConstant = "Surface.ROTATION_180";
 		} else if (rotation == 270) {
-			orientationConstant = "Surface.ROTATION_0";
+			orientationConstant = "Surface.ROTATION_270";
 		} else {
 			throw new EmitterException("Rotation value " + rotation + " is not 0,90,180,270");
 		}
@@ -1188,14 +1233,62 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	 * @param bw output BufferedWriter
 	 * @throws IOException
 	 */
-	public void writeHeader(String classPath, String testPackage, String testClassName, String className, BufferedWriter bw) throws IOException {
+	public void writeHeader(String 			classPath, 
+						    String 			testPackage, 
+						    String 			testClassName,  
+						    List<String> 	interstitialActivities, 
+						    List<String> 	interstitialActivityHandlers, 
+						    String 			className, 
+						    BufferedWriter 	bw) throws IOException {
 		String header = FileUtility.readTemplate(Constants.Templates.HEADER);
+		String activityHandlers = writeActivityHandlers(interstitialActivities, interstitialActivityHandlers);
+		String handlerImports = writeActivityHandlerImports(interstitialActivityHandlers, testPackage);
+		header = header.replace(Constants.VariableNames.ACTIVITY_HANDLERS, activityHandlers);
+		header = header.replace(Constants.VariableNames.HANDLER_IMPORTS, handlerImports);
 		header = header.replace(Constants.VariableNames.TESTPACKAGE, testPackage);
 		header = header.replace(Constants.VariableNames.CLASSPATH, classPath);
 		header = header.replace(Constants.VariableNames.CLASSNAME, className);
 		header = header.replace(Constants.VariableNames.TESTCLASSNAME, testClassName);
 		bw.write(header);
 	}
+	
+	/**
+	 * write the activity handlers
+	 * @param handlerNames names of the handler classes
+	 * @param activityNames names of the activities that they are registered for
+	 * @return string to insert into the header.txt file
+	 */
+	public String writeActivityHandlers(List<String> activityNames, List<String> handlerNames) throws IOException {
+		StringBuffer sbHandlerList = new StringBuffer();
+		for (int i = 0; i < handlerNames.size(); i++) {
+			String handlerExpr = FileUtility.readTemplate(Constants.Templates.ACTIIVTY_HANDLER);
+			String handler = handlerNames.get(i);
+			String activity = activityNames.get(i);	
+			handlerExpr = handlerExpr.replace(Constants.VariableNames.HANDLER, handler);
+			handlerExpr = handlerExpr.replace(Constants.VariableNames.ACTIVITY, activity);
+			sbHandlerList.append(handlerExpr);
+		}
+		return sbHandlerList.toString();			
+	}
+	
+	/**
+	 * write the import headers for the activity handlers
+	 * @param handlerNames
+	 * @param testClassName
+	 * @return
+	 * @throws IOException
+	 */
+	public String writeActivityHandlerImports(List<String> handlerNames, String testPackage) throws IOException {
+		StringBuffer sbImportList = new StringBuffer();
+		for (String handlerName : handlerNames) {
+			String importHeader = FileUtility.readTemplate(Constants.Templates.IMPORT);
+			importHeader = importHeader.replace(Constants.VariableNames.TESTPACKAGE, testPackage);
+			importHeader = importHeader.replace(Constants.VariableNames.HANDLER, handlerName);
+			sbImportList.append(importHeader);
+		}
+		return sbImportList.toString();
+	}
+
 		
 	/**
 	 * write the trailer on completion.
@@ -1324,7 +1417,6 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 			template = writeViewInternalClassIndexCommand(Constants.Templates.PLAYBACK_MOTION_EVENTS_INTERNAL_CLASS_INDEX, refEvents, fullDescription);
 		}
 		template = template.replace(Constants.VariableNames.MOTION_EVENT_VARIABLE_INDEX, Integer.toString(mMotionEventVariableIndex));
-		template = template.replace(Constants.VariableNames.TESTCLASSNAME, testClassName);
 		template = template.replace(Constants.VariableNames.UNIQUE_NAME, uniqueName);
 		lines.add(new LineAndTokens(tokens, template));
 		mMotionEventVariableIndex++;
@@ -1353,5 +1445,4 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		String trailer = FileUtility.readTemplate(Constants.Templates.TRAILER);
 		bw.write(trailer);
 	}
-
 }

@@ -26,6 +26,7 @@ import android.webkit.WebViewClient;
 import android.widget.AbsListView;
 import android.widget.Adapter;
 import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ExpandableListView;
 import android.widget.LinearLayout;
@@ -242,21 +243,41 @@ public class ViewInterceptor {
 	 * @param a activity
 	 * @param v activity content view
 	 */
-	public void replaceListeners(Activity a, View v) {
-		Hashtable<Class,ClassCount> classTable = new Hashtable<Class, ClassCount>();
+	public void replaceListeners(Activity a, View v, Hashtable<Class,ClassCount> classTable) {
 		List<ViewDirective> viewDirectives = mEventRecorder.getMatchingViewDirectives(a, ViewDirective.When.ON_ACTIVITY_START);
 		replaceListeners(a, v, classTable, viewDirectives);
 	}
 
+	// update the classcount hashtable as we recurse through the hierarchy in preorder traversal
+	protected static int updateClassCount(View v, Hashtable<Class,ClassCount> classTable) {
+		ClassCount classCount = classTable.get(v.getClass());
+		if (classCount == null) {
+			classCount = new ClassCount(1);
+			classTable.put(v.getClass(), classCount);
+		} else {
+			classCount.mCount++;		
+		}
+		return classCount.mCount;
+	}
+	
 	/**
 	 * replace the listeners in the view with wrapping listeners that record the events
+	 * TODO: have this return a bool to indicate events were listened to.
 	 * @param v view to record events for.
 	 * @param classTable hashtable of counters for classes for fast indexing into the viewDirectives table
 	 * @param viewDirectives filtered list of directives for this activity on start.
 	 */
-	public void replaceListeners(Activity a, View v, Hashtable<Class,ClassCount> classTable, List<ViewDirective> viewDirectives) {
+	public void replaceListeners(Activity 						a, 
+								 View 							v, 
+							     Hashtable<Class,ClassCount> 	classTable, 
+							     List<ViewDirective> 			viewDirectives) {
 		ClassCount classCount = classTable.get(v.getClass());
 		int viewClassIndex = (classCount != null) ? classCount.mCount : 0;
+		if (ViewDirective.match(v, viewClassIndex, ViewDirective.ViewOperation.IGNORE_EVENTS, 
+							    ViewDirective.When.ON_ACTIVITY_START, viewDirectives)) {
+			updateClassCount(v, classTable);
+			return;
+		}
 		try {
 			if (TestUtils.isVisibleAutomationView(v)) {
 				return;
@@ -266,7 +287,7 @@ public class ViewInterceptor {
 			} else {
 				if (!TestUtils.shouldBeIgnored(v) &&
 					!TestUtils.isInTabControl(v)) {
-					replaceViewListeners(v);
+					replaceViewListeners(v, viewClassIndex, viewDirectives);
 				}
 			}
 			
@@ -293,7 +314,7 @@ public class ViewInterceptor {
 					replaceSpinnerListeners(mEventRecorder, spinner);
 				} else {
 					if (!isSpinnerDropdownList(adapterView)) {
-						replaceAdapterViewListeners(mEventRecorder, adapterView);
+						replaceAdapterViewListeners(mEventRecorder, adapterView, viewClassIndex, viewDirectives);
 					}
 					// expandable list views are a special case.
 					if (adapterView instanceof ExpandableListView) {
@@ -310,16 +331,9 @@ public class ViewInterceptor {
 				if (tv.hasFocus()) {
 					setFocusedView(tv);
 				}
-				replaceEditTextListeners(tv);
+				replaceEditTextListeners(tv, viewClassIndex, viewDirectives);
 			}
-			
-			// update the classcount hashtable as we recurse through the hierarchy in preorder traversal
-			if (classCount == null) {
-				classCount = new ClassCount(1);
-			} else {
-				classCount.mCount++;
-				classTable.put(v.getClass(), classCount);
-			}
+			updateClassCount(v, classTable);
 		} catch (Exception ex) {
 			try {
 				String description = "Intercepting view " +  RecordListener.getDescription(v);
@@ -361,21 +375,27 @@ public class ViewInterceptor {
 	 * @throws NoSuchFieldException
 	 */
 	public static boolean replaceClickListener(EventRecorder eventRecorder, View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
+		if (v instanceof TextView) {
+			Log.e(TAG, "attempting to set click listener for " + ((TextView) v).getText() + " " + v);
+		} else {
+			Log.e(TAG, "attempting to set click listener for " + v);
+			
+		}
 		View.OnClickListener originalClickListener = ListenerIntercept.getClickListener(v);
-		
-		// if the view has a click listener, or if it's a primitive widget and none of its ancestors have defined
-		// a click listener, and it is not a child of an adapter, or the adapter doesn't have any listeners of
-		// its own, then we can record the click
-		AdapterView adapterView = (AdapterView) TestUtils.getDescendantOfClass(v, AdapterView.class);
-		if ((originalClickListener != null) || (!(v instanceof ViewGroup) && !RecordOnClickListener.hasAncestorListenedToClick(v))) {
-			if ((adapterView == null) || !TestUtils.adapterHasListeners(adapterView) || (originalClickListener != null)) {
-				if (!(originalClickListener instanceof RecordOnClickListener)) {
-					RecordOnClickListener recordClickListener = new RecordOnClickListener(eventRecorder, originalClickListener);
-					v.setOnClickListener(recordClickListener);
-					Log.i(TAG, "setting click listener for " + v + " " + RecordListener.getDescription(v));
-					return true;
-				}
+		if (TestUtils.listenClickEvents(v) || (originalClickListener != null)) {
+			if (!(originalClickListener instanceof RecordOnClickListener)) {
+				RecordOnClickListener recordClickListener = new RecordOnClickListener(eventRecorder, originalClickListener);
+				v.setOnClickListener(recordClickListener);
+				Log.i(TAG, "setting click listener for " + v + " " + RecordListener.getDescription(v));
+				return true;
 			}
+		}
+		 // wierd case
+		if (v instanceof TextView) {
+			Log.e(TAG, "failed to replace click listener for " + ((TextView) v).getText() + " " + v);
+		} else {
+			Log.e(TAG, "failed to replace click listener for " + v);
+			
 		}
 		return false;
 	}
@@ -453,15 +473,24 @@ public class ViewInterceptor {
 	
 	/**
 	 * replace the listeners in an atomic view (like a button or a text view, and stuff like that)
+	 * or if there's a view directive for motion events.
 	 * @param v view to intercept
 	 * @throws IllegalAccessException ReflectionUtils exception
 	 * @throws NoSuchFieldException
 	 * @throws ClassNotFoundException
 	 */
-	public void replaceViewListeners(View v) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
-		replaceClickListener(mEventRecorder, v);
-		replaceLongClickListener(mEventRecorder, v);
-		if (TestUtils.listenMotionEvents(mMotionEventViews, v)) {
+	public void replaceViewListeners(View v, int viewClassIndex, List<ViewDirective> viewDirectives) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
+		if (!ViewDirective.match(v, viewClassIndex, ViewDirective.ViewOperation.IGNORE_CLICK_EVENTS, 
+			    				 ViewDirective.When.ON_ACTIVITY_START, viewDirectives)) {
+			replaceClickListener(mEventRecorder, v);
+		}
+		if (!ViewDirective.match(v, viewClassIndex, ViewDirective.ViewOperation.IGNORE_LONG_CLICK_EVENTS, 
+				 ViewDirective.When.ON_ACTIVITY_START, viewDirectives)) {
+			replaceLongClickListener(mEventRecorder, v);
+		}
+		if (TestUtils.listenMotionEvents(mMotionEventViews, v) ||
+		    mEventRecorder.matchViewDirective(v, viewClassIndex, ViewDirective.ViewOperation.MOTION_EVENTS,
+					   						  ViewDirective.When.ALWAYS)) {
 			replaceTouchListener(mEventRecorder, v);
 		}
 	}
@@ -577,23 +606,32 @@ public class ViewInterceptor {
 	 * @throws NoSuchFieldException
 	 * @throws ClassNotFoundExceptions
 	 */
-	public static void replaceAdapterViewListeners(EventRecorder eventRecorder, AdapterView adapterView) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
-		AdapterView.OnItemClickListener originalItemClickListener = adapterView.getOnItemClickListener();
-		if (!(originalItemClickListener instanceof RecordOnItemClickListener)) {
-			if (isExpandedMenuViewItemClickListener(originalItemClickListener)) {
-				RecordExpandedMenuViewOnItemClickListener recordItemClickListener = new RecordExpandedMenuViewOnItemClickListener(eventRecorder, originalItemClickListener);
-				adapterView.setOnItemClickListener(recordItemClickListener);	
-			} else {
-				RecordOnItemClickListener recordItemClickListener = new RecordOnItemClickListener(eventRecorder, originalItemClickListener);
-				adapterView.setOnItemClickListener(recordItemClickListener);
-			}
-		}	
-		if (adapterView instanceof AbsListView) {
-			AbsListView absListView = (AbsListView) adapterView;
-			AbsListView.OnScrollListener originalScrollListener = ListenerIntercept.getScrollListener(absListView);
-			if (!(originalScrollListener instanceof RecordOnScrollListener)) {
-				RecordOnScrollListener recordScrollListener = new RecordOnScrollListener(eventRecorder, originalScrollListener);
-				absListView.setOnScrollListener(recordScrollListener);
+	public static void replaceAdapterViewListeners(EventRecorder 		eventRecorder, 
+												   AdapterView 			adapterView,
+												   int 					viewClassIndex,
+												   List<ViewDirective> 	viewDirectives) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
+		if (!ViewDirective.match(adapterView, viewClassIndex, ViewDirective.ViewOperation.IGNORE_ITEM_SELECT_EVENTS, 
+				 				 ViewDirective.When.ON_ACTIVITY_START, viewDirectives)) {
+			AdapterView.OnItemClickListener originalItemClickListener = adapterView.getOnItemClickListener();
+			if (!(originalItemClickListener instanceof RecordOnItemClickListener)) {
+				if (isExpandedMenuViewItemClickListener(originalItemClickListener)) {
+					RecordExpandedMenuViewOnItemClickListener recordItemClickListener = new RecordExpandedMenuViewOnItemClickListener(eventRecorder, originalItemClickListener);
+					adapterView.setOnItemClickListener(recordItemClickListener);	
+				} else {
+					RecordOnItemClickListener recordItemClickListener = new RecordOnItemClickListener(eventRecorder, originalItemClickListener);
+					adapterView.setOnItemClickListener(recordItemClickListener);
+				}
+			}	
+		}
+		if (!ViewDirective.match(adapterView, viewClassIndex, ViewDirective.ViewOperation.IGNORE_SCROLL_EVENTS, 
+				 				 ViewDirective.When.ON_ACTIVITY_START, viewDirectives)) {
+			if (adapterView instanceof AbsListView) {
+				AbsListView absListView = (AbsListView) adapterView;
+				AbsListView.OnScrollListener originalScrollListener = ListenerIntercept.getScrollListener(absListView);
+				if (!(originalScrollListener instanceof RecordOnScrollListener)) {
+					RecordOnScrollListener recordScrollListener = new RecordOnScrollListener(eventRecorder, originalScrollListener);
+					absListView.setOnScrollListener(recordScrollListener);
+				}
 			}
 		}
 
@@ -621,39 +659,53 @@ public class ViewInterceptor {
 	 * replace the text watcher and focus change listeners for a text view (actually EditText, but we're not picky)
 	 * can't be static, because the this has to be passed ot the FocusChangeListener 
 	 * @param tv TextView
+	 * @param viewClassIndex we need this for the ViewDirective, where the text view has to be resolved
+	 * by the class and view index for event suppression and key by key entry, because it doesn't use the
+	 * standard eventRecorder interface, and uses control logic for key listening. TODO: Instead, we should split
+	 * the RecordTextChangedListener() to a setText and enter key by key version when this is instantiated.
 	 * @throws IllegalAccessException ReflectionUtils Exceptions
 	 * @throws NoSuchFieldException
 	 */
-	public void replaceEditTextListeners(TextView tv) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
-		ArrayList<TextWatcher> textWatcherList = ListenerIntercept.getTextWatcherList(tv);
-		if (textWatcherList == null) {
-			textWatcherList = new ArrayList<TextWatcher>();
+	public void replaceEditTextListeners(TextView tv, int viewClassIndex, List<ViewDirective> viewDirectives) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
+		if (!ViewDirective.match(tv, viewClassIndex, ViewDirective.ViewOperation.IGNORE_TEXT_EVENTS, 
+				 				 ViewDirective.When.ON_ACTIVITY_START, viewDirectives)) {
+			ArrayList<TextWatcher> textWatcherList = ListenerIntercept.getTextWatcherList(tv);
+			if (textWatcherList == null) {
+				textWatcherList = new ArrayList<TextWatcher>();
+			}
+			// make sure that we haven't already added the intercepting text watcher.
+			if (!ListenerIntercept.containsTextWatcher(textWatcherList, RecordTextChangedListener.class)) {
+				textWatcherList.add(0, new RecordTextChangedListener(mEventRecorder, tv, viewClassIndex));
+				ListenerIntercept.setTextWatcherList(tv, textWatcherList);
+			}
 		}
-		// make sure that we haven't already added the intercepting text watcher.
-		if (!ListenerIntercept.containsTextWatcher(textWatcherList, RecordTextChangedListener.class)) {
-			textWatcherList.add(0, new RecordTextChangedListener(mEventRecorder, tv));
-			ListenerIntercept.setTextWatcherList(tv, textWatcherList);
-		}
-		// add listener for focus
-		View.OnFocusChangeListener originalFocusChangeListener = tv.getOnFocusChangeListener();
-		if (!(originalFocusChangeListener instanceof RecordOnFocusChangeListener)) {
-			View.OnFocusChangeListener recordFocusChangeListener = new RecordOnFocusChangeListener(mEventRecorder, this, originalFocusChangeListener);
-			tv.setOnFocusChangeListener(recordFocusChangeListener);
+		if (!ViewDirective.match(tv, viewClassIndex, ViewDirective.ViewOperation.IGNORE_FOCUS_EVENTS, 
+				 				 ViewDirective.When.ON_ACTIVITY_START, viewDirectives)) {
+			// add listener for focus
+			View.OnFocusChangeListener originalFocusChangeListener = tv.getOnFocusChangeListener();
+			if (!(originalFocusChangeListener instanceof RecordOnFocusChangeListener)) {
+				View.OnFocusChangeListener recordFocusChangeListener = new RecordOnFocusChangeListener(mEventRecorder, this, originalFocusChangeListener);
+				tv.setOnFocusChangeListener(recordFocusChangeListener);
+			}
 		}
 	}
 	
+	public void callIntercept(Activity a, View v) {
+	    Hashtable<Class,ClassCount> classTable = new Hashtable<Class, ClassCount>();
+	    intercept(a, v, classTable);
+	}
 	/**
 	 * recursively set the intercepting listeners for touch/key/textwatcher events through the view tree
 	 * @param v view to recurse from.
 	 */
-	public void intercept(Activity a, View v) {
-		replaceListeners(a, v);
+	public void intercept(Activity a, View v, Hashtable<Class,ClassCount> classTable) {
+		replaceListeners(a, v, classTable);
 		try {
 			if (v instanceof ViewGroup) {
 				ViewGroup vg = (ViewGroup) v;
 				for (int iChild = 0; iChild < vg.getChildCount(); iChild++) {
 					View vChild = vg.getChildAt(iChild);
-					intercept(a, vChild);
+					intercept(a, vChild, classTable);
 				}
 			}
 		} catch (Exception ex) {
@@ -672,7 +724,7 @@ public class ViewInterceptor {
 	 * @param activity activity to intercept
 	 * @param actionBar actionBar
 	 */
-	public void intercept(Activity activity, ActionBar actionBar) {
+	public void intercept(Activity activity, ActionBar actionBar, Hashtable<Class,ClassCount> classTable) {
         if (actionBar != null) {
         	try {
 	        	View contentView = null;
@@ -683,13 +735,13 @@ public class ViewInterceptor {
 	        		mEventRecorder.writeException(ex, "while intercepting the action bar for " + activity.getClass().getName());
 	        	}
 	        	if (contentView != null) {
-	            	intercept(activity, contentView);
+	            	intercept(activity, contentView, classTable);
 	            }
 	       		InterceptActionBar.interceptActionBarTabListeners(mEventRecorder, actionBar);
 		       	if (actionBar.getCustomView() != null) {
-		        	intercept(activity, actionBar.getCustomView());
+		        	intercept(activity, actionBar.getCustomView(), classTable);
 		        }
-		       	intercept(activity, InterceptActionBar.getActionBarView(actionBar));
+		       	intercept(activity, InterceptActionBar.getActionBarView(actionBar), classTable);
         	} catch (Exception ex) {
         		mEventRecorder.writeException(ex, "while intercepting action bar");
         	}
@@ -714,7 +766,8 @@ public class ViewInterceptor {
         ViewTreeObserver viewTreeObserver = v.getViewTreeObserver();
         viewTreeObserver.addOnGlobalLayoutListener(new OnLayoutInterceptListener(a));
         setFocusedView(null);
-        intercept(a, v);     
+        Hashtable<Class,ClassCount> classTable = new Hashtable<Class, ClassCount>();
+        intercept(a, v, classTable);     
         ActionBar actionBar = a.getActionBar();
         if (actionBar != null) {
         	try {
@@ -729,7 +782,7 @@ public class ViewInterceptor {
         	} catch (Exception ex) {
         		Log.d(TAG, "failed to intercept action bar");
         	}
-        	intercept(a, actionBar);
+        	intercept(a, actionBar, classTable);
         }
        
  	}
@@ -758,15 +811,19 @@ public class ViewInterceptor {
 	        
 	        // recursively generate the hashcode for this view hierarchy, and re-intercept if it's changed.
 			int hashCode = viewTreeHashCode(mActivity.getWindow().getDecorView());
+		    Hashtable<Class,ClassCount> classTable = new Hashtable<Class, ClassCount>();
+		       
 			if (hashCode != mHashCode) {
-				intercept(mActivity, mActivity.getWindow().getDecorView());
+				intercept(mActivity, mActivity.getWindow().getDecorView(), classTable);
 				mHashCode = hashCode;
 			}
 			
 			// do the action bar, since it doesn't seem to get populated until after the activity was created/resumed
 
 			ActionBar actionBar = mActivity.getActionBar();
-	        intercept(mActivity, actionBar);   
+			if (actionBar != null) {
+				intercept(mActivity, actionBar, classTable); 
+			}
 		}
 	}
 
@@ -822,7 +879,7 @@ public class ViewInterceptor {
 				popupWindow.setOnDismissListener(recordOnDismissListener);
 			}
 			View contentView = popupWindow.getContentView();
-			intercept(activity, contentView);
+			callIntercept(activity, contentView);
 		} catch (Exception ex) {
 			mEventRecorder.writeException(ex, "Intercepting popup window");
 		}
@@ -855,7 +912,8 @@ public class ViewInterceptor {
 				}
 			}
 			Window window = dialog.getWindow();
-			intercept(activity, window.getDecorView());
+		    Hashtable<Class,ClassCount> classTable = new Hashtable<Class, ClassCount>();
+			intercept(activity, window.getDecorView(), classTable);
 		} catch (Exception ex) {
 			try {
 				String description = "Intercepting dialog " +  RecordListener.getDescription(dialog);
@@ -929,7 +987,8 @@ public class ViewInterceptor {
 		
 		public void run() {
 			try {
-				ViewInterceptor.this.intercept(mActivity, mView);
+			    Hashtable<Class,ClassCount> classTable = new Hashtable<Class, ClassCount>();
+				ViewInterceptor.this.intercept(mActivity, mView, classTable);
 			} catch (Exception ex) {
 				ViewInterceptor.this.mEventRecorder.writeException(ex, "while trying to intercept view");
 			}

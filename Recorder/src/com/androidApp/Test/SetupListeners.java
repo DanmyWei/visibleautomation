@@ -328,6 +328,7 @@ public class SetupListeners {
 		mScanTimer.cancel();
 	}			
 
+	// TODO: move these to another class.
 	/**
 	 * when the activity is added to the stack, walk through the view hierarchy and intercept the listeners for each view.
 	 * @author matthew
@@ -399,14 +400,19 @@ public class SetupListeners {
 		
 		public void run() {
 			try {
-				SetupListeners.this.getViewInterceptor().intercept(mActivity, mView);
+				SetupListeners.this.getViewInterceptor().callIntercept(mActivity, mView);
 				Class viewRootImplClass = Class.forName(Constants.Classes.VIEW_ROOT_IMPL);
 				ViewParent viewParent = mView.getParent();
-				ViewGroup vg = (ViewGroup) mView;
-				// can't insert under ViewRootImpl
-				for (int i = 0; i < vg.getChildCount(); i++) {
-					View vChild = vg.getChildAt(i);
-					MagicFrame magicFrame = new MagicFrame(mActivity, vChild, 0, SetupListeners.this.getRecorder(), SetupListeners.this.getViewInterceptor());
+				if (viewParent instanceof ViewGroup) {
+					ViewGroup vg = (ViewGroup) mView;
+					// can't insert under ViewRootImpl
+					for (int i = 0; i < vg.getChildCount(); i++) {
+						View vChild = vg.getChildAt(i);
+						MagicFrame magicFrame = new MagicFrame(mActivity, vChild, 0, SetupListeners.this.getRecorder(), SetupListeners.this.getViewInterceptor());
+					}
+				} else {
+					// TODO: this obviously has to be fixed.
+					Log.e(TAG, "we cannot intercept floating windows with non-view groups yet");
 				}
 			} catch (Exception ex) {
 				SetupListeners.this.mRecorder.writeException(ex, "while trying to intercept view");

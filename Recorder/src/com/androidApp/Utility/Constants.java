@@ -241,6 +241,12 @@ public class Constants {
 		public static final String TOUCH_CANCEL = "touch_cancel";
 		public static final String INTERSTITIAL_ACTIVITY = "interstitial_activity";
 		public static final String IGNORE_EVENTS = "ignore_events";
+		public static final String IGNORE_TEXT_EVENTS = "ignore_text_events";
+		public static final String IGNORE_CLICK_EVENTS = "ignore_click_events";
+		public static final String IGNORE_SCROLL_EVENTS = "ignore_scroll_events";
+		public static final String IGNORE_LONG_CLICK_EVENTS = "ignore_long_click_events";
+		public static final String IGNORE_FOCUS_EVENTS = "ignore_focus_events";
+		public static final String IGNORE_ITEM_SELECTED_EVENTS = "ignore_item_selected_events";
 		public static final String MOTION_EVENTS = "motion_events";
 		public static final String COPY_TEXT = "copy_text";
 		public static final String PASTE_TEXT = "paste_text";
@@ -299,7 +305,15 @@ public class Constants {
 	// TODO: this needs to be read from a resource file, but jar files cannot access android resource files
 	public static class DisplayStrings {
 		public static final String VISIBLE_AUTOMATION = "Visible Automation";
-		public static final String IGNORE_EVENTS = "Ignore Events";
+		public static final String IGNORE_EVENTS = "Ignore All Events";
+		public static final String IGNORE_TEXT_EVENTS = "Ignore Text Events";
+		public static final String IGNORE_TOUCH_EVENTS = "Ignore Touch Events";
+		public static final String IGNORE_CLICK_EVENTS = "Ignore Click Events";
+		public static final String IGNORE_LONG_CLICK_EVENTS = "Ignore Long Click Events";
+		public static final String IGNORE_SCROLL_EVENTS = "Ignore Scroll Events";
+		public static final String IGNORE_ITEM_SELECT_EVENTS = "Ignore Item Select Events";
+		public static final String IGNORE_FOCUS_EVENTS = "Ignore Focus Events";
+
 		public static final String COPY_TEXT = "Copy Text To Variable";
 		public static final String PASTE_TEXT = "Paste Text From Variable";
 		public static final String SELECT_BY_TEXT = "Select Items By Text";

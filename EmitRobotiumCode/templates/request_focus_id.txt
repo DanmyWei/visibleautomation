@@ -1,0 +1,4 @@
+		// %DESCRIPTION%
+		%CLASSPATH% view%VARIABLE_INDEX% = (%CLASSPATH%) solo.getView(%ID%);
+		robotiumUtils.requestFocus(view%VARIABLE_INDEX%, %INSERTION_START%, %INSERTION_END%);
+		

@@ -23,6 +23,12 @@ import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.EventRecorder.ViewDirective.ViewOperation;
 import com.androidApp.EventRecorder.ViewDirective.When;
 import com.androidApp.Intercept.MagicOverlay.ClickMode;
+import com.androidApp.Intercept.directivedialogs.CopyDialogClickListener;
+import com.androidApp.Intercept.directivedialogs.OnCompoundButtonSelectionListener;
+import com.androidApp.Intercept.directivedialogs.OnEditTextSelectionListener;
+import com.androidApp.Intercept.directivedialogs.OnListSelectionListener;
+import com.androidApp.Intercept.directivedialogs.OnTextViewSelectionListener;
+import com.androidApp.Intercept.directivedialogs.OnViewSelectionListener;
 import com.androidApp.Test.ActivityInterceptor;
 import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
@@ -35,8 +41,8 @@ import com.androidApp.Utility.Constants;
  */
 public class DirectiveDialogs {
 	protected static final String	TAG = "DirectiveDialogs";
-	protected static final int		EDIT_TEXT_ID = 0x1001;			// id of edit text in dialog
-	protected static final int		LABEL_ID = 0x1002;				// id of edit text in dialog
+	public static final int			EDIT_TEXT_ID = 0x1001;			// id of edit text in dialog
+	public static final int			LABEL_ID = 0x1002;				// id of edit text in dialog
 	protected MagicOverlay 			mMagicOverlay;					// to get the current view selection.
 	protected static Dialog			sCurrentDialog;					// so we don't intercept ourselves
 	
@@ -98,211 +104,6 @@ public class DirectiveDialogs {
 			}
 		}	
 	}
-	
-	public class OnTextViewSelectionListener implements DialogInterface.OnClickListener {
-
-		@Override
-		public void onClick(DialogInterface dialog, int which) {
-			AlertDialog alertDialog = (AlertDialog) dialog;
-			View currentView = DirectiveDialogs.this.getCurrentView();
-			EventRecorder recorder = DirectiveDialogs.this.getEventRecorder();
-			Activity activity = DirectiveDialogs.this.getActivityState().getActivity();
-			try {
-				UserDefinedViewReference ref = DirectiveDialogs.this.getUserDefinedViewReference(currentView, activity);
-				if (which == 0) {
-					DirectiveDialogs.this.getEventRecorder().writeRecord(Constants.EventTags.IGNORE_EVENTS, currentView);
-					ViewDirective ignoreDirective = new ViewDirective(ref, ViewOperation.IGNORE_EVENTS, When.ON_ACTIVITY_START, null);
-					recorder.addViewDirective(ignoreDirective);
-				} else if (which == 1) {
-					DirectiveDialogs.this.getEventRecorder().writeRecord(Constants.EventTags.MOTION_EVENTS, currentView);
-					ViewDirective motionDirective = new ViewDirective(ref, ViewOperation.MOTION_EVENTS, When.ON_ACTIVITY_START, null);
-					recorder.addViewDirective(motionDirective);
-					try {
-						ViewInterceptor.replaceTouchListener(recorder, currentView);
-					} catch (Exception ex) {
-						recorder.writeException(ex, "replace touch listener in directive dialog");
-					}
-				} else if (which == 2) {
-					DirectiveDialogs.this.getEventRecorder().writeRecord(Constants.EventTags.COPY_TEXT, currentView);
-					Dialog newDialog = createTextEntryDialog(currentView.getContext(), Constants.DisplayStrings.COPY_TEXT, new CopyDialogClickListener());
-					newDialog.show();
-				}
-			} catch (IOException ioex) {
-				DirectiveDialogs.setErrorLabel(alertDialog, Constants.DisplayStrings.VIEW_REFERENCE_FAILED);
-			}
-		}
-	}
-	
-	/**
-	 * copy the text from the text view to the named variable
-	 * @author matt2
-	 *
-	 */
-	public class CopyDialogClickListener implements DialogInterface.OnClickListener {
-
-		@Override
-		public void onClick(DialogInterface dialog, int which) {
-			AlertDialog alertDialog = (AlertDialog) dialog;
-			EditText editText = (EditText) alertDialog.findViewById(EDIT_TEXT_ID);
-			String variable = editText.getText().toString();
-			View currentView = DirectiveDialogs.this.getCurrentView();
-			EventRecorder recorder = DirectiveDialogs.this.getEventRecorder();
-			Activity activity = DirectiveDialogs.this.getActivityState().getActivity();
-			recorder.writeRecord(Constants.EventTags.COPY_TEXT, currentView, variable);
-			if (currentView instanceof TextView) {
-				TextView textView = (TextView) currentView;
-				recorder.setVariableValue(variable, textView.getText().toString());
-				try {
-					UserDefinedViewReference ref = DirectiveDialogs.this.getUserDefinedViewReference(currentView, activity);
-					ViewDirective copyDirective = new ViewDirective(ref, ViewOperation.COPY_TEXT, When.ON_ACTIVITY_END, null);
-					recorder.addViewDirective(copyDirective);
-				} catch (IOException ioex) {
-					DirectiveDialogs.setErrorLabel(alertDialog, Constants.DisplayStrings.VIEW_REFERENCE_FAILED);
-				}			
-			} else {
-				DirectiveDialogs.setErrorLabel(alertDialog, Constants.DisplayStrings.VIEW_NOT_TEXT_VIEW);
-			}
-		}
-	}
-	
-	/**
-	 * paste the text from the named variable 
-	 * @author matt2
-	 *
-	 */
-	public class PasteDialogClickListener implements DialogInterface.OnClickListener {
-
-		@Override
-		public void onClick(DialogInterface dialog, int which) {
-			AlertDialog alertDialog = (AlertDialog) dialog;
-			EditText editText = (EditText) alertDialog.findViewById(EDIT_TEXT_ID);
-			String variable = editText.getText().toString();
-			String value = DirectiveDialogs.this.getEventRecorder().getVariableValue(variable);
-			View currentView = DirectiveDialogs.this.getCurrentView();
-			EventRecorder recorder = DirectiveDialogs.this.getEventRecorder();
-			Activity activity = DirectiveDialogs.this.getActivityState().getActivity();
-			if (value != null) {
-				if (currentView instanceof EditText) {
-					EditText viewEditText = (EditText) currentView;
-					viewEditText.setText(value);
-					try {
-						UserDefinedViewReference ref = DirectiveDialogs.this.getUserDefinedViewReference(currentView, activity);
-						ViewDirective copyDirective = new ViewDirective(ref, ViewOperation.COPY_TEXT, When.ON_ACTIVITY_START, null);
-						recorder.addViewDirective(copyDirective);
-					} catch (IOException ioex) {
-						DirectiveDialogs.setErrorLabel(alertDialog, Constants.DisplayStrings.VIEW_REFERENCE_FAILED);						
-					}
-				} else {
-					DirectiveDialogs.setErrorLabel(alertDialog, Constants.DisplayStrings.VIEW_NOT_TEXT_VIEW);
-				}
-			} else {	
-				DirectiveDialogs.setErrorLabel(alertDialog, Constants.DisplayStrings.VARIABLE_NOT_FOUND);
-			}
-		}
-	}
-
-	/**
-	 * context dialog for list views.
-	 * @author matt2
-	 *
-	 */
-	public class OnListSelectionListener implements DialogInterface.OnClickListener {
-
-		@Override
-		public void onClick(DialogInterface dialog, int which) {
-			AlertDialog alertDialog = (AlertDialog) dialog;
-			View currentView = DirectiveDialogs.this.getCurrentView();
-			EventRecorder recorder = DirectiveDialogs.this.getEventRecorder();
-			Activity activity = DirectiveDialogs.this.getActivityState().getActivity();
-			try {
-				UserDefinedViewReference ref = DirectiveDialogs.this.getUserDefinedViewReference(currentView, activity);
-				if (which == 0) {
-					recorder.writeRecord(Constants.EventTags.IGNORE_EVENTS, currentView);
-					ViewDirective ignoreDirective = new ViewDirective(ref, ViewOperation.IGNORE_EVENTS, When.ON_ACTIVITY_START, null);
-					recorder.addViewDirective(ignoreDirective);
-				} else if (which == 1) {
-					recorder.writeRecord(Constants.EventTags.MOTION_EVENTS, currentView);
-					ViewDirective motionDirective = new ViewDirective(ref, ViewOperation.MOTION_EVENTS, When.ON_ACTIVITY_START, null);
-					try {
-						ViewInterceptor.replaceTouchListener(recorder, currentView);
-					} catch (Exception ex) {
-						recorder.writeException(ex, "replace touch listener in directive dialog");
-					}
-					recorder.addViewDirective(motionDirective);
-				} else if (which == 2) {
-					recorder.writeRecord(Constants.EventTags.SELECT_BY_TEXT, currentView);
-					ViewDirective selectDirective = new ViewDirective(ref, ViewOperation.SELECT_BY_TEXT, When.ON_ACTIVITY_START, null);
-					recorder.addViewDirective(selectDirective);
-				}
-			} catch (IOException ioex) {
-				DirectiveDialogs.setErrorLabel(alertDialog, Constants.DisplayStrings.VIEW_REFERENCE_FAILED);
-			}
-		}
-	}
-
-	/**
-	 * context menu for edit texts.
-	 * @author matt2
-	 *
-	 */
-	public class OnEditTextSelectionListener implements DialogInterface.OnClickListener {
-
-		@Override
-		public void onClick(DialogInterface dialog, int which) {
-			AlertDialog alertDialog = (AlertDialog) dialog;
-			View currentView = DirectiveDialogs.this.getCurrentView();
-			EventRecorder recorder = DirectiveDialogs.this.getEventRecorder();
-			Activity activity = DirectiveDialogs.this.getActivityState().getActivity();
-			try {
-				UserDefinedViewReference ref = DirectiveDialogs.this.getUserDefinedViewReference(currentView, activity);
-				if (which == 0) {
-					recorder.writeRecord(Constants.EventTags.IGNORE_EVENTS, currentView);
-					ViewDirective ignoreDirective = new ViewDirective(ref, ViewOperation.IGNORE_EVENTS, When.ON_ACTIVITY_START, null);
-					recorder.addViewDirective(ignoreDirective);
-				} else if (which == 1) {
-					recorder.writeRecord(Constants.EventTags.MOTION_EVENTS, currentView);
-					ViewDirective motionDirective = new ViewDirective(ref, ViewOperation.MOTION_EVENTS, When.ON_ACTIVITY_START, null);
-					recorder.addViewDirective(motionDirective);
-					try {
-						ViewInterceptor.replaceTouchListener(recorder, currentView);
-					} catch (Exception ex) {
-						recorder.writeException(ex, "replace touch listener in directive dialog");
-					}
-				} else if (which == 2) {
-					recorder.writeRecord(Constants.EventTags.COPY_TEXT, currentView);
-					Dialog newDialog = createTextEntryDialog(currentView.getContext(), Constants.DisplayStrings.COPY_TEXT, new CopyDialogClickListener());
-					newDialog.show();
-				} else if (which == 3) {
-					recorder.writeRecord(Constants.EventTags.PASTE_TEXT, currentView);
-					Dialog newDialog = createTextEntryDialog(currentView.getContext(), Constants.DisplayStrings.PASTE_TEXT, new PasteDialogClickListener());
-					newDialog.show();
-				} else if (which == 4) {
-					ViewDirective keyDirective = new ViewDirective(ref, ViewOperation.ENTER_TEXT_BY_KEY, When.ON_ACTIVITY_START, null);
-					recorder.addViewDirective(keyDirective);
-				} 
-			} catch (IOException ioex) {
-				DirectiveDialogs.setErrorLabel(alertDialog, Constants.DisplayStrings.VIEW_REFERENCE_FAILED);
-			}
-		}
-	}
-
-	public class OnCompoundButtonSelectionListener implements DialogInterface.OnClickListener {
-
-		@Override
-		public void onClick(DialogInterface dialog, int which) {
-			View currentView = DirectiveDialogs.this.getCurrentView();
-			EventRecorder recorder = DirectiveDialogs.this.getEventRecorder();
-			if (which == 0) {
-				recorder.writeRecord(Constants.EventTags.IGNORE_EVENTS, currentView);
-			} else if (which == 1) {
-				recorder.writeRecord(Constants.EventTags.MOTION_EVENTS, currentView);
-			} else if (which == 2) {
-				recorder.writeRecord(Constants.EventTags.CHECK, currentView);
-			} else if (which == 3) {
-				recorder.writeRecord(Constants.EventTags.UNCHECK, currentView);
-			}
-		}
-	}
 
 	/**
 	 * context-sensitive menu which brings up operations based on the view type
@@ -314,32 +115,44 @@ public class DirectiveDialogs {
 			View currentView = DirectiveDialogs.this.getCurrentView();
 			if (currentView instanceof EditText) {
 				String[] editTextItems = new String[] { Constants.DisplayStrings.IGNORE_EVENTS, 
+														Constants.DisplayStrings.IGNORE_CLICK_EVENTS,
+														Constants.DisplayStrings.IGNORE_TEXT_EVENTS,
+														Constants.DisplayStrings.IGNORE_FOCUS_EVENTS,
 														Constants.DisplayStrings.MOTION_EVENTS,
 					    								Constants.DisplayStrings.COPY_TEXT,
 					    								Constants.DisplayStrings.PASTE_TEXT,
 					    								Constants.DisplayStrings.INSERT_BY_CHARACTER};
-				Dialog dialog = createSelectionDialog(context, editTextItems, new OnEditTextSelectionListener());
+				Dialog dialog = createSelectionDialog(context, editTextItems, new OnEditTextSelectionListener(DirectiveDialogs.this));
 				dialog.show();				
 			} else if (currentView instanceof TextView) {
 				String[] textViewItems = new String[] { Constants.DisplayStrings.IGNORE_EVENTS, 
+														Constants.DisplayStrings.IGNORE_CLICK_EVENTS,
+														Constants.DisplayStrings.IGNORE_TEXT_EVENTS,
 													 	Constants.DisplayStrings.MOTION_EVENTS,
 													    Constants.DisplayStrings.COPY_TEXT };
-				Dialog dialog = createSelectionDialog(context, textViewItems, new OnTextViewSelectionListener());
+				Dialog dialog = createSelectionDialog(context, textViewItems, new OnTextViewSelectionListener(DirectiveDialogs.this));
 				dialog.show();
 			} else if (currentView instanceof AbsListView) {
 				String[] listViewItems = new String[] { Constants.DisplayStrings.IGNORE_EVENTS,
 														Constants.DisplayStrings.MOTION_EVENTS,
 														Constants.DisplayStrings.SELECT_BY_TEXT };
-				Dialog dialog = createSelectionDialog(context, listViewItems, new OnListSelectionListener());
+				Dialog dialog = createSelectionDialog(context, listViewItems, new OnListSelectionListener(DirectiveDialogs.this));
 				dialog.show();	
 			} else if (currentView instanceof CompoundButton) {
 				String[] compoundButtonItems = new String[] { Constants.DisplayStrings.IGNORE_EVENTS,
 															  Constants.DisplayStrings.MOTION_EVENTS,
 															  Constants.DisplayStrings.CHECK,
 															  Constants.DisplayStrings.UNCHECK };
-				Dialog dialog = createSelectionDialog(context, compoundButtonItems, new OnCompoundButtonSelectionListener());
+				Dialog dialog = createSelectionDialog(context, compoundButtonItems, new OnCompoundButtonSelectionListener(DirectiveDialogs.this));
 				dialog.show();	
-			} 
+			} else { 
+				String[] viewItems = new String[] { Constants.DisplayStrings.IGNORE_EVENTS,
+													Constants.DisplayStrings.IGNORE_CLICK_EVENTS,
+													Constants.DisplayStrings.IGNORE_LONG_CLICK_EVENTS,
+						  							Constants.DisplayStrings.MOTION_EVENTS };
+				Dialog dialog = createSelectionDialog(context, viewItems, new OnViewSelectionListener(DirectiveDialogs.this));
+				dialog.show();	
+			}
 		} 	
 	}
 	
@@ -349,7 +162,7 @@ public class DirectiveDialogs {
 	 * @param listener
 	 * @return
 	 */
-	protected Dialog createTextEntryDialog(Context context, String title, DialogInterface.OnClickListener listener) {
+	public static Dialog createTextEntryDialog(Context context, String title, DialogInterface.OnClickListener listener) {
 		AlertDialog.Builder builder = new AlertDialog.Builder(context);
 		LinearLayout layout = new LinearLayout(context);
 		layout.setOrientation(LinearLayout.VERTICAL);
@@ -382,7 +195,7 @@ public class DirectiveDialogs {
 	}
 	
 	// set the error label in the alert dialog
-	protected static void setErrorLabel(AlertDialog alertDialog, String error) {
+	public static void setErrorLabel(AlertDialog alertDialog, String error) {
 		TextView label = (TextView) alertDialog.findViewById(LABEL_ID);
 		label.setTextColor(0xffff0000);
 		label.setText(error);
@@ -394,7 +207,7 @@ public class DirectiveDialogs {
 	* @return AlertDialog builder
 	*/
 	
-	protected Dialog createSelectionDialog(Context context, String[] items, DialogInterface.OnClickListener listener) {
+	public static Dialog createSelectionDialog(Context context, String[] items, DialogInterface.OnClickListener listener) {
 		AlertDialog.Builder builder = new AlertDialog.Builder(context);
 		builder.setItems(items,  listener);
 		builder.setTitle(Constants.DisplayStrings.VISIBLE_AUTOMATION);
@@ -413,8 +226,6 @@ public class DirectiveDialogs {
 	 */
 	public UserDefinedViewReference getUserDefinedViewReference(View currentView, Activity activity) throws IOException {
 		EventRecorder recorder = getEventRecorder();
-		ViewReference viewReference = recorder.getViewReference();
-		Instrumentation instrumentation = recorder.getInstrumentation();
 		return new UserDefinedViewReference(recorder.getInstrumentation(), recorder.getViewReference(), currentView, activity);
 	}
 }

@@ -154,6 +154,7 @@ public class CreateRobotiumRecorder  {
 	public void createFolders(IProject testProject) {
 		IFolder sourceFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.SRC);
 		IFolder resFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.RES);
+		IFolder assetsFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.ASSETS);
 	}
 	
 	/**

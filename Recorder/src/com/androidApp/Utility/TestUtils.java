@@ -26,6 +26,7 @@ import android.view.Window;
 import android.widget.Adapter;
 import android.widget.AdapterView;
 import android.widget.AutoCompleteTextView;
+import android.widget.Button;
 import android.widget.PopupWindow;
 import android.widget.Spinner;
 import android.widget.TabHost;
@@ -650,6 +651,17 @@ public class TestUtils {
 			return motionEventViewList.contains(v);
 		}
 		return false;
+	}
+	
+	/**
+	 * we put a wrapper function in here, because the developer may want to specify custom
+	 * controls which don't derive from button, but do take click events.
+	 * TODO: this needs 
+	 * @param v
+	 * @return
+	 */
+	public static boolean listenClickEvents(View v) {
+		return (v instanceof Button);
 	}
 	/**
 	 * given a view inside of an adapter view, find the index of its containing item in the adapter view.

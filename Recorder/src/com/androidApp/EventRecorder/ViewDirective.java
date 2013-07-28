@@ -19,15 +19,36 @@ import com.androidApp.Utility.Constants;
  */
 public class ViewDirective {
 	public enum ViewOperation {
-		COPY_TEXT,				// <view_reference>,copy_text,<when>,variable_name
-		PASTE_TEXT,				// <view_reference>,paste_text,<when>,variable_name
-		CHECK,					// <view_reference>,check,<when>
-		UNCHECK,				// <view_reference>,uncheck,<when>
-		MOTION_EVENTS,			// <view_reference>,motion_events,on_activity_start
-		IGNORE_EVENTS,			// <view_reference>,ignore_events,on_activity_start
-		SELECT_BY_TEXT,			// <view_reference>,select_by_text,on_activity_start
-		ENTER_TEXT_BY_KEY		// <view_reference>,enter_text_by_key,on_actvity_start		
+		COPY_TEXT("copy_text"),									// <view_reference>,copy_text,<when>,variable_name
+		PASTE_TEXT("paste_text"),								// <view_reference>,paste_text,<when>,variable_name
+		CHECK("check"),											// <view_reference>,check,<when>
+		UNCHECK("uncheck"),										// <view_reference>,uncheck,<when>
+		MOTION_EVENTS("motion_events"),							// <view_reference>,motion_events,on_activity_start
+		IGNORE_EVENTS("ignore_events"),							// <view_reference>,ignore_events,on_activity_start
+		SELECT_BY_TEXT("select_by_text"),						// <view_reference>,select_by_text,on_activity_start
+		ENTER_TEXT_BY_KEY("enter_text_by_key"),					// <view_reference>,enter_text_by_key,on_actvity_start		
+		IGNORE_TOUCH_EVENTS("ignore_touch_events"),				// <view_reference>,ignore_events,on_activity_start (all following are same)
+		IGNORE_FOCUS_EVENTS("ignore_focus_events"),
+		IGNORE_CLICK_EVENTS("ignore_click_events"),
+		IGNORE_LONG_CLICK_EVENTS("ignore_long_click_events"),
+		IGNORE_SCROLL_EVENTS("ignore_scroll_events"),
+		IGNORE_ITEM_SELECT_EVENTS("ignore_item_select_events"),
+		IGNORE_TEXT_EVENTS("ignore_text_events");		
 		
+		public String mName;
+		
+		private ViewOperation(String name) {
+			mName = name;
+		}
+		
+		static ViewOperation get(String name) {
+			for (ViewOperation operation : ViewOperation.values()) {
+				if (operation.mName.equals(name)) {
+					return operation;
+				}
+			}
+			return null;
+		}
 	}
 	public enum When {
 		ON_ACTIVITY_START,		// perform the operation when the activity starts
@@ -76,7 +97,7 @@ public class ViewDirective {
 		mViewReference = new UserDefinedViewReference(s);
 		String[] tokens = s.split("[:,]");
 		int startToken = mViewReference.getTokenCount();
-		mOperation = ViewDirective.operationFromString(tokens[startToken]);
+		mOperation = ViewOperation.get(tokens[startToken]);
 		mWhen = ViewDirective.whenFromString(tokens[startToken + 1]);
 		if (tokens.length > startToken + 2) {
 			mVariable = tokens[startToken + 2];
@@ -137,64 +158,13 @@ public class ViewDirective {
 	 */
 	public String toString() {
 		try {
-			String s = mViewReference.toString() + "," + operationToString(mOperation) + "," + whenToString(mWhen);
+			String s = mViewReference.toString() + "," + mOperation.mName + "," + whenToString(mWhen);
 			if (mVariable != null) {
 				s += "," + mVariable;
 			}
 			return s;
 		} catch (ReferenceException rex) {
 			return "bogus view directive";
-		}
-	}
-	
-	/**
-	 * parse the operation of the directive from a string
-	 * @param s
-	 * @return
-	 * @throws ReferenceException
-	 */
-	public static ViewOperation operationFromString(String s) throws ReferenceException {
-		if (s.equals(Constants.EventTags.COPY_TEXT)) {
-			return ViewOperation.COPY_TEXT;
-		} else if (s.equals(Constants.EventTags.PASTE_TEXT)) {
-			return ViewOperation.PASTE_TEXT;
-		} else if (s.equals(Constants.EventTags.CHECK)) {
-			return ViewOperation.CHECK;
-		} else if (s.equals(Constants.EventTags.UNCHECK)) {
-			return ViewOperation.UNCHECK;
-		} else if (s.equals(Constants.EventTags.MOTION_EVENTS)) {
-			return ViewOperation.MOTION_EVENTS;
-		} else if (s.equals(Constants.EventTags.IGNORE_EVENTS)) {
-			return ViewOperation.IGNORE_EVENTS;
-		} else if (s.equals(Constants.EventTags.SELECT_BY_TEXT)) {
-			return ViewOperation.SELECT_BY_TEXT;
-		} else if (s.equals(Constants.EventTags.ENTER_TEXT_BY_KEY)) {
-			return ViewOperation.ENTER_TEXT_BY_KEY;
-		}else {
-			throw new ReferenceException("unable to parse operation from " + s);
-		}
-	}
-	
-	public static String operationToString(ViewOperation operation) throws ReferenceException {
-		switch (operation) {
-		case COPY_TEXT:
-			return Constants.EventTags.COPY_TEXT;
-		case PASTE_TEXT:	
-			return Constants.EventTags.PASTE_TEXT;
-		case CHECK:	
-			return Constants.EventTags.CHECK;
-		case UNCHECK:
-			return Constants.EventTags.UNCHECK;
-		case MOTION_EVENTS:
-			return Constants.EventTags.MOTION_EVENTS;
-		case IGNORE_EVENTS:
-			return Constants.EventTags.IGNORE_EVENTS;
-		case SELECT_BY_TEXT:
-			return Constants.EventTags.SELECT_BY_TEXT;
-		case ENTER_TEXT_BY_KEY:
-			return Constants.EventTags.ENTER_TEXT_BY_KEY;
-		default:
-			throw new ReferenceException("view operation " + operation + " unknown");
 		}
 	}
 	

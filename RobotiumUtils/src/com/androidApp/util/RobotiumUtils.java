@@ -2,6 +2,7 @@ package com.androidApp.util;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 import com.jayway.android.robotium.solo.Solo;
 
@@ -57,7 +58,6 @@ public class RobotiumUtils {
 	protected static int TEXT_FOCUS_TIMEOUT_MSEC = 5000;							// time to wait for text focus (obviously should be much shorter than this
 	protected static ActivityMonitorRunnable	sActivityMonitorRunnable = null;	// so we can "expect" activity transitions
 	protected Instrumentation					mInstrumentation;					// instrumentation handle
-
 	/**
 	 * This has to be called before getActivity(), so it can intercept the first activity.
 	 * @param instrumentation
@@ -739,6 +739,43 @@ public class RobotiumUtils {
 		// send the actual key events.
 		for (int keyEventCode : keyEventCodes) {
 			mInstrumentation.sendKeyDownUpSync(keyEventCode);	
+		}
+	}
+	
+	/**
+	 * add an activity handler to the activity handler list.
+	 * @param activityHandler
+	 */
+	public void addActivityHandler(Class<? extends Activity> cls, IActivityHandler activityHandler) {
+		sActivityMonitorRunnable.addActivityHandler(cls, activityHandler);
+	}
+	
+	public void requestFocus(View v, int startInsertion, int endInsertion) {
+		mInstrumentation.runOnMainSync(new RequestFocusRunnable(v, startInsertion, endInsertion));
+	}
+	
+	protected class RequestFocusRunnable implements Runnable {
+		protected View 	mView;
+		protected int 	mStartInsertion;
+		protected int 	mEndInsertion;
+		
+		public RequestFocusRunnable(View view, int startInsertion, int endInsertion) {
+			mView = view;
+			mStartInsertion = startInsertion;
+			mEndInsertion = endInsertion;
+		}
+		public RequestFocusRunnable(View view) {
+			mView = view;
+			mStartInsertion = -1;
+			mEndInsertion = -1;
+		}
+		
+		public void run() {
+			mView.requestFocus();
+			if ((mStartInsertion != -1) && (mEndInsertion != -1) && (mView instanceof EditText)) {
+				EditText et = (EditText) mView;
+				et.setSelection(mStartInsertion, mEndInsertion);
+			}
 		}
 	}
 	

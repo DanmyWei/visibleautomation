@@ -10,6 +10,7 @@ import android.content.DialogInterface;
 import android.os.SystemClock;
 import android.view.View;
 import android.widget.Spinner;
+import android.widget.TextView;
 
 /**
  * wrapper class to receive focus change events.
@@ -59,7 +60,13 @@ public class RecordOnFocusChangeListener extends RecordListener implements View.
 			setEventBlock(true);
 			try {
 				if (hasFocus) {
-					mEventRecorder.writeRecord(Constants.EventTags.GET_FOCUS, v);
+					if (v instanceof TextView) {
+						TextView tv = (TextView) v;
+						String msg = Integer.toString(tv.getSelectionStart()) + "," +  Integer.toString(tv.getSelectionEnd());
+						mEventRecorder.writeRecord(Constants.EventTags.GET_FOCUS, v, msg);
+					} else {
+						mEventRecorder.writeRecord(Constants.EventTags.GET_FOCUS, v);
+					}
 				} else {
 					mEventRecorder.writeRecord(Constants.EventTags.LOSE_FOCUS, v);
 				}

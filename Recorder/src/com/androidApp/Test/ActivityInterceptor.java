@@ -18,6 +18,7 @@ import android.app.Instrumentation;
 import android.app.Instrumentation.ActivityMonitor;
 import android.content.Context;
 import android.content.IntentFilter;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
@@ -284,6 +285,23 @@ public class ActivityInterceptor {
 	}
 	
 	/**
+	 * see if the activity actually requested this orientation (note that we have rotations from the screen
+	 * Note that the newRotation is 0,1,2,3 (0 and 2 are portrait, 1 and 3 are landscape), and the activity 
+	 * orientation is the Activity.SCREEN_ORIENTATION enumeration.
+	 * NOTE: we also need to check configChanges in the activity, since if they are handled through
+	 * onConfigurationChanged(), then the activity is not destroyed
+	 * @param activity
+	 * @param newRotation
+	 * @return
+	 */
+	private static boolean activityRequestedOrientation(Activity activity, int newRotation) {
+		int orientation = activity.getRequestedOrientation();
+		return (((orientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) && (newRotation == 1)) ||
+				((orientation == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT) && (newRotation == 0)) || 
+				((orientation == ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE) && (newRotation == 3)) ||
+				((orientation == ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT) && (newRotation == 2)));
+	}
+	/**
 	 * record a rotation, which shows up as the activity being destroyed, re-created, and the display rotation changing.
 	 * This creates 3 activity events rather than the normal 2
 	 * @param recorder event recorder
@@ -291,16 +309,22 @@ public class ActivityInterceptor {
 	 * @param newRotation current rotation returned from display (Surface.ROTATION_0, etc)
 	 */
 	public void recordRotation(EventRecorder recorder, ViewInterceptor viewInterceptor, Activity activityA, int newRotation) {
-		Activity activityB = mActivityMonitor.waitForActivity();
-
-		recorder.writeRotation(activityB, newRotation);
-		if (!activityA.equals(activityB)) {
-			replaceLastActivity(activityB);
-			Activity activityBAgain = mActivityMonitor.waitForActivity();
-			if (activityBAgain != activityB) {
-				recorder.writeRecord(Constants.EventTags.EXCEPTION, "rotated activities did not match");
+		if (activityRequestedOrientation(activityA, newRotation)) {
+			Log.i(TAG, "the activity requested the orientation. It is not an event");
+			recordActivityForward(recorder, viewInterceptor, activityA);
+		} else {
+			Activity activityB = mActivityMonitor.waitForActivity();
+	
+			recorder.writeRotation(activityB, newRotation);
+			if (!activityA.equals(activityB)) {
+				replaceLastActivity(activityB);
+				Activity activityBAgain = mActivityMonitor.waitForActivity();
+				if (activityBAgain != activityB) {
+					recorder.writeRecord(Constants.EventTags.EXCEPTION, "rotated activities did not match");
+				}
+				// TODO: check if we need to re-insert listeners on this activity.
+				MagicFrame.insertMagicFrame(mInstrumentation, peekActivityOnStack(), recorder, viewInterceptor);
 			}
-			MagicFrame.insertMagicFrame(mInstrumentation, peekActivityOnStack(), recorder, viewInterceptor);
 		}
 	}
 	

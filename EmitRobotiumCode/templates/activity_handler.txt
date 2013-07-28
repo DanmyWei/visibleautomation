@@ -1,0 +1,1 @@
+	robotiumUtils.addActivityHandler(%ACTIVITY%.class, new %HANDLER%(solo, robotiumUtils));

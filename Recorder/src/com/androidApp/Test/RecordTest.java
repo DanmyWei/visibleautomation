@@ -7,6 +7,7 @@ import java.util.List;
 import com.androidApp.EventRecorder.UserDefinedViewReference;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.FileUtils;
+import com.androidApp.Utility.SaveState;
 import com.androidApp.Utility.TestUtils;
 
 import android.app.Activity;
@@ -55,6 +56,7 @@ public abstract class RecordTest<T extends Activity, S extends RecordTest> exten
         	Log.i(TAG, "did not read any user-defined interstitial activities");
         }
 		mSetupListeners = new SetupListeners(getInstrumentation(), sActivityClass, this, false);
+		SaveState.backupDatabases(getInstrumentation().getTargetContext());
 		initializeResources();
 	}
 

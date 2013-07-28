@@ -5,6 +5,7 @@ import java.io.IOException;
 
 import android.content.Context;
 import android.os.Environment;
+import android.util.Log;
 
 /**
  * copy the database,shared_prefs and files directory contents back into the application directory
@@ -14,6 +15,7 @@ import android.os.Environment;
  *
  */
 public class SaveState {
+	protected static String TAG = "SaveState";
 	
 	/**
 	 * back up the databases referenced by this application to the sdcard
@@ -26,8 +28,11 @@ public class SaveState {
 		File appDatabaseDir = new File(appDatabaseDirName);
 		String backupDatabaseDirName = Environment.getExternalStorageDirectory() + File.separator + context.getPackageName() + File.separator + "databases";
 		File backupDatabaseDir = new File(backupDatabaseDirName);
-		backupDatabaseDir.mkdirs();
-		FileUtils.copyFileList(appDatabaseDir, backupDatabaseDir, databases);
+		if (!backupDatabaseDir.mkdirs()) {
+			Log.e(TAG, "failed to create backup database directory " + backupDatabaseDirName);
+		} else {
+			FileUtils.copyFileList(appDatabaseDir, backupDatabaseDir, databases);
+		}
 	}
 	
 	/**
@@ -55,8 +60,12 @@ public class SaveState {
 		String backupPrefsDirName = Environment.getExternalStorageDirectory() + File.separator + context.getPackageName() + File.separator + "shared_prefs";
 		File backupPrefsDir = new File(backupPrefsDirName);
 		backupPrefsDir.mkdirs();
-		String[] prefsFileList = appPrefsDir.list();
-		FileUtils.copyFileList(appPrefsDir, backupPrefsDir, prefsFileList);
+		if (!backupPrefsDir.mkdirs()) {
+			Log.e(TAG, "failed to create backup database directory " + backupPrefsDirName);
+		} else {
+			String[] prefsFileList = appPrefsDir.list();
+			FileUtils.copyFileList(appPrefsDir, backupPrefsDir, prefsFileList);
+		}
 	}
 	
 	public static void restorePreferences(Context context, String testName) throws IOException {
@@ -79,8 +88,12 @@ public class SaveState {
 		String backupFilesDirName = Environment.getExternalStorageDirectory() + File.separator + context.getPackageName() + File.separator + "files";
 		File backupFilesDir = new File(backupFilesDirName);
 		backupFilesDir.mkdirs();
-		String[] filesFileList = appFilesDir.list();
-		FileUtils.copyFileList(appFilesDir, backupFilesDir, filesFileList);
+		if (!backupFilesDir.mkdirs()) {
+			Log.e(TAG, "failed to create backup database directory " + backupFilesDirName);
+		} else {
+			String[] filesFileList = appFilesDir.list();
+			FileUtils.copyFileList(appFilesDir, backupFilesDir, filesFileList);
+		}
 	}
 	
 	public static void restoreLocalFiles(Context context, String testName) throws IOException {	

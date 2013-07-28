@@ -76,7 +76,7 @@ public class InterceptOnHierarchyChangeListener extends RecordListener implement
 	@Override
 	public void onChildViewAdded(View parent, View child) {
 		if (!mViewInterceptor.runDeferred(parent, mViewInterceptor.new InterceptViewRunnable(mActivity, child))) {
-			mViewInterceptor.intercept(mActivity, child);
+			mViewInterceptor.callIntercept(mActivity, child);
 		}
 		if (mOriginalOnHierarchyChangeListener != null) {
 			mOriginalOnHierarchyChangeListener.onChildViewAdded(parent, child);

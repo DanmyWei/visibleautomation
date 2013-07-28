@@ -11,6 +11,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.StringBufferInputStream;
+import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map.Entry;
@@ -18,11 +19,15 @@ import java.util.Map.Entry;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.preferences.IPreferencesService;
 import org.eclipse.jdt.core.ICompilationUnit;
+import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IPackageFragment;
+import org.eclipse.jdt.core.IPackageFragmentRoot;
+import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
 
 import com.androidApp.emitter.EmitRobotiumCode;
@@ -56,15 +61,18 @@ public class GenerateRobotiumTestCode {
 	 * res/values - directory for strings and stuff
 	 * libs - directory for libraries (specifically the robotium jar)
 	 * gen - for generated android files
+	 * test.output.class.name.handlers - handlers package
 	 * @param testProject reference to project to create directories under
+	 * @param java class of the output.test.class.code so we can create the handlers subdirectory
 	 */
-	public void createFolders(IProject testProject) throws IOException {
+	public void createFolders(IProject testProject) throws IOException, CoreException {
 		IFolder libFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.LIBS);
 		IFolder srcFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.SRC);
 		IFolder resFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.RES);
 		IFolder drawableFolder = EclipseUtility.createFolder(resFolder, Constants.Dirs.DRAWABLE);
 		IFolder genFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.GEN);
 		IFolder assetsFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.ASSETS);
+
 	}
 	
 	public void writeBuildXML(IProject project, String targetClassPath) throws CoreException, IOException {
@@ -208,10 +216,18 @@ public class GenerateRobotiumTestCode {
 	 * @param outputCodeFileName output java file
 	 * @throws IOException
 	 */
-	public void writeTestCode(IEmitCode emitter, List<LineAndTokens> lines, String packagePath, String testClassName, String outputCodeFileName) throws IOException {
+
+	public void writeTestCode(IEmitCode 			emitter, 
+							  List<LineAndTokens> 	lines, 
+							  String 				packagePath, 
+							  String 				testClassName, 
+							  List<String> 			interstitialActivities, 
+							  List<String> 			interstitialActivityHandlers, 
+							  String 				outputCodeFileName) throws IOException {
 		// write the header template, the emitter output, and the trailer temoplate.
 		BufferedWriter bw = new BufferedWriter(new FileWriter(outputCodeFileName));
-		emitter.writeHeader(emitter.getApplicationClassPath(), packagePath, testClassName, emitter.getApplicationClassName(), bw);
+		emitter.writeHeader(emitter.getApplicationClassPath(), packagePath, testClassName, 
+							interstitialActivities, interstitialActivityHandlers, emitter.getApplicationClassName(), bw);
 		String testFunction = FileUtility.readTemplate(Constants.Templates.TEST_FUNCTION);
 		bw.write(testFunction);
 		emitter.writeLines(bw, lines);
@@ -317,4 +333,140 @@ public class GenerateRobotiumTestCode {
 			}
 		}
 	}
+	
+	public static List<String> getHandlerNames(IProject project,IFolder handlerFolder) throws CoreException {
+		List<String> handlerNames = new ArrayList<String>();
+		IResource[] members = handlerFolder.members();
+		for (IResource candFile : members) {
+			String fileName = candFile.getName();
+			if (fileName.endsWith(Constants.Extensions.JAVA)) {
+				String functionName = fileName.substring(0, fileName.length() - 5);
+				handlerNames.add(functionName);
+			}
+		}
+		return handlerNames;
+	}
+	
+	
+	public static List<String> getHandlerActivityNames(IProject project, IFolder handlerFolder) throws CoreException{
+		List<String> activityNames = new ArrayList<String>();
+		IResource[] members = handlerFolder.members();
+		int fileMatchCount = 0;
+		for (IResource candFile : members) {
+			String fileName = candFile.getName();
+			if (fileName.endsWith(Constants.Extensions.JAVA) && fileName.startsWith(Constants.INTERSTITIAL_ACTIVITY_HANDLER)) {
+				int prefixLength = Constants.INTERSTITIAL_ACTIVITY_HANDLER.length();
+				String activityName = fileName.substring(0, fileName.length() - 5).substring(prefixLength);
+				activityNames.add(activityName);
+			}			
+		}
+		return activityNames;
+		
+	}
+	
+	/**
+	 * write the code for the test class, the interstitial activity handlers, save the state files for
+	 * databases, local files and the SQLite databases, and write the motion events.
+	 * @param emitter the code generator
+	 * @param outputCode the hashtable of lines generated by the emitter for "main", and for the interstitial
+	 * activity handlers
+	 * @param motionEvents list of lists of motion events recorded
+	 * @param testProject eclipse project reference to the output test project
+	 * @param testPackage fully.qualified.java.class.package.test
+	 * @param appName name of the *tested* main activity class.
+	 * @param testClassPath filesystem path to the output test class
+	 * @param testClassName Actual output file name
+	 */
+	public void writeTheCode(IEmitCode 								emitter, 
+							 Hashtable<String, List<LineAndTokens>> outputCode,
+							 List<MotionEventList> 					motionEvents,
+							 IProject 								testProject, 
+							 String 								testPackage,
+							 String 								appName,
+							 String 								testClassPath, 
+							 String 								testClassName) throws CoreException, IOException {
+		IFolder srcFolder = testProject.getFolder(Constants.Dirs.SRC);
+		List<LineAndTokens> mainCode = outputCode.get(Constants.MAIN);
+	
+		// write out the test code, first to a temporary file, then to the actual project file.
+		String handlerDirName = FileUtility.sourceDirectoryFromClassName(testPackage) + File.separator + Constants.Dirs.HANDLERS;
+	
+		// get all the handler names and the associated activities from the handlers directory
+		IFolder handlerFolder = srcFolder.getFolder(handlerDirName);
+		List<String> interstitialActivityHandlers = getHandlerNames(testProject, handlerFolder);
+		List<String> interstitialActivities = getHandlerActivityNames(testProject, handlerFolder);
+		
+		// create the java project (or access it if it already exists
+		IJavaProject javaProject = JavaCore.create(testProject);
+		IPackageFragmentRoot packRoot = javaProject.getPackageFragmentRoot(srcFolder);
+		packRoot.open(null);
+		IPackageFragment pack = packRoot.getPackageFragment(testPackage);
+		
+		// write out the interstitial handlers first, since the code generator will need to reference them
+		// by scanning the output filder
+		writeInterstitalHandlers(pack, emitter, outputCode, testClassPath);
+		
+		// write the test code out to a temporary file, read it into a string and create the "compilation unit"
+		// that eclipse likes to refer to
+		String projectFileOutput = testClassName + "." + Constants.Extensions.JAVA;
+		writeTestCode(emitter, mainCode, testPackage, testClassName, interstitialActivities, interstitialActivityHandlers, Constants.Filenames.OUTPUT);
+		String testCode = FileUtility.readToString(new FileInputStream(Constants.Filenames.OUTPUT));
+		ICompilationUnit classFile = pack.createCompilationUnit(projectFileOutput, testCode, true, null);	
+		
+		// write the motion events into the assets directory, and copy the state files from the device
+		writeMotionEvents(testProject, testClassName, motionEvents);
+		saveStateFiles(Constants.Dirs.EXTERNAL_STORAGE, testClassName, appName, testProject);
+		packRoot.close();
+	}
+	
+	/**
+	 * create the folders, .project, .classpath, AndroidManfest.xml, and project.properties files for a project. Copy the
+	 * robotium and robotiumutils libraries to the libs ir
+	 * @param testProject test project that we're creating
+	 * @param emitter emitter so we can get the package and stuff.
+	 * @param androidTarget target platform (like android-14, or something like that.
+	 * @param projectName name of the project to create (check if this is the same as testClassName)
+	 * @param testPackage fully.qualified.java.class.package.test
+	 * @param testClassPath filesystem path to the output test class
+	 * @param testClassName Actual output file name
+	 * @throws CoreException
+	 * @throws IOException
+	 */
+
+	public void createProject(IProject 	testProject, 
+							  IEmitCode emitter,
+							  String 	androidTarget,
+							  String 	projectName,
+							  String 	testPackage,
+							  String 	testClassPath,
+							  String 	testClassName) throws CoreException, IOException {
+		// create the java project and required subfolders.
+		IFolder srcFolder = testProject.getFolder(Constants.Dirs.SRC);
+		IJavaProject javaProject = EclipseUtility.createJavaNature(testProject);
+		createFolders(testProject);
+		
+		// write the project.properties file with the android targets
+		createProjectProperties(testProject, androidTarget, projectName);
+		createProject(testProject, projectName);
+
+		// create the build.xml, AndroidManifest.xml, and .classpath files
+		writeBuildXML(testProject, emitter.getApplicationClassPath());
+		writeManifest(testProject, testClassName, testClassPath, emitter.getApplicationPackage());
+		writeResources(testProject);				
+		writeClasspath(testProject,  projectName, Constants.Filenames.ROBOTIUM_JAR);
+		copyJarToLibs(testProject, Constants.Filenames.UTILITY_JAR);
+		copyJarToLibs(testProject, Constants.Filenames.ROBOTIUM_JAR);
+
+		// create the package for the test code, then write the AllTests.java driver which executes all of the unit tests
+		IPackageFragment packCode = javaProject.getPackageFragmentRoot(srcFolder).createPackageFragment(testPackage, false, null);
+		packCode.open(null);
+		copyTestDriverFile(packCode, testPackage, emitter.getApplicationClassPath());
+		packCode.close();
+		
+		// create the handlers folder
+		String handlerPackage = testPackage + "." + Constants.Dirs.HANDLERS;
+		IPackageFragment packHandler = javaProject.getPackageFragmentRoot(srcFolder).createPackageFragment(handlerPackage, false, null);
+
+	}
+
 }

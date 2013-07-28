@@ -53,10 +53,17 @@ public class GenerateRobotiumTestCodeBinary extends GenerateRobotiumTestCode {
 	}
 
 	@Override
-	public void writeTestCode(IEmitCode emitter, List<LineAndTokens> lines, String packagePath, String testClassName, String outputCodeFileName) throws IOException {
+	public void writeTestCode(IEmitCode 			emitter, 
+							  List<LineAndTokens> 	lines, 
+							  String 				packagePath, 
+							  String 				testClassName, 
+							  List<String> 			interstitialActivities, 
+							  List<String> 			interstitialActivityHandlers, 
+							  String 				outputCodeFileName) throws IOException {
 		// write the header template, the emitter output, and the trailer temoplate.
 		BufferedWriter bw = new BufferedWriter(new FileWriter(outputCodeFileName));
-		emitter.writeHeader(emitter.getApplicationClassPath(), packagePath, testClassName, emitter.getApplicationClassName(), bw);
+		emitter.writeHeader(emitter.getApplicationClassPath(), packagePath, testClassName, 
+						    interstitialActivities, interstitialActivityHandlers,emitter.getApplicationClassName(), bw);
 		String testFunction = FileUtility.readTemplate(Constants.Templates.BINARY_TEST_FUNCTION);
 		bw.write(testFunction);
 		emitter.writeLines(bw, lines);

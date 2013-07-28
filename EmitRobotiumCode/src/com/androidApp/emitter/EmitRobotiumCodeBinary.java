@@ -27,13 +27,42 @@ public class EmitRobotiumCodeBinary extends EmitRobotiumCodeSource {
 	 * @param bw output BufferedWriter
 	 * @throws IOException
 	 */
-	public void writeHeader(String classPath, String testPackage, String testClassName, String className, BufferedWriter bw) throws IOException {
+	public void writeHeader(String 			classPath, 
+						    String 			testPackage, 
+						    String 			testClassName, 
+						    List<String> 	interstitialActivities, 
+						    List<String> 	interstitialActivityHandlers, 
+						    String 			className, 
+						    BufferedWriter 	bw) throws IOException {
 		String header = FileUtility.readTemplate(Constants.Templates.BINARY_HEADER);
+		String activityHandlers = writeActivityHandlers(interstitialActivities, interstitialActivityHandlers);
+		String handlerImports = writeActivityHandlerImports(interstitialActivityHandlers, testPackage);
+		header = header.replace(Constants.VariableNames.ACTIVITY_HANDLERS, activityHandlers);
+		header = header.replace(Constants.VariableNames.HANDLER_IMPORTS, handlerImports);
 		header = header.replace(Constants.VariableNames.TESTPACKAGE, testPackage);
 		header = header.replace(Constants.VariableNames.CLASSPATH, classPath);
 		header = header.replace(Constants.VariableNames.CLASSNAME, className);
 		header = header.replace(Constants.VariableNames.TESTCLASSNAME, testClassName);
 		bw.write(header);
+	}
+	
+	/**
+	 * write the activity handlers
+	 * @param handlerNames names of the handler classes
+	 * @param activityNames names of the activities that they are registered for
+	 * @return string to insert into the header.txt file
+	 */
+	public String writeActivityHandlers(List<String> handlerNames, List<String> activityNames) throws IOException {
+		StringBuffer sbHandlerList = new StringBuffer();
+		for (int i = 0; i < handlerNames.size(); i++) {
+			String handlerExpr = FileUtility.readTemplate(Constants.Templates.ACTIIVTY_HANDLER_BINARY);
+			String handler = handlerNames.get(i);
+			String activity = activityNames.get(i);	
+			handlerExpr = handlerExpr.replace(Constants.VariableNames.HANDLER, handler);
+			handlerExpr = handlerExpr.replace(Constants.VariableNames.ACTIVITY, activity);
+			sbHandlerList.append(handlerExpr);
+		}
+		return sbHandlerList.toString();			
 	}
 	
 	/**
