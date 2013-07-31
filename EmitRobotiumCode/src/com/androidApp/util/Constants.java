@@ -1,5 +1,7 @@
 package com.androidApp.util;
 
+import java.io.File;
+
 /**
  * Constants used in the robotium code emitter
  * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
@@ -21,6 +23,7 @@ public class Constants {
 	public static final String INTERNAL_CLASS_INDEX = "internal_class_index";
 	public static final String MAIN = "main";
 	public static final String INTERSTITIAL_ACTIVITY_HANDLER = "InterstitialActivityHandler";
+	public static final String DIALOG_HANDLER = "DialogHandler";
 	
 	// environment variables
 	public static class Env {
@@ -55,7 +58,12 @@ public class Constants {
 		GROUP_CLICK("group_click"),
 		HIDE_IME_BACK_KEY("hide_ime_back_key"),	
 		ACTIVITY_BACK_KEY("activity_back_key"), 
-		GET_FOCUS("get_focus");
+		GET_FOCUS("get_focus"),
+		INTERSTITIAL_DIALOG_TITLE_ID("interstitial_dialog_title_id"),
+		INTERSTITIAL_DIALOG_TITLE_TEXT("interstitial_dialog_title_text"),
+		INTERSTITIAL_DIALOG_CONTENTS_ID("interstitial_dialog_contents_id"),
+		INTERSTITIAL_DIALOG_CONTENTS_TEXT("interstitial_dialog_contents_text");
+
 		
 		public final String mEventName;		
 		private UserEvent(String s) {
@@ -235,6 +243,13 @@ public class Constants {
 		public static final String REQUEST_FOCUS_ID = "request_focus_id.txt";
 		public static final String REQUEST_FOCUS_CLASS_INDEX = "request_focus_class_index.txt";
 		public static final String REQUEST_FOCUS_INTERNAL_CLASS_INDEX = "request_focus_internal_class_index.txt";
+		public static final String DIALOG_HEADER = "dialog_header.txt";
+		public static final String DIALOG_HANDLER = "dialog_handler.txt";
+		public static final String IMPORT_DIALOG_HANDLER = "import_dialog_handler.txt";
+		public static final String DIALOG_CONDITION = "dialog_condition.txt";
+		public static final String ACTIVITY_CONDITION = "activity_condition.txt";
+		public static final String DIALOG_CONDITION_BINARY = "dialog_condition_binary.txt";
+		public static final String ACTIVITY_CONDITION_BINARY = "activity_condition_binary.txt";
 		
 	}
 	
@@ -278,6 +293,9 @@ public class Constants {
 		public static final String HANDLER_IMPORTS = "%HANDLER_IMPORTS%";
 		public static final String INSERTION_START = "%INSERTION_START%";
 		public static final String INSERTION_END = "%INSERTION_END%";
+		public static final String CODE_DEFINITION = "%CODE_DEFINITION%";
+		public static final String DIALOG_HANDLERS = "%DIALOG_HANDLERS%";
+		public static final String DIALOG_HANDLER_IMPORTS = "%DIALOG_HANDLER_IMPORTS%";
 
 	}
 	
@@ -307,6 +325,7 @@ public class Constants {
 		public static final String TEMPORARY_FILE = "temp.txt";
 		public static final String VIEW_DIRECTIVES = "view_directives.txt";
 		public static final String NONE = "none";
+		public static final String DIALOG_HANDLERS = "dialog_handlers.txt";
 	}
 	
 	// output directories
@@ -325,6 +344,7 @@ public class Constants {
 		public static final String SAVESTATE = "savestate";
 		public static final String EXTERNAL_STORAGE = "/sdcard";
 		public static final String HANDLERS = "handlers";
+		public static final String DIALOGS = "dialogs";
 	}
 	
 	// executables

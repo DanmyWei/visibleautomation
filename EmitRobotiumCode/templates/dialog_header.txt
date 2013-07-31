@@ -1,0 +1,32 @@
+package %TESTPACKAGE%.dialogs;
+
+import com.androidApp.util.RobotiumUtils;
+import com.androidApp.util.IDialogHandler;
+import com.androidApp.util.PlaybackMotionEvents;
+import com.androidApp.util.ViewExtractor;
+import com.androidApp.util.TestException;
+import com.jayway.android.robotium.solo.Solo;
+import android.test.ActivityInstrumentationTestCase2;
+import android.view.View;
+import java.util.ArrayList;
+import java.io.IOException;
+import junit.framework.TestCase;
+import android.app.Activity;
+import android.app.Dialog;
+
+public class DialogHandler%TESTCLASSNAME% implements IDialogHandler {
+  	private Solo 			solo;
+  	private RobotiumUtils	robotiumUtils;
+  	protected static final int ACTIVITY_WAIT_MSEC = 5000;		// wait 5 seconds for new activities by default
+  	protected static final int WEBVIEW_WAIT_MSEC = 10000;		// wait 10 seconds for URL load by default
+	protected static final int DIALOG_CLOSE_TIMEOUT = 5000;		// wait 5 seconds for dialogs to close.
+	protected static final int DIALOG_OPEN_TIMEOUT = 5000;		// wait 5 seconds for dialogs to open.
+  	protected static final int VIEW_WAIT_MSEC = 5000;			// wait 5 seconds for views to appear
+
+  	public DialogHandler%TESTCLASSNAME%(Solo solo, RobotiumUtils robotiumUtils) {
+  		this.solo = solo;
+  		this.robotiumUtils = robotiumUtils;
+  	}
+  	
+  	public void onEnter(Dialog dialog) {
+  

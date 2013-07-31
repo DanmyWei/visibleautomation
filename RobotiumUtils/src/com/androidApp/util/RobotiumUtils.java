@@ -3,6 +3,7 @@ package com.androidApp.util;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Timer;
 
 import com.jayway.android.robotium.solo.Solo;
 
@@ -50,6 +51,7 @@ import android.widget.TabHost;
  */
 public class RobotiumUtils {
 	private static final String TAG = "RobotiumUtils";
+	protected static int DIALOG_SYNC_TIME = 100;									// interval for dialog polling
 	protected static int ACTIVITY_POLL_INTERVAL_MSEC = 1000;						// interval for activity existence polling
 	protected static int VIEW_TIMEOUT_MSEC = 5000;									// time to wait for view to be visible
 	protected static int VIEW_POLL_INTERVAL_MSEC = 1000;							// poll interval for view existence
@@ -70,8 +72,9 @@ public class RobotiumUtils {
 		sActivityMonitorRunnable = new ActivityMonitorRunnable(instrumentation);
 		Thread activityMonitorThread = new Thread(sActivityMonitorRunnable);
 		activityMonitorThread.start();
+
 	}
-	
+		
 	// get a list view item.  
 	public static View getAdapterViewItem(AdapterView av, int itemIndex) {
 		return av.getChildAt((itemIndex - 1) - av.getFirstVisiblePosition());

@@ -12,8 +12,13 @@ import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Stack;
 
+import com.androidApp.emitter.CodeDefinition;
 import com.androidApp.emitter.IEmitCode.LineAndTokens;
+import com.androidApp.emitter.CodeDefinition.DialogScanType;
+import com.androidApp.emitter.CodeDefinition.DialogTagType;
 import com.androidApp.parser.ProjectPropertiesScan;
 import com.androidApp.util.Constants;
 import com.androidApp.util.FileUtility;
@@ -83,12 +88,12 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	 * @throws IOException
 	 * @throws EmitterException
 	 */
-	public Hashtable<String, List<LineAndTokens>> generateTestCode(IEmitCode emitter, String eventsFileName, List<MotionEventList> motionEvents) throws FileNotFoundException, IOException, EmitterException {
-		Hashtable<String, List<LineAndTokens>> outputCode = new Hashtable<String, List<LineAndTokens>>();
+	public void generateTestCode(String 										eventsFileName, 
+								 Hashtable<CodeDefinition, List<LineAndTokens>> outputCode,
+								 List<MotionEventList> 							motionEvents) throws FileNotFoundException, IOException, EmitterException {
 		BufferedReader br = new BufferedReader(new FileReader(eventsFileName));
-		List<LineAndTokens> mainLines = emitter.emit(br, null, outputCode, motionEvents, false);
-		outputCode.put(Constants.MAIN, mainLines);
-		return outputCode;
+		List<LineAndTokens> mainLines = emit(br, null, outputCode, motionEvents, OutputType.MAIN);
+		outputCode.put(new CodeDefinition(Constants.MAIN, null), mainLines);
 	}
 
 	
@@ -104,17 +109,19 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	 * @throws EmitterException
 	 */
 	@Override
-	public List<LineAndTokens> emit(BufferedReader 							br, 
-									String									line,
-									Hashtable<String, List<LineAndTokens>>	outputCode,
-									List<MotionEventList> 					motionEvents,
-									boolean									fInterstitialActivity) throws IOException, EmitterException {
+	public List<LineAndTokens> emit(BufferedReader 									br, 
+									String											line,
+									Hashtable<CodeDefinition, List<LineAndTokens>>	outputCode,
+									List<MotionEventList> 							motionEvents,
+									OutputType										outputType) throws IOException, EmitterException {
 		boolean scrollsHaveHappened = false;							// we get a zillion scroll events.  We only care about the last one
 		int scrollFirstVisibleItem = 0;									// preserve scroll values so we can apply it on the last scroll.
 		int scrollListIndex = 0;										// track the current scroll index to write on the next non-scroll instruction
 		List<String> clickSpinnerDialogTokens = null;					// workaround for robotium, which selects spinners, but doesn't just click-dismiss
 		int sLineNumber = 0;											// track line number for errors
 		List<LineAndTokens> lines = new ArrayList<LineAndTokens>();		// output code for this scope
+		Stack<String> activityStack = new Stack<String>();
+		String precedingLine = null;
 		if (line == null) {
 			line = br.readLine();
 		}
@@ -156,18 +163,35 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 							scrollsHaveHappened = false;
 						}
 					}
-				}				
+				}	
+				
+				// see if there's conditional code that matches this activity
+				
+				CodeDefinition codeDef = findConditionalCode(tokens, outputCode);
+				if (codeDef != null) {
+					List<LineAndTokens> conditionalCode = outputCode.get(codeDef);
+					lines.addAll(conditionalCode);
+				}
 				
 				// then everything else is switched on the event name.
 				if (Constants.ActivityEvent.PACKAGE.equals(action)) {
 					mTargetPackage = tokens.get(2);
 				} else if (Constants.ActivityEvent.INTERSTITIAL_ACTIVITY.equals(action)) {
 					String newActivityName = tokens.get(2);
-					List<LineAndTokens> activityLines = emit(br, mNextLine, outputCode, motionEvents, true);
-					outputCode.put(newActivityName, activityLines);
+					List<LineAndTokens> activityCode = handleInterstitialActivity(br, precedingLine, outputCode, motionEvents, tokens);
+					lines.addAll(activityCode);
+				} else if (Constants.UserEvent.INTERSTITIAL_DIALOG_CONTENTS_ID.equals(action) ||
+						   Constants.UserEvent.INTERSTITIAL_DIALOG_CONTENTS_TEXT.equals(action) ||
+						   Constants.UserEvent.INTERSTITIAL_DIALOG_TITLE_ID.equals(action) ||
+						   Constants.UserEvent.INTERSTITIAL_DIALOG_TITLE_ID.equals(action)) {
+					List<LineAndTokens> dialogCode = handleInterstitialDialog(br, precedingLine, outputCode, motionEvents, tokens);
+					lines.addAll(dialogCode);
 				} else if (Constants.ActivityEvent.ACTIVITY_FORWARD.equals(action)) {
+					String activityClass = tokens.get(2);
+					activityStack.push(activityClass);
+					
 					// if we're in an interstitial, that means that it's time to go.
-					if (fInterstitialActivity) {
+					if ((outputType == OutputType.INTERSTITIAL_ACTIVITY) || (outputType == OutputType.INTERSTITIAL_DIALOG)) {
 						return lines;
 					}
 					if (mTargetClassPath == null) {
@@ -180,9 +204,10 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 						writeWaitForActivity(tokens, lines);
 					}
 				} else if (Constants.ActivityEvent.ACTIVITY_BACK.equals(action) || Constants.UserEvent.ACTIVITY_BACK_KEY.equals(action)) {
+					activityStack.pop();
 					// the handler is responsible for managing the activity transtion, but we do need to record the 
 					// fact that the user used the back key to get out if he
-					if (fInterstitialActivity) {
+					if ((outputType == OutputType.INTERSTITIAL_ACTIVITY) || (outputType == OutputType.INTERSTITIAL_DIALOG)) {
 						if (Constants.UserEvent.ACTIVITY_BACK_KEY.equals(action)) {
 							writeGoBack(tokens, lines);
 							return lines;
@@ -215,8 +240,14 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 						writeClick(tokens, lines);
 					} else if (Constants.SystemEvent.DISMISS_DIALOG.equals(action)) {
 						writeDismissDialog(tokens, lines);
+						if (outputType == OutputType.INTERSTITIAL_DIALOG) {
+							return lines;
+						}
 					} else if (Constants.UserEvent.CANCEL_DIALOG.equals(action)) {
 						writeCancelDialog(tokens, lines);
+						if (outputType == OutputType.INTERSTITIAL_DIALOG) {
+							return lines;
+						}
 					} else if (Constants.SystemEvent.CREATE_DIALOG.equals(action)) {
 						writeCreateDialog(tokens, lines);
 					} else if (Constants.SystemEvent.SHOW_IME.equals(action)) {
@@ -274,7 +305,8 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 					} else if (Constants.UserEvent.SELECT_TAB.equals(action)) {
 						selectTab(tokens, lines);
 					} else if (Constants.SystemEvent.ON_PAGE_FINISHED.equals(action)) {
-						// TODO: TEMPORARY for DEMO
+						// TODO: TEMPORARY for DEMO.. for some reason in the cozi app, the recorder picks up 2 webviews
+						// but the playback runtime only recognizes one.
 						// waitForPageToLoad(tokens, lines);
 					} else if (Constants.UserEvent.TOUCH_DOWN.equals(action) || Constants.UserEvent.TOUCH_MOVE.equals(action)) {
 						// we have to listen for the first "touch move", not just touch down, because scroll containers
@@ -286,6 +318,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 						mNextLine = br.readLine();
 					}
 				}
+				precedingLine = line;
 				line = mNextLine;
 			} catch (Exception ex) {
 				System.err.println("error parsing line " + sLineNumber);
@@ -296,7 +329,104 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		} while (true);
 		return lines;
 	}
+
+	public List<LineAndTokens> handleInterstitialActivity(BufferedReader									br,
+														   String											precedingLine,
+														   Hashtable<CodeDefinition, List<LineAndTokens>> 	outputCode,
+														   List<MotionEventList> 							motionEvents,
+														   List<String> 									tokens) throws EmitterException, IOException {
+		String newActivityName = tokens.get(2);
+		SuperTokenizer st = new SuperTokenizer(precedingLine, "\"", ":,", '\\');
+		List<String> precedingTokens = st.toList();
+		CodeDefinition codeDef = new CodeDefinition(newActivityName, precedingTokens);
+		List<LineAndTokens> activityLines = emit(br, mNextLine, outputCode, motionEvents, OutputType.INTERSTITIAL_ACTIVITY);
+		LineAndTokens conditionalCode = activityCondition(tokens, newActivityName);
+		activityLines.add(0, conditionalCode);
+		activityLines.add(closeCondition(tokens));
+		outputCode.put(codeDef, activityLines);
+		return activityLines;
+	}
 	
+	LineAndTokens activityCondition(List<String> tokens, String activityName) throws IOException {
+		String dialogConditionTemplate = FileUtility.readTemplate(Constants.Templates.ACTIVITY_CONDITION);
+		String description = "wait to see if activity " + activityName + " has appeared";
+		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.ACTIVITY_CLASS, activityName);
+		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.DESCRIPTION, description);
+		return new LineAndTokens(tokens, dialogConditionTemplate);
+	}
+
+   /**
+    * TODO: for some reason, this code output is getting doubled.
+	 * consolidated code to handle interstitial dialogs
+	 * @param br for reading /sdcard/events.txt into tokens
+	 * @param previousLine we write this into the file to test against for when we insert the conditional code again
+	 * @param outputCode outputcode hashtable
+	 * @param motionEvents passed in recursive call to emit
+	 * @param tokens tokens containing the interstitial request
+	 * @return emitted code.
+	 * @throws EmitterException
+	 * @throws IOException
+	 */
+	public List<LineAndTokens> handleInterstitialDialog(BufferedReader									br,
+														 String											precedingLine,
+														 Hashtable<CodeDefinition, List<LineAndTokens>> outputCode,
+														 List<MotionEventList> 							motionEvents,
+														 List<String> 									tokens) throws EmitterException, IOException {
+		String action = tokens.get(0);
+		SuperTokenizer st = new SuperTokenizer(precedingLine, "\"", ":,", '\\');
+		List<String> precedingTokens = st.toList();
+		List<LineAndTokens> dialogLines = null;
+		CodeDefinition codeDef = null;
+		String activityName = tokens.get(2);
+		if (Constants.UserEvent.INTERSTITIAL_DIALOG_CONTENTS_ID.equals(action)) {
+			// interstitial_dialog_contents_id:123627258,com.example.android.apis.app.AlertDialogSamples,com.example.foo.R.string.bar
+			String id = tokens.get(3);
+			codeDef = new CodeDefinition(activityName, id, CodeDefinition.DialogScanType.CONTENT,
+				    					CodeDefinition.DialogTagType.ID, precedingTokens);
+		} else if (Constants.UserEvent.INTERSTITIAL_DIALOG_CONTENTS_TEXT.equals(action)) {
+			// interstitial_dialog_contents_text:123627258,com.example.android.apis.app.AlertDialogSamples,"Command two"
+			String unescapedTag = StringUtils.unescapeString(StringUtils.stripQuotes(tokens.get(3)), '\\');
+			codeDef = new CodeDefinition(activityName, unescapedTag, CodeDefinition.DialogScanType.CONTENT,
+										 CodeDefinition.DialogTagType.TEXT, precedingTokens);
+		} else if (Constants.UserEvent.INTERSTITIAL_DIALOG_TITLE_ID.equals(action)) {
+			String id = tokens.get(3);
+			codeDef = new CodeDefinition(activityName, id, CodeDefinition.DialogScanType.TITLE,
+										 CodeDefinition.DialogTagType.ID, precedingTokens);
+		} else if (Constants.UserEvent.INTERSTITIAL_DIALOG_TITLE_TEXT.equals(action)) {
+			// interstitial_dialog_title_text:123609633,com.example.android.apis.app.AlertDialogSamples,"Header title"
+			String unescapedTag = StringUtils.unescapeString(StringUtils.stripQuotes(tokens.get(3)), '\\');
+			codeDef = new CodeDefinition(activityName, unescapedTag, CodeDefinition.DialogScanType.TITLE,
+				    					 CodeDefinition.DialogTagType.TEXT, precedingTokens);
+		}
+		dialogLines = emit(br, mNextLine, outputCode, motionEvents, OutputType.INTERSTITIAL_DIALOG);
+		LineAndTokens conditionalCode = dialogCondition(tokens, codeDef);
+		dialogLines.add(0, conditionalCode);
+		dialogLines.add(closeCondition(tokens));
+		outputCode.put(codeDef, dialogLines);
+		return dialogLines;
+	}
+	
+	/**
+	 * write out the conditional test for a dialog.
+	 * @param tokens
+	 * @param codeDef
+	 * @return
+	 * @throws IOException
+	 */
+	LineAndTokens dialogCondition(List<String> tokens, CodeDefinition codeDef) throws IOException {
+		String dialogConditionTemplate = FileUtility.readTemplate(Constants.Templates.DIALOG_CONDITION);
+		String description = "wait to see if a dialog with string " + codeDef.getDialogTag() + " has appeared";
+		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.DESCRIPTION, description);
+		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mActivityVariableIndex));
+		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.CODE_DEFINITION, codeDef.toCode());
+		mActivityVariableIndex++;
+		return new LineAndTokens(tokens, dialogConditionTemplate);
+	}
+	
+	LineAndTokens closeCondition(List<String> tokens) {
+		return new LineAndTokens(tokens, "}");
+	}
+
 	/**
 	 * for an activity forward or activity back
 	 * member variables: set mCurrentActivityName if the event was activity_forward
@@ -1227,69 +1357,26 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	
 	/**
 	 * write the header on the first activity
+	 * TODO: consolidate code defintions between interstitial activity and dialog handlers
 	 * @param testPackage com.package.name for the test application
 	 * @param testClassName classNameTest<index>
 	 * @param className name of the test application
 	 * @param bw output BufferedWriter
 	 * @throws IOException
 	 */
-	public void writeHeader(String 			classPath, 
-						    String 			testPackage, 
-						    String 			testClassName,  
-						    List<String> 	interstitialActivities, 
-						    List<String> 	interstitialActivityHandlers, 
-						    String 			className, 
-						    BufferedWriter 	bw) throws IOException {
+	public void writeHeader(String 					classPath, 
+						    String 					testPackage, 
+						    String 					testClassName,  
+						    String 					className, 
+						    BufferedWriter 			bw) throws IOException {
 		String header = FileUtility.readTemplate(Constants.Templates.HEADER);
-		String activityHandlers = writeActivityHandlers(interstitialActivities, interstitialActivityHandlers);
-		String handlerImports = writeActivityHandlerImports(interstitialActivityHandlers, testPackage);
-		header = header.replace(Constants.VariableNames.ACTIVITY_HANDLERS, activityHandlers);
-		header = header.replace(Constants.VariableNames.HANDLER_IMPORTS, handlerImports);
 		header = header.replace(Constants.VariableNames.TESTPACKAGE, testPackage);
 		header = header.replace(Constants.VariableNames.CLASSPATH, classPath);
 		header = header.replace(Constants.VariableNames.CLASSNAME, className);
 		header = header.replace(Constants.VariableNames.TESTCLASSNAME, testClassName);
 		bw.write(header);
 	}
-	
-	/**
-	 * write the activity handlers
-	 * @param handlerNames names of the handler classes
-	 * @param activityNames names of the activities that they are registered for
-	 * @return string to insert into the header.txt file
-	 */
-	public String writeActivityHandlers(List<String> activityNames, List<String> handlerNames) throws IOException {
-		StringBuffer sbHandlerList = new StringBuffer();
-		for (int i = 0; i < handlerNames.size(); i++) {
-			String handlerExpr = FileUtility.readTemplate(Constants.Templates.ACTIIVTY_HANDLER);
-			String handler = handlerNames.get(i);
-			String activity = activityNames.get(i);	
-			handlerExpr = handlerExpr.replace(Constants.VariableNames.HANDLER, handler);
-			handlerExpr = handlerExpr.replace(Constants.VariableNames.ACTIVITY, activity);
-			sbHandlerList.append(handlerExpr);
-		}
-		return sbHandlerList.toString();			
-	}
-	
-	/**
-	 * write the import headers for the activity handlers
-	 * @param handlerNames
-	 * @param testClassName
-	 * @return
-	 * @throws IOException
-	 */
-	public String writeActivityHandlerImports(List<String> handlerNames, String testPackage) throws IOException {
-		StringBuffer sbImportList = new StringBuffer();
-		for (String handlerName : handlerNames) {
-			String importHeader = FileUtility.readTemplate(Constants.Templates.IMPORT);
-			importHeader = importHeader.replace(Constants.VariableNames.TESTPACKAGE, testPackage);
-			importHeader = importHeader.replace(Constants.VariableNames.HANDLER, handlerName);
-			sbImportList.append(importHeader);
-		}
-		return sbImportList.toString();
-	}
 
-		
 	/**
 	 * write the trailer on completion.
 	 * @param bw output BufferedWriter
@@ -1423,26 +1510,62 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	}
 	
 	/**
-	 * write out the lines into the handler for an interstitial activity
-	 * @param bw buffered writer
-	 * @param testPackageName output package
-	 * @param activityName name of the interstitialActivityHandler
-	 * @param lines output lines from emit()
+	 *  check to see if two token lists match.  Of course, don't check the timestamp.
+	 * @return true if they match, false otherwise, foo.
+	 */
+	public boolean matchTokens(List<String> a, List<String> b) {
+		if (a.size() != b.size()) {
+			return false;			
+		} else {
+			for (int i = 0; i < a.size(); i++) {
+				if (i != 1) {
+					if (!a.get(i).equals(b.get(i))) {
+						return false;
+					}
+				}	
+			}
+			return true;
+		}
+	}
+	
+	/**
+	 * read the target package in advance, because that gives us the name of the application that we're testing
+	 * and we can get the directory of the test app that we're generating to read the handlers from so we can
+	 * insert them in the output code.
+	 * @param eventsFileName
+	 * @return
 	 * @throws IOException
 	 */
-	
-	public void writeInterstitialHandler(BufferedWriter 		bw, 
-										 String 				testPackageName,
-										 String 				activityName, 
-										 List<LineAndTokens> 	lines) throws IOException {
-		String header = FileUtility.readTemplate(Constants.Templates.INTERSTITIAL_HEADER);
-		header = header.replace(Constants.VariableNames.TESTPACKAGE, testPackageName);
-		header = header.replace(Constants.VariableNames.TESTCLASSNAME, activityName);
-		bw.write(header);
-		for (LineAndTokens line : lines) {
-			bw.write(line.mOutputLine);
+	public String readApplicationPackage(String eventsFileName) throws IOException {
+		BufferedReader br = new BufferedReader(new FileReader(eventsFileName));
+		String line = br.readLine();
+		String targetPackage = null;
+		while (line != null) {
+			SuperTokenizer st = new SuperTokenizer(line, "\"", ":,", '\\');
+			List<String> tokens = st.toList();
+			String action = tokens.get(0);
+			if (Constants.ActivityEvent.ACTIVITY_FORWARD.equals(action)) {
+				targetPackage = tokens.get(2);
+				break;
+			}
+			line = br.readLine();
 		}
-		String trailer = FileUtility.readTemplate(Constants.Templates.TRAILER);
-		bw.write(trailer);
+		br.close();
+		return targetPackage;
 	}
+	
+	// find the matching code definition to this list of tokens.
+	public CodeDefinition findConditionalCode(List<String> 									 tokens, 
+											  Hashtable<CodeDefinition, List<LineAndTokens>> outputCode) {
+		for (Entry<CodeDefinition, List<LineAndTokens>>  entry : outputCode.entrySet()) {
+			CodeDefinition codeDef = entry.getKey();
+			if (codeDef.getPrecedingTokens() != null) {
+				if (matchTokens(codeDef.getPrecedingTokens(), tokens)) {
+					return codeDef;
+				}
+			}
+		}
+		return null;
+	}
+
 }

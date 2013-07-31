@@ -30,15 +30,9 @@ public class EmitRobotiumCodeBinary extends EmitRobotiumCodeSource {
 	public void writeHeader(String 			classPath, 
 						    String 			testPackage, 
 						    String 			testClassName, 
-						    List<String> 	interstitialActivities, 
-						    List<String> 	interstitialActivityHandlers, 
 						    String 			className, 
 						    BufferedWriter 	bw) throws IOException {
 		String header = FileUtility.readTemplate(Constants.Templates.BINARY_HEADER);
-		String activityHandlers = writeActivityHandlers(interstitialActivities, interstitialActivityHandlers);
-		String handlerImports = writeActivityHandlerImports(interstitialActivityHandlers, testPackage);
-		header = header.replace(Constants.VariableNames.ACTIVITY_HANDLERS, activityHandlers);
-		header = header.replace(Constants.VariableNames.HANDLER_IMPORTS, handlerImports);
 		header = header.replace(Constants.VariableNames.TESTPACKAGE, testPackage);
 		header = header.replace(Constants.VariableNames.CLASSPATH, classPath);
 		header = header.replace(Constants.VariableNames.CLASSNAME, className);
@@ -174,5 +168,32 @@ public class EmitRobotiumCodeBinary extends EmitRobotiumCodeSource {
 			lines.add(new LineAndTokens(tokens, goBackTemplate));			
 		}
 	}
+	
+	LineAndTokens activityConditionBinary(List<String> tokens, String activityName) throws IOException {
+		String dialogConditionTemplate = FileUtility.readTemplate(Constants.Templates.ACTIVITY_CONDITION_BINARY);
+		String description = "wait to see if activity " + activityName + " has appeared";
+		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.ACTIVITY_CLASS, activityName);
+		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.DESCRIPTION, description);
+		return new LineAndTokens(tokens, dialogConditionTemplate);
+	}
+	
+	
+	/**
+	 * write out the conditional test for a dialog.
+	 * @param tokens
+	 * @param codeDef
+	 * @return
+	 * @throws IOException
+	 */
+	LineAndTokens dialogCondition(List<String> tokens, CodeDefinition codeDef) throws IOException {
+		String dialogConditionTemplate = FileUtility.readTemplate(Constants.Templates.DIALOG_CONDITION_BINARY);
+		String description = "wait to see if a dialog with string " + codeDef.getDialogTag() + " has appeared";
+		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.DESCRIPTION, description);
+		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mActivityVariableIndex));
+		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.CODE_DEFINITION, codeDef.toCode());
+		mActivityVariableIndex++;
+		return new LineAndTokens(tokens, dialogConditionTemplate);
+	}
+
 
 }

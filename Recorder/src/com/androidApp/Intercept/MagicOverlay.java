@@ -11,6 +11,7 @@ import com.androidApp.Utility.FileUtils;
 
 import android.animation.Animator;
 import android.animation.Animator.AnimatorListener;
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
@@ -74,7 +75,10 @@ public class MagicOverlay extends View implements OnGestureListener {
 	protected Rect									mCurrentViewRect;				// performance onDraw()
 	protected Rect									mOverlayViewRect;				// perf onDraw() to detect if in our overlay.
 	protected DirectiveDialogs						mDirectiveDialogs;				// context dialogs to issue directives.
-	
+	protected Activity								mActivity;						// activity backreference
+
+	// dictates what happens when the user clicks on the overlay:  bring up the initial dialog or
+	// select a view
 	protected enum ClickMode {
 		BASE,
 		VIEW_SELECT
@@ -86,57 +90,62 @@ public class MagicOverlay extends View implements OnGestureListener {
 	 * @param recorder
 	 * @throws IOException
 	 */
-	public static void addMagicOverlay(MagicFrame magicFrame, EventRecorder recorder, ActivityInterceptor.ActivityState activityState) throws IOException, ClassNotFoundException {
+	public static void addMagicOverlay(Activity activity, MagicFrame magicFrame, EventRecorder recorder) throws IOException, ClassNotFoundException {
 		View contentView = magicFrame.getChildAt(0);
-
-		// don't display the button for action bars
-		// FAIL FAIL FAIL FAIL
 		try {
-			Class<? extends View> actionBarContainerClass = (Class<? extends View>) Class.forName(Constants.Classes.ACTION_BAR_CONTAINER);
-			boolean fDisplayButton = !actionBarContainerClass.isAssignableFrom(contentView.getClass());
-			MagicOverlay createOverlay = new MagicOverlay(magicFrame, fDisplayButton, activityState, recorder, contentView);
-			activityState.addMagicOverlay(createOverlay);
-			
-			// we sort of have to fix our layout, since we're offscreen or onscreen depending on mfEnabled. This means, of course.
-			// that we need to be created before the content is laid out.
-			FrameLayout.LayoutParams overlayLayoutParams = new FrameLayout.LayoutParams(contentView.getMeasuredWidth(), contentView.getMeasuredHeight());
-			overlayLayoutParams.setMargins(contentView.getMeasuredWidth(), 0, 0, 0);
-			createOverlay.setLayoutParams(overlayLayoutParams);
-			createOverlay.setBackgroundColor(0x0);
-			createOverlay.setWillNotDraw(false);
-			createOverlay.bringToFront();
-			createOverlay.setFocusable(true);
-			createOverlay.setActivated(true);
-			createOverlay.setEnabled(true);
-			magicFrame.addView(createOverlay);
-			if (createOverlay.getButton() != null) {
-				magicFrame.addView(createOverlay.getButton());
-				createOverlay.getButton().bringToFront();
-			}
-			magicFrame.requestLayout();
+			MagicOverlay createOverlay = new MagicOverlay(activity, magicFrame, recorder, contentView);
+			initOverlayAttributes(magicFrame, contentView, createOverlay);
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
+	}
+	
+	public static void initOverlayAttributes(MagicFrame magicFrame, View contentView, MagicOverlay createOverlay) {
+		
+		// we sort of have to fix our layout, since we're offscreen or onscreen depending on mfEnabled. This means, of course.
+		// that we need to be created before the content is laid out.
+		FrameLayout.LayoutParams overlayLayoutParams = new FrameLayout.LayoutParams(contentView.getMeasuredWidth(), contentView.getMeasuredHeight());
+		overlayLayoutParams.setMargins(contentView.getMeasuredWidth(), 0, 0, 0);
+		createOverlay.setLayoutParams(overlayLayoutParams);
+		createOverlay.setBackgroundColor(0x0);
+		createOverlay.setWillNotDraw(false);
+		createOverlay.bringToFront();
+		createOverlay.setFocusable(true);
+		createOverlay.setActivated(true);
+		createOverlay.setEnabled(true);
+		magicFrame.addView(createOverlay);
+		if (createOverlay.getButton() != null) {
+			magicFrame.addView(createOverlay.getButton());
+			createOverlay.getButton().bringToFront();
+		}
+		magicFrame.requestLayout();
 	}
 	
 	public MagicOverlay(Context context) {
 		super(context);
 	}
 	
-	public MagicOverlay(MagicFrame 							magicFrame, 
-					    boolean 							fButton, 
-					    ActivityInterceptor.ActivityState 	activityState,
-					    EventRecorder						eventRecorder,
-					    View								contentView) throws IOException {
+	/**
+	 * create the magic overlay, which allows us to interrogate the view hierarchy and give directives
+	 * for the current activity or selected view.
+	 * @param magicFrame
+	 * @param fButton
+	 * @param activityState
+	 * @param eventRecorder
+	 * @param contentView
+	 * @throws IOException
+	 */
+	public MagicOverlay(Activity		activity,
+						MagicFrame 		magicFrame, 
+					    EventRecorder	eventRecorder,
+					    View			contentView) throws IOException {
 		super(magicFrame.getContext());
 		mContentView = contentView;
+		mActivity = activity;
 		mRecorder = eventRecorder;
-		mActivityState = activityState;
 		Context context = magicFrame.getContext();
-		if (fButton) {
-			mButton = createButton(context, contentView);
-			mButton.setOnClickListener(new SlideInClickListener());
-		}
+		mButton = createButton(context, contentView);
+		mButton.setOnClickListener(new SlideInClickListener());
 		mBackgroundPaint = MagicOverlay.createBackgroundPaint();
 		mViewPaint = MagicOverlay.createViewPaint();
 		mTextPaint = MagicOverlay.createTextPaint();
@@ -149,6 +158,7 @@ public class MagicOverlay extends View implements OnGestureListener {
 		mDirectiveDialogs = new DirectiveDialogs(this);
 	}
 	
+	// standard grey background.
 	public static Paint createBackgroundPaint() {
 		Paint backgroundPaint = new Paint();
 		backgroundPaint.setColor(0x0);
@@ -157,6 +167,7 @@ public class MagicOverlay extends View implements OnGestureListener {
 		return backgroundPaint;	
 	}
 	
+	// green stroke for view outlines
 	public static Paint createViewPaint() {
 		Paint viewPaint = new Paint();
 		viewPaint.setColor(0xff00ff00);
@@ -166,6 +177,7 @@ public class MagicOverlay extends View implements OnGestureListener {
 		return viewPaint;
 	}
 	
+	// green fill for view description text.
 	public static Paint createTextPaint() {
 		Paint viewPaint = new Paint();
 		viewPaint.setColor(0xff00ff00);
@@ -184,8 +196,8 @@ public class MagicOverlay extends View implements OnGestureListener {
 		return mCurrentView;
 	}
 	
-	public ActivityInterceptor.ActivityState getActivityState() {
-		return mActivityState;
+	public Activity getActivity() {
+		return mActivity;
 	}
 	
 	public ClickMode getClickMode() {
@@ -198,6 +210,10 @@ public class MagicOverlay extends View implements OnGestureListener {
 	
 	public void resetCurrentView() {
 		mCurrentView = mContentView;
+	}
+	
+	public View getContentView() {
+		return mContentView;
 	}
 	
 	/**
@@ -240,21 +256,9 @@ public class MagicOverlay extends View implements OnGestureListener {
 
 		@Override
 		public void onClick(View v) {
-			for (MagicOverlay overlay : mActivityState.getMagicOverlayList()) {
-				FrameLayout.LayoutParams overlayLayoutParams = (FrameLayout.LayoutParams) MagicOverlay.this.getLayoutParams();
-				overlayLayoutParams.setMargins(0, 0, 0, 0);
-				MagicOverlay.this.setX(MagicOverlay.this.mContentView.getX());
-/*
- * for some reason, the slide-in animaton doesn't work
-				TranslateAnimation slideInAnimation = new TranslateAnimation(TranslateAnimation.RELATIVE_TO_SELF, 1.0F,
-																			 TranslateAnimation.RELATIVE_TO_SELF, 0.0F,
-																			 TranslateAnimation.RELATIVE_TO_SELF, 0.0F,
-																			 TranslateAnimation.RELATIVE_TO_SELF, 0.0F);
-				slideInAnimation.setDuration(500);
-				overlay.startAnimation(slideInAnimation);
-				new Handler().postDelayed(new SlideCompleteRunnable(slideInAnimation, overlay, true), slideInAnimation.getDuration());
-*/
-			}
+			FrameLayout.LayoutParams overlayLayoutParams = (FrameLayout.LayoutParams) MagicOverlay.this.getLayoutParams();
+			overlayLayoutParams.setMargins(0, 0, 0, 0);
+			MagicOverlay.this.setX(MagicOverlay.this.mContentView.getX());
 		}	
 	}
 	/**
@@ -264,17 +268,15 @@ public class MagicOverlay extends View implements OnGestureListener {
 	@Override
 	public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
 		if (velocityX > FLING_THRESHOLD) {
-			for (MagicOverlay overlay : mActivityState.getMagicOverlayList()) {
-				TranslateAnimation slideOutAnimation = new TranslateAnimation(TranslateAnimation.RELATIVE_TO_SELF, 0.0F,
-																			  TranslateAnimation.RELATIVE_TO_SELF, 1.0F,
-																			  TranslateAnimation.RELATIVE_TO_SELF, 0.0F,
-																			  TranslateAnimation.RELATIVE_TO_SELF, 0.0F);
-				slideOutAnimation.setDuration(500);
-				overlay.startAnimation(slideOutAnimation);
-				new Handler().postDelayed(new SlideCompleteRunnable(slideOutAnimation, overlay, false), slideOutAnimation.getDuration());
-				mMode = ClickMode.BASE;
-				mCurrentView = mContentView;
-			}
+			TranslateAnimation slideOutAnimation = new TranslateAnimation(TranslateAnimation.RELATIVE_TO_SELF, 0.0F,
+																		  TranslateAnimation.RELATIVE_TO_SELF, 1.0F,
+																		  TranslateAnimation.RELATIVE_TO_SELF, 0.0F,
+																		  TranslateAnimation.RELATIVE_TO_SELF, 0.0F);
+			slideOutAnimation.setDuration(500);
+			MagicOverlay.this.startAnimation(slideOutAnimation);
+			new Handler().postDelayed(new SlideCompleteRunnable(slideOutAnimation, MagicOverlay.this, false), slideOutAnimation.getDuration());
+			mMode = ClickMode.BASE;
+			mCurrentView = mContentView;
 			return true;
 		} 
 		return false;
@@ -333,9 +335,12 @@ public class MagicOverlay extends View implements OnGestureListener {
 		return true;
 	}
 
+	// bring up the view operation dialog on the current view
 	@Override
 	public void onLongPress(MotionEvent e) {
-		mDirectiveDialogs.viewDialog(MagicOverlay.this.getContext(), e);
+		if ((mMode == ClickMode.VIEW_SELECT) && (mCurrentView != null)) {
+			mDirectiveDialogs.viewDialog(MagicOverlay.this.getContext(), e);
+		}
 	}
 	
 	@Override
@@ -346,56 +351,77 @@ public class MagicOverlay extends View implements OnGestureListener {
 	@Override
 	public void onShowPress(MotionEvent e) {		
 	}
-	
+
+	/**
+	 * either bring up the initial dialog, or update the current view selection, depending on the click mode
+	 */
 	@Override
 	public boolean onSingleTapUp(MotionEvent e) {
 		if (mMode == ClickMode.BASE) {
-			String[] baseItems = new String[] { "Interstitial Activity", "View Selection" };
-			Dialog dialog = mDirectiveDialogs.createSelectionDialog(MagicOverlay.this.getContext(), baseItems, mDirectiveDialogs.new OnBaseDialogSelectionListener());
-			dialog.show();
+			Dialog dialog = baseSelectionDialog(MagicOverlay.this.getContext());
+			return true;
 		} else if (mMode == ClickMode.VIEW_SELECT) {
 			Rect currentViewRect = new Rect();
 			int eventX = (int) e.getX();
 			int eventY = (int) e.getY();
-			Rect thisRect = new Rect();
-			this.getGlobalVisibleRect(thisRect);
-			int offsetX = -thisRect.left;
-			int offsetY = -thisRect.top;
-			
-			// if the current view is a view group, and the event is inside one of its children
-			// then set the current view to that child
-			if (mCurrentView instanceof ViewGroup) {
-				ViewGroup vg = (ViewGroup) mCurrentView;
-				mCurrentView.getGlobalVisibleRect(currentViewRect);
-				currentViewRect.offset(offsetX, offsetY);
-				if (currentViewRect.contains(eventX, eventY)) {
-					for (int iChild = 0; iChild < vg.getChildCount(); iChild++) {
-						View vChild = vg.getChildAt(iChild);
-						if ((vChild.getVisibility() == View.VISIBLE) && vChild.getGlobalVisibleRect(mCurrentViewRect)) {
-							mCurrentViewRect.offset(offsetX, offsetY);
-							if (mCurrentViewRect.contains(eventX, eventY)) {
-								mCurrentView = vChild;
-								invalidate();
-								return true;						
-							}
+			return updateViewSelection(eventX, eventY);
+		}
+		return false;
+	}
+	
+	/**
+	 * overridden by derived classes to show a context-specific dialog (like for dialogs and popups and such)
+	 * @param context
+	 * @return
+	 */
+	public Dialog baseSelectionDialog(Context context) {
+		String[] baseItems = new String[] {  Constants.DisplayStrings.INTERSTITIAL_ACTIVITY,  
+											 Constants.DisplayStrings.VIEW_SELECTION };
+		Dialog dialog = mDirectiveDialogs.createSelectionDialog(MagicOverlay.this.getContext(), baseItems, mDirectiveDialogs.new OnBaseDialogSelectionListener());
+		dialog.show();
+		return dialog;
+	}
+	
+	public boolean updateViewSelection(int eventX, int eventY) {
+		Rect currentViewRect = new Rect();
+		Rect thisRect = new Rect();
+		this.getGlobalVisibleRect(thisRect);
+		int offsetX = -thisRect.left;
+		int offsetY = -thisRect.top;
+		
+		// if the current view is a view group, and the event is inside one of its children
+		// then set the current view to that child
+		if (mCurrentView instanceof ViewGroup) {
+			ViewGroup vg = (ViewGroup) mCurrentView;
+			mCurrentView.getGlobalVisibleRect(currentViewRect);
+			currentViewRect.offset(offsetX, offsetY);
+			if (currentViewRect.contains(eventX, eventY)) {
+				for (int iChild = 0; iChild < vg.getChildCount(); iChild++) {
+					View vChild = vg.getChildAt(iChild);
+					if ((vChild.getVisibility() == View.VISIBLE) && vChild.getGlobalVisibleRect(mCurrentViewRect)) {
+						mCurrentViewRect.offset(offsetX, offsetY);
+						if (mCurrentViewRect.contains(eventX, eventY)) {
+							mCurrentView = vChild;
+							invalidate();
+							return true;						
 						}
 					}
 				}
 			}
-			
-			// otherwise, keep skipping up views until we find one that contains the event, or until we
-			// reach the content view.
-			while (mCurrentView != mContentView) {
-				mCurrentView = (View)  mCurrentView.getParent();
-				mCurrentView.getGlobalVisibleRect(currentViewRect);
-				currentViewRect.offset(offsetX, offsetY);
-				if (currentViewRect.contains(eventX, eventY)) {
-					break;
-				}
-			}
-			invalidate();
 		}
-		return false;
+		
+		// otherwise, keep skipping up views until we find one that contains the event, or until we
+		// reach the content view.
+		while (mCurrentView != mContentView) {
+			mCurrentView = (View)  mCurrentView.getParent();
+			mCurrentView.getGlobalVisibleRect(currentViewRect);
+			currentViewRect.offset(offsetX, offsetY);
+			if (currentViewRect.contains(eventX, eventY)) {
+				break;
+			}
+		}
+		invalidate();
+		return true;
 	}
 	
 	/**

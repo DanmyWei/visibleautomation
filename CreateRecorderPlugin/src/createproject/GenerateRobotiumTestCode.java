@@ -30,6 +30,7 @@ import org.eclipse.jdt.core.IPackageFragmentRoot;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
 
+import com.androidApp.emitter.CodeDefinition;
 import com.androidApp.emitter.EmitRobotiumCode;
 import com.androidApp.emitter.EmitRobotiumCodeSource;
 import com.androidApp.emitter.IEmitCode;
@@ -72,6 +73,7 @@ public class GenerateRobotiumTestCode {
 		IFolder drawableFolder = EclipseUtility.createFolder(resFolder, Constants.Dirs.DRAWABLE);
 		IFolder genFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.GEN);
 		IFolder assetsFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.ASSETS);
+		IFolder handlersFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.HANDLERS);
 
 	}
 	
@@ -192,8 +194,7 @@ public class GenerateRobotiumTestCode {
 		file.create(fis, IFile.FORCE, null);
 	}
 
-	
-	/**
+		/**
 	 * extract the events file from the device via adb if the keyword "device" is specified, otherwise return the
 	 * file that was passed ins
 	 * @param eventsFilename
@@ -221,13 +222,10 @@ public class GenerateRobotiumTestCode {
 							  List<LineAndTokens> 	lines, 
 							  String 				packagePath, 
 							  String 				testClassName, 
-							  List<String> 			interstitialActivities, 
-							  List<String> 			interstitialActivityHandlers, 
 							  String 				outputCodeFileName) throws IOException {
 		// write the header template, the emitter output, and the trailer temoplate.
 		BufferedWriter bw = new BufferedWriter(new FileWriter(outputCodeFileName));
-		emitter.writeHeader(emitter.getApplicationClassPath(), packagePath, testClassName, 
-							interstitialActivities, interstitialActivityHandlers, emitter.getApplicationClassName(), bw);
+		emitter.writeHeader(emitter.getApplicationClassPath(), packagePath, testClassName, emitter.getApplicationClassName(), bw);
 		String testFunction = FileUtility.readTemplate(Constants.Templates.TEST_FUNCTION);
 		bw.write(testFunction);
 		emitter.writeLines(bw, lines);
@@ -312,20 +310,30 @@ public class GenerateRobotiumTestCode {
 		}
 	}
 	
-	public static void writeInterstitalHandlers(IPackageFragment 						pack,
-												IEmitCode								emitter,
-												Hashtable<String, List<LineAndTokens>> outputCode,
-											    String 									testClassPath) throws IOException, CoreException {
+	/**
+	 * write out the code marked as interstitial handlers into the handlers directory
+	 * @param pack package referencing the handlers directory
+	 * @param emitter write the interstitial handler code
+	 * @param outputCode hashtable of outputs for main, activity handlers, and dialog handlers
+	 * @param testClassPath for writing the package name into the handler code
+	 * @throws IOException
+	 * @throws CoreException
+	 */
+	
+	public static void writeInterstitalHandlers(IPackageFragment 								pack,
+												IEmitCode										emitter,
+												Hashtable<CodeDefinition, List<LineAndTokens>> 	outputCode,
+											    String 											testClassPath) throws IOException, CoreException {
 		// create the handler files for the interstitial activities used in this test
-		for (Entry<String, List<LineAndTokens>> entry : outputCode.entrySet()) {
-			String activityClassName = entry.getKey();
-			if (!activityClassName.equals(Constants.MAIN)) {
-				String activityName = StringUtils.getNameFromClassPath(activityClassName);
+		for (Entry<CodeDefinition, List<LineAndTokens>> entry : outputCode.entrySet()) {
+			CodeDefinition codeDef = entry.getKey();
+			if ((codeDef.getType() == CodeDefinition.Type.ACTIVITY) && 
+				codeDef.getActivityName().equals(Constants.MAIN)) {
+				String activityName = StringUtils.getNameFromClassPath(codeDef.getActivityName());
 				String interstitialHandlerName = Constants.INTERSTITIAL_ACTIVITY_HANDLER + activityName;
-				String interstitialHandlerFile = interstitialHandlerName + File.separator + Constants.Extensions.JAVA;
+				String interstitialHandlerFile = interstitialHandlerName + "." + Constants.Extensions.JAVA;
 				List<LineAndTokens> code = entry.getValue();
 				BufferedWriter bwHandler = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(Constants.Filenames.OUTPUT)));
-				emitter.writeInterstitialHandler(bwHandler, testClassPath, interstitialHandlerName, code);
 				String testCode = FileUtility.readToString(new FileInputStream(Constants.Filenames.OUTPUT));
 				
 				// what about the case where the interstitial file already exists
@@ -334,6 +342,13 @@ public class GenerateRobotiumTestCode {
 		}
 	}
 	
+	/**
+	 * iterate
+	 * @param project
+	 * @param handlerFolder
+	 * @return
+	 * @throws CoreException
+	 */
 	public static List<String> getHandlerNames(IProject project,IFolder handlerFolder) throws CoreException {
 		List<String> handlerNames = new ArrayList<String>();
 		IResource[] members = handlerFolder.members();
@@ -369,7 +384,7 @@ public class GenerateRobotiumTestCode {
 	 * databases, local files and the SQLite databases, and write the motion events.
 	 * @param emitter the code generator
 	 * @param outputCode the hashtable of lines generated by the emitter for "main", and for the interstitial
-	 * activity handlers
+	 * activity handlers and dialog handlers
 	 * @param motionEvents list of lists of motion events recorded
 	 * @param testProject eclipse project reference to the output test project
 	 * @param testPackage fully.qualified.java.class.package.test
@@ -377,16 +392,16 @@ public class GenerateRobotiumTestCode {
 	 * @param testClassPath filesystem path to the output test class
 	 * @param testClassName Actual output file name
 	 */
-	public void writeTheCode(IEmitCode 								emitter, 
-							 Hashtable<String, List<LineAndTokens>> outputCode,
-							 List<MotionEventList> 					motionEvents,
-							 IProject 								testProject, 
-							 String 								testPackage,
-							 String 								appName,
-							 String 								testClassPath, 
-							 String 								testClassName) throws CoreException, IOException {
+	public void writeTheCode(IEmitCode 										emitter, 
+							 Hashtable<CodeDefinition, List<LineAndTokens>> outputCode,
+							 List<MotionEventList> 							motionEvents,
+							 IProject 										testProject, 
+							 String 										testPackage,
+							 String 										appName,
+							 String											testClassPath, 
+							 String 										testClassName) throws CoreException, IOException {
 		IFolder srcFolder = testProject.getFolder(Constants.Dirs.SRC);
-		List<LineAndTokens> mainCode = outputCode.get(Constants.MAIN);
+		List<LineAndTokens> mainCode = outputCode.get(new CodeDefinition(Constants.MAIN, null));
 	
 		// write out the test code, first to a temporary file, then to the actual project file.
 		String handlerDirName = FileUtility.sourceDirectoryFromClassName(testPackage) + File.separator + Constants.Dirs.HANDLERS;
@@ -409,7 +424,7 @@ public class GenerateRobotiumTestCode {
 		// write the test code out to a temporary file, read it into a string and create the "compilation unit"
 		// that eclipse likes to refer to
 		String projectFileOutput = testClassName + "." + Constants.Extensions.JAVA;
-		writeTestCode(emitter, mainCode, testPackage, testClassName, interstitialActivities, interstitialActivityHandlers, Constants.Filenames.OUTPUT);
+		writeTestCode(emitter, mainCode, testPackage, testClassName, Constants.Filenames.OUTPUT);
 		String testCode = FileUtility.readToString(new FileInputStream(Constants.Filenames.OUTPUT));
 		ICompilationUnit classFile = pack.createCompilationUnit(projectFileOutput, testCode, true, null);	
 		

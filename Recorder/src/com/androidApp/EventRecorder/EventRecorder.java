@@ -202,7 +202,14 @@ public class EventRecorder extends EventRecorderInterface {
 				writeRecord(event + ":" + time + "," + getViewReference().getReference(v) + "," + message);
 			}
 		} catch (Exception ex) {
-			writeRecord(Constants.EventTags.EXCEPTION, "while getting reference for view in event " + event + " " + message);
+			// TEMPORARY: the IME keeps sending events long after we have died died died,
+			// so we suppress the exceptions
+			if (!event.equals(Constants.EventTags.SHOW_IME) && 
+				!event.equals(Constants.EventTags.HIDE_IME) &&
+				!event.equals(Constants.EventTags.HIDE_IME_BACK_KEY)) {
+				writeRecord(Constants.EventTags.EXCEPTION, "while getting reference for view in event " + event + " " + message);
+
+			}
 		}
 	}
 	

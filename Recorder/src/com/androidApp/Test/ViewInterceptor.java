@@ -48,6 +48,7 @@ import com.androidApp.EventRecorder.ViewDirective.ViewOperation;
 import com.androidApp.EventRecorder.ViewDirective.When;
 import com.androidApp.Intercept.InterceptActionBar;
 import com.androidApp.Intercept.MagicFrame;
+import com.androidApp.Intercept.MagicFramePopup;
 import com.androidApp.Listeners.FinishTextChangedListener;
 import com.androidApp.Listeners.InterceptOnHierarchyChangeListener;
 import com.androidApp.Listeners.RecordAutoCompleteDropdownOnDismissListener;
@@ -839,9 +840,16 @@ public class ViewInterceptor {
 				popupWindow.setOnDismissListener(recordOnDismissListener);
 			}
 			View contentView = popupWindow.getContentView();
+			
+			// we have to intercept even if we've already inserted the magic frame.
+			if (contentView instanceof MagicFramePopup) {
+				contentView = ((MagicFramePopup) contentView).getChildAt(0);
+			}
 			if (ListenerIntercept.isPopupMenu(contentView)) {
 				replacePopupMenuListeners(eventRecorder, contentView);
-			} 
+			} else {
+				callIntercept((Activity) contentView.getContext(), contentView);
+			}
 		} catch (Exception ex) {
 			mEventRecorder.writeException(ex, "Intercepting popup window");
 		}

@@ -25,11 +25,11 @@ public class InsertMagicFrameRunnable implements Runnable {
 	protected Window							mWindow;					// window containing views of interest
 	protected EventRecorder 					mRecorder;					// event recorder interface
 	protected ViewInterceptor 					mViewInterceptor;			// to intercept the views contained in the window
-	protected ActivityInterceptor.ActivityState mActivityState;				// containts activity and magic overlay list
-	public InsertMagicFrameRunnable(ActivityInterceptor.ActivityState activityState, EventRecorder recorder, ViewInterceptor viewInterceptor) {
-		mActivityState = activityState;
-		Activity activity = activityState.getActivity();
+	protected Activity							mActivity;					// activity backreference for dialogs
+
+	public InsertMagicFrameRunnable(Activity activity, EventRecorder recorder, ViewInterceptor viewInterceptor) {
 		mWindow = activity.getWindow();
+		mActivity = activity;
 		mRecorder = recorder;
 		mViewInterceptor = viewInterceptor;
 	}
@@ -42,16 +42,7 @@ public class InsertMagicFrameRunnable implements Runnable {
 			ViewGroup decorView = (ViewGroup) mWindow.getDecorView();
 			ViewGroup contentView = (ViewGroup) decorView.getChildAt(0);
 			MagicFrame magicFrame = new MagicFrame(mWindow.getContext(), contentView, 0, mRecorder, mViewInterceptor);
-			MagicOverlay.addMagicOverlay(magicFrame, mRecorder, mActivityState);
-			/*
-			if (contentView instanceof ViewGroup) {
-				for (int iChild = 0; iChild < contentView.getChildCount(); iChild++) {
-					View realContentView = (View) contentView.getChildAt(iChild);
-					MagicFrame magicFrame = new MagicFrame(mWindow.getContext(), realContentView, iChild, mRecorder, mViewInterceptor);
-					MagicOverlay.addMagicOverlay(magicFrame, mRecorder, mActivityState);
-				} 
-			}
-			*/
+			MagicOverlay.addMagicOverlay(mActivity, magicFrame, mRecorder);
 		} catch (Exception ex) {
 			mRecorder.writeException(ex, "attempting to insert magic frame");
 		}

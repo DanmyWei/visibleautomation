@@ -258,6 +258,11 @@ public class Constants {
 		public static final String AFTER_SET_TEXT = "after_set_text";
 		public static final String CREATE_EXPANDED_MENU_VIEW = "create_expanded_menu_view";
 		public static final String VALUE_CHANGE = "value_change";
+		public static final String INTERSTITIAL_DIALOG_TITLE_ID = "interstitial_dialog_title_id";
+		public static final String INTERSTITIAL_DIALOG_TITLE_TEXT = "interstitial_dialog_title_text";
+		public static final String INTERSTITIAL_DIALOG_CONTENTS_ID = "interstitial_dialog_contents_id";
+		public static final String INTERSTITIAL_DIALOG_CONTENTS_TEXT = "interstitial_dialog_contents_text";
+		public static final String INTERSTITIAL_DIALOG_CONTENTS = "interstitial_dialog_contents";
 	}
 	
 	// description strings 
@@ -305,6 +310,11 @@ public class Constants {
 	// TODO: this needs to be read from a resource file, but jar files cannot access android resource files
 	public static class DisplayStrings {
 		public static final String VISIBLE_AUTOMATION = "Visible Automation";
+		public static final String INTERSTITIAL_DIALOG_TITLE = "Interstitial Dialog by Title";
+		public static final String INTERSTITIAL_DIALOG_CONTENTS = "Interstitial Dialog by Contents";
+		public static final String INTERSTITIAL_ACTIVITY = "Interstitial Activity";
+		public static final String VIEW_SELECTION = "View Selection";
+
 		public static final String IGNORE_EVENTS = "Ignore All Events";
 		public static final String IGNORE_TEXT_EVENTS = "Ignore Text Events";
 		public static final String IGNORE_TOUCH_EVENTS = "Ignore Touch Events";
@@ -326,6 +336,8 @@ public class Constants {
 		public static final String VIEW_NOT_TEXT_VIEW = "The selected view is not a text view";
 		public static final String VIEW_REFERENCE_FAILED = "Failed to generate view reference";
 		public static final String INSERT_BY_CHARACTER = "Insert text by keys";
+		public static final String NO_DIALOG_TITLE = "Unable to find dialog title";
+		public static final String RESOURCE_ERROR = "resource access error";
 	}
 	
 	// when ViewDirectives should be applied during record and playback.

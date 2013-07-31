@@ -217,4 +217,21 @@ public class StringUtils {
 		}
 		return sb.toString();
 	}
+	
+	/**
+	 * take a vector of strings and return,them,in,a,single,string
+	 * @param list
+	 * @param delim
+	 * @return
+	 */
+	public static String delimit(List<String> list, char delim) {
+		StringBuffer sb = new StringBuffer();
+		for (int i = 0; i < list.size(); i++) {
+			sb.append(list.get(i));
+			if (i < list.size() - 1) {
+				sb.append(',');
+			}
+		}
+		return sb.toString();
+	}
 }

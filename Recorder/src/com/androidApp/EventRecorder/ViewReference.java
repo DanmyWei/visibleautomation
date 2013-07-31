@@ -242,7 +242,7 @@ public class ViewReference {
 					int textCount = TestUtils.textCount(viewParentWithId, s);
 					if (textCount == 1) {
 						return Constants.Reference.TEXT_ID + "," + TestUtils.getIdForValue(mRIDList, viewParentWithId.getId()) + "," + 
-							    "\"" + StringUtils.escapeString(s, "\"", '\\') + "\"";
+							    "\"" + StringUtils.escapeString(s, "\"", '\\').replace("\n", "\\n") + "\"";
 					}
 				}
 			}

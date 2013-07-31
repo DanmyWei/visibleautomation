@@ -1,6 +1,10 @@
 package %TESTPACKAGE%;
 
 import com.androidApp.util.RobotiumUtils;
+import com.androidApp.util.CodeDefinition;
+import com.androidApp.util.IDialogHandler;
+import com.androidApp.util.IActivityHandler;
+import com.androidApp.util.DialogListener;
 import com.androidApp.util.ViewExtractor;
 import com.androidApp.util.TestException;
 import com.jayway.android.robotium.solo.Solo;

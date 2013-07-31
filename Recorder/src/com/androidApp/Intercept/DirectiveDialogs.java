@@ -1,6 +1,7 @@
 package com.androidApp.Intercept;
 
 import java.io.IOException;
+import java.util.List;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -8,6 +9,7 @@ import android.app.Dialog;
 import android.app.Instrumentation;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.res.Resources;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.AbsListView;
@@ -15,6 +17,7 @@ import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.UserDefinedViewReference;
@@ -32,6 +35,8 @@ import com.androidApp.Intercept.directivedialogs.OnViewSelectionListener;
 import com.androidApp.Test.ActivityInterceptor;
 import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.StringUtils;
+import com.androidApp.Utility.TestUtils;
 
 /**
  * dialogs which are displayed from the magic overlay to enter information for view directives,
@@ -54,8 +59,8 @@ public class DirectiveDialogs {
 		return mMagicOverlay.getEventRecorder();
 	}
 	
-	public ActivityInterceptor.ActivityState getActivityState() {
-		return mMagicOverlay.getActivityState();
+	public Activity getActivity() {
+		return mMagicOverlay.getActivity();
 	}
 	
 	public View getCurrentView() {
@@ -90,14 +95,75 @@ public class DirectiveDialogs {
 		sCurrentDialog = dialog;
 	}
 	
+	/**
+	 * activity base dialog selection
+	 * @author matt2
+	 *
+	 */
 	public class OnBaseDialogSelectionListener implements DialogInterface.OnClickListener {
 
 		@Override
 		public void onClick(DialogInterface dialog, int which) {
 			if (which == 0) {
-				String logMsg =  DirectiveDialogs.this.getActivityState().getActivity().getClass().getName();
+				String logMsg =  DirectiveDialogs.this.getActivity().getClass().getName();
 				DirectiveDialogs.this.getEventRecorder().writeRecord(Constants.EventTags.INTERSTITIAL_ACTIVITY, logMsg);
 			} else if (which == 1) {
+				// go into view selection mode
+				DirectiveDialogs.this.setClickMode(ClickMode.VIEW_SELECT);
+				DirectiveDialogs.this.resetCurrentView();
+			}
+		}	
+	}
+	
+	/**
+	 * the dialog selection handler for dialog intercepts requires a backreference to the magicOverlay for 
+	 * dialogs so it can get the source dialog handle, and the selection mode for content
+	 * @author matt2
+	 *
+	 */
+	public class OnBaseDialogDialogSelectionListener implements DialogInterface.OnClickListener {
+		protected MagicOverlayDialog mMagicOverlayDialog;
+		
+		public OnBaseDialogDialogSelectionListener(MagicOverlayDialog magicOverlayDialog) {
+			mMagicOverlayDialog = magicOverlayDialog;
+		}
+		
+		@Override
+		public void onClick(DialogInterface dialog, int which) {
+			if (which == 0) {
+				try {
+					TextView dialogTitle = TestUtils.getDialogTitleView(mMagicOverlayDialog.getTargetDialog());
+					if (dialogTitle != null) {
+						String title = dialogTitle.getText().toString();
+						if (title != null) {
+							Resources res = mMagicOverlayDialog.getActivity().getResources();
+							EventRecorder eventRecorder = DirectiveDialogs.this.getEventRecorder();
+							List<Object> resourceIds =  eventRecorder.getViewReference().getStringList();		
+							List<String> resIds = TestUtils.getIdForString(res, resourceIds, title);
+							if (resIds.size() == 1) {
+								String msg = mMagicOverlayDialog.getActivity().getClass().getName() + "," + resIds.get(0);
+								eventRecorder.writeRecord(Constants.EventTags.INTERSTITIAL_DIALOG_TITLE_ID, msg);
+							} else {
+								String escapedTitle = StringUtils.escapeString(title, "\"", '\\').replace("\n", "\\n");
+								String msg = mMagicOverlayDialog.getActivity().getClass().getName() + "," + "\"" + escapedTitle + "\"";
+								eventRecorder.writeRecord(Constants.EventTags.INTERSTITIAL_DIALOG_TITLE_TEXT, msg);
+							}
+						} else {
+							Toast.makeText(mMagicOverlayDialog.getActivity(), Constants.DisplayStrings.NO_DIALOG_TITLE, Toast.LENGTH_SHORT).show();
+						}
+					} else {
+						Toast.makeText(mMagicOverlayDialog.getActivity(), Constants.DisplayStrings.NO_DIALOG_TITLE, Toast.LENGTH_SHORT).show();
+					}
+				} catch (IllegalAccessException iaex) {
+					Toast.makeText(mMagicOverlayDialog.getActivity(), Constants.DisplayStrings.RESOURCE_ERROR, Toast.LENGTH_SHORT).show();
+					iaex.printStackTrace();
+				}
+			} else if (which == 1) {
+				// go into view selection mode to find the content view that we want to match
+				mMagicOverlayDialog.setViewSelectDialogContent(true);
+				DirectiveDialogs.this.setClickMode(ClickMode.VIEW_SELECT);
+				DirectiveDialogs.this.resetCurrentView();
+			} else if (which == 2) {
 				// go into view selection mode
 				DirectiveDialogs.this.setClickMode(ClickMode.VIEW_SELECT);
 				DirectiveDialogs.this.resetCurrentView();

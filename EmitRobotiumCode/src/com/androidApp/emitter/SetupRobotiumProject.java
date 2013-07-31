@@ -50,12 +50,12 @@ public class SetupRobotiumProject {
 		public File mDrawableDir = null;					// res/drawable	
 		public File mSaveStateDir = null;					// savestate
 		public File mPackageDir = null;						// src/path/to/testclass
-		public File mHandlerDir = null;						// src/path/to/testclss/handlers
+		public File mHandlerDir = null;						// handlers
 		
 		public Dirs(String dirname, String testClassFilePath) {
 			mSrcDir = new File(dirname + File.separator + Constants.Dirs.SRC);
 			mPackageDir = new File(testClassFilePath);
-			mHandlerDir = new File(mPackageDir + File.separator + Constants.Dirs.HANDLERS);
+			mHandlerDir = new File(dirname + File.separator + Constants.Dirs.HANDLERS);
 			mLibDir = new File(dirname + File.separator + Constants.Dirs.LIBS);
 			mResDir = new File(dirname + File.separator + Constants.Dirs.RES);
 			mDrawableDir = new File(mResDir + File.separator + Constants.Dirs.DRAWABLE);

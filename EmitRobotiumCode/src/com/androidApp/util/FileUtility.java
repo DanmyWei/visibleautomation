@@ -187,6 +187,20 @@ public class FileUtility {
 	 * directory was not found.
 	 */
 	public static int uniqueFileIndex(String directory, String templateFilename) {
+		File dir = new File(directory);
+		if (!dir.exists()) {
+			return 0;
+		}
+		return uniqueFileIndex(dir, templateFilename);
+	}
+	
+	/**
+	 * same but takes a file argument
+	 * @param dir
+	 * @param templateFilename
+	 * @return
+	 */
+	public static int uniqueFileIndex(File dir, String templateFilename) {
 		
 		// strip the extension. We want foo2.java, not foo.java2
 		int ichDot = templateFilename.lastIndexOf('.');
@@ -196,10 +210,6 @@ public class FileUtility {
 		}
 		
 		// check if we need to ever bother
-		File dir = new File(directory);
-		if (!dir.exists()) {
-			return 0;
-		}
 		File path = new File(dir, templateFilename);
 		if (!path.exists()) {
 			return 0;
@@ -213,7 +223,7 @@ public class FileUtility {
 			if (candFile.getName().startsWith(name)) {
 				String candFileName = candFile.getName();
 				String numericSuffix = "0";
-				ichDot = candFileName.indexOf('.');
+				ichDot = candFileName.lastIndexOf('.');
 				if (ichDot != -1) {
 					numericSuffix = candFileName.substring(name.length(), ichDot);
 				} else {
@@ -264,5 +274,13 @@ public class FileUtility {
 		BufferedWriter bw = new BufferedWriter(new FileWriter(file));
 		bw.write(s);
 		bw.close();
+	}
+	
+	public static void deleteAllFilesFromDirectory(File dir) {
+		String[] filenames = dir.list();
+		for (String filename : filenames) {
+			File file = new File(dir, filename);
+			file.delete();
+		}
 	}
 }

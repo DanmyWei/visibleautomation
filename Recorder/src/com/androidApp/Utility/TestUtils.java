@@ -34,6 +34,7 @@ import android.widget.TextView;
 import android.widget.ScrollView;
 import android.widget.Gallery;
 
+import com.androidApp.Intercept.DirectiveDialogs;
 import com.androidApp.Intercept.MagicOverlay;
 import com.androidApp.Intercept.MagicFrame;
 
@@ -99,7 +100,7 @@ public class TestUtils {
 	 * @return view or null if no matching child found
 	 */
 	public static View findChild(View v, Integer index, Class<? extends View> cls) {
-		if (v.getClass().isAssignableFrom(cls)) {
+		if (cls.isAssignableFrom(v.getClass())) {
 			if (index == 0) {
 				return v;
 			} else {
@@ -109,9 +110,10 @@ public class TestUtils {
 			ViewGroup vg = (ViewGroup) v;
 			int nChild = vg.getChildCount();
 			for (int i = 0; i < nChild; i++) {
-				View vChild = TestUtils.findChild(vg, index, cls);
-				if (vChild != null) {
-					return vChild;
+				View vChild = vg.getChildAt(i);
+				View vFound = TestUtils.findChild(vChild, index, cls);
+				if (vFound != null) {
+					return vFound;
 				}
 			}
 		}
@@ -1199,6 +1201,25 @@ public class TestUtils {
 			}
 		}
 		return false;		
+	}
+	
+	/**
+	 * geting a dialog title is tricky, because they didn't provide an accessor function for it, AND
+	 * it's an internal view (which fortunately derives from a TextView)
+	 * @param dialog
+	 * @return TextView or null if not found
+	 */
+	public static TextView getDialogTitleView(Dialog dialog) {
+		try {
+			Class<? extends View> dialogTitleClass = (Class<? extends View>) Class.forName(Constants.Classes.DIALOG_TITLE);
+			Window window = dialog.getWindow();
+			View decorView = window.getDecorView();
+			TextView dialogTitle = (TextView) TestUtils.findChild(decorView, 0, dialogTitleClass);
+			return dialogTitle;
+		} catch (ClassNotFoundException cnfex) {
+			Log.e(TAG, "failed to find dialog title");
+			return null;
+		}
 	}
 	
 	/**

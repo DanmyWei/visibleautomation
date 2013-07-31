@@ -103,7 +103,6 @@ public class MagicFrame extends FrameLayout {
 		this.addView(mContentView);
 		mViewInterceptor = viewInterceptor;
 		init();
-		//insertInterceptor(mContentView, 0);
 	}
 		
 	/**
@@ -114,10 +113,10 @@ public class MagicFrame extends FrameLayout {
 	 * @param recorder event recorder.
 	 */
 	public static void insertMagicFrame(Instrumentation instrumentation, 
-									    ActivityState 	activityState, 
+									    Activity		activity,
 									    EventRecorder 	recorder, 
 									    ViewInterceptor viewInterceptor) {
-		InsertMagicFrameRunnable runnable = new InsertMagicFrameRunnable(activityState, recorder, viewInterceptor);
+		InsertMagicFrameRunnable runnable = new InsertMagicFrameRunnable(activity, recorder, viewInterceptor);
 		instrumentation.runOnMainSync(runnable);
 	}
 	  

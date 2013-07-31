@@ -280,7 +280,7 @@ public class ActivityInterceptor {
 		if (activityB != activityA) {
 			recorder.writeRecord(Constants.EventTags.EXCEPTION, "first activities did not match");
 		} else {
-			MagicFrame.insertMagicFrame(mInstrumentation, peekActivityOnStack(), recorder, viewInterceptor);
+			MagicFrame.insertMagicFrame(mInstrumentation, peekActivityOnStack().getActivity(), recorder, viewInterceptor);
 		}
 	}
 	
@@ -323,7 +323,7 @@ public class ActivityInterceptor {
 					recorder.writeRecord(Constants.EventTags.EXCEPTION, "rotated activities did not match");
 				}
 				// TODO: check if we need to re-insert listeners on this activity.
-				MagicFrame.insertMagicFrame(mInstrumentation, peekActivityOnStack(), recorder, viewInterceptor);
+				MagicFrame.insertMagicFrame(mInstrumentation, peekActivityOnStack().getActivity(), recorder, viewInterceptor);
 			}
 		}
 	}
@@ -404,7 +404,7 @@ public class ActivityInterceptor {
 		mInstrumentation.runOnMainSync(new InterceptActivityRunnable(activityB));
 		String logMsg =  activityB.getClass().getName() + "," + activityB.toString();
 		recorder.writeRecord(Constants.EventTags.ACTIVITY_FORWARD, logMsg);
-		MagicFrame.insertMagicFrame(mInstrumentation, peekActivityOnStack(), recorder, viewInterceptor);
+		MagicFrame.insertMagicFrame(mInstrumentation, peekActivityOnStack().getActivity(), recorder, viewInterceptor);
 	}
 
 	/**

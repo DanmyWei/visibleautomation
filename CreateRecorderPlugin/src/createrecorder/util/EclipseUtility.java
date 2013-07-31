@@ -1,6 +1,7 @@
 package createrecorder.util;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -154,6 +155,12 @@ public class EclipseUtility {
 	public static void writeResource(IFolder folder, String resourceName) throws CoreException {
 		InputStream fis = EmitRobotiumCode.class.getResourceAsStream("/" + resourceName);
 		IFile file = folder.getFile(resourceName);
+		file.delete(false, null);
+		file.create(fis, IFile.FORCE, null);	
+	}
+	public static void writeFile(IFolder folder, String srcFileName, String dstFileName) throws CoreException, FileNotFoundException {
+		InputStream fis = new FileInputStream(srcFileName);
+		IFile file = folder.getFile(dstFileName);
 		file.delete(false, null);
 		file.create(fis, IFile.FORCE, null);	
 	}

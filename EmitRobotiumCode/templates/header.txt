@@ -1,8 +1,11 @@
 package %TESTPACKAGE%;
 
 import %CLASSPATH%;
-%HANDLER_IMPORTS%
 import com.androidApp.util.RobotiumUtils;
+import com.androidApp.util.CodeDefinition;
+import com.androidApp.util.IDialogHandler;
+import com.androidApp.util.IActivityHandler;
+import com.androidApp.util.DialogListener;
 import com.androidApp.util.PlaybackMotionEvents;
 import com.androidApp.util.ViewExtractor;
 import com.androidApp.util.TestException;
@@ -33,7 +36,6 @@ public class %TESTCLASSNAME% extends ActivityInstrumentationTestCase2<%CLASSNAME
   	public void setUp() throws Exception {
 		robotiumUtils = new RobotiumUtils(%TESTCLASSNAME%.class, getInstrumentation());
 		solo = new Solo(getInstrumentation(), getActivity());
-  		%ACTIVITY_HANDLERS%
   	}
   
    	@Override

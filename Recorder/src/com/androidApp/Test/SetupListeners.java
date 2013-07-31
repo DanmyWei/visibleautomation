@@ -30,6 +30,8 @@ import com.androidApp.Intercept.IMEMessageListener;
 import com.androidApp.Intercept.InterceptKeyViewMenu;
 import com.androidApp.Intercept.MagicFrame;
 import com.androidApp.Intercept.MagicFramePopup;
+import com.androidApp.Intercept.MagicOverlay;
+import com.androidApp.Intercept.MagicOverlayDialog;
 import com.androidApp.Listeners.RecordWindowCallback;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.FieldUtils;
@@ -349,8 +351,10 @@ public class SetupListeners {
 		
 		public void run() {
 			View contentView = TestUtils.getDialogContentView(mDialog);
-			MagicFrame magicFrame = new MagicFrame(contentView.getContext(), contentView, 0, mRecorder, mViewInterceptor);
+			// add magic overlay here
 			try {
+				MagicFrame magicFrame = new MagicFrame(contentView.getContext(), contentView, 0, mRecorder, mViewInterceptor);
+				MagicOverlayDialog.addMagicOverlay(mActivity, mDialog, magicFrame, mRecorder);
 				// spinner dialogs have their own dismiss.
 				if (TestUtils.isSpinnerDialog(contentView)) {
 					mViewInterceptor.interceptSpinnerDialog(mDialog);

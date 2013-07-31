@@ -1,0 +1,2 @@
+		// %DESCRIPTION%
+		if (obotiumUtils.waitForActivity(%ACTIVITY_CLASS%.class, ACTIVITY_WAIT_MSEC))) {	

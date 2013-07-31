@@ -1,0 +1,4 @@
+	// %DESCRIPTION%
+	Activity activity%VARIABLE_INDEX% = robotiumUtils.getCurrentActivity();
+	if (DialogListener.waitForDialog(activity%VARIABLE_INDEX%, new %CODE_DEFINITION%, DIALOG_OPEN_TIMEOUT)) {
+	
