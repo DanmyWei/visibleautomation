@@ -133,7 +133,7 @@ public class ActivityInterceptor {
 		mfHasFinished = f;
 	}
 	
-	public boolean getFinished() {
+	public boolean hasFinished() {
 		return mfHasFinished;
 	}
 	
@@ -150,62 +150,49 @@ public class ActivityInterceptor {
 		Runnable runnable = new Runnable() {
 			public void run() {
 				boolean fStart = true;
-				boolean fPreviousActivityFinished = false;
 				boolean fPastFirstActivity = false;
 				int currentRotation = Surface.ROTATION_0;
-				WeakReference<Activity> activityRefBackedTo = null;
-
 				while (fStart || !fPastFirstActivity || !ActivityInterceptor.this.isActivityStackEmpty()) {
 					try {
 						Activity activity = ActivityInterceptor.this.mActivityMonitor.waitForActivity();
+						boolean fStopped = isStopped(activity);
+						boolean fResumed = isResumed(activity);
+						boolean fFinishing = activity.isFinishing();
 						Log.i(TAG, "activity = " + activity + 
-								   " finished = " + activity.isFinishing() +
-								   " stopped = " + isStopped(activity) + 
-								   " resumed = " + isResumed(activity) + 
+								   " finished = " + fFinishing +
+								   " stopped = " + fStopped + 
+								   " resumed = " + fResumed + 
 								   " flags = 0x" + Integer.toHexString(activity.getIntent().getFlags()));
-						cleanupActivityStack();
 						currentRotation  = activity.getWindowManager().getDefaultDisplay().getRotation();
-						if (fStart) {
+						if (fStart  && fResumed) {
 							handleStartActivity(activity);
 							fStart = false;
-						} else if (activity.isFinishing()) {
+						} else if (fFinishing) {
 							removeActivityFromStack(activity);
+							if (isActivityStackEmpty()) {
+								handleLastActivityFinish(activity);
+							}
 						} else {
-							if (inActivityStack(activity)  && isResumed(activity)) {	
+							if (inActivityStack(activity)  && fResumed) {	
 								handleActivityBack(activity);
 							} else if (isManualRotation(activity, currentRotation)) {
 								Log.i(TAG, "manual rotation " + activity);
 								handleManualRotation(activity, currentRotation);
-							} else if (isResumed(activity)) {
+							} else if (fResumed) {
 								handleNewActivity(activity);
 							}
 						}
+						cleanupActivityStack();
 					} catch (Exception ex) {
 						Log.e(TAG, "exception thrown in activity interceptor");
 						ex.printStackTrace();
 					}
 				}
+				mfHasFinished = true;
 			}
 		};
 		mActivityThread = new Thread(runnable, "activityMonitorThread");
 		mActivityThread.start();
-	}
-		
-	public void handleClearTop(Activity activity) {
-		if (!isOnTopOfActivityStack(activity)) {
-			if (mViewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_BACK) {
-				mViewInterceptor.setLastKeyAction(-1);
-				String logMsg = activity.getClass().getName() + "," + activity;
-				mEventRecorder.writeRecord(Constants.EventTags.ACTIVITY_BACK_KEY, logMsg);
-			} else {
-				String logMsg = activity.getClass().getName() + "," + activity;
-				mEventRecorder.writeRecord(Constants.EventTags.ACTIVITY_BACK, logMsg);
-			}
-			if (!MagicFrame.isAlreadyInserted(activity)) {
-				MagicFrame.insertMagicFrame(mInstrumentation, activity, mEventRecorder, mViewInterceptor);			
-				mInstrumentation.runOnMainSync(new InterceptActivityRunnable(activity));
-			}
-		}
 	}
 	
 	public void handleNewActivity(Activity activity) {
@@ -260,6 +247,18 @@ public class ActivityInterceptor {
 		}
 	}
 	
+	
+	public void handleLastActivityFinish(Activity activity) {
+        long time = SystemClock.uptimeMillis();
+		if (mViewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_BACK) {
+			mViewInterceptor.setLastKeyAction(-1);
+ 			mEventRecorder.writeRecord(Constants.EventTags.ACTIVITY_BACK_KEY + ":" + time);
+		} else {
+			String logMsg = activity.getClass().getName() + "," + "no previous activity";
+			mEventRecorder.writeRecord(Constants.EventTags.ACTIVITY_BACK + ":" + time);
+		}
+	}
+	
 	public boolean isManualRotation(Activity activity, int currentOrientation) {
 		ActivityState topActivityState = peekActivityOnStack();
 		Activity topActivity = topActivityState.getActivity();
@@ -311,13 +310,7 @@ public class ActivityInterceptor {
 			return false;
 		}
 	}
-	/**
-	 * so, how big is it, really?  
-	 * @return
-	 */
-	public synchronized int activityStackSize() {
-		return mActivityStack.size();
-	}
+
 	/**
 	 * push the activity onto the stack of WeakReferences. We use weak reference so we don't actually hold onto the activity
 	 * after it's been finished.
@@ -368,31 +361,6 @@ public class ActivityInterceptor {
 			return mActivityStack.peek();
 		}
 	}
-	/**
-	 * return the activity that's below the top of the stack
-	 * @return top activity
-	 */
-	public synchronized ActivityState peekPreviousActivityOnStack() {
-		if (mActivityStack.size() < 2) {
-			return null;
-		} else {
-			return mActivityStack.get(mActivityStack.size() - 2);
-		}
-	}
-	
-	/**
-	 * rather than popping the stack, find the activity, for certain
-	 * @param a
-	 * @return
-	 */
-	public synchronized ActivityState findPreviousActivityOnStack(Activity a) {
-		for (ActivityState cand : mActivityStack) {
-			if (cand.getActivity() == a) {
-				return cand;
-			}
-		}
-		return null;
-	}
 	
 
 	public ActivityState activityClassInStack(Class<? extends Activity> activityClass) {
@@ -411,7 +379,7 @@ public class ActivityInterceptor {
 		List<ActivityState> removeList = new ArrayList<ActivityState>();
 		int iPos = mActivityStack.size() - 1;
 		for (ActivityState cand : mActivityStack) {
-			if (cand.getActivity() == null) {
+			if ((cand.getActivity() == null) || (cand.getActivity().isFinishing())) {
 				removeList.add(cand);
 				Log.i(TAG, "removing activity " + cand.getActivityUniqueName() + " at position " + iPos);
 			}
@@ -422,35 +390,6 @@ public class ActivityInterceptor {
 		}
 	}
 	
-	
-	/**
-	 * activities can be returned from the activity monitor out of order. We need to know what order they are
-	 * actually in
-	 * @param a first activity returned from ActivityMonitor
-	 * @param b second activity returned from ActivityMonitor
-	 * @return
-	 */
-	public synchronized ActivityState findEarliestActivityOnStack(Activity a, Activity b) {
-		int stackDepthA = -1, stackDepthB = -1;
-		ActivityState stateA = null, stateB = null;
-		for (int stackDepth = 0; stackDepth < mActivityStack.size(); stackDepth++) {
-			// list: stacks top is at end of list.
-			ActivityState cand = mActivityStack.get(mActivityStack.size() - 1 - stackDepth);
-			if (cand.getActivity() == a) {
-				stackDepthA = stackDepth;
-				stateA = cand;
-			}
-			if (cand.getActivity() == b) {
-				stackDepthB = stackDepth;
-				stateB = cand;
-			}
-		}
-		if (stackDepthA > stackDepthB) {
-			return stateA;
-		} else {
-			return stateB;
-		}
-	}
 	
 	/***
 	 * scan the activity stack to determine if an activity is in it.  
@@ -486,22 +425,6 @@ public class ActivityInterceptor {
 		} else {
 			return null;
 		}
-	}
-	
-	/**
-	 * when the intent flag FLAG_ACTIVITY_CLEAR_TOP is passed to the activity when startActivity is called,
-	 * then if the activty is in the stack, then all the activities between it and the activity are cleared
-	 * so we unroll the stack to the matching activity CLASS, because unless onNewIntent() is defined for that
-	 * activity, it will launch a new activity and replace the old activity
-	 */
-
-	protected boolean isClearTop(Activity activity, Activity activityJustFinished) {
-		Intent intent = activity.getIntent();
-		if ((intent.getFlags() & Intent.FLAG_ACTIVITY_CLEAR_TOP) != 0x0) {
-			return (activityClassInStack(activity.getClass()) != null) || 
-					((activityJustFinished != null) && (activity.getClass() == activityJustFinished.getClass()));
-		}
-		return false;
 	}
 	
 	/**
