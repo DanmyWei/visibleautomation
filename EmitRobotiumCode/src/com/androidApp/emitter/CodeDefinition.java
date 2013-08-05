@@ -263,4 +263,17 @@ public class CodeDefinition {
 			}
 		}
 	}
+	
+	// generate the code suitable for a handler java class
+	public String toBinaryCode() {
+		if (mType == Type.ACTIVITY) {
+			return "CodeDefinition(" + mActivityName + ".class"+ ")";
+		} else {
+			if (mDialogTagType == DialogTagType.TEXT) {
+				return "CodeDefinition(\"" + mActivityName + "\"" +  ",\"" + mDialogTag + "\"," + mDialogScanType.mCodeName + "," + mDialogTagType.mCodeName + ")";
+			} else {
+				return "CodeDefinition(\"" + mActivityName + "\"" + "," + mDialogTag + "," + mDialogScanType.mCodeName + "," + mDialogTagType.mCodeName + ")";
+			}
+		}
+	}
 }

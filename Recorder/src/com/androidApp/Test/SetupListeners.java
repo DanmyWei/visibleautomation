@@ -124,7 +124,8 @@ public class SetupListeners {
 		}
 		Intent intent = new Intent(Intent.ACTION_MAIN);
 		intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-		intent.setClassName(getInstrumentation().getTargetContext(), mActivityName);			// so we can get the package name to write in the manifest and classpath
+		// so we can get the package name to write in the manifest and classpath
+		intent.setClassName(getInstrumentation().getTargetContext(), mActivityName);
 		getInstrumentation().startActivitySync(intent);
 	}
 
@@ -159,10 +160,12 @@ public class SetupListeners {
 							}
 						}
 					} else {
+						/* TEMPORARY
 						if (SetupListeners.this.getActivityInterceptor().hasStarted() && !SetupListeners.this.getActivityInterceptor().mightBeWaitingForSplashScreen()) {
 							Log.i(TAG, "setupDialogListener activity = " + activity + " viewInterceptor = " + viewInterceptor);
 							this.cancel();
 						}
+						*/
 					}
 				} catch (Exception ex) {
 					ex.printStackTrace();

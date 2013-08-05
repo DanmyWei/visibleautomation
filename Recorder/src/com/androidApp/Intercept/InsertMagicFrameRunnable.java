@@ -26,7 +26,7 @@ public class InsertMagicFrameRunnable implements Runnable {
 	protected EventRecorder 					mRecorder;					// event recorder interface
 	protected ViewInterceptor 					mViewInterceptor;			// to intercept the views contained in the window
 	protected Activity							mActivity;					// activity backreference for dialogs
-
+	
 	public InsertMagicFrameRunnable(Activity activity, EventRecorder recorder, ViewInterceptor viewInterceptor) {
 		mWindow = activity.getWindow();
 		mActivity = activity;

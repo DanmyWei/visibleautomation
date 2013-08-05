@@ -194,7 +194,7 @@ public class EclipseUtility {
 				String numericSuffix = "0";
 				
 				// strip the extension off the candidate.
-				ichDot = candFileName.indexOf('.');
+				ichDot = candFileName.lastIndexOf('.');
 				if (ichDot != -1) {
 					numericSuffix = candFileName.substring(name.length(), ichDot);
 				} else {

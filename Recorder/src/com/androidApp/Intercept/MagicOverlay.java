@@ -156,6 +156,7 @@ public class MagicOverlay extends View implements OnGestureListener {
 		mCurrentView = null;
 		mfEnabled = false;
 		mDirectiveDialogs = new DirectiveDialogs(this);
+		setVisibility(View.INVISIBLE);
 	}
 	
 	// standard grey background.
@@ -258,7 +259,12 @@ public class MagicOverlay extends View implements OnGestureListener {
 		public void onClick(View v) {
 			FrameLayout.LayoutParams overlayLayoutParams = (FrameLayout.LayoutParams) MagicOverlay.this.getLayoutParams();
 			overlayLayoutParams.setMargins(0, 0, 0, 0);
-			MagicOverlay.this.setX(MagicOverlay.this.mContentView.getX());
+			overlayLayoutParams.width = MagicOverlay.this.mContentView.getWidth();
+			overlayLayoutParams.height = MagicOverlay.this.mContentView.getHeight();
+			MagicOverlay.this.setVisibility(View.VISIBLE);
+			MagicOverlay.this.setLayoutParams(overlayLayoutParams);
+			//MagicOverlay.this.setX(MagicOverlay.this.mContentView.getX());
+			MagicOverlay.this.getParent().requestLayout();
 		}	
 	}
 	/**
@@ -273,8 +279,11 @@ public class MagicOverlay extends View implements OnGestureListener {
 																		  TranslateAnimation.RELATIVE_TO_SELF, 0.0F,
 																		  TranslateAnimation.RELATIVE_TO_SELF, 0.0F);
 			slideOutAnimation.setDuration(500);
+			slideOutAnimation.setFillAfter(false);
+			slideOutAnimation.setFillAfter(false);
+			slideOutAnimation.setFillEnabled(false);
 			MagicOverlay.this.startAnimation(slideOutAnimation);
-			new Handler().postDelayed(new SlideCompleteRunnable(slideOutAnimation, MagicOverlay.this, false), slideOutAnimation.getDuration());
+			new Handler().postDelayed(new SlideCompleteRunnable(slideOutAnimation, MagicOverlay.this), slideOutAnimation.getDuration());
 			mMode = ClickMode.BASE;
 			mCurrentView = mContentView;
 			return true;
@@ -289,13 +298,11 @@ public class MagicOverlay extends View implements OnGestureListener {
 	 */
 	protected class SlideCompleteRunnable implements Runnable {
 		protected MagicOverlay 	mOverlay;
-		protected boolean		mfEnable;
 		protected Animation		mAnimation;
 		
-		public SlideCompleteRunnable(Animation animation, MagicOverlay overlay, boolean fEnable) {
+		public SlideCompleteRunnable(Animation animation, MagicOverlay overlay) {
 			mAnimation = animation;
 			mOverlay = overlay;
-			mfEnable = fEnable;
 		}
 
 		@Override
@@ -309,13 +316,17 @@ public class MagicOverlay extends View implements OnGestureListener {
 				maxWait -= 100;
 			}
 			FrameLayout.LayoutParams overlayLayoutParams = (FrameLayout.LayoutParams) MagicOverlay.this.getLayoutParams();
-			if (mfEnable) {
-				overlayLayoutParams.setMargins(0, 0, 0, 0);
-				MagicOverlay.this.setX(MagicOverlay.this.mContentView.getX());
-			} else {
-				overlayLayoutParams.setMargins(MagicOverlay.this.mContentView.getMeasuredWidth(), 0, 0, 0);
-				MagicOverlay.this.setX(MagicOverlay.this.mContentView.getX() + MagicOverlay.this.mContentView.getMeasuredWidth());
-			}
+			TranslateAnimation removeAnimation = new TranslateAnimation(TranslateAnimation.RELATIVE_TO_SELF, 1.0F,
+																		  TranslateAnimation.RELATIVE_TO_SELF, 0.0F,
+																		  TranslateAnimation.RELATIVE_TO_SELF, 0.0F,
+																		  TranslateAnimation.RELATIVE_TO_SELF, 0.0F);
+			removeAnimation.setDuration(0);
+			removeAnimation.setFillAfter(false);
+			removeAnimation.setFillAfter(false);
+			removeAnimation.setFillEnabled(false);
+			MagicOverlay.this.startAnimation(removeAnimation);
+			overlayLayoutParams.setMargins(MagicOverlay.this.mContentView.getMeasuredWidth(), 0, 0, 0);
+			//MagicOverlay.this.setX(MagicOverlay.this.mContentView.getX() + MagicOverlay.this.mContentView.getMeasuredWidth());
 			MagicOverlay.this.setLayoutParams(overlayLayoutParams);
 			MagicOverlay.this.getParent().requestLayout();
 

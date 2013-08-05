@@ -36,6 +36,16 @@ public interface IEmitCode {
 		}
 	}	
 	
+	public class CodeOutput {
+		public List<LineAndTokens>	mLineAndTokens;
+		public int					mNextLineIndex;
+		
+		public CodeOutput(List<LineAndTokens> lineAndTokens, int nextLineIndex) {
+			mLineAndTokens = lineAndTokens;
+			mNextLineIndex = nextLineIndex;
+		}
+	}
+	
 	/**
 	 * output type from the emitter: determines when it terminates (end of code, activity transtion, dialog)
 	 * @author matt2
@@ -53,11 +63,11 @@ public interface IEmitCode {
 	void generateTestCode(String 											eventsFileName, 
 			 		  	  Hashtable<CodeDefinition, List<LineAndTokens>>	outputCode, 
 			 		  	  List<MotionEventList> 							motionEvents) throws FileNotFoundException, IOException, EmitterException;
-	List<LineAndTokens> emit(BufferedReader 								br, 
-							 String											line,
-							 Hashtable<CodeDefinition, List<LineAndTokens>>	outputCode,
-							 List<MotionEventList> 							motionEvents,
-							 OutputType										outputType) throws IOException, EmitterException;
+	CodeOutput emit(List<List<String>>								tokenLines,
+					int												currentReadIndex,
+					Hashtable<CodeDefinition, List<LineAndTokens>>	outputCode,
+					List<MotionEventList> 							motionEvents,
+					OutputType										outputType) throws IOException, EmitterException;
 	String getDescription(List<String> tokens);
 	void writeFunctionHeader(BufferedWriter bw) throws IOException;
 	void writeException(List<String> tokens, List<LineAndTokens> lines) throws IOException;

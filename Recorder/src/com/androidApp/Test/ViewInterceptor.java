@@ -376,12 +376,6 @@ public class ViewInterceptor {
 	 * @throws NoSuchFieldException
 	 */
 	public static boolean replaceClickListener(EventRecorder eventRecorder, View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
-		if (v instanceof TextView) {
-			Log.e(TAG, "attempting to set click listener for " + ((TextView) v).getText() + " " + v);
-		} else {
-			Log.e(TAG, "attempting to set click listener for " + v);
-			
-		}
 		View.OnClickListener originalClickListener = ListenerIntercept.getClickListener(v);
 		if (TestUtils.listenClickEvents(v) || (originalClickListener != null)) {
 			if (!(originalClickListener instanceof RecordOnClickListener)) {
@@ -390,13 +384,6 @@ public class ViewInterceptor {
 				Log.i(TAG, "setting click listener for " + v + " " + RecordListener.getDescription(v));
 				return true;
 			}
-		}
-		 // wierd case
-		if (v instanceof TextView) {
-			Log.e(TAG, "failed to replace click listener for " + ((TextView) v).getText() + " " + v);
-		} else {
-			Log.e(TAG, "failed to replace click listener for " + v);
-			
 		}
 		return false;
 	}

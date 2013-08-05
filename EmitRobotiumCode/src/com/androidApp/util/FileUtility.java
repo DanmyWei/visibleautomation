@@ -9,6 +9,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.omg.CORBA_2_3.portable.OutputStream;
@@ -63,6 +64,21 @@ public class FileUtility {
 				return sb.toString();
 			}
 		} while (true);
+	}
+	
+	
+	// read from a string into a list of lines.
+	public static List<String> readToLines(InputStream is) throws IOException {
+		List<String> lines = new ArrayList<String>();
+		BufferedReader buf = new BufferedReader(new InputStreamReader(is));
+		String line = buf.readLine();
+		while (line != null) {	
+			if (line != null) {
+				lines.add(line);
+			}
+			line = buf.readLine();
+		}
+		return lines;
 	}
 	
 	/**

@@ -169,7 +169,7 @@ public class EmitRobotiumCodeBinary extends EmitRobotiumCodeSource {
 		}
 	}
 	
-	LineAndTokens activityConditionBinary(List<String> tokens, String activityName) throws IOException {
+	public LineAndTokens activityConditionBinary(List<String> tokens, String activityName) throws IOException {
 		String dialogConditionTemplate = FileUtility.readTemplate(Constants.Templates.ACTIVITY_CONDITION_BINARY);
 		String description = "wait to see if activity " + activityName + " has appeared";
 		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.ACTIVITY_CLASS, activityName);
@@ -185,12 +185,12 @@ public class EmitRobotiumCodeBinary extends EmitRobotiumCodeSource {
 	 * @return
 	 * @throws IOException
 	 */
-	LineAndTokens dialogCondition(List<String> tokens, CodeDefinition codeDef) throws IOException {
+	public LineAndTokens dialogCondition(List<String> tokens, CodeDefinition codeDef) throws IOException {
 		String dialogConditionTemplate = FileUtility.readTemplate(Constants.Templates.DIALOG_CONDITION_BINARY);
 		String description = "wait to see if a dialog with string " + codeDef.getDialogTag() + " has appeared";
 		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.DESCRIPTION, description);
 		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mActivityVariableIndex));
-		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.CODE_DEFINITION, codeDef.toCode());
+		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.CODE_DEFINITION, codeDef.toBinaryCode());
 		mActivityVariableIndex++;
 		return new LineAndTokens(tokens, dialogConditionTemplate);
 	}

@@ -203,6 +203,14 @@ public class CreateTestHandler extends AbstractHandler {
 		}
 	}
 	
+	/**
+	 * write the conditional handlers for dialogs and activities.
+	 * @param testProject
+	 * @param outputCode
+	 * @throws CoreException
+	 * @throws IOException
+	 * @throws EmitterException
+	 */
 	public static void writeHandlers(IProject 										testProject,
 	 								 Hashtable<CodeDefinition, List<LineAndTokens>> outputCode) throws CoreException, IOException, EmitterException {
 		IFolder handlersFolder = testProject.getFolder(Constants.Dirs.HANDLERS);
@@ -210,7 +218,7 @@ public class CreateTestHandler extends AbstractHandler {
 			CodeDefinition codeDef = entry.getKey();
 			List<LineAndTokens> code = entry.getValue();
 			if (!codeDef.getActivityName().equals(Constants.MAIN)) {
-				String templateFileName = codeDef.getActivityName();
+				String templateFileName = codeDef.getActivityName() + "." + Constants.Extensions.JAVA;
 				int uniqueFileIndex = EclipseUtility.uniqueFileIndex(handlersFolder, templateFileName);
 				if (uniqueFileIndex != 0) {
 					templateFileName += Integer.toString(uniqueFileIndex);
@@ -218,7 +226,6 @@ public class CreateTestHandler extends AbstractHandler {
 				FileOutputStream fos = new FileOutputStream("handler");
 				EmitRobotiumCode.writeConditionalCode(fos, codeDef, code);
 				fos.close();
-				templateFileName += "." + Constants.Extensions.TEXT;
 				FileInputStream fis = new FileInputStream("handler");
 				IFile file = handlersFolder.getFile(templateFileName);
 				file.delete(false, null);

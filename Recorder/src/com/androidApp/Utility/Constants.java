@@ -152,6 +152,8 @@ public class Constants {
 		public static final String VIEW = "mView";
 		public static final String PARENT = "mParent";
 		public static final String ON_VALUE_CHANGE_LISTENER = "mOnValueChangeListener";
+		public static final String STOPPED = "mStopped";
+		public static final String RESUMED = "mResumed";
 
 	}
 	

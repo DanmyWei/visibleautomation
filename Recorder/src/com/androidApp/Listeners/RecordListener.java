@@ -65,7 +65,9 @@ public class RecordListener {
 	}
 	
 	public static boolean getEventLatch() {
-		return sfEventLatch;
+		boolean f = sfEventLatch;
+		sfEventLatch = false;
+		return f;
 	}
 		
 	/**

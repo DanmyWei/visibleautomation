@@ -82,6 +82,19 @@ public class Constants {
 			}
 			return false;
 		}
+		
+		public static boolean isInterstitialDialogEvent(String s) {
+			String[] dialogEvents = new String[] {INTERSTITIAL_DIALOG_TITLE_ID.mEventName,
+													INTERSTITIAL_DIALOG_TITLE_TEXT.mEventName,
+													INTERSTITIAL_DIALOG_CONTENTS_ID.mEventName,
+													INTERSTITIAL_DIALOG_CONTENTS_TEXT.mEventName };
+			for (String event : dialogEvents) {
+				if (s.equals(event)) {
+					return true;
+				}
+			}
+			return false;
+		}
 	}
 	
 	// activity transition events

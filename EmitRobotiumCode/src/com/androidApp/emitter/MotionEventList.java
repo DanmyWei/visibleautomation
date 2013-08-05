@@ -50,7 +50,22 @@ public class MotionEventList {
 	protected int						mWidth;				// dimensions of containing view
 	protected int						mHeight;
 	protected List<MotionEventPoint>	mPoints;			// list of recorded points
-	public MotionEventList(String name, List<String> touchDownTokens, String nextLine, BufferedReader br) throws EmitterException, IOException {
+	protected int						mLastReadIndex;		// so caller can know how many lines we read
+	/**
+	 * read motion events from the input tokens. TouchDownTokens is the touch_down event which kicks off
+	 * the read, and we read until either touch_up or an event that isn't touch_move (since other events can
+	 * happen, like going out of the window)
+	 * @param name  name that the motion event list is assigned
+	 * @param touchDownTokens tokens from the touch_down events
+	 * @param tokenLines the events file, parsed into a list of lists of tokens
+	 * @param currentReadIndex current position in the list of lists of tokens
+	 * @throws EmitterException
+	 * @throws IOException
+	 */
+	public MotionEventList(String 				name, 
+						   List<String> 		touchDownTokens, 
+						   List<List<String>>	tokenLines,
+						   int					currentReadIndex) throws EmitterException, IOException {
 		mName = name;
 		mPoints = new ArrayList<MotionEventPoint>();
 		mWidth = Integer.parseInt(touchDownTokens.get(2));
@@ -61,11 +76,10 @@ public class MotionEventList {
 		MotionEventPoint downEvent = new MotionEventPoint(eventTimeMsec, eventX, eventY);
 		mRef = new ReferenceParser(touchDownTokens, 6);
 		mPoints.add(downEvent);
-		String line = nextLine;
-		do {
-			
-			SuperTokenizer st = new SuperTokenizer(line, "\"", ":,", '\\');
-			List<String> tokens = st.toList();
+		int iPointLine;
+		// we've already read touch down, hence + 1
+		for (iPointLine = currentReadIndex + 1; iPointLine < tokenLines.size(); iPointLine++) {
+			List<String> tokens = tokenLines.get(iPointLine);
 			String action = tokens.get(0);
 			if (Constants.UserEvent.TOUCH_MOVE.equals(action)) {
 				eventTimeMsec = Long.parseLong(tokens.get(1));
@@ -79,12 +93,13 @@ public class MotionEventList {
 				eventY = Float.parseFloat(tokens.get(3));
 				MotionEventPoint upEvent = new MotionEventPoint(eventTimeMsec, eventX, eventY);
 				mPoints.add(upEvent);
+				mLastReadIndex = iPointLine + 1;		// we want this event.
 				break;
 			} else {
+				mLastReadIndex = iPointLine;		// caller wants this event
 				break;
 			}
-			line = br.readLine();
-		} while (true);
+		}
 	}
 	
 	/**
@@ -108,5 +123,9 @@ public class MotionEventList {
 	
 	public ReferenceParser getRef() {
 		return mRef;
+	}
+	
+	public int getLastReadIndex() {
+		return mLastReadIndex;
 	}
 }

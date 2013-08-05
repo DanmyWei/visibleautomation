@@ -12,11 +12,13 @@ import com.androidApp.Intercept.ViewInsertRecordWindowCallbackRunnable;
 import com.androidApp.Intercept.MagicFrame;
 import com.androidApp.Listeners.RecordListener;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.ReflectionUtils;
 
 import android.app.Activity;
 import android.app.Instrumentation;
 import android.app.Instrumentation.ActivityMonitor;
 import android.content.Context;
+import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageInfo;
@@ -50,7 +52,6 @@ public class ActivityInterceptor {
 	protected boolean				mfHasStarted;						// the first activity has been observed.
 	protected boolean				mfHasFinished;						// last activity was finished()
 	protected boolean				mfPastFirstActivity;				// first activity might finish() immediately because it's a splash screen
-	protected boolean		 		mfMightBeSplashScreenFinish;		// waiting for next activity after splash screen finish
 	/**
 	 * retain the activity information along with the activity.
 	 * @author Matthew
@@ -136,11 +137,6 @@ public class ActivityInterceptor {
 		return mfHasFinished;
 	}
 	
-	/**
-	 * activity monitor hits always come in pairs.
-	 * if the activities are the same (A, A), then it is going forward to that activity (A)
-	 * if the activities are different (A, B) then it is going backwards from B to A 
-	 */
 	public void setupActivityStackListener(Instrumentation instrumentation) {
 		IntentFilter filter = null;
 		
@@ -153,94 +149,40 @@ public class ActivityInterceptor {
 		mActivityStack = new Stack<ActivityState>();
 		Runnable runnable = new Runnable() {
 			public void run() {
-				ActivityInterceptor.this.mfMightBeSplashScreenFinish = false;
-				EventRecorder recorder = ActivityInterceptor.this.getRecorder();
-				ViewInterceptor viewInterceptor = ActivityInterceptor.this.getViewInterceptor();
 				boolean fStart = true;
+				boolean fPreviousActivityFinished = false;
+				boolean fPastFirstActivity = false;
 				int currentRotation = Surface.ROTATION_0;
-				while (fStart || !ActivityInterceptor.this.isActivityStackEmpty()) {
-					Activity activityA = ActivityInterceptor.this.mActivityMonitor.waitForActivity();
-					boolean fEventsHaveBeenFired = RecordListener.getEventLatch();
-					// no events have been recorded yet for this activity.
-					RecordListener.setEventLatch(false);
-					if (fStart) {
+				WeakReference<Activity> activityRefBackedTo = null;
 
-						Log.i(TAG, "start case activity = " + activityA);
-						// tell instrumentation that it can go ahead and start the first activity.  We're ready for anything.
-						synchronized (this) {
-							this.notify();
-						}
-						ActivityInterceptor.this.recordInitialActivity(recorder, viewInterceptor, activityA);
-						ActivityInterceptor.this.setStarted(true);
-						fStart = false;
-						currentRotation  = activityA.getWindowManager().getDefaultDisplay().getRotation();
-						mInstrumentation.runOnMainSync(new InsertRecordWindowCallbackRunnable(activityA.getWindow(), recorder, viewInterceptor));
-						// write out the package so we can do the correct import for the application
-						// initialize the view reference with an activity so we can read the appropriate whitelist
-						// for the target application's SDK
-						try {
-							recorder.getViewReference().initializeWithActivity(activityA, mInstrumentation);
-							String packageName = getPackageName(activityA);
-							ActivityInterceptor.this.getRecorder().writeRecord(Constants.EventTags.PACKAGE, packageName);
-						} catch (Exception ex) {
-							ActivityInterceptor.this.getRecorder().writeException(ex, "getting package name");
-						}
-					} else {
-						if (!fEventsHaveBeenFired) {
-							Log.i(TAG, "no UI recorded were fired to cause this activity transition");
-						}
-						int newRotation = activityA.getWindowManager().getDefaultDisplay().getRotation();
-						if (isFinalActivityBack(activityA)) {
-							if (mfPastFirstActivity) {
-								Log.i(TAG, "first activity back case activity = " + activityA);
-								ActivityInterceptor.this.recordFirstActivityBack(recorder);
-								ActivityInterceptor.this.setFinished(true);
-								return;
-							} else {
-								ActivityInterceptor.this.mfMightBeSplashScreenFinish = true;
-							}
+				while (fStart || !fPastFirstActivity || !ActivityInterceptor.this.isActivityStackEmpty()) {
+					try {
+						Activity activity = ActivityInterceptor.this.mActivityMonitor.waitForActivity();
+						Log.i(TAG, "activity = " + activity + 
+								   " finished = " + activity.isFinishing() +
+								   " stopped = " + isStopped(activity) + 
+								   " resumed = " + isResumed(activity) + 
+								   " flags = 0x" + Integer.toHexString(activity.getIntent().getFlags()));
+						cleanupActivityStack();
+						currentRotation  = activity.getWindowManager().getDefaultDisplay().getRotation();
+						if (fStart) {
+							handleStartActivity(activity);
+							fStart = false;
+						} else if (activity.isFinishing()) {
+							removeActivityFromStack(activity);
 						} else {
-							// the device has rotated in the activity transition, where one activity is destroyed, and another created
-							// with the rotated layout.
-							if (newRotation != currentRotation) {
-								currentRotation = newRotation;
-								Log.i(TAG, "rotation case activity = " + activityA);
-								ActivityInterceptor.this.recordRotation(recorder, viewInterceptor, activityA, newRotation);
-							} else {
-								Activity activityB;
-								// the user may have backed out of the initial screen, so we should timeout on the next activity wait
-								if (ActivityInterceptor.this.mfMightBeSplashScreenFinish) {
-									activityB = ActivityInterceptor.this.mActivityMonitor.waitForActivityWithTimeout(ACTIVITY_WAIT_MSEC);
-									if (activityB == null) {
-										ActivityInterceptor.this.setFinished(true);
-										return;						
-									}
-								} else {
-									activityB = ActivityInterceptor.this.mActivityMonitor.waitForActivity();
-								}
-								ActivityInterceptor.this.mfMightBeSplashScreenFinish = false;
-								mfPastFirstActivity = true;
-								// if the activity was in the stack, then we are going back to it, otherwise we're
-								// going forward to a new activity.
-								if (ActivityInterceptor.this.inActivityStack(activityA)  && ActivityInterceptor.this.inActivityStack(activityB)) {
-									Log.i(TAG, "normal back case activity = " + activityA);
-									ActivityInterceptor.this.recordActivityBack(recorder, activityA, activityB, currentRotation);
-								} else {
-									if (activityA.equals(activityB)) {
-										Log.i(TAG, "we cannot go forward to the same activity, this shouldn't happen");
-									}
-									Activity newActivity = activityB;
-									if (ActivityInterceptor.this.inActivityStack(activityB)) {
-										newActivity = activityA;
-									}
-									if (!newActivity.isFinishing()) {
-										Log.i(TAG, "forward case activity = " + newActivity);
-										ActivityInterceptor.this.recordActivityForward(recorder, viewInterceptor, newActivity);
-										mInstrumentation.runOnMainSync(new InsertRecordWindowCallbackRunnable(newActivity.getWindow(), recorder, viewInterceptor));
-									}
-								}
+							if (inActivityStack(activity)  && isResumed(activity)) {	
+								handleActivityBack(activity);
+							} else if (isManualRotation(activity, currentRotation)) {
+								Log.i(TAG, "manual rotation " + activity);
+								handleManualRotation(activity, currentRotation);
+							} else if (isResumed(activity)) {
+								handleNewActivity(activity);
 							}
 						}
+					} catch (Exception ex) {
+						Log.e(TAG, "exception thrown in activity interceptor");
+						ex.printStackTrace();
 					}
 				}
 			}
@@ -248,40 +190,83 @@ public class ActivityInterceptor {
 		mActivityThread = new Thread(runnable, "activityMonitorThread");
 		mActivityThread.start();
 	}
-	
-	/**
-	 * if the activity is finishing, and getChangingConfigurations() is zero, and there's only one activity in the stack, and this is
-	 * that last activity, then we are hitting the back key for the last time
-	 * @param activityA candidate activity
-	 * @return true if it's backing out of the last activity in the stack.
-	 */
-	public boolean isFinalActivityBack(Activity activityA) {
-		return activityA.isFinishing() && (activityA.getChangingConfigurations() == 0x0) && (activityStackSize() == 1) && inActivityStack(activityA);
-	}
-	
-	public boolean mightBeWaitingForSplashScreen() {
-		return mfMightBeSplashScreenFinish;
-	}
-	
-	/**
-	 * record the initial activity start, which we mark as "activity_forward"
-	 * @param recorder event recorder
-	 * @param activityA first activity returned from the activity monitor
-	 */
-	public void recordInitialActivity(EventRecorder recorder, ViewInterceptor viewInterceptor, Activity activityA) {
-		pushActivityOnStack(activityA);
-		// intercept events on the newly created activity.
-		mInstrumentation.runOnMainSync(new InterceptActivityRunnable(activityA));
-		String logMsg = activityA.getClass().getName() + "," + activityA.toString();
-		recorder.writeRecord(Constants.EventTags.ACTIVITY_FORWARD, logMsg);
 		
-		// we get 2 fires on the first activity
-		Activity activityB = mActivityMonitor.waitForActivity();
-		if (activityB != activityA) {
-			recorder.writeRecord(Constants.EventTags.EXCEPTION, "first activities did not match");
-		} else {
-			MagicFrame.insertMagicFrame(mInstrumentation, peekActivityOnStack().getActivity(), recorder, viewInterceptor);
+	public void handleClearTop(Activity activity) {
+		if (!isOnTopOfActivityStack(activity)) {
+			if (mViewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_BACK) {
+				mViewInterceptor.setLastKeyAction(-1);
+				String logMsg = activity.getClass().getName() + "," + activity;
+				mEventRecorder.writeRecord(Constants.EventTags.ACTIVITY_BACK_KEY, logMsg);
+			} else {
+				String logMsg = activity.getClass().getName() + "," + activity;
+				mEventRecorder.writeRecord(Constants.EventTags.ACTIVITY_BACK, logMsg);
+			}
+			if (!MagicFrame.isAlreadyInserted(activity)) {
+				MagicFrame.insertMagicFrame(mInstrumentation, activity, mEventRecorder, mViewInterceptor);			
+				mInstrumentation.runOnMainSync(new InterceptActivityRunnable(activity));
+			}
 		}
+	}
+	
+	public void handleNewActivity(Activity activity) {
+		String logMsg =  activity.getClass().getName() + "," + activity.toString();
+		mEventRecorder.writeRecord(Constants.EventTags.ACTIVITY_FORWARD, logMsg);
+		pushActivityOnStack(activity);
+		if (!MagicFrame.isAlreadyInserted(activity)) {
+			MagicFrame.insertMagicFrame(mInstrumentation, peekActivityOnStack().getActivity(), mEventRecorder, mViewInterceptor);			
+			mInstrumentation.runOnMainSync(new InterceptActivityRunnable(activity));
+			mInstrumentation.runOnMainSync(new InsertRecordWindowCallbackRunnable(activity.getWindow(), mEventRecorder, mViewInterceptor));
+		}
+	}
+	
+	public void handleManualRotation(Activity activity, int newRotation) {
+		mEventRecorder.writeRotation(activity, newRotation);
+		replaceLastActivity(activity);
+		if (!MagicFrame.isAlreadyInserted(activity)) {
+			MagicFrame.insertMagicFrame(mInstrumentation, peekActivityOnStack().getActivity(), mEventRecorder, mViewInterceptor);			
+			mInstrumentation.runOnMainSync(new InterceptActivityRunnable(activity));
+			mInstrumentation.runOnMainSync(new InsertRecordWindowCallbackRunnable(activity.getWindow(), mEventRecorder, mViewInterceptor));
+		}
+	}
+	
+	public void handleStartActivity(Activity activity) {
+		Log.i(TAG, "start case activity = " + activity);
+		// tell instrumentation that it can go ahead and start the first activity.  We're ready for anything.
+		synchronized (this) {
+			this.notify();
+		}
+		handleNewActivity(activity);
+		ActivityInterceptor.this.setStarted(true);
+		// write out the package so we can do the correct import for the application
+		// initialize the view reference with an activity so we can read the appropriate whitelist
+		// for the target application's SDK
+		try {
+			mEventRecorder.getViewReference().initializeWithActivity(activity, mInstrumentation);
+			String packageName = getPackageName(activity);
+			mEventRecorder.writeRecord(Constants.EventTags.PACKAGE, packageName);
+		} catch (Exception ex) {
+			mEventRecorder.writeException(ex, "getting package name");
+		}
+	}
+	
+	public void handleActivityBack(Activity activity) {
+		if (mViewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_BACK) {
+			mViewInterceptor.setLastKeyAction(-1);
+			String logMsg = activity.getClass().getName() + "," + activity;
+			mEventRecorder.writeRecord(Constants.EventTags.ACTIVITY_BACK_KEY, logMsg);
+		} else {
+			String logMsg = activity.getClass().getName() + "," + activity;
+			mEventRecorder.writeRecord(Constants.EventTags.ACTIVITY_BACK, logMsg);
+		}
+	}
+	
+	public boolean isManualRotation(Activity activity, int currentOrientation) {
+		ActivityState topActivityState = peekActivityOnStack();
+		Activity topActivity = topActivityState.getActivity();
+		if (topActivity.getClass() == activity.getClass()) {
+			return (currentOrientation != topActivityState.mRotation) && !activityRequestedOrientation(activity, currentOrientation);
+		}
+		return false;
 	}
 	
 	/**
@@ -301,111 +286,6 @@ public class ActivityInterceptor {
 				((orientation == ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE) && (newRotation == 3)) ||
 				((orientation == ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT) && (newRotation == 2)));
 	}
-	/**
-	 * record a rotation, which shows up as the activity being destroyed, re-created, and the display rotation changing.
-	 * This creates 3 activity events rather than the normal 2
-	 * @param recorder event recorder
-	 * @param activityA activity returned from first waitForActivity() call
-	 * @param newRotation current rotation returned from display (Surface.ROTATION_0, etc)
-	 */
-	public void recordRotation(EventRecorder recorder, ViewInterceptor viewInterceptor, Activity activityA, int newRotation) {
-		if (activityRequestedOrientation(activityA, newRotation)) {
-			Log.i(TAG, "the activity requested the orientation. It is not an event");
-			recordActivityForward(recorder, viewInterceptor, activityA);
-		} else {
-			Activity activityB = mActivityMonitor.waitForActivity();
-	
-			recorder.writeRotation(activityB, newRotation);
-			if (!activityA.equals(activityB)) {
-				replaceLastActivity(activityB);
-				Activity activityBAgain = mActivityMonitor.waitForActivity();
-				if (activityBAgain != activityB) {
-					recorder.writeRecord(Constants.EventTags.EXCEPTION, "rotated activities did not match");
-				}
-				// TODO: check if we need to re-insert listeners on this activity.
-				MagicFrame.insertMagicFrame(mInstrumentation, peekActivityOnStack().getActivity(), recorder, viewInterceptor);
-			}
-		}
-	}
-	
-	/**
-	 * record the "back" from the first activity, so we don't write out the previous activity reference
-	 * @param recorder event recorder.
-	 */
-	public void recordFirstActivityBack(EventRecorder recorder) {
-		long time = SystemClock.uptimeMillis();
-		
-		// activity was finished by the user hitting the back key
-		if (mViewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_BACK) {
-			mViewInterceptor.setLastKeyAction(-1);
-			String logMsg = Constants.EventTags.ACTIVITY_BACK_KEY + ":" + time;
-			recorder.writeRecord(logMsg);
-		} else {
-			String logMsg = Constants.EventTags.ACTIVITY_BACK + ":" + time;
-			recorder.writeRecord(logMsg);
-		}
-		// this will cause the calling loop to terminate due to an empty stack
-		popActivityFromStack();
-	}
-	
-	/**
-	 * record the "back" event from the middle of the activity stack. There is a special case for rotation, where if the
-	 * new activity is different from the old one, and the rotation has changed from the previous activity, then the old
-	 * activity is destroyed, and replaced with the new rotated activity.  This causes 3 activity monitor events to fire
-	 * instead of the normal 2
-	 * @param recorder event recorder
-	 * @param activityA activity returned from first waitForActivity() call
-	 * @param activityB activity returned from the second waitForActivity() call
-	 * @param currentRotation rotation polled from display
-	 */
-
-	public void recordActivityBack(EventRecorder recorder, Activity activityA, Activity activityB, int currentRotation) {
-		popActivityFromStack();
-		ActivityState previousActivityState = peekActivityOnStack();
-		if ((activityA != activityB) && (previousActivityState != null) && (currentRotation != previousActivityState.mRotation)) {
-			Activity activityBAgain = mActivityMonitor.waitForActivity();
-			
-			// I'm not sure exactly where this activity comes from.  I need to track it down and verify it
-			Activity activityBAgainAgain = mActivityMonitor.waitForActivity();
-			replaceLastActivity(activityBAgain);
-			previousActivityState = peekActivityOnStack();
-			Log.i(TAG, "rotated back case replacing activity " + activityBAgain);
-		}
-		// activity was finished by the user hitting the back key
-		if (mViewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_BACK) {
-			mViewInterceptor.setLastKeyAction(-1);
-			if (previousActivityState != null) {
-				String logMsg = previousActivityState.getActivityClass().getName() + "," + previousActivityState.getActivityUniqueName();
-				recorder.writeRecord(Constants.EventTags.ACTIVITY_BACK_KEY, logMsg);
-			} else {
-				String logMsg = previousActivityState.getActivityClass().getName() + "," + "no previous activity";
-				recorder.writeRecord(Constants.EventTags.ACTIVITY_BACK_KEY, logMsg);		
-			}
-		} else {
-			// activity was finished by some other method
-			if (previousActivityState != null) {
-				String logMsg = previousActivityState.getActivityClass().getName() + "," + previousActivityState.getActivityUniqueName();
-				recorder.writeRecord(Constants.EventTags.ACTIVITY_BACK, logMsg);
-			} else {
-				String logMsg = previousActivityState.getActivityClass().getName() + "," + "no previous activity";
-				recorder.writeRecord(Constants.EventTags.ACTIVITY_BACK, logMsg);
-			}
-		}
-	}
-	
-	/**
-	 * if the activity isn't in the "back stack", then it is a new activity and should be pushed onto the stack
-	 * @param recorder event recorder
-	 * @param activityB activity returned from second waitForActivity() call
-	 */
-	public void recordActivityForward(EventRecorder recorder, ViewInterceptor viewInterceptor, Activity activityB) {
-		pushActivityOnStack(activityB);
-		// intercept events on the newly created activity.
-		mInstrumentation.runOnMainSync(new InterceptActivityRunnable(activityB));
-		String logMsg =  activityB.getClass().getName() + "," + activityB.toString();
-		recorder.writeRecord(Constants.EventTags.ACTIVITY_FORWARD, logMsg);
-		MagicFrame.insertMagicFrame(mInstrumentation, peekActivityOnStack().getActivity(), recorder, viewInterceptor);
-	}
 
 	/**
 	 * replace the current activity in the stack. Since we're probably doing this because of rotation,
@@ -417,6 +297,20 @@ public class ActivityInterceptor {
 		pushActivityOnStack(activity);
 	}
 	
+	public synchronized boolean removeActivityFromStack(Activity activity) {
+		ActivityState targetState = null;
+		for (ActivityState cand : mActivityStack) {
+			if (cand.getActivity() == activity) {
+				targetState = cand;
+			}
+		}
+		if (targetState != null) {
+			mActivityStack.remove(targetState);
+			return true;
+		} else {
+			return false;
+		}
+	}
 	/**
 	 * so, how big is it, really?  
 	 * @return
@@ -442,6 +336,28 @@ public class ActivityInterceptor {
 	}
 	
 	/**
+	 * unroll the stack to the passed activity
+	 * @param activity the current activity
+	 */
+	public void unwindStackPastActivity(Activity activity) {
+		ActivityState activityState = mActivityStack.peek();
+		while (!mActivityStack.empty()) {
+			activityState = mActivityStack.pop();
+			if (activityState.getActivity() == activity) {
+				break;
+			}
+		}
+	}
+	
+	public synchronized boolean isOnTopOfActivityStack(Activity a) {
+		if (mActivityStack.isEmpty()) {
+			return false;
+		} else {
+			return mActivityStack.peek().getActivity() == a;
+		}
+	}
+
+	/**
 	 * return the activity that's on the top of the stack
 	 * @return top activity
 	 */
@@ -450,6 +366,89 @@ public class ActivityInterceptor {
 			return null;
 		} else {
 			return mActivityStack.peek();
+		}
+	}
+	/**
+	 * return the activity that's below the top of the stack
+	 * @return top activity
+	 */
+	public synchronized ActivityState peekPreviousActivityOnStack() {
+		if (mActivityStack.size() < 2) {
+			return null;
+		} else {
+			return mActivityStack.get(mActivityStack.size() - 2);
+		}
+	}
+	
+	/**
+	 * rather than popping the stack, find the activity, for certain
+	 * @param a
+	 * @return
+	 */
+	public synchronized ActivityState findPreviousActivityOnStack(Activity a) {
+		for (ActivityState cand : mActivityStack) {
+			if (cand.getActivity() == a) {
+				return cand;
+			}
+		}
+		return null;
+	}
+	
+
+	public ActivityState activityClassInStack(Class<? extends Activity> activityClass) {
+		for (ActivityState cand : mActivityStack) {
+			if ((cand.getActivity() != null) && (cand.getActivity().getClass() == activityClass)) {
+				return cand;
+			}
+		}
+		return null;
+	}
+	
+	/**
+	 * the weak references go null after the activities are finished
+	 */
+	public void cleanupActivityStack() {
+		List<ActivityState> removeList = new ArrayList<ActivityState>();
+		int iPos = mActivityStack.size() - 1;
+		for (ActivityState cand : mActivityStack) {
+			if (cand.getActivity() == null) {
+				removeList.add(cand);
+				Log.i(TAG, "removing activity " + cand.getActivityUniqueName() + " at position " + iPos);
+			}
+			iPos--;
+		}
+		for (ActivityState remove : removeList) {
+			mActivityStack.remove(remove);
+		}
+	}
+	
+	
+	/**
+	 * activities can be returned from the activity monitor out of order. We need to know what order they are
+	 * actually in
+	 * @param a first activity returned from ActivityMonitor
+	 * @param b second activity returned from ActivityMonitor
+	 * @return
+	 */
+	public synchronized ActivityState findEarliestActivityOnStack(Activity a, Activity b) {
+		int stackDepthA = -1, stackDepthB = -1;
+		ActivityState stateA = null, stateB = null;
+		for (int stackDepth = 0; stackDepth < mActivityStack.size(); stackDepth++) {
+			// list: stacks top is at end of list.
+			ActivityState cand = mActivityStack.get(mActivityStack.size() - 1 - stackDepth);
+			if (cand.getActivity() == a) {
+				stackDepthA = stackDepth;
+				stateA = cand;
+			}
+			if (cand.getActivity() == b) {
+				stackDepthB = stackDepth;
+				stateB = cand;
+			}
+		}
+		if (stackDepthA > stackDepthB) {
+			return stateA;
+		} else {
+			return stateB;
 		}
 	}
 	
@@ -490,6 +489,22 @@ public class ActivityInterceptor {
 	}
 	
 	/**
+	 * when the intent flag FLAG_ACTIVITY_CLEAR_TOP is passed to the activity when startActivity is called,
+	 * then if the activty is in the stack, then all the activities between it and the activity are cleared
+	 * so we unroll the stack to the matching activity CLASS, because unless onNewIntent() is defined for that
+	 * activity, it will launch a new activity and replace the old activity
+	 */
+
+	protected boolean isClearTop(Activity activity, Activity activityJustFinished) {
+		Intent intent = activity.getIntent();
+		if ((intent.getFlags() & Intent.FLAG_ACTIVITY_CLEAR_TOP) != 0x0) {
+			return (activityClassInStack(activity.getClass()) != null) || 
+					((activityJustFinished != null) && (activity.getClass() == activityJustFinished.getClass()));
+		}
+		return false;
+	}
+	
+	/**
 	 * get the package name for this activity.
 	 * @param activity
 	 * @return package name 
@@ -499,6 +514,14 @@ public class ActivityInterceptor {
         PackageManager pm = activity.getPackageManager();
         PackageInfo packageInfo = pm.getPackageInfo(activity.getPackageName(), 0);
         return packageInfo.packageName;
+	}
+	
+	protected boolean isStopped(Activity activity) throws IllegalAccessException, NoSuchFieldException {
+		return ReflectionUtils.getFieldBoolean(activity, Activity.class, Constants.Fields.STOPPED);
+	}
+	
+	protected boolean isResumed(Activity activity) throws IllegalAccessException, NoSuchFieldException {
+		return ReflectionUtils.getFieldBoolean(activity, Activity.class, Constants.Fields.RESUMED);
 	}
 
 	/**

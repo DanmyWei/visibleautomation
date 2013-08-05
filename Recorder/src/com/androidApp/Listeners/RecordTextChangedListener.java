@@ -44,25 +44,29 @@ public class RecordTextChangedListener extends RecordListener implements TextWat
 
 	public void beforeTextChanged(CharSequence s, int start, int count, int after) {
 		try {
+			
+			// we have to test the view directive here, because we don't pass the View down to the event recorder 
+			// which normally gets it.
 			if (!mEventRecorder.matchViewDirective(mTextView, mViewIndex, ViewDirective.ViewOperation.IGNORE_EVENTS,
 				  							   	   ViewDirective.When.ALWAYS)) {
 				String description = getDescription(mTextView);
 				String reference = mEventRecorder.getViewReference().getReference(mTextView);
 				String massagedString = StringUtils.escapeString(s.toString(), "\"", '\\').replace("\n", "\\n");
 				String logString = '\"' + massagedString + '\"' + "," + start + "," +  count + "," + after + "," + reference + "," + description;
+				boolean fKeyText = mfEnterTextByKey ||
+					    			mEventRecorder.matchViewDirective(mTextView, mViewIndex, ViewDirective.ViewOperation.ENTER_TEXT_BY_KEY,
+					    											  ViewDirective.When.ALWAYS);
 				if (!RecordListener.getEventBlock() && (IMEMessageListener.getOutstandingKeyCount() > 0)) {
 					mfBeforeFired = true;
 					setEventBlock(true);
-					if (mfEnterTextByKey ||
-					    mEventRecorder.matchViewDirective(mTextView, mViewIndex, ViewDirective.ViewOperation.ENTER_TEXT_BY_KEY,
-														  ViewDirective.When.ALWAYS)) {
+					if (fKeyText) {
 						mEventRecorder.writeRecord(Constants.EventTags.BEFORE_TEXT_KEY, logString);
 						mfEnterTextByKey = true;
 					} else {
 						mEventRecorder.writeRecord(Constants.EventTags.BEFORE_TEXT, logString);
 					}
-				} else {
-					// programmatic..this gets written as a wait.
+				} else if (fKeyText) {
+					// the text was set programmatically..this gets written as a wait.
 					if (mTextView.getVisibility() == View.VISIBLE) {
 						mEventRecorder.writeRecord(Constants.EventTags.BEFORE_SET_TEXT, logString);
 					}

@@ -26,6 +26,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewManager;
 import android.view.ViewParent;
+import android.view.Window;
 import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -42,6 +43,13 @@ public class MagicFrame extends FrameLayout {
 	protected EventRecorder				mRecorder;
 	protected ViewInterceptor			mViewInterceptor;					// to log key events for activity/ime dismissal.
 	protected View						mContentView;						// actual content view being masked
+
+	public static boolean isAlreadyInserted(Activity activity) {
+		Window window = activity.getWindow();
+		ViewGroup decorView = (ViewGroup) window.getDecorView();
+		ViewGroup contentView = (ViewGroup) decorView.getChildAt(0);
+		return contentView instanceof MagicFrame;
+	}
 
 	// initialize the timer and paint so we can draw touch events for debugging.
 	protected void init() {
