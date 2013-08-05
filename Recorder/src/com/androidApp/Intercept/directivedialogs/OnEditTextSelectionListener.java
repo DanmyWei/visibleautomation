@@ -33,7 +33,7 @@ public class OnEditTextSelectionListener implements DialogInterface.OnClickListe
 		AlertDialog alertDialog = (AlertDialog) dialog;
 		View currentView = mDirectiveDialogs.getCurrentView();
 		EventRecorder recorder = mDirectiveDialogs.getEventRecorder();
-		Activity activity = mDirectiveDialogs.getActivityState().getActivity();
+		Activity activity = mDirectiveDialogs.getActivity();
 		try {
 			UserDefinedViewReference ref = mDirectiveDialogs.getUserDefinedViewReference(currentView, activity);
 			switch (which) {

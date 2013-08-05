@@ -37,7 +37,7 @@ public class CopyDialogClickListener implements DialogInterface.OnClickListener 
 		String variable = editText.getText().toString();
 		View currentView = mDirectiveDialogs.getCurrentView();
 		EventRecorder recorder = mDirectiveDialogs.getEventRecorder();
-		Activity activity = mDirectiveDialogs.getActivityState().getActivity();
+		Activity activity = mDirectiveDialogs.getActivity();
 		recorder.writeRecord(Constants.EventTags.COPY_TEXT, currentView, variable);
 		if (currentView instanceof TextView) {
 			TextView textView = (TextView) currentView;

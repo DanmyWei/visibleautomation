@@ -36,7 +36,7 @@ public class PasteDialogClickListener implements DialogInterface.OnClickListener
 		String value = mDirectiveDialogs.getEventRecorder().getVariableValue(variable);
 		View currentView = mDirectiveDialogs.getCurrentView();
 		EventRecorder recorder = mDirectiveDialogs.getEventRecorder();
-		Activity activity = mDirectiveDialogs.getActivityState().getActivity();
+		Activity activity = mDirectiveDialogs.getActivity();
 		if (value != null) {
 			if (currentView instanceof EditText) {
 				EditText viewEditText = (EditText) currentView;
