@@ -1,0 +1,3 @@
+		// %DESCRIPTION%
+		%CLASSPATH% view%VARIABLE_INDEX% = (%CLASSPATH%) solo.getView((Class<? extends View>) Class.forName("%INTERNAL_CLASS%"), %VIEW_INDEX%);
+		robotiumUtils.selectItemByText(solo, view%VARIABLE_INDEX%, "%ITEM_TEXT%");

@@ -74,6 +74,12 @@ public class OnTextViewSelectionListener implements DialogInterface.OnClickListe
 															 				 new CopyDialogClickListener(mDirectiveDialogs));
 					newDialog.show();
 				}
+				case 5:
+				{
+					mDirectiveDialogs.getEventRecorder().writeRecord(Constants.EventTags.CLICK_WORKAROUND, currentView);
+					ViewDirective ignoreClickDirective = new ViewDirective(ref, ViewOperation.CLICK_WORKAROUND, When.ON_ACTIVITY_START, null);
+					recorder.addViewDirective(ignoreClickDirective);
+				} 
 			}
 		} catch (IOException ioex) {
 			DirectiveDialogs.setErrorLabel(alertDialog, Constants.DisplayStrings.VIEW_REFERENCE_FAILED);

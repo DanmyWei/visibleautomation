@@ -1,0 +1,3 @@
+ 
+
+ 	public void dialogHandler%FUNCTION_NAME%(Solo solo, RobotiumUtils robotiumUtils) { 

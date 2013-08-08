@@ -1,3 +1,5 @@
 	// %DESCRIPTION%
 	if (DialogListener.waitForDialog(robotiumUtils.getCurrentActivity(), new %CODE_DEFINITION%, DIALOG_OPEN_TIMEOUT)) {
+		dialogHandler%FUNCTION_NAME%(solo, robotiumUtils);
+	}
 	

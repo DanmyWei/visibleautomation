@@ -219,7 +219,8 @@ public class GenerateRobotiumTestCode {
 	 */
 
 	public void writeTestCode(IEmitCode 			emitter, 
-							  List<LineAndTokens> 	lines, 
+							  List<LineAndTokens> 	mainCode, 
+							  List<LineAndTokens>	functionCode,
 							  String 				packagePath, 
 							  String 				testClassName, 
 							  String 				outputCodeFileName) throws IOException {
@@ -228,7 +229,11 @@ public class GenerateRobotiumTestCode {
 		emitter.writeHeader(emitter.getApplicationClassPath(), packagePath, testClassName, emitter.getApplicationClassName(), bw);
 		String testFunction = FileUtility.readTemplate(Constants.Templates.TEST_FUNCTION);
 		bw.write(testFunction);
-		emitter.writeLines(bw, lines);
+		emitter.writeLines(bw, mainCode);
+		emitter.writeTrailer(bw);
+		if (functionCode != null) {
+			emitter.writeLines(bw, functionCode);
+		}		
 		emitter.writeTrailer(bw);
 		bw.close();
 	}	
@@ -311,38 +316,6 @@ public class GenerateRobotiumTestCode {
 	}
 	
 	/**
-	 * write out the code marked as interstitial handlers into the handlers directory
-	 * @param pack package referencing the handlers directory
-	 * @param emitter write the interstitial handler code
-	 * @param outputCode hashtable of outputs for main, activity handlers, and dialog handlers
-	 * @param testClassPath for writing the package name into the handler code
-	 * @throws IOException
-	 * @throws CoreException
-	 */
-	
-	public static void writeInterstitalHandlers(IPackageFragment 								pack,
-												IEmitCode										emitter,
-												Hashtable<CodeDefinition, List<LineAndTokens>> 	outputCode,
-											    String 											testClassPath) throws IOException, CoreException {
-		// create the handler files for the interstitial activities used in this test
-		for (Entry<CodeDefinition, List<LineAndTokens>> entry : outputCode.entrySet()) {
-			CodeDefinition codeDef = entry.getKey();
-			if ((codeDef.getType() == CodeDefinition.Type.ACTIVITY) && 
-				codeDef.getActivityName().equals(Constants.MAIN)) {
-				String activityName = StringUtils.getNameFromClassPath(codeDef.getActivityName());
-				String interstitialHandlerName = Constants.INTERSTITIAL_ACTIVITY_HANDLER + activityName;
-				String interstitialHandlerFile = interstitialHandlerName + "." + Constants.Extensions.JAVA;
-				List<LineAndTokens> code = entry.getValue();
-				BufferedWriter bwHandler = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(Constants.Filenames.OUTPUT)));
-				String testCode = FileUtility.readToString(new FileInputStream(Constants.Filenames.OUTPUT));
-				
-				// what about the case where the interstitial file already exists
-				ICompilationUnit classFile = pack.createCompilationUnit(interstitialHandlerFile, testCode, true, null);
-			}
-		}
-	}
-	
-	/**
 	 * iterate
 	 * @param project
 	 * @param handlerFolder
@@ -402,6 +375,7 @@ public class GenerateRobotiumTestCode {
 							 String 										testClassName) throws CoreException, IOException {
 		IFolder srcFolder = testProject.getFolder(Constants.Dirs.SRC);
 		List<LineAndTokens> mainCode = outputCode.get(new CodeDefinition(Constants.MAIN, null));
+		List<LineAndTokens> functionCode = outputCode.get(new CodeDefinition(Constants.FUNCTIONS, null));
 	
 		// write out the test code, first to a temporary file, then to the actual project file.
 		String handlerDirName = FileUtility.sourceDirectoryFromClassName(testPackage) + File.separator + Constants.Dirs.HANDLERS;
@@ -417,14 +391,10 @@ public class GenerateRobotiumTestCode {
 		packRoot.open(null);
 		IPackageFragment pack = packRoot.getPackageFragment(testPackage);
 		
-		// write out the interstitial handlers first, since the code generator will need to reference them
-		// by scanning the output filder
-		writeInterstitalHandlers(pack, emitter, outputCode, testClassPath);
-		
 		// write the test code out to a temporary file, read it into a string and create the "compilation unit"
 		// that eclipse likes to refer to
 		String projectFileOutput = testClassName + "." + Constants.Extensions.JAVA;
-		writeTestCode(emitter, mainCode, testPackage, testClassName, Constants.Filenames.OUTPUT);
+		writeTestCode(emitter, mainCode, functionCode, testPackage, testClassName, Constants.Filenames.OUTPUT);
 		String testCode = FileUtility.readToString(new FileInputStream(Constants.Filenames.OUTPUT));
 		ICompilationUnit classFile = pack.createCompilationUnit(projectFileOutput, testCode, true, null);	
 		

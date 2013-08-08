@@ -155,6 +155,9 @@ public class ActivityInterceptor {
 				while (fStart || !fPastFirstActivity || !ActivityInterceptor.this.isActivityStackEmpty()) {
 					try {
 						Activity activity = ActivityInterceptor.this.mActivityMonitor.waitForActivity();
+						// assign these right awway, since they are LIVE activities, and the state may change
+						// it would be nice to have a mutex lock preventing any further execution on the application
+						// thread, but I have no such luck
 						boolean fStopped = isStopped(activity);
 						boolean fResumed = isResumed(activity);
 						boolean fFinishing = activity.isFinishing();
@@ -164,24 +167,39 @@ public class ActivityInterceptor {
 								   " resumed = " + fResumed + 
 								   " flags = 0x" + Integer.toHexString(activity.getIntent().getFlags()));
 						currentRotation  = activity.getWindowManager().getDefaultDisplay().getRotation();
+						
+						// first activity resumed..start activity
 						if (fStart  && fResumed) {
 							handleStartActivity(activity);
 							fStart = false;
 						} else if (fFinishing) {
+							
+							// finishing..remove from the stack.  if it's the last activity, then write that
 							removeActivityFromStack(activity);
 							if (isActivityStackEmpty()) {
 								handleLastActivityFinish(activity);
 							}
 						} else {
+								// if the activity is in the stack, and we're resuming it, then we write "goBack()" to the activity
 							if (inActivityStack(activity)  && fResumed) {	
 								handleActivityBack(activity);
 							} else if (isManualRotation(activity, currentRotation)) {
+								
+								// manual rotation can fire 2 or 3 events: one for the destruction, and 1 or 2 for the creation
 								Log.i(TAG, "manual rotation " + activity);
 								handleManualRotation(activity, currentRotation);
 							} else if (fResumed) {
 								handleNewActivity(activity);
+								
+								// splash screen case, where the first activity is destroyed, emptying stack
+								if (activityStackDepth() > 1) {
+									fPastFirstActivity = true;
+								}
 							}
+							// ignore this activity.
 						}
+						
+						// remove finished or nulled activities.
 						cleanupActivityStack();
 					} catch (Exception ex) {
 						Log.e(TAG, "exception thrown in activity interceptor");
@@ -411,6 +429,14 @@ public class ActivityInterceptor {
 	 */
 	public synchronized boolean isActivityStackEmpty() {
 		return mActivityStack.isEmpty();
+	}
+	
+	/**
+	 * what is the depth of the activity stack
+	 * @return activity stack depth
+	 */
+	public synchronized int activityStackDepth() {
+		return mActivityStack.size();
 	}
 	
 	/**

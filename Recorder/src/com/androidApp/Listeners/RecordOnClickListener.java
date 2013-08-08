@@ -5,6 +5,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
+import com.androidApp.EventRecorder.ViewDirective;
 import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.ReflectionUtils;
@@ -33,9 +34,11 @@ import android.view.ViewParent;
  */
 public class RecordOnClickListener extends RecordListener implements View.OnClickListener, IOriginalListener  {
 	protected View.OnClickListener 	mOriginalOnClickListener;
+	protected int			mViewIndex;
 	
-	public RecordOnClickListener(EventRecorder eventRecorder, View v) {
+	public RecordOnClickListener(EventRecorder eventRecorder, int viewIndex, View v) {
 		super(eventRecorder);
+		mViewIndex = viewIndex;
 		try {
 			mOriginalOnClickListener = ListenerIntercept.getClickListener(v);
 			v.setOnClickListener(this);
@@ -44,8 +47,9 @@ public class RecordOnClickListener extends RecordListener implements View.OnClic
 		}		
 	}
 	
-	public RecordOnClickListener(EventRecorder eventRecorder, View.OnClickListener originalTouchListener) {
+	public RecordOnClickListener(EventRecorder eventRecorder, int viewIndex, View.OnClickListener originalTouchListener) {
 		super(eventRecorder);
+		mViewIndex = viewIndex;
 		mOriginalOnClickListener = originalTouchListener;
 	}
 	
@@ -62,32 +66,17 @@ public class RecordOnClickListener extends RecordListener implements View.OnClic
 		if (!RecordListener.getEventBlock()) {
 			setEventBlock(true);
 			try {
-				mEventRecorder.writeRecord(Constants.EventTags.CLICK, v, getDescription(v));
+				if (mEventRecorder.matchViewDirective(v, mViewIndex, ViewDirective.ViewOperation.CLICK_WORKAROUND,
+					   	   						  ViewDirective.When.ALWAYS)) { 
+					mEventRecorder.writeRecord(Constants.EventTags.CLICK_WORKAROUND, v, getDescription(v));
+				} else {
+					mEventRecorder.writeRecord(Constants.EventTags.CLICK, v, getDescription(v));
+				}
 			} catch (Exception ex) {
 				mEventRecorder.writeException(ex, v, "on click");
 			}
 		}
 		if (!fReentryBlock) {
-			
-			// specifically for OnClickListeners, View tests to see if the click listener in the ListenerInfo have been set, and if so,
-			// prevents firing the performClick() event.  Inherited views then won't fire their onClick() events.  So, we check if the listener info
-			// is null, or the onclick recorders with no original listeners, and if so, null out the listener and call performClick() directly.
-			// NOTE: this is a terrible hack/workaround, but there's no other option that I can see at this point.
-			// NOTE: THIS DOESN'T WORK: the performClick gets sent to the toggle button twice.
-			// NOTE: The semantics of View.OnClick changed between Android-14 and Android-17
-			/*
-			try {
-				 Object listenerInfo = ListenerIntercept.getListenerInfo(v);
-				 if ((listenerInfo == null) || !hasClickListener(v)) {
-					 ListenerIntercept.setListenerInfo(v, null);
-					 v.performClick();
-					 ListenerIntercept.setListenerInfo(v, listenerInfo);
-				 }
-			 } catch (Exception ex) {
-				 mEventRecorder.writeRecord(Constants.EventTags.EXCEPTION, v, "on click");
-				 ex.printStackTrace();
-			 }
-			 */
 			if (mOriginalOnClickListener != null) {
 				 mOriginalOnClickListener.onClick(v);
 			}

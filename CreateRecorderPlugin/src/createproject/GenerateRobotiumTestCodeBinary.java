@@ -52,9 +52,15 @@ public class GenerateRobotiumTestCodeBinary extends GenerateRobotiumTestCode {
 		EclipseUtility.writeString(project, Constants.Filenames.CLASSPATH, classpath);
 	}
 
+	/**
+	 * write the header (which includes the imports, classname, class defintion, and initialization functions)
+	 * followed by the main body code, then the functions for conditional activities and dialogs, then the close brace.
+	 * 
+	 */
 	@Override
 	public void writeTestCode(IEmitCode 			emitter, 
-							  List<LineAndTokens> 	lines, 
+							  List<LineAndTokens> 	mainCode, 
+							  List<LineAndTokens> 	functionCode,
 							  String 				packagePath, 
 							  String 				testClassName, 
 							  String 				outputCodeFileName) throws IOException {
@@ -63,7 +69,11 @@ public class GenerateRobotiumTestCodeBinary extends GenerateRobotiumTestCode {
 		emitter.writeHeader(emitter.getApplicationClassPath(), packagePath, testClassName, emitter.getApplicationClassName(), bw);
 		String testFunction = FileUtility.readTemplate(Constants.Templates.BINARY_TEST_FUNCTION);
 		bw.write(testFunction);
-		emitter.writeLines(bw, lines);
+		emitter.writeLines(bw, mainCode);
+		emitter.writeTrailer(bw);
+		if (functionCode != null) {
+			emitter.writeLines(bw, functionCode);
+		}		
 		emitter.writeTrailer(bw);
 		bw.close();
 	}			

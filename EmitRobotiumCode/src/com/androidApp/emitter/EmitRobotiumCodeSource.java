@@ -19,6 +19,7 @@ import java.util.Stack;
 
 import com.androidApp.emitter.CodeDefinition;
 import com.androidApp.emitter.IEmitCode.LineAndTokens;
+import com.androidApp.emitter.TokenScanner.Predicate;
 import com.androidApp.emitter.CodeDefinition.DialogScanType;
 import com.androidApp.emitter.CodeDefinition.DialogTagType;
 import com.androidApp.parser.ProjectPropertiesScan;
@@ -38,6 +39,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	protected int 			mViewVariableIndex = 0;					// incremented for unique view variable names
 	protected int 			mActivityVariableIndex = 0;				// incremented for unique activity variable names
 	protected int 			mMotionEventVariableIndex = 0;			// incremented for unique motion event file names
+	protected int			mFunctionNameIndex = 0;					// incremented for dialog and activity conditional fns
 	protected String 		mTargetClassPath = null;				// class path of initial activity.	
 	protected String 		mTargetPackage = null;					// package name that the recorder pulled from the app
 	private boolean 		mLastEventWasWaitForActivity = false;	// want to do a waitForView for next event.
@@ -145,9 +147,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 				List<String> nextTokens = null;
 				if (readIndex < tokenLines.size() - 1) {
 					nextTokens = tokenLines.get(readIndex + 1);
-				}
-				if (readIndex < tokens.size() - 1) {
-					checkActivityTransition(tokens, tokenLines.get(readIndex + 1), lines);
+					checkActivityTransition(tokens, nextTokens, lines);
 				}
 				String action = tokens.get(0);
 				
@@ -170,12 +170,18 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 					}
 				}	
 				
-				// see if there's conditional code that matches this activity
+				// see if there's conditional code that matches this activity or dialog
 				
 				CodeDefinition codeDef = findConditionalCode(tokens, outputCode);
 				if (codeDef != null) {
 					List<LineAndTokens> conditionalCode = outputCode.get(codeDef);
 					lines.addAll(conditionalCode);
+					if (codeDef.getType() == CodeDefinition.Type.ACTIVITY) {
+						readIndex = findClosingActivity(tokenLines, tokenScanner, codeDef, readIndex);
+						continue;
+					} else if (codeDef.getType() == CodeDefinition.Type.DIALOG){
+						readIndex = findDialogClose(tokenLines, tokenScanner, codeDef, readIndex);
+					}
 				}
 				
 				// then everything else is switched on the event name.
@@ -183,45 +189,46 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 					mTargetPackage = tokens.get(2);
 				} else if (Constants.ActivityEvent.INTERSTITIAL_ACTIVITY.equals(action)) {
 					String newActivityName = tokens.get(2);
-					CodeOutput activityCode = handleInterstitialActivity(tokenLines, readIndex, outputCode, motionEvents, tokens);
+					CodeOutput activityCode = handleInterstitialActivity(tokenLines, tokenScanner, readIndex, outputCode, motionEvents, tokens);
 					lines.addAll(activityCode.mLineAndTokens);
 					readIndex = activityCode.mNextLineIndex - 1; 	// loop increments this
 				} else if (Constants.UserEvent.isInterstitialDialogEvent(action)) {
-					CodeOutput dialogCode = handleInterstitialDialog(tokenLines, readIndex, outputCode, motionEvents, tokens);
+					CodeOutput dialogCode = handleInterstitialDialog(tokenLines, tokenScanner, readIndex, outputCode, motionEvents, tokens);
 					lines.addAll(dialogCode.mLineAndTokens);
 					readIndex = dialogCode.mNextLineIndex - 1;	// loop increments this
 				} else if (Constants.ActivityEvent.ACTIVITY_FORWARD.equals(action)) {
 					String activityClass = tokens.get(2);
 					activityStack.push(activityClass);
 					
-					// if we're in an interstitial, that means that it's time to go.
-					if ((outputType == OutputType.INTERSTITIAL_ACTIVITY) || (outputType == OutputType.INTERSTITIAL_DIALOG)) {
-						return new CodeOutput(lines, currentReadIndex + 1);
-					}
-					
 					// if this is the first activity_forward, then record the classpath so we can construct the output project
 					if (mTargetClassPath == null) {
 						mTargetClassPath = tokens.get(2);
 					}
 					mLastEventWasWaitForActivity = true;
-					
-					// applications can use the same activity class with different contents in the intent, so we have to
-					// write different "wait" cases.
-					if (mfActivityMatches) {
-						writeWaitForMatchingActivity(mActivityVariable, tokens, lines);
-					} else {
-						writeWaitForActivity(tokens, lines);
-					}
-				} else if (Constants.ActivityEvent.ACTIVITY_BACK.equals(action) || Constants.UserEvent.ACTIVITY_BACK_KEY.equals(action)) {
-					activityStack.pop();
-					// the handler is responsible for managing the activity transtion, but we do need to record the 
-					// fact that the user used the back key to get out if he
-					if ((outputType == OutputType.INTERSTITIAL_ACTIVITY) || (outputType == OutputType.INTERSTITIAL_DIALOG)) {
-						if (Constants.UserEvent.ACTIVITY_BACK_KEY.equals(action)) {
-							writeGoBack(tokens, lines);
-							return new CodeOutput(lines, readIndex + 1);
+					// if an interstitial activity (with the same activity name)was marked after this activity_forward 
+					// transition, and there is no activity transition, between us, then DO NOT write the waitActivity() 
+					// call, because it should be taken care of by the condition.
+					if (!TokenScanner.happensBefore(tokenLines, readIndex,
+													tokenScanner.new EventParameterPredicate(Constants.ActivityEvent.INTERSTITIAL_ACTIVITY.mEventName, 2, activityClass),
+												    tokenScanner.new ActivityTransitionPredicate())) {
+						// applications can use the same activity class with different contents in the intent, so we have to
+						// write different "wait" cases.
+						if (mfActivityMatches) {
+							writeWaitForMatchingActivity(mActivityVariable, tokens, lines);
+						} else {
+							writeWaitForActivity(tokens, lines);
 						}
 					}
+					
+					// if we're in an interstitial, that means that it's time to go, but don't forget to add the next wait for activity call
+					if ((outputType == OutputType.INTERSTITIAL_ACTIVITY) || (outputType == OutputType.INTERSTITIAL_DIALOG)) {
+						return new CodeOutput(lines, currentReadIndex + 1);
+					}
+				} else if (Constants.ActivityEvent.ACTIVITY_BACK.equals(action) || Constants.UserEvent.ACTIVITY_BACK_KEY.equals(action)) {
+					if (!activityStack.isEmpty()) {
+						activityStack.pop();
+					}
+
 					// I think this is technically incorrect, since the "back" event doesn't always happen from the back key
 					// but some other event like a click, and we should use a different template
 					if ((tokens.size() > 2) && mfActivityMatches) {
@@ -230,9 +237,16 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 						writeGoBackAndWaitForActivity(tokens, lines);
 					}
 					mLastEventWasWaitForActivity = true;
+					
+					// the handler is responsible for managing the activity transition, so the back event is part of it
+					if ((outputType == OutputType.INTERSTITIAL_ACTIVITY) || (outputType == OutputType.INTERSTITIAL_DIALOG)) {
+						return new CodeOutput(lines, readIndex + 1);
+					}
 				} else {
 					if (Constants.UserEvent.ITEM_CLICK.equals(action)) {
 						writeItemClick(tokens, lines);
+					} else if (Constants.UserEvent.ITEM_CLICK_BY_TEXT.equals(action)) {
+						writeItemClickByText(tokens, lines);
 					} else if (Constants.UserEvent.POPUP_MENU_ITEM_CLICK.equals(action)) {
 						writePopupMenuItemClick(tokens, lines);
 					} else if (Constants.UserEvent.ITEM_SELECTED.equals(action)) {
@@ -342,29 +356,68 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		} 
 		return new CodeOutput(lines, readIndex);
 	}
-
+	
 	public CodeOutput handleInterstitialActivity(List<List<String>>								tokenLines,
+												 TokenScanner									tokenScanner,
 												 int											currentReadIndex,
 												 Hashtable<CodeDefinition, List<LineAndTokens>> outputCode,
 												 List<MotionEventList> 							motionEvents,
 												 List<String> 									tokens) throws EmitterException, IOException {
+		return handleInterstitialActivity(tokenLines, tokenScanner, currentReadIndex, outputCode, motionEvents, tokens, Constants.Templates.ACTIVITY_FUNCTION);
+	}
+	/**
+	 * write out the if (waitForActivity()) { interstitial_code } in the main code, and the handler function in the
+	 * handler set
+	 * @param tokenLines
+	 * @param currentReadIndex
+	 * @param outputCode
+	 * @param motionEvents
+	 * @param tokens
+	 * @return
+	 * @throws EmitterException
+	 * @throws IOException
+	 */
+	public CodeOutput handleInterstitialActivity(List<List<String>>								tokenLines,
+												 TokenScanner									tokenScanner,
+												 int											currentReadIndex,
+												 Hashtable<CodeDefinition, List<LineAndTokens>> outputCode,
+												 List<MotionEventList> 							motionEvents,
+												 List<String> 									tokens,
+												 String											functionTemplateName) throws EmitterException, IOException {
 		String newActivityName = tokens.get(2);
-		List<String> precedingTokens = tokenLines.get(currentReadIndex - 1);
+		// We don't just want the previous line, we want the activity transition or user event prior to the 
+		// activity_forward that this interstitial activity was launched in, so we scan backwards to the first activity transition to a different activity
+		TokenScanner.Predicate causingPredicate = tokenScanner.new OrPredicate(tokenScanner.new PredicateParameter(tokenScanner.new ActivityTransitionPredicate(), 
+																												   2, newActivityName, false),
+																			   tokenScanner.new UserEventPredicate());
+		int causingLineIndex = TokenScanner.findPrevious(tokenLines, currentReadIndex, causingPredicate);
+		List<String> precedingTokens = tokenLines.get(causingLineIndex);
 		CodeDefinition codeDef = new CodeDefinition(newActivityName, precedingTokens);
 		CodeOutput activityOutput = emit(tokenLines, currentReadIndex + 1, outputCode, motionEvents, OutputType.INTERSTITIAL_ACTIVITY);
-		List<LineAndTokens> activityLines = activityOutput.mLineAndTokens;
-		LineAndTokens conditionalCode = activityCondition(tokens, newActivityName);
-		activityLines.add(0, conditionalCode);
-		activityLines.add(closeCondition(tokens));
+		String functionName = addLinesAsFunction(tokens, newActivityName, activityOutput.mLineAndTokens, functionTemplateName, outputCode);
+		List<LineAndTokens> activityLines = new ArrayList<LineAndTokens>();
+		LineAndTokens conditionalCode = activityCondition(tokens, newActivityName, functionName);
+		activityLines.add(conditionalCode);
 		outputCode.put(codeDef, activityLines);
+		activityOutput.mLineAndTokens = activityLines;
 		return activityOutput;
 	}
-	
-	LineAndTokens activityCondition(List<String> tokens, String activityName) throws IOException {
+
+	/**
+	 * actual code insert for the activity condition
+	 * @param tokens
+	 * @param activityName
+	 * @param functionName
+	 * @return
+	 * @throws IOException
+	 */
+	public LineAndTokens activityCondition(List<String> tokens, String activityName, String functionName) throws IOException {
 		String activityConditionTemplate = FileUtility.readTemplate(Constants.Templates.ACTIVITY_CONDITION);
 		String description = "wait to see if activity " + activityName + " has appeared";
 		activityConditionTemplate = activityConditionTemplate.replace(Constants.VariableNames.ACTIVITY_CLASS, activityName);
 		activityConditionTemplate = activityConditionTemplate.replace(Constants.VariableNames.DESCRIPTION, description);
+		activityConditionTemplate = activityConditionTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mActivityVariableIndex));
+		activityConditionTemplate = activityConditionTemplate.replace(Constants.VariableNames.FUNCTION_NAME, functionName);
 		return new LineAndTokens(tokens, activityConditionTemplate);
 	}
 
@@ -381,13 +434,19 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	 * @throws IOException
 	 */
 	public CodeOutput handleInterstitialDialog(List<List<String>>								tokenLines,
+											   TokenScanner										tokenScanner,
 												int												currentReadIndex,
-												Hashtable<CodeDefinition, List<LineAndTokens>> outputCode,
+												Hashtable<CodeDefinition, List<LineAndTokens>> 	outputCode,
 												List<MotionEventList> 							motionEvents,
 												List<String> 									tokens) throws EmitterException, IOException {
 		String action = tokens.get(0);
-		List<String> precedingTokens = tokenLines.get(currentReadIndex - 1);
-		List<LineAndTokens> dialogLines = null;
+		// We don't just want the previous line, we want the activity transition or user event prior to the 
+		// activity_forward that this interstitial dialog was launched in.
+		TokenScanner.Predicate causingPredicate = tokenScanner.new OrPredicate(tokenScanner.new ActivityTransitionPredicate(), 
+																			   tokenScanner.new UserEventPredicate());
+		int causingLineIndex = tokenScanner.findPrevious(tokenLines, currentReadIndex, causingPredicate);
+		List<String> precedingTokens = tokenLines.get(causingLineIndex);
+		
 		CodeDefinition codeDef = null;
 		String activityName = tokens.get(2);
 		if (Constants.UserEvent.INTERSTITIAL_DIALOG_CONTENTS_ID.equals(action)) {
@@ -411,12 +470,48 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 				    					 CodeDefinition.DialogTagType.TEXT, precedingTokens);
 		}
 		CodeOutput codeOutput = emit(tokenLines, currentReadIndex + 1, outputCode, motionEvents, OutputType.INTERSTITIAL_DIALOG);
-		dialogLines = codeOutput.mLineAndTokens;
-		LineAndTokens conditionalCode = dialogCondition(tokens, codeDef);
-		dialogLines.add(0, conditionalCode);
-		dialogLines.add(closeCondition(tokens));
+		// we write the dialog lines at the end of the file, because of variable scoping issues
+		String functionName = addLinesAsFunction(tokens, activityName, codeOutput.mLineAndTokens, Constants.Templates.DIALOG_FUNCTION, outputCode);
+		List<LineAndTokens> dialogLines = new ArrayList<LineAndTokens>();
+		LineAndTokens conditionalCode = dialogCondition(tokens, codeDef, functionName);
+		dialogLines.add(conditionalCode);
 		outputCode.put(codeDef, dialogLines);
+		codeOutput.mLineAndTokens = dialogLines;
 		return codeOutput;
+	}
+	
+	/**
+	 * 
+	 * @param tokens
+	 * @param activityName
+	 * @param lines
+	 * @param functionTemplateName
+	 * @param outputCode
+	 * @return the name of the function
+	 * @throws IOException
+	 */
+	public String addLinesAsFunction(List<String> 									tokens, 
+								   String 											activityName, 
+								   List<LineAndTokens> 								lines, 
+								   String											functionTemplateName,
+								   Hashtable<CodeDefinition, List<LineAndTokens>> 	outputCode) throws IOException {
+		ArrayList<LineAndTokens> copyLine = new ArrayList<LineAndTokens>(lines);
+		String functionTemplate = FileUtility.readTemplate(functionTemplateName);
+		
+		// remove.the.dots.from.the.activity.class
+		String functionName = StringUtils.getNameFromClassPath(activityName) + Integer.toString(mFunctionNameIndex);
+		mFunctionNameIndex++;
+		functionTemplate = functionTemplate.replace(Constants.VariableNames.FUNCTION_NAME, functionName);
+		copyLine.add(0, new LineAndTokens(tokens, functionTemplate));
+		copyLine.add(closeCondition(tokens));
+		CodeDefinition functionCodeDef = new CodeDefinition(Constants.FUNCTIONS, null);
+		List<LineAndTokens> functionCode = outputCode.get(functionCodeDef);
+		if (functionCode == null) {
+			outputCode.put(functionCodeDef, copyLine);
+		} else {
+			functionCode.addAll(copyLine);
+		}
+		return functionName;
 	}
 	
 	/**
@@ -426,18 +521,19 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	 * @return
 	 * @throws IOException
 	 */
-	LineAndTokens dialogCondition(List<String> tokens, CodeDefinition codeDef) throws IOException {
+	public LineAndTokens dialogCondition(List<String> tokens, CodeDefinition codeDef, String functionName) throws IOException {
 		String dialogConditionTemplate = FileUtility.readTemplate(Constants.Templates.DIALOG_CONDITION);
 		String description = "wait to see if a dialog with string " + codeDef.getDialogTag() + " has appeared";
 		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.DESCRIPTION, description);
 		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mActivityVariableIndex));
+		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.FUNCTION_NAME, functionName);
 		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.CODE_DEFINITION, codeDef.toCode());
 		mActivityVariableIndex++;
 		return new LineAndTokens(tokens, dialogConditionTemplate);
 	}
 	
 	LineAndTokens closeCondition(List<String> tokens) {
-		return new LineAndTokens(tokens, "}");
+		return new LineAndTokens(tokens, "}\n");
 	}
 
 	/**
@@ -451,7 +547,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	 * @return true if there was an activity transition
 	 */
 	protected boolean checkActivityTransition(List<String> tokens, List<String> nextTokens, List<LineAndTokens> lines) throws IOException {
-		// if it's the first "activity_forward", then it's the class
+		// if it's the first "", then it's the class
 		if (Constants.ActivityEvent.ACTIVITY_FORWARD.equals(tokens.get(0))) {
 			if (mTargetClassPath == null) {
 				mTargetClassPath =  tokens.get(2);
@@ -1216,9 +1312,9 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		listItemWaitTemplate = listItemWaitTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
 		lines.add(new LineAndTokens(tokens, listItemWaitTemplate));				
 	}
+	
 	/**
 	 * write the item click event for a list item
-	 * TODO: THIS NEEDS TO HANDLE ID AND INTERNAL CLASS INDEX
 	 * item_click:195768219, 2,class_index,android.widget.ListView,1
 	 * command:time,item_index,[view reference]
 	 * @param tokens parsed from a line in events.txt
@@ -1235,7 +1331,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 			itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
 			lines.add(new LineAndTokens(tokens, itemClickTemplate));
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.INTERNAL_CLASS_INDEX) {
-			String itemClickTemplate = writeViewInternalClassIndexCommand(Constants.Templates.CLICK_IN_LIST, ref, fullDescription);
+			String itemClickTemplate = writeViewInternalClassIndexCommand(Constants.Templates.CLICK_IN_LIST_INTERNAL_CLASS_INDEX, ref, fullDescription);
 			itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
 			lines.add(new LineAndTokens(tokens, itemClickTemplate));
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
@@ -1246,7 +1342,36 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
 		}
 	}
+	/**
+	 * write the item click event for a list item
+	 * item_click_by_text:195768219, "this is the item text",class_index,android.widget.ListView,1
+	 * command:time,item_index,[view reference]
+	 * @param tokens parsed from a line in events.txt
+	 * @param lines output list of java instructions
+	 * @throws IOException if the template file can't be read
+	 */
 	
+	public void writeItemClickByText(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
+		String itemText = StringUtils.unescapeString(StringUtils.stripQuotes(tokens.get(2)), '\\');
+		ReferenceParser ref = new ReferenceParser(tokens, 3);
+		String description = getDescription(tokens);
+		String fullDescription = "click item " + description;
+		if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
+			String itemClickTemplate = writeViewClassIndexCommand(Constants.Templates.CLICK_IN_LIST_BY_TEXT, ref, fullDescription);
+			itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.ITEM_TEXT, itemText);
+			lines.add(new LineAndTokens(tokens, itemClickTemplate));
+		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.INTERNAL_CLASS_INDEX) {
+			String itemClickTemplate = writeViewInternalClassIndexCommand(Constants.Templates.CLICK_IN_LIST_BY_TEXT_INTERNAL_CLASS_INDEX, ref, fullDescription);
+			itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.ITEM_TEXT, itemText);
+			lines.add(new LineAndTokens(tokens, itemClickTemplate));
+		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
+			String clickListItemTemplate = writeViewIDCommand(Constants.Templates.CLICK_LIST_ITEM_ID_BY_TEXT, ref, fullDescription);
+			clickListItemTemplate = clickListItemTemplate.replace(Constants.VariableNames.ITEM_TEXT, itemText);
+			lines.add(new LineAndTokens(tokens, clickListItemTemplate));
+		} else {
+			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
+		}
+	}
 	/**
 	 * write the item click event for a menu popup list item
 	 * same as item_click event, but we want to differentiate.
@@ -1580,6 +1705,72 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 			}
 		}
 		return null;
+	}
+		
+	/**
+	 * after an activity has been marked as interstitial, and we've hit the matching tokens, we need to scan
+	 * to the next activity_transition event, with a matching activity name, then one with a different activity name
+	 * @param tokenLines
+	 * @param tokenScanner
+	 * @param codeDef
+	 * @param currentIndex
+	 * @return
+	 */
+	public int findClosingActivity(List<List<String>> 	tokenLines,
+								   TokenScanner			tokenScanner,
+								   CodeDefinition		codeDef,
+								   int					currentIndex) {
+		Predicate activityTransitionPredicate =  tokenScanner.new ActivityTransitionPredicate();
+		int activityTransitionIndex = TokenScanner.scanForward(tokenLines, currentIndex, activityTransitionPredicate);
+		List<String> activityTransitionTokens = tokenLines.get(activityTransitionIndex);
+		String activityName = activityTransitionTokens.get(2);
+		
+		// positive case: the interstitial activity was fired.  We search for the next activity transition and skip it
+		// because the interstitial handler waits for the activity transition.  NOTE: The outer loop skips it for us
+		if (activityName.equals(codeDef.getActivityName())) {
+			int nextActivityTransitionIndex = TokenScanner.scanForward(tokenLines, activityTransitionIndex + 1, activityTransitionPredicate);
+			if (nextActivityTransitionIndex == -1) {
+				return tokenLines.size() - 1;
+			} else {
+				return nextActivityTransitionIndex + 1;
+			}
+		} else {
+			// negative case.  The interstitial activity was not fired, so we just write the condition and keep going
+			return currentIndex; 
+		}
+	}
+	
+	/**
+	 * aftr a dialog has been marked as interstitial, and we've hit the matching tokens, we scan for the next 
+	 * create_dialog event, then we scan to the next activity close.  If there's a system event or a user event
+	 * before then, then the dialog didn't fire, so we just insert the dialog code
+	 * @param tokenLines
+	 * @param tokenScanner
+	 * @param codeDef
+	 * @param currentIndex
+	 * @return
+	 */
+	public int findDialogClose(List<List<String>> 	tokenLines,
+							   TokenScanner			tokenScanner,
+							   CodeDefinition		codeDef,
+							   int					currentIndex) {
+		Predicate dialogOpenPredicate = tokenScanner.new EventListPredicate(Constants.SystemEvent.CREATE_DIALOG.mEventName);
+		
+		// see if there is a dialog open event before the next user or activity transition event.
+		// TODO: we will write the dialog description for an interstitial dialog
+		int dialogOpenIndex = TokenScanner.scanForward(tokenLines, currentIndex, dialogOpenPredicate);
+		Predicate nextEventPredicate = tokenScanner.new OrPredicate(tokenScanner.new ActivityTransitionPredicate(),
+														  		    tokenScanner.new UserEventPredicate());
+		int nextEventIndex = TokenScanner.scanForward(tokenLines, currentIndex, nextEventPredicate);
+		if (nextEventIndex > dialogOpenIndex) {
+												
+			Predicate dialogClosePredicate = tokenScanner.new OrPredicate(tokenScanner.new DialogClosePredicate(),
+																	      tokenScanner.new ActivityTransitionPredicate());
+			int dialogCloseIndex = TokenScanner.scanForward(tokenLines, dialogOpenIndex + 1, dialogClosePredicate);
+			return dialogCloseIndex;
+		} else {
+			return currentIndex;
+		}
 	}
 
 }

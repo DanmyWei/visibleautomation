@@ -726,6 +726,51 @@ public class RobotiumUtils {
 	}
 	
 	/**
+	 * find an item of the scroll view which contains a text view with a matching string and select it
+	 * @param solo
+	 * @param absListView
+	 * @param text
+	 * @return
+	 */
+	public boolean selectItemByText(Solo solo, AbsListView absListView, String text) {
+		for (int i = 0; i < absListView.getChildCount(); i++) {
+			View adapterViewItem = absListView.getChildAt(i);
+			if (findText(adapterViewItem, text) != null) {
+				solo.clickOnView(adapterViewItem);
+				return true;
+			}			
+		}
+		return false;
+	}
+	
+	/**
+	 * find text in the view hierarchy
+	 * @param v view to search against.
+	 * @param s string to search for
+	 * @return view containing text or null
+	 */
+	public View findText(View v, String s) {
+		if (v instanceof TextView) {
+			TextView tv = (TextView) v;
+			if (tv.getText().toString().equals(s)) {
+				return v;
+			}
+		} else if (v instanceof ViewGroup) {
+			ViewGroup vg = (ViewGroup) v;
+			for (int i = 0; i < vg.getChildCount(); i++) {
+				View vChild = vg.getChildAt(i);
+				View vFound = findText(vChild, s);
+				if (vFound != null) {
+					return vFound;
+				}
+			}
+			
+		}
+		return null;
+	}
+	
+	
+	/**
 	 * enter text key by key.  Much more reliable than just setting text directly
 	 * TODO: check that \b maps to KEYCODE_DEL
 	 * @param editText  edit text to send characters to 

@@ -116,15 +116,25 @@ public class CodeDefinition {
 	}
 		
 	
+	/**
+	 * parse a code definition from a string.
+	 * ACTIVITY: activityClass
+	 * DIALOG: activityName, dialog_tag, scanType <title|content>, tagType <id|text>
+	 * @param s
+	 * @return
+	 * @throws EmitterException
+	 */
 	public static CodeDefinition parse(String s) throws EmitterException {
 		SuperTokenizer st = new SuperTokenizer(s, "\"", ":,", '\\');
 		List<String> tokens = st.toList();
 		String tokenType = tokens.get(0);
-		if (Type.ACTIVITY.mName.equals(tokenType)) {
+		if (Type.ACTIVITY.mName.equalsIgnoreCase(tokenType)) {
 			return new CodeDefinition(tokens.get(1), null);
+		} else if (Type.DIALOG.mName.equalsIgnoreCase(tokenType)) {
+			return new CodeDefinition(tokens.get(1), tokens.get(2), DialogScanType.fromString(tokens.get(3)), 
+									  DialogTagType.fromString(tokens.get(4)), null);
 		} else {
-			return new CodeDefinition(tokens.get(1), tokens.get(3), DialogScanType.fromString(tokens.get(3)), 
-						DialogTagType.fromString(tokens.get(4)), null);
+			throw new EmitterException("unknown code definition type " + tokenType);
 		}
 	}
 	/**

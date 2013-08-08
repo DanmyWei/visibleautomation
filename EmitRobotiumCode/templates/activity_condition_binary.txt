@@ -1,2 +1,5 @@
 		// %DESCRIPTION%
-		if (obotiumUtils.waitForActivity(Class.forName("%ACTIVITY_CLASS%"), ACTIVITY_WAIT_MSEC))) {	
+		if (robotiumUtils.waitForActivity((Class<? extends Activity>) Class.forName("%ACTIVITY_CLASS%"), ACTIVITY_WAIT_MSEC)) {	
+			activityHandler%FUNCTION_NAME%(solo, robotiumUtils);
+		}
+		

@@ -2,9 +2,13 @@ package com.androidApp.emitter;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Hashtable;
 import java.util.List;
 
+import com.androidApp.emitter.IEmitCode.CodeOutput;
 import com.androidApp.emitter.IEmitCode.LineAndTokens;
+import com.androidApp.emitter.IEmitCode.OutputType;
 import com.androidApp.util.Constants;
 import com.androidApp.util.FileUtility;
 import com.androidApp.util.StringUtils;
@@ -38,6 +42,26 @@ public class EmitRobotiumCodeBinary extends EmitRobotiumCodeSource {
 		header = header.replace(Constants.VariableNames.CLASSNAME, className);
 		header = header.replace(Constants.VariableNames.TESTCLASSNAME, testClassName);
 		bw.write(header);
+	}
+	/**
+	 * write out the if (waitForActivity()) { interstitial_code } in the main code, and the handler function in the
+	 * handler set
+	 * @param tokenLines
+	 * @param currentReadIndex
+	 * @param outputCode
+	 * @param motionEvents
+	 * @param tokens
+	 * @return
+	 * @throws EmitterException
+	 * @throws IOException
+	 */
+	public CodeOutput handleInterstitialActivity(List<List<String>>								tokenLines,
+												 TokenScanner									tokenScanner,
+												 int											currentReadIndex,
+												 Hashtable<CodeDefinition, List<LineAndTokens>> outputCode,
+												 List<MotionEventList> 							motionEvents,
+												 List<String> 									tokens) throws EmitterException, IOException {
+		return handleInterstitialActivity(tokenLines, tokenScanner, currentReadIndex, outputCode, motionEvents, tokens, Constants.Templates.ACTIVITY_FUNCTION_BINARY);
 	}
 	
 	/**
@@ -169,31 +193,38 @@ public class EmitRobotiumCodeBinary extends EmitRobotiumCodeSource {
 		}
 	}
 	
-	public LineAndTokens activityConditionBinary(List<String> tokens, String activityName) throws IOException {
-		String dialogConditionTemplate = FileUtility.readTemplate(Constants.Templates.ACTIVITY_CONDITION_BINARY);
+	@Override	
+	public LineAndTokens activityCondition(List<String> tokens, String activityName, String functionName) throws IOException {
+		String activityConditionTemplate = FileUtility.readTemplate(Constants.Templates.ACTIVITY_CONDITION_BINARY);
 		String description = "wait to see if activity " + activityName + " has appeared";
-		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.ACTIVITY_CLASS, activityName);
-		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.DESCRIPTION, description);
-		return new LineAndTokens(tokens, dialogConditionTemplate);
+		activityConditionTemplate = activityConditionTemplate.replace(Constants.VariableNames.ACTIVITY_CLASS, activityName);
+		activityConditionTemplate = activityConditionTemplate.replace(Constants.VariableNames.DESCRIPTION, description);
+		activityConditionTemplate = activityConditionTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mActivityVariableIndex));
+		activityConditionTemplate = activityConditionTemplate.replace(Constants.VariableNames.FUNCTION_NAME, functionName);
+		return new LineAndTokens(tokens, activityConditionTemplate);
 	}
 	
 	
 	/**
 	 * write out the conditional test for a dialog.
 	 * @param tokens
-	 * @param codeDef
+	 * @param codeDef defintion of the dialog
+	 * @param functionName name of the function to write out after the main code method
 	 * @return
 	 * @throws IOException
 	 */
-	public LineAndTokens dialogCondition(List<String> tokens, CodeDefinition codeDef) throws IOException {
+	@Override
+	public LineAndTokens dialogCondition(List<String> tokens, CodeDefinition codeDef, String functionName) throws IOException {
 		String dialogConditionTemplate = FileUtility.readTemplate(Constants.Templates.DIALOG_CONDITION_BINARY);
 		String description = "wait to see if a dialog with string " + codeDef.getDialogTag() + " has appeared";
 		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.DESCRIPTION, description);
 		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mActivityVariableIndex));
+		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.FUNCTION_NAME, functionName);
 		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.CODE_DEFINITION, codeDef.toBinaryCode());
 		mActivityVariableIndex++;
 		return new LineAndTokens(tokens, dialogConditionTemplate);
 	}
+	
 
 
 }

@@ -3,14 +3,20 @@ import java.util.List;
 
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
+import com.androidApp.EventRecorder.ViewDirective;
 import com.androidApp.EventRecorder.ViewReference;
+import com.androidApp.EventRecorder.ViewDirective.ViewOperation;
+import com.androidApp.EventRecorder.ViewDirective.When;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.ReflectionUtils;
+import com.androidApp.Utility.StringUtils;
+import com.androidApp.Utility.TestUtils;
 
 import android.os.SystemClock;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.TextView;
 
 /**
  *  record item clicks for listviews
@@ -19,10 +25,12 @@ import android.widget.AdapterView;
  */
 public class RecordOnItemClickListener extends RecordListener implements AdapterView.OnItemClickListener, IOriginalListener  {
 	protected AdapterView.OnItemClickListener	mOriginalItemClickListener;
+	protected int								mViewIndex;
 	
-	public RecordOnItemClickListener(EventRecorder eventRecorder, AdapterView<?> adapterView) {
+	public RecordOnItemClickListener(EventRecorder eventRecorder, AdapterView<?> adapterView, int viewIndex) {
 		super(eventRecorder);
 		mOriginalItemClickListener = adapterView.getOnItemClickListener();
+		mViewIndex = viewIndex;
 		adapterView.setOnItemClickListener(this);
 	}
 	
@@ -44,13 +52,24 @@ public class RecordOnItemClickListener extends RecordListener implements Adapter
 	 *  @param position index in adapter
 	 *  @param id adapter item id
 	 */
+	//				ViewDirective selectDirective = new ViewDirective(ref, ViewOperation.SELECT_BY_TEXT, When.ON_ACTIVITY_START, null);
+
 
 	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 		boolean fReentryBlock = getReentryBlock();
 		if (!RecordListener.getEventBlock()) {
 			setEventBlock(true);
 			try {
-				mEventRecorder.writeRecord(Constants.EventTags.ITEM_CLICK, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));	
+				if (mEventRecorder.matchViewDirective(parent, mViewIndex, ViewDirective.ViewOperation.SELECT_BY_TEXT,
+					   	   							   ViewDirective.When.ALWAYS)) {
+					TextView tv = (TextView) TestUtils.findChild(view, 0, TextView.class);
+					if (tv != null) {
+						String text = StringUtils.escapeString(tv.getText().toString(), "\"", '\\').replace("\n", "\\n");
+						mEventRecorder.writeRecord(Constants.EventTags.ITEM_CLICK_BY_TEXT, text + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));	
+					}
+				} else {
+					mEventRecorder.writeRecord(Constants.EventTags.ITEM_CLICK, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));	
+				}
 			} catch (Exception ex) {
 				mEventRecorder.writeException(ex, view, "item click");
 			}	

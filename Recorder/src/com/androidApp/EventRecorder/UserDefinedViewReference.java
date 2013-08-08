@@ -117,7 +117,8 @@ public class UserDefinedViewReference {
 	}
 	
 	/**
-	 * similar to ViewRefernce: TODO: Consolidate these functions
+	 * similar to ViewReference: TODO: Consolidate these functions
+	 * TODO: support dialog references.
 	 * @param v
 	 */
 	public UserDefinedViewReference(Instrumentation instrumentation, ViewReference viewReference, View v, Activity activity) throws IOException {
@@ -144,6 +145,7 @@ public class UserDefinedViewReference {
 			mViewClass = usableClass;
 			mViewInternalClassName = v.getClass().getName();
 			mViewInternalClass = v.getClass();
+			mClassIndex = TestUtils.classIndex(v.getRootView(), v);
 		} else {
 			mReferenceType = ReferenceEnum.VIEW_BY_ACTIVITY_CLASS_INDEX;
 			mViewClassName = usableClass.getName();

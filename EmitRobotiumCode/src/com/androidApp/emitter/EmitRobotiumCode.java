@@ -103,6 +103,7 @@ public class EmitRobotiumCode {
 		List<MotionEventList> motionEvents = new ArrayList<MotionEventList>();
 		emitter.generateTestCode(eventsFileName, outputCode, motionEvents);
 		List<LineAndTokens> mainCode = outputCode.get(new CodeDefinition(Constants.MAIN, null));
+		List<LineAndTokens> functionCode = outputCode.get(new CodeDefinition(Constants.FUNCTIONS, null));
 		if (emitter.getApplicationClassPath() == null) {
 			System.err.println("unable to generate output code, no activity reference");
 			System.exit(-1);
@@ -158,6 +159,10 @@ public class EmitRobotiumCode {
 			emitter.writeFunctionHeader(bw);
 			emitter.writeLines(bw, mainCode);
 			emitter.writeTrailer(bw);
+			if (functionCode != null) {
+				emitter.writeLines(bw, functionCode);
+			}
+			emitter.writeTrailer(bw);
 		}
 		
 		bw.close();
@@ -190,7 +195,7 @@ public class EmitRobotiumCode {
 		StringBuffer code = new StringBuffer();
 		String line = br.readLine();
 		while (line != null) {
-			code.append(line);
+			code.append(line + "\n");
 			line = br.readLine();
 		}
 		LineAndTokens lineAndTokens = new LineAndTokens(tokens, line);
@@ -240,13 +245,12 @@ public class EmitRobotiumCode {
 		for (Entry<CodeDefinition, List<LineAndTokens>> entry : outputCode.entrySet()) {
 			CodeDefinition codeDef = entry.getKey();
 			List<LineAndTokens> code = entry.getValue();
-			if (!codeDef.getActivityName().equals(Constants.MAIN)) {
-				String templateFileName = codeDef.getActivityName();
+			if (!codeDef.getActivityName().equals(Constants.MAIN) && !codeDef.getActivityName().equals(Constants.FUNCTIONS)) {
+				String templateFileName = StringUtils.getNameFromClassPath(codeDef.getActivityName()) + "." + Constants.Extensions.TEXT;
 				int uniqueFileIndex = FileUtility.uniqueFileIndex(handlerDir, templateFileName);
 				if (uniqueFileIndex != 0) {
 					templateFileName += Integer.toString(uniqueFileIndex);
 				}
-				templateFileName += "." + Constants.Extensions.TEXT;
 				File file = new File(handlerDir, templateFileName);
 				// when we write out the conditional code, we write the first set of tokens, because that's what we scan
 				// against to insert it into the output.

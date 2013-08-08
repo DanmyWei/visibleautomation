@@ -48,7 +48,9 @@ public class RecordTextChangedListener extends RecordListener implements TextWat
 			// we have to test the view directive here, because we don't pass the View down to the event recorder 
 			// which normally gets it.
 			if (!mEventRecorder.matchViewDirective(mTextView, mViewIndex, ViewDirective.ViewOperation.IGNORE_EVENTS,
-				  							   	   ViewDirective.When.ALWAYS)) {
+				  							   	   ViewDirective.When.ALWAYS) &&
+				!mEventRecorder.matchViewDirective(mTextView, mViewIndex, ViewDirective.ViewOperation.IGNORE_TEXT_EVENTS, 
+				  						 		   ViewDirective.When.ALWAYS)) {
 				String description = getDescription(mTextView);
 				String reference = mEventRecorder.getViewReference().getReference(mTextView);
 				String massagedString = StringUtils.escapeString(s.toString(), "\"", '\\').replace("\n", "\\n");
@@ -81,7 +83,9 @@ public class RecordTextChangedListener extends RecordListener implements TextWat
 	public void onTextChanged(CharSequence s, int start, int before, int count) {
 		try {
 			if (!mEventRecorder.matchViewDirective(mTextView, mViewIndex, ViewDirective.ViewOperation.IGNORE_EVENTS,
-				   	   							   ViewDirective.When.ALWAYS)) {
+				   	   							   ViewDirective.When.ALWAYS) &&
+				!mEventRecorder.matchViewDirective(mTextView, mViewIndex, ViewDirective.ViewOperation.IGNORE_TEXT_EVENTS, 
+				 		   						   ViewDirective.When.ALWAYS)) {
 				String description = getDescription(mTextView);
 				String reference = mEventRecorder.getViewReference().getReference(mTextView);
 				String massagedString = StringUtils.escapeString(s.toString(), "\"", '\\').replace("\n", "\\n");

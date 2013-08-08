@@ -69,7 +69,7 @@ public class EventRecorder extends EventRecorderInterface {
 		try {
 			InputStream isInterstitialActivityList  = instrumentation.getContext().getAssets().open(Constants.Asset.INTERSTITIAL_ACTIVITY_LIST);
 			mInterstitialActivityList = InterstialActivity.readActivityClassList(isInterstitialActivityList);
-		}catch (FileNotFoundException fnfex) {
+		} catch (FileNotFoundException fnfex) {
 			Log.i(TAG, "no interstitial activities were specified");
 		}
 	}
@@ -131,7 +131,19 @@ public class EventRecorder extends EventRecorderInterface {
 	}
 	
 	public void addInterstitialActivity(Activity activity) {
+		if (mInterstitialActivityList == null) {
+			mInterstitialActivityList = new ArrayList<Class<? extends Activity>>();
+		}
 		mInterstitialActivityList.add(activity.getClass());
+	}
+	
+	// don't want to double-write interstitial activities.
+	public boolean isInterstitialActivity(Activity activity) {
+		if (mInterstitialActivityList == null) {
+			return false;
+		} else {
+			return mInterstitialActivityList.contains(activity.getClass());
+		}
 	}
 	
 	/**

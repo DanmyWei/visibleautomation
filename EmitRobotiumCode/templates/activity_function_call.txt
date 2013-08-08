@@ -1,0 +1,3 @@
+
+ 	activityHandler%FUNCTION_NAME%(solo, robotiumUtils);
+ 

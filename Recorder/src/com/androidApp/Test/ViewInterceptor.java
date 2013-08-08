@@ -375,11 +375,11 @@ public class ViewInterceptor {
 	 * @throws ClassNotFoundException
 	 * @throws NoSuchFieldException
 	 */
-	public static boolean replaceClickListener(EventRecorder eventRecorder, View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
+	public static boolean replaceClickListener(EventRecorder eventRecorder, int viewClassIndex, View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
 		View.OnClickListener originalClickListener = ListenerIntercept.getClickListener(v);
 		if (TestUtils.listenClickEvents(v) || (originalClickListener != null)) {
 			if (!(originalClickListener instanceof RecordOnClickListener)) {
-				RecordOnClickListener recordClickListener = new RecordOnClickListener(eventRecorder, originalClickListener);
+				RecordOnClickListener recordClickListener = new RecordOnClickListener(eventRecorder, viewClassIndex, originalClickListener);
 				v.setOnClickListener(recordClickListener);
 				Log.i(TAG, "setting click listener for " + v + " " + RecordListener.getDescription(v));
 				return true;
@@ -470,7 +470,7 @@ public class ViewInterceptor {
 	public void replaceViewListeners(View v, int viewClassIndex, List<ViewDirective> viewDirectives) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
 		if (!ViewDirective.match(v, viewClassIndex, ViewDirective.ViewOperation.IGNORE_CLICK_EVENTS, 
 			    				 ViewDirective.When.ON_ACTIVITY_START, viewDirectives)) {
-			replaceClickListener(mEventRecorder, v);
+			replaceClickListener(mEventRecorder, viewClassIndex,  v);
 		}
 		if (!ViewDirective.match(v, viewClassIndex, ViewDirective.ViewOperation.IGNORE_LONG_CLICK_EVENTS, 
 				 ViewDirective.When.ON_ACTIVITY_START, viewDirectives)) {

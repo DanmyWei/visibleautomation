@@ -2,21 +2,11 @@ package createrecorder.handlers;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Stack;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.preferences.IPreferencesService;
 import org.eclipse.swt.widgets.Shell;
@@ -24,14 +14,10 @@ import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.dialogs.ElementListSelectionDialog;
 import org.eclipse.ui.handlers.HandlerUtil;
 import org.eclipse.jdt.core.IJavaProject;
-import org.eclipse.jface.dialogs.InputDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.window.Window;
 
-import com.androidApp.parser.ManifestParser;
-import com.androidApp.parser.ProjectParser;
-import com.androidApp.parser.ProjectPropertiesScan;
 import com.androidApp.util.Constants;
 import com.androidApp.util.Exec;
 
@@ -77,7 +63,13 @@ public class CreateRecorderHandler extends AbstractHandler {
 		String packagePath = testClassDialog.getTestClassDialog(shell, "Visible Automation", "Enter classpath of APK to record");
 		if (packagePath != null) {	
 			try {
-				ResignAPK.resign(testClassDialog.mMatchingClass, PackageUtils.getPackageName(testClassDialog.mPackagePath));
+				String os = Platform.getOS();
+				// TODO: TEST THIS
+				if (os.equals(Platform.OS_WIN32)) {	
+					ResignAPK.resignWin32(shell, testClassDialog.mMatchingClass, PackageUtils.getPackageName(testClassDialog.mPackagePath));
+				} else {
+					ResignAPK.resign(shell, testClassDialog.mMatchingClass, PackageUtils.getPackageName(testClassDialog.mPackagePath));
+				}
 			} catch (Exception ex) {
 				ex.printStackTrace();
 			}

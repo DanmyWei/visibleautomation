@@ -105,8 +105,12 @@ public class DirectiveDialogs {
 		@Override
 		public void onClick(DialogInterface dialog, int which) {
 			if (which == 0) {
-				String logMsg =  DirectiveDialogs.this.getActivity().getClass().getName();
-				DirectiveDialogs.this.getEventRecorder().writeRecord(Constants.EventTags.INTERSTITIAL_ACTIVITY, logMsg);
+				// prevent 'doubling'
+				if (!DirectiveDialogs.this.getEventRecorder().isInterstitialActivity(DirectiveDialogs.this.getActivity())) {
+					String logMsg =  DirectiveDialogs.this.getActivity().getClass().getName();
+					DirectiveDialogs.this.getEventRecorder().writeRecord(Constants.EventTags.INTERSTITIAL_ACTIVITY, logMsg);
+					DirectiveDialogs.this.getEventRecorder().addInterstitialActivity(DirectiveDialogs.this.getActivity());
+				}
 			} else if (which == 1) {
 				// go into view selection mode
 				DirectiveDialogs.this.setClickMode(ClickMode.VIEW_SELECT);
@@ -195,13 +199,15 @@ public class DirectiveDialogs {
 														Constants.DisplayStrings.IGNORE_CLICK_EVENTS,
 														Constants.DisplayStrings.IGNORE_TEXT_EVENTS,
 													 	Constants.DisplayStrings.MOTION_EVENTS,
-													    Constants.DisplayStrings.COPY_TEXT };
+													    Constants.DisplayStrings.COPY_TEXT,
+													    Constants.DisplayStrings.CLICK_WORKAROUND};
 				Dialog dialog = createSelectionDialog(context, textViewItems, new OnTextViewSelectionListener(DirectiveDialogs.this));
 				dialog.show();
 			} else if (currentView instanceof AbsListView) {
 				String[] listViewItems = new String[] { Constants.DisplayStrings.IGNORE_EVENTS,
 														Constants.DisplayStrings.MOTION_EVENTS,
-														Constants.DisplayStrings.SELECT_BY_TEXT };
+														Constants.DisplayStrings.SELECT_BY_TEXT,
+														Constants.DisplayStrings.SELECT_ITEM_WORKAROUND};
 				Dialog dialog = createSelectionDialog(context, listViewItems, new OnListSelectionListener(DirectiveDialogs.this));
 				dialog.show();	
 			} else if (currentView instanceof CompoundButton) {

@@ -22,8 +22,10 @@ public class Constants {
 	public static final String CLASS_INDEX = "class_index";
 	public static final String INTERNAL_CLASS_INDEX = "internal_class_index";
 	public static final String MAIN = "main";
+	public static final String FUNCTIONS = "functions";
 	public static final String INTERSTITIAL_ACTIVITY_HANDLER = "InterstitialActivityHandler";
-	public static final String DIALOG_HANDLER = "DialogHandler";
+	public static final String DIALOG_HANDLER = "DialogHandler";	
+	public static final String SUCCESS = "Success";
 	
 	// environment variables
 	public static class Env {
@@ -43,6 +45,7 @@ public class Constants {
 		SCROLL("scroll"),
 		SEEKBAR_CHANGE("seekbar_change"),
 		ITEM_CLICK("item_click"),
+		ITEM_CLICK_BY_TEXT("item_click_by_text"),
 		ITEM_LONG_CLICK("item_long_click"),		
 		DISMISS_DIALOG_BACK_KEY("dismiss_dialog_back_key"),
 		CANCEL_DIALOG("cancel_dialog"),
@@ -113,7 +116,7 @@ public class Constants {
 			return mEventName.equals(s);
 		}
 		
-		public static boolean isAcivityEvent(String s) {
+		public static boolean isActivityEvent(String s) {
 			for (ActivityEvent event : ActivityEvent.values()) {
 				if (event.equals(s)) {
 					return true;
@@ -263,6 +266,13 @@ public class Constants {
 		public static final String ACTIVITY_CONDITION = "activity_condition.txt";
 		public static final String DIALOG_CONDITION_BINARY = "dialog_condition_binary.txt";
 		public static final String ACTIVITY_CONDITION_BINARY = "activity_condition_binary.txt";
+		public static final String DIALOG_FUNCTION = "dialog_function.txt";
+		public static final String ACTIVITY_FUNCTION = "activity_function.txt";
+		public static final String CLICK_IN_LIST_INTERNAL_CLASS_INDEX = "click_in_list_internal_class_index.txt";
+		public static final String CLICK_IN_LIST_BY_TEXT = "click_in_list_by_text.txt";
+		public static final String CLICK_IN_LIST_BY_TEXT_INTERNAL_CLASS_INDEX = "click_in_list_by_text_internal_class_index.txt";
+		public static final String CLICK_LIST_ITEM_ID_BY_TEXT = "click_in_list_id_by_text.txt";
+		public static final String ACTIVITY_FUNCTION_BINARY = "activity_function_binary.txt";
 		
 	}
 	
@@ -309,7 +319,7 @@ public class Constants {
 		public static final String CODE_DEFINITION = "%CODE_DEFINITION%";
 		public static final String DIALOG_HANDLERS = "%DIALOG_HANDLERS%";
 		public static final String DIALOG_HANDLER_IMPORTS = "%DIALOG_HANDLER_IMPORTS%";
-
+		public static final String ITEM_TEXT = "%ITEM_TEXT%";
 	}
 	
 	// generic names

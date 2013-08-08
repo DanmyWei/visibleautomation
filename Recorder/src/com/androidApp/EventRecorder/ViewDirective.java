@@ -33,7 +33,9 @@ public class ViewDirective {
 		IGNORE_LONG_CLICK_EVENTS("ignore_long_click_events"),
 		IGNORE_SCROLL_EVENTS("ignore_scroll_events"),
 		IGNORE_ITEM_SELECT_EVENTS("ignore_item_select_events"),
-		IGNORE_TEXT_EVENTS("ignore_text_events");		
+		IGNORE_TEXT_EVENTS("ignore_text_events"), 
+		CLICK_WORKAROUND("click_workaround"), 
+		SELECT_ITEM_WORKAROUND("select_item_workaround");
 		
 		public String mName;
 		

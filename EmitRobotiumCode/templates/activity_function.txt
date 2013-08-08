@@ -1,0 +1,3 @@
+
+ 	public void activityHandler%FUNCTION_NAME%(Solo solo, RobotiumUtils robotiumUtils) {
+ 

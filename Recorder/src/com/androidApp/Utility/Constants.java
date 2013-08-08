@@ -265,6 +265,9 @@ public class Constants {
 		public static final String INTERSTITIAL_DIALOG_CONTENTS_ID = "interstitial_dialog_contents_id";
 		public static final String INTERSTITIAL_DIALOG_CONTENTS_TEXT = "interstitial_dialog_contents_text";
 		public static final String INTERSTITIAL_DIALOG_CONTENTS = "interstitial_dialog_contents";
+		public static final String ITEM_CLICK_BY_TEXT = "item_click_by_text";
+		public static final String CLICK_WORKAROUND = "click_workaround";
+		public static final String SELECT_ITEM_WORKAROUND = "select_item_workaround";
 	}
 	
 	// description strings 
@@ -340,6 +343,8 @@ public class Constants {
 		public static final String INSERT_BY_CHARACTER = "Insert text by keys";
 		public static final String NO_DIALOG_TITLE = "Unable to find dialog title";
 		public static final String RESOURCE_ERROR = "resource access error";
+		public static final String SELECT_ITEM_WORKAROUND = "select item workaround";
+		public static final String CLICK_WORKAROUND = "click workaround";
 	}
 	
 	// when ViewDirectives should be applied during record and playback.

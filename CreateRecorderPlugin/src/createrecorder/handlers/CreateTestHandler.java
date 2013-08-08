@@ -41,6 +41,7 @@ import com.androidApp.emitter.EmitRobotiumCodeBinary;
 import com.androidApp.util.Constants;
 import com.androidApp.util.Exec;
 import com.androidApp.util.FileUtility;
+import com.androidApp.util.StringUtils;
 
 import createproject.GenerateRobotiumTestCodeBinary;
 import createrecorder.util.EclipseUtility;
@@ -217,12 +218,13 @@ public class CreateTestHandler extends AbstractHandler {
 		for (Entry<CodeDefinition, List<LineAndTokens>> entry : outputCode.entrySet()) {
 			CodeDefinition codeDef = entry.getKey();
 			List<LineAndTokens> code = entry.getValue();
-			if (!codeDef.getActivityName().equals(Constants.MAIN)) {
-				String templateFileName = codeDef.getActivityName() + "." + Constants.Extensions.JAVA;
-				int uniqueFileIndex = EclipseUtility.uniqueFileIndex(handlersFolder, templateFileName);
+			if (!codeDef.getActivityName().equals(Constants.MAIN) && !codeDef.getActivityName().equals(Constants.FUNCTIONS)) {
+				String templateFileName = StringUtils.getNameFromClassPath(codeDef.getActivityName());
+				int uniqueFileIndex = EclipseUtility.uniqueFileIndex(handlersFolder, templateFileName + "." + Constants.Extensions.TEXT);
 				if (uniqueFileIndex != 0) {
 					templateFileName += Integer.toString(uniqueFileIndex);
 				}
+				templateFileName += "." + Constants.Extensions.TEXT;
 				FileOutputStream fos = new FileOutputStream("handler");
 				EmitRobotiumCode.writeConditionalCode(fos, codeDef, code);
 				fos.close();

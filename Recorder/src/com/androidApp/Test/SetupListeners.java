@@ -160,12 +160,10 @@ public class SetupListeners {
 							}
 						}
 					} else {
-						/* TEMPORARY
-						if (SetupListeners.this.getActivityInterceptor().hasStarted() && !SetupListeners.this.getActivityInterceptor().mightBeWaitingForSplashScreen()) {
+						if (SetupListeners.this.getActivityInterceptor().hasFinished()) {
 							Log.i(TAG, "setupDialogListener activity = " + activity + " viewInterceptor = " + viewInterceptor);
 							this.cancel();
 						}
-						*/
 					}
 				} catch (Exception ex) {
 					ex.printStackTrace();
@@ -586,7 +584,7 @@ public class SetupListeners {
 			}
 			do {
 				Thread.sleep(100);
-			} while (!mActivityInterceptor.getFinished());
+			} while (!mActivityInterceptor.hasFinished());
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
