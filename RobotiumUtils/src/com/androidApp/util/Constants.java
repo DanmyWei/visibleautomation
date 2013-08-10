@@ -13,6 +13,8 @@ public class Constants {
 		public static final String VIEWS = "mViews";
 		public static final String CALLBACK_PROXY = "mCallbackProxy";
 		public static final String WEBVIEW_CLIENT = "mWebViewClient";
+		public static final String STOPPED = "mStopped";
+		public static final String RESUMED = "mResumed";
 		
 	}
 	

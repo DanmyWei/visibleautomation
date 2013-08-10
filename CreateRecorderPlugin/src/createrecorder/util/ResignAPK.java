@@ -8,6 +8,7 @@ import org.eclipse.swt.widgets.Shell;
 
 import com.androidApp.util.Constants;
 import com.androidApp.util.Exec;
+import com.androidApp.util.StringUtils;
 
 /*
  * utility functions to re-sign an .apk with the developer's debug signature.
@@ -31,46 +32,30 @@ public class ResignAPK {
 	public static void resign(Shell shell, String packageName, String apkFile) throws IOException {
 	    String zipfile = replaceExtension(apkFile, Constants.Extensions.ZIP);
 	    String[] pullResults = EclipseExec.getAdbCommandOutput("pull /data/app" + apkFile);
+	    if (StringUtils.containedInStringArray(Constants.Errors.DOES_NOT_EXIST, pullResults)) {
+	    	MessageDialog.openInformation(shell, "Resign APK", "failed to pull APK from device");
+	    }
 	    File apkFileRef = new File(apkFile);
 	    if (!apkFileRef.exists()) {
 			MessageDialog.openInformation(shell,"Resign APK","failed to pull /data/app/" + apkFile + " from device");
 	    }
-	    if (!Exec.executeShellCommand("rm -fr temp")) {
-			MessageDialog.openInformation(shell,"Resign APK","failed to remove temp directory");
-	    }
-	    if (!Exec.executeShellCommand("mkdir temp")) {
-			MessageDialog.openInformation(shell,"Resign APK","failed to create temp directory");
-	    }
-	    if (!Exec.executeShellCommand("cp " + apkFile + " temp/" + zipfile)) {
-			MessageDialog.openInformation(shell,"Resign APK", "failed to copy the APK to the temp directory");
-	    }
-	    if (!Exec.executeShellCommand("unzip temp/" + zipfile + " -o -q -d temp");
-	    if (!Exec.executeShellCommand("rm -fr temp/META-INF")) {
+	    if (!Exec.resultCodeIn(Exec.executeShellCommand("zip -d " + apkFile + " META-INF/\\*"), new int[] { 0, 12 })) {
 			MessageDialog.openInformation(shell,"Resign APK", "failed to remove META-INF directory");
 	    }
-	    if (!Exec.executeShellCommand("rm temp/" + zipfile)) {
-	 		MessageDialog.openInformation(shell,"Resign APK", "failed to remove the zip file");
-	    }
-	   Exec.executeShellCommand("temp", "/usr/bin/zip", zipfile, "-r", ".");
-	    if (!Exec.executeShellCommand("mv temp/" + zipfile + " " + apkFile)) {
-	 		MessageDialog.openInformation(shell,"Resign APK", "failed to move the zip file to an APK");	    	
-	    }
 	    String home = System.getenv(RecorderConstants.EnvironmentVariables.HOME);
-	    if (!Exec.executeShellCommand("/usr/bin/jarsigner -keystore " + home + "/.android/debug.keystore -storepass android -keypass android " + apkFile + " androiddebugkey")) {
+	    String jarsignerCmd = "/usr/bin/jarsigner -keystore " + home + "/.android/debug.keystore -storepass android -keypass android " + apkFile + " androiddebugkey";
+	    if (Exec.executeShellCommand(jarsignerCmd) != 0) {
 	 		MessageDialog.openInformation(shell,"Resign APK", "failed to sign the new APK");	    	  	
 	    }
 	    //Exec.executeShellCommand(androidHome + "/tools/zipalign 4 " + apkFile + " tempfile");
 	    //Exec.executeShellCommand("mv tempfile " + apkFile);
 	    String[] uninstallResults = EclipseExec.getAdbCommandOutput("uninstall " + packageName);
-	    if ((uninstallResults.length != 1) || !uninstallResults[0].equals(Constants.SUCCESS)) {
+	    if (StringUtils.containedInStringArray(Constants.Errors.FAILURE, uninstallResults)) {
 	 		MessageDialog.openInformation(shell,"Resign APK", "failed to uninstall APK");	    	  	
 	    }
 	    String[] installResults = EclipseExec.getAdbCommandOutput("install " + apkFile);
-	    if ((installResults.length != 1) || !installResults[0].equals(Constants.SUCCESS)) {
+	    if (StringUtils.containedInStringArray(Constants.Errors.FAILURE, installResults)) {
 	 		MessageDialog.openInformation(shell,"Resign APK", "failed to install APK");	    	  	
-	    }
-	    if (!Exec.executeShellCommand("rm -fr temp")) {
-	 		MessageDialog.openInformation(shell,"Resign APK", "failed to remove temp directory");	    	  	
 	    }
 	}
 	/**

@@ -234,4 +234,34 @@ public class StringUtils {
 		}
 		return sb.toString();
 	}
+	
+	/**
+	 * is s in array?
+	 * @param s string 
+	 * @param array array of strings
+	 * @return true if s is in array
+	 */
+	public static boolean inStringArray(String s, String[] array) {
+		for (String cand : array) {
+			if (s.equals(cand)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	/**
+	 * is s contained in a string in array
+	 * @param s
+	 * @param array
+	 * @return
+	 */
+	public static boolean containedInStringArray(String s, String[] array) {
+		for (String cand : array) {
+			if (cand.contains(s)) {
+				return true;
+			}
+		}
+		return false;
+	}
 }

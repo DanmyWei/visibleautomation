@@ -36,6 +36,7 @@ import android.widget.ExpandableListView;
 import android.widget.ListView;
 import android.widget.PopupWindow;
 import android.widget.ScrollView;
+import android.widget.Spinner;
 import android.widget.TabHost;
 
 /**
@@ -791,12 +792,18 @@ public class RobotiumUtils {
 	}
 	
 	/**
-	 * add an activity handler to the activity handler list.
-	 * @param activityHandler
+	 * because Robotium selects spinner items RELATIVE to the currently selected item in the spinner,
+	 * which is retarded.
+	 * @param solo
+	 * @param spinnerIndex
+	 * @param item
 	 */
-	public void addActivityHandler(Class<? extends Activity> cls, IActivityHandler activityHandler) {
-		sActivityMonitorRunnable.addActivityHandler(cls, activityHandler);
+	public void pressSpinnerItem(Solo solo, int spinnerIndex, int itemIndex) {
+		Spinner spinner = solo.getView(Spinner.class, spinnerIndex);
+		int currentPosition = spinner.getSelectedItemPosition();
+		solo.pressSpinnerItem(spinnerIndex, itemIndex - currentPosition);
 	}
+	
 	
 	public void requestFocus(View v, int startInsertion, int endInsertion) {
 		mInstrumentation.runOnMainSync(new RequestFocusRunnable(v, startInsertion, endInsertion));

@@ -253,7 +253,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 						writeItemSelected(tokens, lines);
 					} else if (Constants.UserEvent.GROUP_CLICK.equals(action)) {
 						writeGroupClick(tokens, lines);
-					} else if (Constants.UserEvent.GROUP_CLICK.equals(action)) {
+					} else if (Constants.UserEvent.CHILD_CLICK.equals(action)) {
 						writeChildClick(tokens, lines);
 					} else if (Constants.UserEvent.SCROLL.equals(action)) {
 						scrollFirstVisibleItem = Integer.parseInt(tokens.get(2));
@@ -1326,21 +1326,18 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		ReferenceParser ref = new ReferenceParser(tokens, 3);
 		String description = getDescription(tokens);
 		String fullDescription = "click item " + description;
+		String itemClickTemplate = null;
 		if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
-			String itemClickTemplate = writeViewClassIndexCommand(Constants.Templates.CLICK_IN_LIST, ref, fullDescription);
-			itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
-			lines.add(new LineAndTokens(tokens, itemClickTemplate));
+			itemClickTemplate = writeViewClassIndexCommand(Constants.Templates.CLICK_IN_LIST, ref, fullDescription);
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.INTERNAL_CLASS_INDEX) {
-			String itemClickTemplate = writeViewInternalClassIndexCommand(Constants.Templates.CLICK_IN_LIST_INTERNAL_CLASS_INDEX, ref, fullDescription);
-			itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
-			lines.add(new LineAndTokens(tokens, itemClickTemplate));
+			itemClickTemplate = writeViewInternalClassIndexCommand(Constants.Templates.CLICK_IN_LIST_INTERNAL_CLASS_INDEX, ref, fullDescription);
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
-			String clickListItemTemplate = writeViewIDCommand(Constants.Templates.CLICK_LIST_ITEM, ref, fullDescription);
-			clickListItemTemplate = clickListItemTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
-			lines.add(new LineAndTokens(tokens, clickListItemTemplate));
+			itemClickTemplate = writeViewIDCommand(Constants.Templates.CLICK_LIST_ITEM, ref, fullDescription);
 		} else {
 			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
 		}
+		itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
+		lines.add(new LineAndTokens(tokens, itemClickTemplate));
 	}
 	/**
 	 * write the item click event for a list item
@@ -1391,7 +1388,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 			itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
 			lines.add(new LineAndTokens(tokens, itemClickTemplate));
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.INTERNAL_CLASS_INDEX) {
-			String itemClickTemplate = writeViewInternalClassIndexCommand(Constants.Templates.CLICK_IN_LIST, ref, fullDescription);
+			String itemClickTemplate = writeViewInternalClassIndexCommand(Constants.Templates.CLICK_IN_LIST_INTERNAL_CLASS_INDEX, ref, fullDescription);
 			itemClickTemplate = itemClickTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
 			lines.add(new LineAndTokens(tokens, itemClickTemplate));
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
@@ -1412,7 +1409,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	 * @throws IOException if the template file can't be read
 	 */
 	public void writeItemSelected(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
-		int itemIndex = Integer.parseInt(tokens.get(2)) + 1;
+		int itemIndex = Integer.parseInt(tokens.get(2));
 		ReferenceParser ref = new ReferenceParser(tokens, 3);
 		String description = getDescription(tokens);
 		String fullDescription = "select item " + description;
@@ -1435,41 +1432,41 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	}
 	
 	/**
-	 * child_click:105261255,0,0,class_index,android.widget.ExpandableListView,0,Arnold
+	 * child_click:105261255,0,0,0,class_index,android.widget.ExpandableListView,0,Arnold
 	 */
 	public void writeChildClick(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
-		int itemIndex = Integer.parseInt(tokens.get(2)) + 1;
-		ReferenceParser ref = new ReferenceParser(tokens, 3);
+		int groupPosition = Integer.parseInt(tokens.get(2)) + 1;
+		int childPosition = Integer.parseInt(tokens.get(3)) + 1;
+		int flatListIndex = Integer.parseInt(tokens.get(4)) + 1;
+		ReferenceParser ref = new ReferenceParser(tokens, 5);
 		String description = getDescription(tokens);
 		String fullDescription = "child click item " + description;
 		if (mLastEventWasWaitForActivity) {
 			writeWaitForView(tokens, 3, lines);
 			mLastEventWasWaitForActivity = false;
 		} 
+		String childClickTemplate = null;
 		if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
-			String childClickTemplate = writeViewClassIndexCommand(Constants.Templates.CLICK_EXPANDABLE_LIST_CHILD_CLASS_INDEX, ref, fullDescription);
-			childClickTemplate = childClickTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
-			lines.add(new LineAndTokens(tokens, childClickTemplate));
+			childClickTemplate = writeViewClassIndexCommand(Constants.Templates.CLICK_IN_LIST, ref, fullDescription);
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
-			String childClickTemplate = writeViewInternalClassIndexCommand(Constants.Templates.CLICK_EXPANDABLE_LIST_INTERNAL_CHILD_CLASS_INDEX, ref, fullDescription);
-			childClickTemplate = childClickTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
-			lines.add(new LineAndTokens(tokens, childClickTemplate));
+			childClickTemplate = writeViewInternalClassIndexCommand(Constants.Templates.CLICK_IN_LIST_INTERNAL_CLASS_INDEX, ref, fullDescription);
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
-			String childClickTemplate = writeViewIDCommand(Constants.Templates.CLICK_EXPANDABLE_LIST_CHILD_ID, ref, fullDescription);
-			childClickTemplate = childClickTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
-			lines.add(new LineAndTokens(tokens, childClickTemplate));
+			childClickTemplate = writeViewIDCommand(Constants.Templates.CLICK_LIST_ITEM, ref, fullDescription);
 		} else {
 			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
 		}
+		childClickTemplate = childClickTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(flatListIndex));
+		lines.add(new LineAndTokens(tokens, childClickTemplate));
 		mViewVariableIndex++;			
 	}
 	
 	/**
-	 * group_click:105266794,1,class_index,android.widget.ExpandableListView,0,Dog Names
+	 * group_click:105266794,1,0, class_index,android.widget.ExpandableListView,0,Dog Names
 	 */
 	public void writeGroupClick(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
 		int itemIndex = Integer.parseInt(tokens.get(2)) + 1;
-		ReferenceParser ref = new ReferenceParser(tokens, 3);
+		int flatListIndex = Integer.parseInt(tokens.get(3)) + 1;
+		ReferenceParser ref = new ReferenceParser(tokens, 4);
 		String description = getDescription(tokens);
 		String fullDescription = "group click item " + description;
 		if (mLastEventWasWaitForActivity) {
@@ -1478,15 +1475,15 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		} 
 		String groupClickTemplate = null;
 		if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
-			groupClickTemplate = writeViewClassIndexCommand(Constants.Templates.CLICK_EXPANDABLE_LIST_GROUP_CLASS_INDEX, ref, fullDescription);
+			groupClickTemplate = writeViewClassIndexCommand(Constants.Templates.CLICK_IN_LIST, ref, fullDescription);
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
-			groupClickTemplate = writeViewInternalClassIndexCommand(Constants.Templates.CLICK_EXPANDABLE_LIST_GROUP_INTERNAL_CLASS_INDEX, ref, fullDescription);
+			groupClickTemplate = writeViewInternalClassIndexCommand(Constants.Templates.CLICK_IN_LIST_INTERNAL_CLASS_INDEX, ref, fullDescription);
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
-			groupClickTemplate = writeViewIDCommand(Constants.Templates.CLICK_EXPANDABLE_LIST_GROUP_ID, ref, fullDescription);
+			groupClickTemplate = writeViewIDCommand(Constants.Templates.CLICK_LIST_ITEM, ref, fullDescription);
 		} else {
 			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
 		}
-		groupClickTemplate = groupClickTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(itemIndex));
+		groupClickTemplate = groupClickTemplate.replace(Constants.VariableNames.ITEM_INDEX, Integer.toString(flatListIndex));
 		lines.add(new LineAndTokens(tokens, groupClickTemplate));
 		mViewVariableIndex++;			
 		

@@ -72,9 +72,6 @@ public class MagicFrame extends FrameLayout {
 	 */
 	public MagicFrame(Context context, View contentView, int index, EventRecorder recorder, ViewInterceptor viewInterceptor) {
 		super(context);
-		this.setFocusable(true);
-		this.setFocusableInTouchMode(true);
-		this.requestFocus();
 		this.setClipChildren(false);
 		this.setClipToPadding(false);
 		this.setMeasureAllChildren(true);
@@ -97,9 +94,6 @@ public class MagicFrame extends FrameLayout {
 	 */
 	public MagicFrame(Context context, ViewParent viewRootImpl, EventRecorder recorder, ViewInterceptor viewInterceptor) throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException{
 		super(context);
-		this.setFocusable(true);
-		this.setFocusableInTouchMode(true);
-		this.requestFocus();
 		this.setClipChildren(false);
 		this.setClipToPadding(false);
 		this.setMeasureAllChildren(true);

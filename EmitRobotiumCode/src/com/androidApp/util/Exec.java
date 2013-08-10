@@ -81,23 +81,38 @@ public class Exec {
 	 * @param cmd command to run in the shell
 	 * @return true on success, false on failure
 	 */
-	public static boolean executeShellCommand(String cmd) {
+	public static int executeShellCommand(String cmd) {
 		Process proc = null;
 		try {
             proc = Runtime.getRuntime().exec(cmd);
          } catch (IOException e) {
             System.err.println("failed to execute " + cmd + " " + e.getMessage());
-            return false;
+            return -1;
         }
 		int result = -1;
         try {
             result = proc.waitFor();
         } catch (InterruptedException e) {
             System.err.println("interrupted executing " + cmd + " " + e.getMessage());
-            return false;
+            return -1;
         }	
-        return result == 0;
+        return result;
  	}
+	
+	/**
+	 * is code in results?
+	 * @param code
+	 * @param results
+	 * @return
+	 */
+	public static boolean resultCodeIn(int code, int[] results) {
+		for (int result : results) {
+			if (code == result) {
+				return true;
+			}
+		}
+		return false;
+	}
 	
 	/**
 	 * execute a shell command as a list of strings (useful for running commands through the shell and such)

@@ -48,6 +48,8 @@ public class MagicFramePopup extends MagicFrame {
             // we have to bypass setContentView() because it does nothing if the window is already showing, which it is.
             ReflectionUtils.setFieldValue(popupWindow, PopupWindow.class, Constants.Fields.CONTENT_VIEW, this);
 			mPopupViewContainer.requestLayout();
+			
+			// we have to have focus, otherwise, we don't get the back key.
 			this.requestFocus();
 		} catch (Exception ex) {
 			recorder.writeException(ex,  "trying to intercept popup window");

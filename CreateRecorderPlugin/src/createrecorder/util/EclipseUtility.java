@@ -20,7 +20,11 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.JavaCore;
-
+import org.eclipse.ui.console.ConsolePlugin;
+import org.eclipse.ui.console.IConsole;
+import org.eclipse.ui.console.IConsoleManager;
+import org.eclipse.ui.console.IOConsoleOutputStream;
+import org.eclipse.ui.console.MessageConsole;
 import com.android.ide.eclipse.adt.AdtConstants;
 import com.androidApp.emitter.EmitRobotiumCode;
 import com.androidApp.util.StringUtils;
@@ -30,7 +34,8 @@ import com.androidApp.util.StringUtils;
   * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class EclipseUtility {
-
+	private static MessageConsole sMessageConsole = null;
+	private static IOConsoleOutputStream sMessageConsoleStream = null;
 	/**
 	 *  we like-us some java project nature.  With Birkenstocks
 	 * @param project project reference
@@ -214,6 +219,33 @@ public class EclipseUtility {
 			return 0;
 		} else {
 			return maxFileNumber + 1;
+		}
+	}
+	
+	private static MessageConsole findConsole(String name) {
+		  ConsolePlugin plugin = ConsolePlugin.getDefault();
+		  IConsoleManager conMan = plugin.getConsoleManager();
+		  IConsole[] existing = conMan.getConsoles();
+		  for (int i = 0; i<existing.length; i++){
+			  if (name.equals(existing[i].getName())){
+				  return (MessageConsole)existing[i];
+			  }
+		  }
+		  //no console found -> create new one
+		  MessageConsole newConsole = new MessageConsole(name, null);
+		  conMan.addConsoles(new IConsole[]{newConsole});
+		  return newConsole;
+	}
+	
+	public static void printConsole(String s) {
+		if (sMessageConsole == null) {
+			sMessageConsole = EclipseUtility.findConsole(RecorderConstants.VISIBLE_AUTOMATION);
+			sMessageConsoleStream = sMessageConsole.newOutputStream();
+		}
+		try {
+			sMessageConsoleStream.write(s + "\n");
+		} catch (IOException ex) {
+			System.out.println(s);
 		}
 	}
 }

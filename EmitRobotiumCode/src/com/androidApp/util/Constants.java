@@ -320,6 +320,8 @@ public class Constants {
 		public static final String DIALOG_HANDLERS = "%DIALOG_HANDLERS%";
 		public static final String DIALOG_HANDLER_IMPORTS = "%DIALOG_HANDLER_IMPORTS%";
 		public static final String ITEM_TEXT = "%ITEM_TEXT%";
+		public static final String GROUP_POSITION = "%GROUP_POSITION%";
+		public static final String CHILD_POSITION = "%CHILD_POSITION%";
 	}
 	
 	// generic names
@@ -391,5 +393,10 @@ public class Constants {
 	// messages back from commands
 	public static class Messages {
 		public static final String NO_SUCH_FILE_OR_DIRECTORY = "No such file or directory";
+	}
+	
+	public static class Errors {
+		public static final String DOES_NOT_EXIST = "does not exist";
+		public static final String FAILURE = "Failure";
 	}
 }

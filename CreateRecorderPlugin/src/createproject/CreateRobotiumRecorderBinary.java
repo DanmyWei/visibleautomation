@@ -71,20 +71,22 @@ public class CreateRobotiumRecorderBinary extends CreateRobotiumRecorder {
 	public void createTestClass(IProject 		testProject, 
 								IJavaProject 	javaProject, 
 								String			packageName,
-								String			startActivity) throws CoreException, IOException {
+								String			startActivityClassPath) throws CoreException, IOException {
 		// strip the nasty dot they use in AndroidManifest.xml to prefix activities
-		int ichLastDot = startActivity.lastIndexOf('.');
+		int ichLastDot = startActivityClassPath.lastIndexOf('.');
+		String startActivityFileName = startActivityClassPath;
 		if (ichLastDot != -1) {
-			startActivity = startActivity.substring(ichLastDot + 1);
+			startActivityFileName = startActivityFileName.substring(ichLastDot + 1);
 		}
 		String testClass = FileUtility.readTemplate(RecorderConstants.BINARY_TESTCLASS_TEMPLATE);
 		testClass = testClass.replace(Constants.VariableNames.CLASSPACKAGE, packageName);
-		testClass = testClass.replace(Constants.VariableNames.CLASSNAME, startActivity);
+		testClass = testClass.replace(Constants.VariableNames.CLASSPATH, startActivityClassPath);
+		testClass = testClass.replace(Constants.VariableNames.CLASSNAME, startActivityFileName);
 		// write to the fully qualified path
 		IFolder sourceFolder = testProject.getFolder(Constants.Dirs.SRC);
 		String packagePath = packageName + RecorderConstants.TEST_EXTENSION;
 		IPackageFragment pack = javaProject.getPackageFragmentRoot(sourceFolder).createPackageFragment(packagePath, false, null);
-		String javaFile = startActivity + RecorderConstants.RECORDER_SUFFIX + "." + Constants.Extensions.JAVA;
+		String javaFile = startActivityFileName + RecorderConstants.RECORDER_SUFFIX + "." + Constants.Extensions.JAVA;
 		ICompilationUnit classFile = pack.createCompilationUnit(javaFile, testClass, true, null);
  	}
 }

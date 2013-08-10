@@ -321,7 +321,9 @@ public class SetupListeners {
 																			 SetupListeners.this.getRecorder(),
 																			 SetupListeners.this.getViewInterceptor());
 			((ViewGroup) mExpandedMenuView).addView(interceptKeyView);
-			interceptKeyView.requestFocus();	
+			/*
+			interceptKeyView.requestFocus();
+			*/	
 		}
 	}
 	/**

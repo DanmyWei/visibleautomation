@@ -320,7 +320,7 @@ public class ViewInterceptor {
 					// expandable list views are a special case.
 					if (adapterView instanceof ExpandableListView) {
 						ExpandableListView expandableListView = (ExpandableListView) adapterView;
-						replaceExpandableListVewListeners(mEventRecorder, expandableListView);
+						replaceExpandableListViewListeners(mEventRecorder, expandableListView);
 					}
 					if (ViewDirective.match(v, viewClassIndex, ViewDirective.ViewOperation.MOTION_EVENTS, ViewDirective.When.ON_ACTIVITY_START, viewDirectives)) {				
 						replaceTouchListener(mEventRecorder, v);
@@ -629,7 +629,7 @@ public class ViewInterceptor {
 	 * ExpandableListViews are different from list views. They ignore onItemClickListener, but they have an onGroupClickListener
 	 * and an onChildClickListener
 	 */
-	public static void replaceExpandableListVewListeners(EventRecorder eventRecorder, ExpandableListView expandableListView) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
+	public static void replaceExpandableListViewListeners(EventRecorder eventRecorder, ExpandableListView expandableListView) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
 		ExpandableListView.OnChildClickListener onChildClickListener = ListenerIntercept.getOnChildClickListener(expandableListView);
 		if (!(onChildClickListener instanceof RecordOnChildClickListener)) {
 			RecordOnChildClickListener recordOnChildClickListner = new RecordOnChildClickListener(eventRecorder, expandableListView);

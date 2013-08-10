@@ -5,6 +5,7 @@ import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
 
 import android.os.SystemClock;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ExpandableListView;
@@ -16,6 +17,7 @@ import android.widget.ExpandableListView;
  */
 public class RecordOnChildClickListener extends RecordListener implements ExpandableListView.OnChildClickListener, IOriginalListener  {
 	protected ExpandableListView.OnChildClickListener	mOriginalChildClickListener;
+	protected final String TAG = "RecordOnChildClickListener";
 	
 	public RecordOnChildClickListener(EventRecorder eventRecorder, ExpandableListView expandableListView) {
 		super(eventRecorder);
@@ -50,8 +52,10 @@ public class RecordOnChildClickListener extends RecordListener implements Expand
 		boolean fReentryBlock = getReentryBlock();
 		if (!RecordListener.getEventBlock()) {
 			setEventBlock(true);
+			int flatListIndex = parent.getFlatListPosition(parent.getPackedPositionForChild(groupPosition, childPosition));
+			Log.i(TAG, "group position = " + groupPosition + " childPosition = " + childPosition + " list index = " + flatListIndex);
 			try {
-				mEventRecorder.writeRecord(Constants.EventTags.CHILD_CLICK, groupPosition + "," + childPosition + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
+				mEventRecorder.writeRecord(Constants.EventTags.CHILD_CLICK, groupPosition + "," + childPosition + "," + flatListIndex + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
 			} catch (Exception ex) {
 				mEventRecorder.writeException(ex, view, "item click");
 			}	

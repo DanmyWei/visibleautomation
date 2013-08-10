@@ -10,6 +10,7 @@ import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.IntentFilter;
 import android.util.Log;
+import android.view.Surface;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.view.Window;
@@ -28,7 +29,6 @@ public class ActivityMonitorRunnable implements Runnable {
 	 protected Instrumentation.ActivityMonitor							mActivityMonitor;				// activity monitor
 	 protected Stack<ActivityInfo>										mActivityStack;					// stack of activities.
 	 protected Instrumentation											mInstrumentation;				// so we can run stuff on the UI thread
-	 protected Hashtable<Class<? extends Activity>, IActivityHandler>	mActivityHandlerTable;			// fired on activity monitor transitions.
 	 /**
 	  * so we can retain information associated with the activity
 	  * @author mattrey
@@ -37,6 +37,10 @@ public class ActivityMonitorRunnable implements Runnable {
 	 protected class ActivityInfo {
 		 WeakReference<Activity> 					mRefActivity;
 		 WeakReference<OnLayoutInterceptListener> 	mRefLayoutListener;
+		 
+		 public Activity getActivity() {
+			 return mRefActivity.get();
+		 }
 	 }
 	
 	 /**
@@ -56,17 +60,9 @@ public class ActivityMonitorRunnable implements Runnable {
 		mInstrumentation = instrumentation;
 		mActivityStack = new Stack<ActivityInfo>();
 		IntentFilter intentFilter = null;
-		mActivityHandlerTable = new Hashtable<Class<? extends Activity>, IActivityHandler>();
 		mActivityMonitor = instrumentation.addMonitor(intentFilter, null, false);
 	}
 	
-	/**
-	 * add an activity handler to the activity handler list.
-	 * @param activityHandler
-	 */
-	public void addActivityHandler(Class<? extends Activity> cls, IActivityHandler activityHandler) {
-		mActivityHandlerTable.put(cls, activityHandler);
-	}
 	
 	public void logActivityStack() {
 		for (int i = 0; i < mActivityStack.size(); i++) {
@@ -75,92 +71,77 @@ public class ActivityMonitorRunnable implements Runnable {
 		}
 	}
 	
-	/**
-	 * runnable for the background thread.  This waits for activities to start and stop, and adds and
-	 * removes them from the stack
-	 */
-
 	public void run() {
-		while (true) {
-			// the activity monitor (like the postman) always rings twice. Except for the very first activity.
-			// Once for the activity being paused and once for the activity being started.  This may be the same 
-			// activity semantically, due to rotation, but it will always be the same object.  I'm not as sure 
-			// about this as I should be, but the monitor can return activities in a different order than
-			// pause, create.
-			// TODO: handle the activity.isFinishing() case explicitly, since the operating system can
-			// finish activities lower in the stack.
-			Activity activityA = mActivityMonitor.waitForActivity();
-			if (!inActivityStack(activityA)) {
-				Log.i(TAG, "add activity to stack " + activityA);
-				addActivityToStack(activityA);
-				IActivityHandler handler = mActivityHandlerTable.get(activityA.getClass());
-				if (handler != null) {
-					handler.onEnter(activityA);
-				}
-				logActivityStack();
-			}
- 			Activity activityB = null;
-			
-			// OK, now this is very very strange, but sometimes, even though there should be a second activity,
- 			// there isn't, so we time out on the wait.
- 			// TODO: There must be a better solution for this, and we need to find out why only one activity is returned
- 			// The previous activity is getting nulled out because it's a WeakReference<> by another thread, and 
- 			// we need to detect that case.  If the previous activity in the stack is null, then do we get a double-tap
- 			// from the activity monitor as usual?  What are the messages we get?
-			if (!mActivityStack.isEmpty()) {
-				activityB = mActivityMonitor.waitForActivity();
-			} 
-			if (activityB != activityA) {
-				Log.i(TAG, "activity stack depth = " + mActivityStack.size());
-				if (!inActivityStack(activityB)) {
-					Log.i(TAG, "add activity to stack " + activityB);
-					addActivityToStack(activityB);
-					IActivityHandler handler = mActivityHandlerTable.get(activityB.getClass());
-					if (handler != null) {
-						handler.onEnter(activityB);
-					}
-					logActivityStack();
+		boolean fStart = true;
+		boolean fPastFirstActivity = false;
+		int currentRotation = Surface.ROTATION_0;
+		while (fStart || !fPastFirstActivity || !ActivityMonitorRunnable.this.isActivityStackEmpty()) {
+			try {
+				Activity activity = ActivityMonitorRunnable.this.mActivityMonitor.waitForActivity();
+				// assign these right awway, since they are LIVE activities, and the state may change
+				// it would be nice to have a mutex lock preventing any further execution on the application
+				// thread, but I have no such luck
+				boolean fStopped = isStopped(activity);
+				boolean fResumed = isResumed(activity);
+				boolean fFinishing = activity.isFinishing();
+				Log.i(TAG, "activity = " + activity + 
+						   " finished = " + fFinishing +
+						   " stopped = " + fStopped + 
+						   " resumed = " + fResumed + 
+						   " flags = 0x" + Integer.toHexString(activity.getIntent().getFlags()));
+				currentRotation  = activity.getWindowManager().getDefaultDisplay().getRotation();
+				
+				// first activity resumed..start activity
+				if (fStart  && fResumed) {
+					addActivityToStack(activity);
+					fStart = false;
+				} else if (fFinishing || fStopped) {
+					
+					// finishing..remove from the stack.  if it's the last activity, then write that
+					removeActivityFromStack(activity);
 				} else {
-					if (isActivityGoingBack(activityA, activityB)) {
-						Log.i(TAG, "remove activity from stack " + activityA);
-						removeActivityFromStack(activityA);
-						logActivityStack();
-					} else if (isActivityGoingBack(activityB, activityA)) {
-						Log.i(TAG, "remove activity from stack " + activityB);
-						removeActivityFromStack(activityB);
-						logActivityStack();
-					}
-					if (mActivityStack.empty()) {
-						Log.i(TAG, "empty activity stack");
-						break;
-					}
+						// if the activity is in the stack, and we're resuming it, then we write "goBack()" to the activity
+					if (!inActivityStack(activity)  && fResumed) {	
+						addActivityToStack(activity);
+					} 
 				}
+				
+				// remove finished or nulled activities.
+				cleanupActivityStack();
+			} catch (Exception ex) {
+				Log.e(TAG, "exception thrown in activity interceptor");
+				ex.printStackTrace();
 			}
 		}
-	}	
+	}
 	
 	/**
-	 * is the current activity going back to the previous activity
-	 * @param activityCurrent what we think is the current activity
-	 * @param activityPrevious what we think is the previous activity
-	 * @return
+	 * the weak references go null after the activities are finished
 	 */
-	public boolean isActivityGoingBack(Activity activityCurrent, Activity activityPrevious) {
-		if (atTopOfActivityStack(activityCurrent)) {
-			if (mActivityStack.size() == 1) {
-				return true;
-			} else {
-				if (activityPrevious == null) {
-					return true;
-				} else {
-					ActivityInfo activityInfoPrevious = mActivityStack.get(mActivityStack.size() - 2);
-					if (activityInfoPrevious.mRefActivity.get() == activityPrevious) {
-						return true;
-					}
-				}
-			} 
+	public void cleanupActivityStack() {
+		List<ActivityInfo> removeList = new ArrayList<ActivityInfo>();
+		int iPos = mActivityStack.size() - 1;
+		for (ActivityInfo cand : mActivityStack) {
+			if ((cand.getActivity() == null) || (cand.getActivity().isFinishing())) {
+				removeList.add(cand);
+			}
+			iPos--;
 		}
-		return false;
+		for (ActivityInfo remove : removeList) {
+			mActivityStack.remove(remove);
+		}
+	}
+	
+	protected boolean isStopped(Activity activity) throws IllegalAccessException, NoSuchFieldException {
+		return ReflectionUtils.getFieldBoolean(activity, Activity.class, Constants.Fields.STOPPED);
+	}
+	
+	protected boolean isResumed(Activity activity) throws IllegalAccessException, NoSuchFieldException {
+		return ReflectionUtils.getFieldBoolean(activity, Activity.class, Constants.Fields.RESUMED);
+	}
+
+	protected boolean isActivityStackEmpty() {
+		return mActivityStack.isEmpty();
 	}
 
 	/**
@@ -247,21 +228,6 @@ public class ActivityMonitorRunnable implements Runnable {
 		return null;
 	}
 	
-	/**
-	 * is the specified activity at the top of the activity stack?
-	 * @param activity
-	 * @return
-	 */
-	public boolean atTopOfActivityStack(Activity activity) {
-		if ((mActivityStack != null) && !mActivityStack.isEmpty()) {
-			ActivityInfo topInfo = mActivityStack.peek();
-			WeakReference<Activity> ref = topInfo.mRefActivity;
-			if (ref.get() == activity) {
-				return true;
-			}
-		}
-		return false;		
-	}
 	
 	/**
 	 * scan the activity stack to see if the activity is in it.
@@ -289,6 +255,27 @@ public class ActivityMonitorRunnable implements Runnable {
 		activityInfo.mRefLayoutListener = new WeakReference<OnLayoutInterceptListener>(listener);
 	    mInstrumentation.runOnMainSync(new AddGlobalLayoutListenerRunnable(activity, listener));
 		mActivityStack.push(activityInfo);
+	}
+	/**
+	 * remove the specified activity from the stack (not necessarily popping it)
+	 * @param activity activity to be removed.
+	 */
+	protected boolean removeActivityFromStack(Activity activity) {
+		ActivityInfo activityInfo = null;
+		for (ActivityInfo candActivityInfo : mActivityStack) {
+			WeakReference<Activity> candRef = candActivityInfo.mRefActivity;
+			if (candRef.get() == activity) {
+				activityInfo = candActivityInfo;
+				break;
+			}
+		}
+		if (activityInfo != null) {
+			mActivityStack.remove(activityInfo);
+			return true;
+		} else {
+			Log.d(TAG, "failed to remove " + activity + " from stack");
+		}
+		return false;
 	}
 		
 	
@@ -323,27 +310,6 @@ public class ActivityMonitorRunnable implements Runnable {
 	}
 
 	
-	/**
-	 * remove the specified activity from the stack (not necessarily popping it)
-	 * @param activity activity to be removed.
-	 */
-	protected boolean removeActivityFromStack(Activity activity) {
-		ActivityInfo activityInfo = null;
-		for (ActivityInfo candActivityInfo : mActivityStack) {
-			WeakReference<Activity> candRef = candActivityInfo.mRefActivity;
-			if (candRef.get() == activity) {
-				activityInfo = candActivityInfo;
-				break;
-			}
-		}
-		if (activityInfo != null) {
-			mActivityStack.remove(activityInfo);
-			return true;
-		} else {
-			Log.d(TAG, "failed to remove " + activity + " from stack");
-		}
-		return false;
-	}
 
 	// sleep utility
 	public static void sleep(long msec) {

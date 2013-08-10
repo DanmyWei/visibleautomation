@@ -29,6 +29,7 @@ public class RecorderConstants {
 	public static final String LOGSERVICE_PACKAGE = "com.androidApp.logService";
 	public static final String EVENTRECORDERINTERFACE_JAR = "eventrecorderinterface.jar";
 	public static final String NO_SUCH_FILE_OR_DIRECTORY = "No such file or directory";
+	public static final String VISIBLE_AUTOMATION = "Visible Automation";
 	
 	// eclipse preference keys.
 	public static class Preferences {

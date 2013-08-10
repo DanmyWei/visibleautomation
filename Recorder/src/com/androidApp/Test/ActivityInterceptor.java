@@ -277,11 +277,19 @@ public class ActivityInterceptor {
 		}
 	}
 	
+	/**
+	 * has the application been rotated manually, causing the activity to be destroyed and re-created?
+	 * @param activity
+	 * @param currentOrientation
+	 * @return
+	 */
 	public boolean isManualRotation(Activity activity, int currentOrientation) {
 		ActivityState topActivityState = peekActivityOnStack();
-		Activity topActivity = topActivityState.getActivity();
-		if (topActivity.getClass() == activity.getClass()) {
-			return (currentOrientation != topActivityState.mRotation) && !activityRequestedOrientation(activity, currentOrientation);
+		if (topActivityState != null) {
+			Activity topActivity = topActivityState.getActivity();
+			if (topActivity.getClass() == activity.getClass()) {
+				return (currentOrientation != topActivityState.mRotation) && !activityRequestedOrientation(activity, currentOrientation);
+			}
 		}
 		return false;
 	}
