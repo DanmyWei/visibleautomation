@@ -156,15 +156,17 @@ public class RecordListener {
 	public static String getDescription(DialogInterface dialogInterface) throws ClassNotFoundException, IllegalAccessException, NoSuchFieldException  {
 		Dialog dialog = (Dialog) dialogInterface;
 		Window window = dialog.getWindow();
+		
+		// TODO: THIS IS WRONG: The title is a text view
 		Class phoneWindowClass = Class.forName(Constants.Classes.PHONE_WINDOW);
 		String titleString = (String) ReflectionUtils.getFieldValue(window, phoneWindowClass, Constants.Fields.TITLE);
 		if (titleString != null) {
 			return StringUtils.massageString(titleString);
 		} else {
 			View dialogView = window.getDecorView();
-			View dialogTitle = TestUtils.getChildByClassName(dialogView, Constants.Classes.DIALOG_TITLE_SIMPLE_NAME);
+			TextView dialogTitle = (TextView) TestUtils.getChildByClassName(dialogView, Constants.Classes.DIALOG_TITLE_SIMPLE_NAME);
 			if (dialogTitle != null) {
-				titleString = (String) ReflectionUtils.getFieldValue(dialogTitle, TextView.class, Constants.Fields.TEXT);
+				titleString = dialogTitle.getText().toString();
 				if (!StringUtils.isEmpty(titleString)) {
 					return StringUtils.massageString(titleString);
 				} 

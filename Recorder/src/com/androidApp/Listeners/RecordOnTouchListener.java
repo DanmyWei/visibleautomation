@@ -70,13 +70,9 @@ public class RecordOnTouchListener extends RecordListener implements OnTouchList
 				String description = getDescription(v);
 				// we want to save the widget size in the down case, because the motion events have to be
 				// scaled on playback in case it's a different device
-				String logString = "";
-				if (mFirstEventFired) {
-					logString = v.getWidth() + "," + v.getHeight() + ",";
-					mFirstEventFired = false;
-				}
-				logString += event.getX() + "," + event.getY() + "," +
-						 	 mEventRecorder.getViewReference().getReference(v) + "," + description;
+				String logString = v.getWidth() + "," + v.getHeight() + "," + 
+							 	   event.getX() + "," + event.getY() + "," + 
+							 	   mEventRecorder.getViewReference().getReference(v) + "," + description;
 				mEventRecorder.writeRecord(eventName, logString);
 				if (event.getAction() == MotionEvent.ACTION_UP) {
 					mFirstEventFired = true;

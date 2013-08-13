@@ -1,5 +1,29 @@
 package com.androidApp.Utility;
 
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
+
+import android.app.ActionBar;
+import android.support.v4.view.ViewPager;
+import android.util.Log;
+import android.view.Menu;
+import android.view.View;
+import android.view.View.OnLongClickListener;
+import android.view.ViewGroup;
+import android.webkit.WebViewClient;
+import android.widget.AbsListView;
+import android.widget.AdapterView;
+import android.widget.CompoundButton;
+import android.widget.ExpandableListView;
+import android.widget.ListPopupWindow;
+import android.widget.NumberPicker;
+import android.widget.PopupMenu;
+import android.widget.PopupWindow;
+import android.widget.SeekBar;
+import android.widget.TabHost;
+import android.widget.TextView;
+import android.view.MenuItem;
 /**
  * constants used in the recorder, categorized by use
  * @author Matthew
@@ -82,79 +106,114 @@ public class Constants {
 		public static final String MENU_DIALOG_HELPER = "MenuDialogHelper";
 		public static final String SUBMENU_BUILDER = "com.android.internal.view.menu.SubMenuBuilder";	
 		public static final String VIEW_ROOT_IMPL = "android.view.ViewRootImpl";
+		public static final String ACTION_BAR_VIEW = "com.android.internal.widget.ActionBarView";
+		public static final String ON_PAGE_CHANGE_LISTENER = "android.support.v4.view.ViewPager.OnPageChangeListener";
 	}
 	
-	// listener field names
-	public static class Fields {
-		public static final String TEXT_WATCHER_LIST = "mListeners";
-		public static final String TOUCH_LISTENER = "mOnTouchListener";
-		public static final String CLICK_LISTENER = "mOnClickListener";
-		public static final String DRAG_LISTENER = "mOnDragListener";
-		public static final String FOCUS_CHANGE_LISTENER = "mOnFocusChangeListener";
-		public static final String ONITEM_CLICK_LISTENER = "mOnItemClickListener";
-		public static final String ITEM_CLICK_LISTENER = "mItemClickListener";
-		public static final String KEY_LISTENER = "mOnKeyListener";
-		public static final String LISTENER_INFO = "mListenerInfo";
-		public static final String LONG_CLICK_LISTENER = "mOnLongClickListener";
-		public static final String SCROLL_LISTENER = "mOnScrollListener";
-		public static final String SEEKBAR_CHANGE_LISTENER = "mOnSeekBarChangeListener";
-		public static final String DIALOG_DISMISS_LISTENER = "mOnDialogDismissListener";
-		public static final String DIALOG_DISMISS_MESSAGE = "mDismissMessage";
-		public static final String DIALOG_SHOW_MESSAGE = "mShowMessage";
-		public static final String CALLBACK = "mCallback";
-		public static final String CHECKED_CHANGE_LISTENER = "mOnCheckedChangeListener";
-		public static final String DIALOG_CLICK_MESSAGE = "mClickMessage";
-		public static final String DIALOG_CANCEL_MESSAGE = "mCancelMessage";
-		public static final String SELECTED_ITEM_LISTENER = "mOnItemSelectedListener";
-		public static final String POPUP = "mPopup";
-		public static final String TITLE = "mTitle";
-		public static final String TEXT = "mText";
-		public static final String VIEWS = "mViews";
-		public static final String PARAMS = "mParams";
-		public static final String DECOR = "mDecor";
-		public static final String POPUP_WINDOW_ON_DISMISS_LISTENER = "mOnDismissListener";
-		public static final String WINDOW_MANAGER_FIELD = "mWindowManager";
-		public static final String WINDOW_MANAGER_FIELD_STATIC = "sWindowManager";
-		public static final String CONTENT_VIEW = "mContentView";
-		public static final String ACTION_VIEW = "mActionView";
-		public static final String CONTAINER_VIEW = "mContainerView";
-		public static final String CANCEL_AND_DISMISS_TAKEN = "mCancelAndDismissTaken";	
-		public static final String PRESENTER_CALLBACK = "mPresenterCallback";
-		public static final String MENU_ITEM_CLICK_LISTENER = "mMenuItemClickListener";
-		public static final String MENU = "mMenu";
-		public static final String SINGLE_LINE = "mSingleLine";	
-		public static final String ENCLOSING_CLASS = "this$0";
-		public static final String IS_SHOWING = "mIsShowing";
-		public static final String POPUP_VIEW = "mPopupView";
-		public static final String WINDOW_MANAGER = "mWindowManager";
-		public static final String LAYOUT_CHANGE_LISTENERS = "mOnLayoutChangeListeners";
-		public static final String ATTACH_STATE_CHANGE_LISTENERS = "mOnAttachStateChangeListeners";
-		public static final String HOVER_LISTENER = "mOnHoverListener";
-		public static final String GENERIC_MOTION_LISTENER = "mOnGenericMotionListener";
-		public static final String SYSTEMUI_VISIBILITY_CHANGE_LISTENER = "mOnSystemUiVisibilityChangeListener";
-		public static final String ITEM_DATA = "mItemData";
-		public static final String TABS = "mTabs";
-		public static final String ANCHOR = "mAnchor";
-		public static final String CALLBACK_PROXY = "mCallbackProxy";
-		public static final String WEBVIEW_CLIENT = "mWebViewClient";
-		public static final String ALERT = "mAlert";
-		public static final String ON_TAB_CHANGE_LISTENER = "mOnTabChangeListener";
-		public static final String ONGROUP_CLICK_LISTENER = "mOnGroupClickListener";
-		public static final String ONCHILD_CLICK_LISTENER = "mOnChildClickListener";
-		public static final String HORIZONTALLY_SCROLLING = "mHorizontallyScrolling";
-		public static final String ON_HIERARCHY_CHANGE_LISTENER = "mOnHierarchyChangeListener";
-		public static final String INPUT_CONTENT_TYPE = "mInputContentType";
-		public static final String ON_EDITOR_ACTION_LISTENER = "onEditorActionListener";
-		public static final String POPUP_PRESENTER_CALLBACK = "mPopupPresenterCallback";
-		public static final String MENU_CLICK_LISTENER = "mClickListener";
-		public static final String ONCLICK_LISTENER = "mOnClickListener";
-		public static final String ITEMS = "mItems";
-		public static final String VIEW = "mView";
-		public static final String PARENT = "mParent";
-		public static final String ON_VALUE_CHANGE_LISTENER = "mOnValueChangeListener";
-		public static final String STOPPED = "mStopped";
-		public static final String RESUMED = "mResumed";
+	// of course, developers can run proguard on their software, which changes the field names of classes.  On the other
+	// hand, it can't change the intrinsic types that they reference, so we provide a "backup" reflection method, where
+	// we can scan fields by types, and reference fields by their type and index. Unfortunately for templatized types
+	// like list, we can only test against the type, not the contained element.
+	public enum Fields {
+		TEXT_WATCHER_LIST("mListeners", ArrayList.class),
+		TOUCH_LISTENER("mOnTouchListener", View.OnTouchListener.class),
+		CLICK_LISTENER("mOnClickListener", View.OnClickListener.class),
+		DRAG_LISTENER("mOnDragListener", View.OnDragListener.class),
+		FOCUS_CHANGE_LISTENER("mOnFocusChangeListener", View.OnFocusChangeListener.class),
+		ONITEM_CLICK_LISTENER("mOnItemClickListener", AdapterView.OnItemClickListener.class),
+		ITEM_CLICK_LISTENER("mItemClickListener", AdapterView.OnItemClickListener.class), 	// from ListPopupWindow
+		KEY_LISTENER("mOnKeyListener", View.OnKeyListener.class),
+		LISTENER_INFO("mListenerInfo", Constants.Classes.LISTENER_INFO),
+		LONG_CLICK_LISTENER("mOnLongClickListener", OnLongClickListener.class),
+		SCROLL_LISTENER("mOnScrollListener", AbsListView.OnScrollListener.class ),
+		SEEKBAR_CHANGE_LISTENER("mOnSeekBarChangeListener", SeekBar.OnSeekBarChangeListener.class),
+		DIALOG_DISMISS_MESSAGE("mDismissMessage", android.os.Message.class, 1),
+		DIALOG_SHOW_MESSAGE("mShowMessage", android.os.Message.class, 2),
+		DIALOG_CANCEL_MESSAGE("mCancelMessage", android.os.Message.class, 0),
+		CALLBACK("mCallback", ActionBar.TabListener.class),
+		CHECKED_CHANGE_LISTENER("mOnCheckedChangeListener", CompoundButton.OnCheckedChangeListener.class),
+		SELECTED_ITEM_LISTENER("mOnItemSelectedListener", AdapterView.OnItemSelectedListener.class ),
+		POPUP("mPopup", ListPopupWindow.class),
+		TITLE("mTitle", TextView.class),
+		VIEWS("mViews", View[].class),
+		POPUP_WINDOW_ON_DISMISS_LISTENER("mOnDismissListener", PopupWindow.OnDismissListener.class),
+		WINDOW_MANAGER_FIELD("mWindowManager", String.class),
+		WINDOW_MANAGER_FIELD_STATIC("sWindowManager", String.class),
+		CONTENT_VIEW("mContentView", View.class ),
+		ACTION_VIEW("mActionView", Constants.Classes.ACTION_BAR_VIEW),
+		CONTAINER_VIEW("mContainerView", Constants.Classes.ACTION_BAR_IMPL),
+		CANCEL_AND_DISMISS_TAKEN("mCancelAndDismissTaken", String.class),	
+		PRESENTER_CALLBACK("mPresenterCallback", PopupMenu.class),
+		MENU_ITEM_CLICK_LISTENER("mMenuItemClickListener", PopupMenu.OnMenuItemClickListener.class),
+		// NOTE: we may need multiple classes for this
+		MENU("mMenu", Menu.class),
+		ENCLOSING_CLASS("this$0"),
+		POPUP_VIEW("mPopupView", View.class, 1),
+		ITEM_DATA("mItemData", Constants.Classes.LIST_MENU_ITEM_VIEW),
+		ANCHOR("mAnchor",WeakReference.class),
+		CALLBACK_PROXY("mCallbackProxy", Constants.Classes.WEBKIT_CALLBACK_PROXY),
+		WEBVIEW_CLIENT("mWebViewClient", WebViewClient.class),
+		ON_TAB_CHANGE_LISTENER("mOnTabChangeListener",TabHost.OnTabChangeListener.class ),
+		ONGROUP_CLICK_LISTENER("mOnGroupClickListener", ExpandableListView.OnGroupClickListener.class ),
+		ONCHILD_CLICK_LISTENER("mOnChildClickListener", ExpandableListView.OnGroupClickListener.class ),
+		HORIZONTALLY_SCROLLING("mHorizontallyScrolling", boolean.class),
+		ON_HIERARCHY_CHANGE_LISTENER("mOnHierarchyChangeListener", ViewGroup.OnHierarchyChangeListener.class),
+		POPUP_PRESENTER_CALLBACK("mPopupPresenterCallback",Constants.Classes.POPUP_PRESENTER_CALLBACK ),
+		MENU_CLICK_LISTENER("mClickListener", MenuItem.OnMenuItemClickListener.class),
+		ONCLICK_LISTENER("mOnClickListener", View.OnClickListener.class),
+		ITEMS("mItems",List.class),
+		VIEW("mView", View.class),
+		PARENT("mParent", View.class),
+		ON_VALUE_CHANGE_LISTENER("mOnValueChangeListener", NumberPicker.OnValueChangeListener.class),
+		STOPPED("mStopped", boolean.class ),
+		RESUMED("mResumed", boolean.class),
+		ON_PAGE_CHANGE_LISTENER("mOnPageChangeListener", Constants.Classes.ON_PAGE_CHANGE_LISTENER );
 
+		protected final static String TAG = "Fields";
+		public final String mName;
+		public Class mCls;
+		public final int mClassIndex;
+		
+		private Fields(String name, Class cls) {
+		    mName = name;
+		    mCls = cls;
+		    mClassIndex  = 0;
+		}
+
+		private Fields(String name) {
+		    mName = name;
+		    mCls = null;
+		    mClassIndex = 0;
+		}
+		
+		private Fields(String name, String className) {
+		    mName = name;
+		    mClassIndex = 0;
+		    try {	
+		    	mCls = Class.forName(className);
+		    } catch (ClassNotFoundException cnfex) {
+				Log.e(TAG, "failed to resolve class for " + className);
+				mCls = null;
+		    }
+		}
+
+		private Fields(String name, String className, int classIndex) {
+		    mName = name;
+		    mClassIndex = classIndex;
+		    try {	
+		    	mCls = Class.forName(className);
+		    } catch (ClassNotFoundException cnfex) {
+				Log.e(TAG, "failed to resolve class for " + className);
+				mCls = null;
+		    }
+		}
+
+		private Fields(String name, Class cls, int classIndex) {
+		    mName = name;
+		    mCls = cls;
+		    mClassIndex = classIndex;
+		}
+	
 	}
 	
 	// possible derive methods which listen for events.
@@ -268,6 +327,9 @@ public class Constants {
 		public static final String ITEM_CLICK_BY_TEXT = "item_click_by_text";
 		public static final String CLICK_WORKAROUND = "click_workaround";
 		public static final String SELECT_ITEM_WORKAROUND = "select_item_workaround";
+		public static final String PAGE_SCROLL_STATE_CHANGED = "page_scroll_state_changed";
+		public static final String PAGE_SCROLLED = "page_scrolled";
+		public static final String PAGE_SELECTED = "page_selected";
 	}
 	
 	// description strings 

@@ -257,6 +257,7 @@ public class MagicOverlay extends View implements OnGestureListener {
 
 		@Override
 		public void onClick(View v) {
+			MagicOverlay.this.getEventRecorder().setEventRecorded(true);
 			FrameLayout.LayoutParams overlayLayoutParams = (FrameLayout.LayoutParams) MagicOverlay.this.getLayoutParams();
 			overlayLayoutParams.setMargins(0, 0, 0, 0);
 			overlayLayoutParams.width = MagicOverlay.this.mContentView.getWidth();
@@ -335,6 +336,7 @@ public class MagicOverlay extends View implements OnGestureListener {
 			
 	
 	public boolean onTouchEvent(MotionEvent me) {
+		MagicOverlay.this.getEventRecorder().setEventRecorded(true);
 		if (!mGestureDetector.onTouchEvent(me)) {
 			return false;
 		}
@@ -343,12 +345,14 @@ public class MagicOverlay extends View implements OnGestureListener {
 	
 	@Override
 	public boolean onDown(MotionEvent e) {
+		MagicOverlay.this.getEventRecorder().setEventRecorded(true);
 		return true;
 	}
 
 	// bring up the view operation dialog on the current view
 	@Override
 	public void onLongPress(MotionEvent e) {
+		MagicOverlay.this.getEventRecorder().setEventRecorded(true);
 		if ((mMode == ClickMode.VIEW_SELECT) && (mCurrentView != null)) {
 			mDirectiveDialogs.viewDialog(MagicOverlay.this.getContext(), e);
 		}

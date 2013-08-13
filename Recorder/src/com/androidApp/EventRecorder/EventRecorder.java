@@ -37,7 +37,7 @@ public class EventRecorder extends EventRecorderInterface {
 	protected List<ViewDirective>				mViewDirectiveList;					// list of "directives" to apply on record
 	protected List<Class <? extends Activity>> 	mInterstitialActivityList;			// list of random popup activities, for ads and such
 	protected Hashtable<String,String> 			mVariableTable;						// variable hashtable
-	
+	protected boolean							mEventWasRecorded;					// indicate that click/key event was recorded (or not)
 	/**
 	 * constructor which opens the recording file, which is stashed somewhere on the sdcard.
 	 * @param instrumentation instrumentation handle
@@ -110,12 +110,45 @@ public class EventRecorder extends EventRecorderInterface {
 		mfVisualDebug = f;
 	}
 
+	/**
+	 * When interacting with the low-level event interceptors, we listen to key and click events, and set a flag
+	 * saying  "this event hasn't been recorded yet", when the event recorder writes the event to the log file,
+	 * we unset the flag, but if the event wasn't recorded in a "short period of time", or by when the next event
+	 * comes in, we bring up a little toast informing the user of this unfortunate situation.
+	 * @return
+	 */
+	public boolean eventWasRecorded() {
+		return mEventWasRecorded;
+	}
 		
-	// write a record to the output
-	public synchronized void writeRecord(String s)  {
-		writeLog(mRecordFileName, s);
+	public void setEventRecorded(boolean f) {
+		mEventWasRecorded = f;
 	}
 	
+	// write a record to the output
+	public synchronized void writeRecord(String s)  {
+		mEventWasRecorded = true;
+		writeLog(mRecordFileName, s);
+	}
+		
+	/**
+	 * write an event with time in milliseconds <event>:<time>
+	 * @param event event to write out (from Constants.EventTags)
+	 */
+	public void writeRecordTime(String event) {
+		mEventWasRecorded = true;
+		long time = SystemClock.uptimeMillis();
+		writeLog(mRecordFileName, event + ":" + time);
+	}
+	
+	// wrapper to write a record with an event, time and message to the system	
+	public void writeRecord(String event, String message) {
+		mEventWasRecorded = true;
+		long time = SystemClock.uptimeMillis();
+		writeLog(mRecordFileName, event + ":" + time + "," + message);
+	}
+	
+	// for copy and paste (from DirectiveIDalogs)
 	public String getVariableValue(String var) {
 		return mVariableTable.get(var);
 	}
@@ -124,12 +157,15 @@ public class EventRecorder extends EventRecorderInterface {
 		mVariableTable.put(var, value);
 	}
 	
+	// add a view directive to a a view (like clear the text, enter text key by key
 	public void addViewDirective(ViewDirective viewDirective) {
 		mViewDirectiveList.add(viewDirective);
 		writeLog(mDirectiveFileName, viewDirective.toString());
 		
 	}
 	
+	// "this is an interstitial activity.  It doesn't come up all the time, because we need to annoy our
+	// users with popup advertisements.
 	public void addInterstitialActivity(Activity activity) {
 		if (mInterstitialActivityList == null) {
 			mInterstitialActivityList = new ArrayList<Class<? extends Activity>>();
@@ -187,11 +223,12 @@ public class EventRecorder extends EventRecorderInterface {
 
 	/**
 	 * match against the internal list
-	 * @param view
-	 * @param viewIndex
-	 * @param operation
-	 * @param when
-	 * @return
+	 * @param view view to match
+	 * @param viewIndex its index within the view hierarchy: NOTE: BE CAREFUL TO NOT USE THE SAME VIEW MATCHER AS EVENTS
+	 * The Robotium stuff only indexes views based on whats visible, not on the entire view hierarchy
+	 * @param operation operaton to perform
+	 * @param when start, end, or always
+	 * @return true/false
 	 */
 	public boolean matchViewDirective(View 					      	view, 
 									  int						  	viewIndex,
@@ -213,6 +250,7 @@ public class EventRecorder extends EventRecorderInterface {
 			if (!matchViewDirective(v, viewIndex, ViewDirective.ViewOperation.IGNORE_EVENTS, ViewDirective.When.ALWAYS)) {
 				writeRecord(event + ":" + time + "," + getViewReference().getReference(v) + "," + message);
 			}
+			mEventWasRecorded = true;
 		} catch (Exception ex) {
 			// TEMPORARY: the IME keeps sending events long after we have died died died,
 			// so we suppress the exceptions
@@ -233,6 +271,7 @@ public class EventRecorder extends EventRecorderInterface {
 			if (!matchViewDirective(v, viewIndex, ViewDirective.ViewOperation.IGNORE_EVENTS, ViewDirective.When.ALWAYS)) {
 				writeRecord(event + ":" + time + "," + getViewReference().getReference(v));
 			}
+			mEventWasRecorded = true;
 		} catch (Exception ex) {
 			writeException(ex,  "while getting reference for view in event " + event);
 		}

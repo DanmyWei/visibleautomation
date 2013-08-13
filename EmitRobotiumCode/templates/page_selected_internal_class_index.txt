@@ -1,0 +1,3 @@
+		// %DESCRIPTION%
+		%CLASSPATH% viewPager%VARIABLE_INDEX% = (%CLASSPATH%) solo.getView((Class<? extends View>) Class.forName("%INTERNAL_CLASS%"), %VIEW_INDEX%);
+		robotiumUtils.selectPage(viewPager%VARIABLE_INDEX%, "%PAGE_ID%");

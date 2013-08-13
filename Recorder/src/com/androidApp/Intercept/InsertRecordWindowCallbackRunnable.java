@@ -34,7 +34,7 @@ public class InsertRecordWindowCallbackRunnable implements Runnable {
 		try {
 			Window.Callback originalCallback = mWindow.getCallback();
 			if (!(originalCallback instanceof RecordWindowCallback)) {
-				RecordWindowCallback recordCallback = new RecordWindowCallback(mRecorder, mViewInterceptor, originalCallback);
+				RecordWindowCallback recordCallback = new RecordWindowCallback(mWindow, mWindow.getContext(), mRecorder, mViewInterceptor, originalCallback);
 				mWindow.setCallback(recordCallback);
 			}
 		} catch (Exception ex) {

@@ -52,7 +52,9 @@ public class SetupListeners {
 	private static final long 				INTERCEPTOR_WAIT_MSEC = 1000;
 	private EventRecorder 					mRecorder;
 	private ViewInterceptor					mViewInterceptor;
-	private Timer							mScanTimer = null;					// timer for scanning for new dialogs to set intercept handlers on.
+	
+	// NOTE: this timer is used throughout the recorder.
+	private static Timer					sScanTimer = null;					// timer for scanning for new dialogs to set intercept handlers on.
 	private ActivityInterceptor				mActivityInterceptor = null;
 	private boolean							mfRunRandomTest = false;
 	private int								mRandomTestIterations = 1000;
@@ -109,7 +111,7 @@ public class SetupListeners {
 	 */
 	public void setUp(Class<? extends Activity> activityClass, boolean fBinary) throws Exception {
 		initRecorder(getInstrumentation().getContext(), fBinary);
-		mScanTimer = new Timer();
+		sScanTimer = new Timer();
 		mActivityInterceptor = new ActivityInterceptor(getRecorder(), getViewInterceptor());
 		setupDialogListener();
 		setupPopupWindowListener();
@@ -170,7 +172,7 @@ public class SetupListeners {
 				}
 			}	
 		};
-		mScanTimer.schedule(scanTask, 0, DIALOG_SYNC_TIME);
+		sScanTimer.schedule(scanTask, 0, DIALOG_SYNC_TIME);
 	}
 	
 	/**
@@ -223,7 +225,7 @@ public class SetupListeners {
 				}
 			}	
 		};
-		mScanTimer.schedule(scanTask, 0, POPUP_WINDOW_SYNC_TIME);
+		sScanTimer.schedule(scanTask, 0, POPUP_WINDOW_SYNC_TIME);
 	}
 	
 	/**
@@ -330,7 +332,7 @@ public class SetupListeners {
 	 * shutdown the dialog scan timertask once the activity stack has been emptied
 	 */
 	public void shutdownScanTimer() {
-		mScanTimer.cancel();
+		sScanTimer.cancel();
 	}			
 
 	// TODO: move these to another class.
@@ -570,10 +572,19 @@ public class SetupListeners {
 	
 	/**
 	 * return the instrumentation handle
-	 * @return
+	 * @return instrumentation handle
 	 */
 	public Instrumentation getInstrumentation() {
 		return mInstrumentation;
+	}
+	
+	/**
+	 * for global access to the timer, since the recorder only needs a single timer thread.
+	 * @return the global timer (which has its own thread).
+	 */
+	
+	public static Timer getScanTimer() {
+		return sScanTimer;
 	}
 	/**
 	 * keep looping until the activity interceptor has finished

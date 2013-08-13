@@ -78,6 +78,9 @@ public class CreateRobotiumRecorderBinary extends CreateRobotiumRecorder {
 		if (ichLastDot != -1) {
 			startActivityFileName = startActivityFileName.substring(ichLastDot + 1);
 		}
+		if (startActivityClassPath.charAt(0) == '.') {
+			startActivityClassPath = packageName + startActivityClassPath;
+		}
 		String testClass = FileUtility.readTemplate(RecorderConstants.BINARY_TESTCLASS_TEMPLATE);
 		testClass = testClass.replace(Constants.VariableNames.CLASSPACKAGE, packageName);
 		testClass = testClass.replace(Constants.VariableNames.CLASSPATH, startActivityClassPath);

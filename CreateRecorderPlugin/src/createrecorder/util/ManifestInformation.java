@@ -16,6 +16,7 @@ public class ManifestInformation {
 	public String	mApplicationName = null;
 	public String	mStartActivityName = null;
 	
+	protected final String CATEGORY_LAUNCHER = "android.intent.category.LAUNCHER";
 	protected final String[][] packagePair = {{"N", "android"} , {"E", "manifest"}, {"A", "package"} };
 	protected final Pair[] PACKAGE_PATH = Pair.toPairArray(packagePair);			
 	protected final String[][] minSdkVersionPair = {{"N", "android"} , {"E", "manifest"}, {"E", "uses-sdk"}, {"A", "android:minSdkVersion"}};
@@ -24,10 +25,16 @@ public class ManifestInformation {
 	protected final Pair[] TARGET_SDK_PATH = Pair.toPairArray(targetSdkVersionPair);	
 	protected final String[][] applicationPair = {{"N", "android"} , {"E", "manifest"}, {"E", "application"}, {"A", "android:name"}};
 	protected final Pair[] APPLICATION_PATH = Pair.toPairArray(applicationPair);	
-	protected final String[][] startActivityPair = {{"N", "android"} , {"E", "manifest"}, {"E", "application"}, {"E", "activity"}, {"A", "android:name"}};
-	protected final Pair[] START_ACTIVITY = Pair.toPairArray(startActivityPair);	
+	protected final String[][] activityPair = {{"N", "android"} , {"E", "manifest"}, {"E", "application"}, {"E", "activity"}, {"A", "android:name"}};
+	protected final Pair[] ACTIVITY = Pair.toPairArray(activityPair);	
+	protected final String[][] actionPair = {{"N", "android"} , {"E", "manifest"}, {"E", "application"}, {"E", "activity"}, {"E", "intent-filter"}, {"E", "category"}, {"A", "android:name"}};
+	protected final Pair[] ACTION = Pair.toPairArray(actionPair);	
+	protected final String[][] actionPairAlias = {{"N", "android"} , {"E", "manifest"}, {"E", "application"}, {"E", "activity-alias"}, {"E", "intent-filter"}, {"E", "category"}, {"A", "android:name"}};
+	protected final Pair[] ACTION_ALIAS = Pair.toPairArray(actionPairAlias);	
 	
 	public ManifestInformation(String[] lines) {
+		String candActivityName = null;
+		String firstActivityName = null;
 		int currentIndent = 0;
 		Stack<Pair> stack = new Stack<Pair>();
 		for (String line : lines) {
@@ -66,15 +73,36 @@ public class ManifestInformation {
 				if (applicationName != null) {
 					mApplicationName = applicationName.substring(2, applicationName.length() - 3);
 				}
-			} else if (matchPairArray(stack, START_ACTIVITY)) {
-				if (mStartActivityName == null) {
-					 //A: android:name(0x01010003)="ApiDemos" (Raw: "ApiDemos")
-					String activityName = extractMatch(line, "=\".*\" \\(");
-					if (activityName != null) {
-						mStartActivityName = activityName.substring(2, activityName.length() - 3);
-					}
+			} else if (matchPairArray(stack, ACTIVITY)) {
+				 //A: android:name(0x01010003)="ApiDemos" (Raw: "ApiDemos")
+				String activityName = extractMatch(line, "=\".*\" \\(");
+				if (activityName != null) {
+					// strip the ="activity" to activity
+					candActivityName = activityName.substring(2, activityName.length() - 3);
+				}
+				if (firstActivityName == null) {
+					firstActivityName = candActivityName;
+				}
+			} else if (matchPairArray(stack, ACTION)) {
+				// A: android:name(0x01010003)="android.intent.action.MAIN" (Raw: "android.intent.action.MAIN")
+				String intentName = extractMatch(line, "=\".*\" \\(");
+				// strip the ="intent" to intent
+				intentName = intentName.substring(2, intentName.length() - 3);
+				if (intentName.equals(CATEGORY_LAUNCHER) && (mStartActivityName == null)) {
+					mStartActivityName = candActivityName;
+				}
+			} else if (matchPairArray(stack, ACTION_ALIAS)) {
+				// A: android:name(0x01010003)="android.intent.action.MAIN" (Raw: "android.intent.action.MAIN")
+				String intentName = extractMatch(line, "=\".*\" \\(");
+				// strip the ="intent" to intent
+				intentName = intentName.substring(2, intentName.length() - 3);
+				if (intentName.equals(CATEGORY_LAUNCHER) && (mStartActivityName == null)) {
+					mStartActivityName = candActivityName;
 				}
 			}
+		}
+		if (mStartActivityName == null) {
+			mStartActivityName = firstActivityName;
 		}
 	}
 	

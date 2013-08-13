@@ -83,14 +83,14 @@ public class MotionEventList {
 			String action = tokens.get(0);
 			if (Constants.UserEvent.TOUCH_MOVE.equals(action)) {
 				eventTimeMsec = Long.parseLong(tokens.get(1));
-				eventX = Float.parseFloat(tokens.get(2));
-				eventY = Float.parseFloat(tokens.get(3));
+				eventX = Float.parseFloat(tokens.get(4));
+				eventY = Float.parseFloat(tokens.get(5));
 				MotionEventPoint moveEvent = new MotionEventPoint(eventTimeMsec, eventX, eventY);
 				mPoints.add(moveEvent);
 			} else if (Constants.UserEvent.TOUCH_UP.equals(action)) { 
 				eventTimeMsec = Long.parseLong(tokens.get(1));
-				eventX = Float.parseFloat(tokens.get(2));
-				eventY = Float.parseFloat(tokens.get(3));
+				eventX = Float.parseFloat(tokens.get(4));
+				eventY = Float.parseFloat(tokens.get(5));
 				MotionEventPoint upEvent = new MotionEventPoint(eventTimeMsec, eventX, eventY);
 				mPoints.add(upEvent);
 				mLastReadIndex = iPointLine + 1;		// we want this event.

@@ -41,7 +41,7 @@ public class ReferenceParser {
 	protected ReferenceType	mType;							// describes how to decompose the reference
 	protected TextType		mTextType;						// string or resource iff mType == TEXT_ID
 	protected IDType		mIDType;						// hardcoded or resource if mType == TEXT_ID, ID or CLASS_INDEX_ID
-	
+	protected int			mTokensConsumed;				// how many tokens were consumed to parse this reference?
 	// class_index,class android.widget.ListView,1
 	// id,com.example.android.apis.R$id.radio_button
 	
@@ -56,13 +56,16 @@ public class ReferenceParser {
 			mType = ReferenceType.CLASS_INDEX;
 			mClass = parts.get(startIndex + 1);
 			mIndex = Integer.parseInt(parts.get(startIndex + 2));	
+			mTokensConsumed = 3;
 		} else if (parts.get(startIndex).equals(Constants.INTERNAL_CLASS_INDEX)) {
 			mType = ReferenceType.INTERNAL_CLASS_INDEX;
 			mClass = parts.get(startIndex + 2);
 			mInternalClass = parts.get(startIndex + 1);
 			mIndex = Integer.parseInt(parts.get(startIndex + 3));
+			mTokensConsumed = 3;
 		} else if (parts.get(startIndex).equals(Constants.CLASS_INDEX_ID)) {
 			mType = ReferenceType.CLASS_INDEX_ID;
+			mTokensConsumed = 1;
 		} else if (parts.get(startIndex).equals(Constants.ID)) {
 			mType = ReferenceType.ID;
 			mID = parts.get(startIndex + 1);
@@ -73,6 +76,7 @@ public class ReferenceParser {
 				mIDType = IDType.RESOURCE;
 				mID = mID.replace('$', '.');
 			}
+			mTokensConsumed = 3;
 		} else if (parts.get(startIndex).equals(Constants.TEXT_ID)) {
 			mType = ReferenceType.TEXT_ID;
 			mID = parts.get(startIndex + 1);
@@ -88,8 +92,10 @@ public class ReferenceParser {
 			} else {
 				mTextType = TextType.RESOURCE;
 			}
+			mTokensConsumed = 3;
 		} else {
 			mType = ReferenceType.UNKNOWN;
+			mTokensConsumed = 0;
 		}	
 	}
 	
@@ -124,6 +130,10 @@ public class ReferenceParser {
 	
 	public String getInternalClassName() {
 		return mInternalClass;
+	}
+	
+	public int getTokensConsumed() {
+		return mTokensConsumed;
 	}
 	
 	/**

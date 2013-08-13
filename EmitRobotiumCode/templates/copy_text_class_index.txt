@@ -1,0 +1,3 @@
+		// %DESCRIPTION%
+		android.widget.TextView textView%VARIABLE_INDEX% = (android.widget.TextView) solo.getView(android.widget.EditText.class, %VIEW_INDEX%);
+		String text%VARIABLE_NAME% = textView%VARIABLE_INDEX%.getText().toString();

@@ -7,6 +7,7 @@ import java.util.List;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.os.Message;
+import android.support.v4.view.ViewPager;
 import android.text.TextWatcher;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -234,12 +235,7 @@ public class ListenerIntercept {
 	 * @throws IllegalAccessException
 	 */
 	public static View.OnClickListener getClickListener(View v) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
-		Object listenerInfo = getListenerInfo(v);
-		if (listenerInfo != null) {
-			return (View.OnClickListener) getListenerInfoField(Constants.Fields.CLICK_LISTENER).get(listenerInfo);
-		} else {
-			return null;
-		}
+		return (View.OnClickListener) getListenerInfoField(v, Constants.Fields.CLICK_LISTENER);
 	}
 
 	/**
@@ -251,12 +247,7 @@ public class ListenerIntercept {
 	 * @throws IllegalAccessException
 	 */
 	public static View.OnFocusChangeListener getFocusChangeListener(View v) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
-		Object listenerInfo = getListenerInfo(v);
-		if (listenerInfo != null) {
-			return (View.OnFocusChangeListener) getListenerInfoField(Constants.Fields.FOCUS_CHANGE_LISTENER).get(listenerInfo);
-		} else {
-			return null;
-		}
+		return (View.OnFocusChangeListener) getListenerInfoField(v, Constants.Fields.FOCUS_CHANGE_LISTENER);
 	}
 
 	/**
@@ -268,12 +259,7 @@ public class ListenerIntercept {
 	 * @throws IllegalAccessException
 	 */
 	public static View.OnKeyListener getKeyListener(View v) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
-		Object listenerInfo = getListenerInfo(v);
-		if (listenerInfo != null) {
-			return (View.OnKeyListener) getListenerInfoField(Constants.Fields.KEY_LISTENER).get(listenerInfo);
-		} else {
-			return null;
-		}
+		return (View.OnKeyListener) getListenerInfoField(v, Constants.Fields.KEY_LISTENER);
 	}
 
 	/**
@@ -299,11 +285,13 @@ public class ListenerIntercept {
 	 * @throws NoSuchFieldException
 	 * @throws ClassNotFoundException
 	 */
-	public static Field getListenerInfoField(String fieldName) throws NoSuchFieldException, ClassNotFoundException {
-		Class listenerInfoClass = Class.forName(Constants.Classes.LISTENER_INFO);
-		Field listenerField = listenerInfoClass.getDeclaredField(fieldName);
-		listenerField.setAccessible(true);
-		return listenerField;
+	public static Object getListenerInfoField(View v, Constants.Fields fieldName) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
+		Object listenerInfo = getListenerInfo(v);
+		if (listenerInfo != null) {
+			Class listenerInfoClass = Class.forName(Constants.Classes.LISTENER_INFO);
+			return ReflectionUtils.getFieldValue(listenerInfo, listenerInfoClass, fieldName);
+		}
+		return null;
 	}
 
 	/**
@@ -315,12 +303,7 @@ public class ListenerIntercept {
 	 * @throws IllegalAccessException
 	 */
 	public static View.OnLongClickListener getLongClickListener(View v) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
-		Object listenerInfo = getListenerInfo(v);
-		if (listenerInfo != null) {
-			return (View.OnLongClickListener) getListenerInfoField(Constants.Fields.LONG_CLICK_LISTENER).get(listenerInfo);
-		} else {
-			return null;
-		}
+		return (View.OnLongClickListener) getListenerInfoField(v, Constants.Fields.LONG_CLICK_LISTENER);
 	}
 
 	/**
@@ -380,12 +363,7 @@ public class ListenerIntercept {
 	 * @throws IllegalAccessException
 	 */
 	public static View.OnTouchListener getTouchListener(View v) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
-		Object listenerInfo = getListenerInfo(v);
-		if (listenerInfo != null) {
-			return (View.OnTouchListener) getListenerInfoField(Constants.Fields.TOUCH_LISTENER).get(listenerInfo);
-		} else {
-			return null;
-		}
+		return (View.OnTouchListener) getListenerInfoField(v, Constants.Fields.TOUCH_LISTENER);
 	}
 
 	/**
@@ -398,9 +376,7 @@ public class ListenerIntercept {
 	 * @throws IllegalAccessException if we can't get mListeners
 	 */
 	public static void setTextWatcherList(TextView tv, ArrayList<TextWatcher> textWatcherList) throws NoSuchFieldException, SecurityException, IllegalAccessException {
-		Field textWatcherListField = TextView.class.getDeclaredField(Constants.Fields.TEXT_WATCHER_LIST);
-		textWatcherListField.setAccessible(true);
-		textWatcherListField.set(tv, textWatcherList);
+		ReflectionUtils.setFieldValue(tv, TextView.class, Constants.Fields.TEXT_WATCHER_LIST, textWatcherList);
 	}
 
 	/**
@@ -519,31 +495,6 @@ public class ListenerIntercept {
 			return null;
 		}
 	}
-	/**
-	 * dialog key listener.
-	 * @param dialog
-	 * @return
-	 * @throws NoSuchFieldException
-	 * @throws SecurityException
-	 * @throws IllegalAccessException
-	 */
-	public static DialogInterface.OnClickListener getOnClickListener(Dialog dialog) throws NoSuchFieldException, SecurityException, IllegalAccessException  {
-		Message clickMessage = (Message) ReflectionUtils.getFieldValue(dialog, Dialog.class, Constants.Fields.DIALOG_CLICK_MESSAGE);
-		if (clickMessage != null) {
-			return (DialogInterface.OnClickListener) clickMessage.obj;
-		} else {
-			return null;
-		}
-	}
-
-	public static DialogInterface.OnShowListener getOnShowListener(Dialog dialog) throws NoSuchFieldException, SecurityException, IllegalAccessException  {
-		Message showMessage = (Message) ReflectionUtils.getFieldValue(dialog, Dialog.class, Constants.Fields.DIALOG_SHOW_MESSAGE);
-		if (showMessage != null) {
-			return (DialogInterface.OnShowListener) showMessage.obj;
-		} else {
-			return null;
-		}
-	}
 	
 	/**
 	 * given a PhoneWindow$DecorView, get the this$0 reference to its window, and return the Window.Callback so we can intercept it.
@@ -617,5 +568,16 @@ public class ListenerIntercept {
 	public static Menu getMenuFromExpandedMenuView(View v) throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
 		Class expandedMenuViewClass = Class.forName(Constants.Classes.EXPANDED_MENU_VIEW);
 		return (Menu) ReflectionUtils.getFieldValue(v, expandedMenuViewClass, Constants.Fields.MENU);
+	}
+	
+	/**
+	 * get the view page changed listener for ViewPager (note Android 18)
+	 * @param viewPager
+	 * @return
+	 * @throws NoSuchFieldException
+	 * @throws IllegalAccessException
+	 */
+	public static ViewPager.OnPageChangeListener getPageChangeListener(ViewPager viewPager) throws NoSuchFieldException, IllegalAccessException {
+		return (ViewPager.OnPageChangeListener) ReflectionUtils.getFieldValue(viewPager, ViewPager.class, Constants.Fields.ON_PAGE_CHANGE_LISTENER);
 	}
 }

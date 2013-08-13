@@ -1,0 +1,3 @@
+		// %DESCRIPTION%
+		android.support.v4.view.ViewPager viewPager%VARIABLE_INDEX% = (android.support.v4.view.ViewPager) solo.getView(%ID%);
+		robotiumUtils.selectPage(viewPager%VARIABLE_INDEX%, "%PAGE_ID%");

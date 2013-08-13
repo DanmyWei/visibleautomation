@@ -18,9 +18,9 @@ import android.widget.AdapterView;
 public class ViewExtractor {
 	protected static String getWindowManagerString(){
 		if (android.os.Build.VERSION.SDK_INT >= 13) {
-			return Constants.Fields.WINDOW_MANAGER_FIELD_STATIC;
+			return Constants.Fields.WINDOW_MANAGER_FIELD_STATIC.mName;
 		} else {
-			return Constants.Fields.WINDOW_MANAGER_FIELD;
+			return Constants.Fields.WINDOW_MANAGER_FIELD.mName;
 		}
 	}
 	
@@ -41,6 +41,7 @@ public class ViewExtractor {
 	
 	/**
 	 * return the views hosted by the window manager.  Hidden class WindowManagerImpl.mViews is the list of decor views.
+	 * NOTE: change this to use the reflection utilities
 	 * @return
 	 */
 	public static View[] getWindowDecorViews() {
@@ -48,7 +49,7 @@ public class ViewExtractor {
 		Field viewsField;
 		Field instanceField;
 		try {
-			viewsField = sWindowManager.getDeclaredField(Constants.Fields.VIEWS);
+			viewsField = sWindowManager.getDeclaredField(Constants.Fields.VIEWS.mName);
 			instanceField = sWindowManager.getDeclaredField(getWindowManagerString());
 			viewsField.setAccessible(true);
 			instanceField.setAccessible(true);

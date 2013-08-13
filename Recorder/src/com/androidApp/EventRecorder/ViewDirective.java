@@ -89,6 +89,10 @@ public class ViewDirective {
 		return mWhen;
 	}
 	
+	public String getVariable() {
+		return mVariable;
+	}
+	
 	/**
 	 * parse a View Directive from a string
 	 * @param s
@@ -127,11 +131,11 @@ public class ViewDirective {
 
 	/**
 	 * does this view match the view reference, requested operation, and when?
-	 * @param v
-	 * @param viewIndex
-	 * @param op
-	 * @param when
-	 * @return
+	 * @param v view to test against
+	 * @param viewIndex index of view by preorder search filter by view type
+	 * @param op operation to filter by
+	 * @param when activity_start, etc.
+	 * @return true if it's a match
 	 */
 	public boolean match(View v, int viewIndex, ViewOperation op, When when) {
 		return mViewReference.matchView(v, viewIndex) && (mOperation == op) && (mWhen.match(when));

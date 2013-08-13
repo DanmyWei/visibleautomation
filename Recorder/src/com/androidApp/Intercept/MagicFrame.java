@@ -1,24 +1,14 @@
 package com.androidApp.Intercept;
 
-import java.util.Timer;
-import java.util.TimerTask;
 
 import com.androidApp.EventRecorder.EventRecorder;
-import com.androidApp.EventRecorder.ListenerIntercept;
-import com.androidApp.Listeners.RecordOnFocusChangeListener;
-import com.androidApp.Test.ActivityInterceptor.ActivityState;
 import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.ReflectionUtils;
-import com.androidApp.Utility.TestUtils;
 
 import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.Paint;
-import android.graphics.Point;
-import android.graphics.Rect;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -214,7 +204,7 @@ public class MagicFrame extends FrameLayout {
 		this.addView(contentView);
 		parentView.addView(this, index);
 		if (focusedView != null) {
-			focusedView.requestFocus();
+			//focusedView.requestFocus();
 		}
 	}
 }

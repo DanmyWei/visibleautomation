@@ -65,8 +65,11 @@ public class Constants {
 		INTERSTITIAL_DIALOG_TITLE_ID("interstitial_dialog_title_id"),
 		INTERSTITIAL_DIALOG_TITLE_TEXT("interstitial_dialog_title_text"),
 		INTERSTITIAL_DIALOG_CONTENTS_ID("interstitial_dialog_contents_id"),
-		INTERSTITIAL_DIALOG_CONTENTS_TEXT("interstitial_dialog_contents_text");
-
+		INTERSTITIAL_DIALOG_CONTENTS_TEXT("interstitial_dialog_contents_text"),
+		PAGE_SELECTED("page_selected"),
+		COPY_TEXT("copy_text"),
+		PASTE_TEXT("paste_text"),
+		SELECT_BY_TEXT("select_by_text");
 		
 		public final String mEventName;		
 		private UserEvent(String s) {
@@ -273,6 +276,15 @@ public class Constants {
 		public static final String CLICK_IN_LIST_BY_TEXT_INTERNAL_CLASS_INDEX = "click_in_list_by_text_internal_class_index.txt";
 		public static final String CLICK_LIST_ITEM_ID_BY_TEXT = "click_in_list_id_by_text.txt";
 		public static final String ACTIVITY_FUNCTION_BINARY = "activity_function_binary.txt";
+		public static final String PAGE_SELECTED_ID = "page_selected_id.txt";
+		public static final String PAGE_SELECTED_CLASS_INDEX = "page_selected_class_index.txt";
+		public static final String PAGE_SELECTED_INTERNAL_CLASS_INDEX = "page_selected_internal_class_index.txt";
+		public static final String COPY_TEXT_CLASS_INDEX = "copy_text_class_index.txt";
+		public static final String COPY_TEXT_INTERNAL_CLASS_INDEX = "copy_text_internal_class_index.txt";
+		public static final String COPY_TEXT_ID = "copy_text_id.txt";
+		public static final String PASTE_TEXT_CLASS_INDEX = "copy_text_class_index.txt";
+		public static final String PASTE_TEXT_INTERNAL_CLASS_INDEX = "copy_text_internal_class_index.txt";
+		public static final String PASTE_TEXT_ID = "copy_text_id.txt";
 		
 	}
 	
@@ -322,6 +334,8 @@ public class Constants {
 		public static final String ITEM_TEXT = "%ITEM_TEXT%";
 		public static final String GROUP_POSITION = "%GROUP_POSITION%";
 		public static final String CHILD_POSITION = "%CHILD_POSITION%";
+		public static final String PAGE_ID = "%PAGE_ID%";
+		public static final String VARIABLE_NAME = "%VARIABLE_NAME%";
 	}
 	
 	// generic names

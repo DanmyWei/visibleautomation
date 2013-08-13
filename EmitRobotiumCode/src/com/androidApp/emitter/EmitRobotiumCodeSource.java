@@ -280,9 +280,17 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 						}
 					} else if (Constants.SystemEvent.SHOW_IME.equals(action)) {
 						writeShowIME(tokens, lines);
-					} else if (Constants.SystemEvent.HIDE_IME.equals(action) ||
-							   Constants.UserEvent.HIDE_IME_BACK_KEY.equals(action)) {
+					} else if (Constants.UserEvent.HIDE_IME_BACK_KEY.equals(action)) {
+						
+						// always hide on the back key
 						writeHideIME(tokens, lines);
+					} else if (Constants.SystemEvent.HIDE_IME.equals(action)) {
+						// only write out the hide IME if a user event happens before a dialog close or activity transition.
+						TokenScanner.Predicate transitionPredicate = tokenScanner.new OrPredicate(tokenScanner.new DialogClosePredicate(),
+																								  tokenScanner.new ActivityTransitionPredicate());
+						if (TokenScanner.happensBefore(tokenLines, readIndex, tokenScanner.new UserEventPredicate(), transitionPredicate)) {
+							writeHideIME(tokens, lines);
+						}
 					} else if (Constants.UserEvent.BEFORE_TEXT.equals(action) || 
 							   Constants.UserEvent.BEFORE_TEXT_KEY.equals(action)) {
 						if (mCurrentText.length() == 0) {
@@ -334,6 +342,8 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 						selectActionBarTab(tokens, lines);
 					} else if (Constants.UserEvent.SELECT_TAB.equals(action)) {
 						selectTab(tokens, lines);
+					} else if (Constants.UserEvent.PAGE_SELECTED.equals(action)) {
+						pageSelected(tokens, lines);
 					} else if (Constants.SystemEvent.ON_PAGE_FINISHED.equals(action)) {
 						// TODO: TEMPORARY for DEMO.. for some reason in the cozi app, the recorder picks up 2 webviews
 						// but the playback runtime only recognizes one.
@@ -345,6 +355,8 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 						// there may be a way around this
 						// note that we increment readIndex in the loop, so we -1 it
 						readIndex = writeMotionEvents(tokenLines, readIndex, getApplicationClassName(), motionEvents, lines) - 1;
+					} else if (Constants.UserEvent.COPY_TEXT.equals(action)) {
+						copyText(tokens, lines);
 					}
 				}
 			} catch (Exception ex) {
@@ -639,7 +651,30 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		selectTabTemplate = selectTabTemplate.replace(Constants.VariableNames.TAB_ID, tabId);
 		lines.add(new LineAndTokens(tokens, selectTabTemplate));
 	}
-	
+	//				String logMsg = Integer.toString(state) + "," + getDescription(mViewPager);
+
+	/**
+	 * write the page selected event: page_selected:88338018,id,0x1020012,1,pager
+	 * @param tokens tokenized input line
+	 * @param lines output code
+	 * @throws IOException
+	 */
+	public void pageSelected(List<String> tokens, List<LineAndTokens> lines) throws IOException {
+		String description = "page selected";
+		String pageSelectedTemplate = "";
+		String tabId = tokens.get(5);
+		ReferenceParser ref = new ReferenceParser(tokens, 2);
+		// NOTE: need to search resource files for the tab id's
+		if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
+			pageSelectedTemplate = writeViewIDCommand(Constants.Templates.PAGE_SELECTED_ID, ref, description);
+		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
+			pageSelectedTemplate = writeViewClassIndexCommand(Constants.Templates.PAGE_SELECTED_CLASS_INDEX, ref, description);
+		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.INTERNAL_CLASS_INDEX) {
+			pageSelectedTemplate = writeViewInternalClassIndexCommand(Constants.Templates.PAGE_SELECTED_INTERNAL_CLASS_INDEX, ref, description);
+		}
+		pageSelectedTemplate = pageSelectedTemplate.replace(Constants.VariableNames.PAGE_ID, tabId);
+		lines.add(new LineAndTokens(tokens, pageSelectedTemplate));
+	}
 	
 
 	/**
@@ -1231,7 +1266,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	 */
 
 	public void writeEnterText(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
-		String text =  StringUtils.unescapeString(StringUtils.stripQuotes(tokens.get(2)), '\\');
+		String text =  StringUtils.stripQuotes(tokens.get(2));
 		writeEnterText(tokens, lines, text);
 	} 
 	/**
@@ -1245,12 +1280,6 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		ReferenceParser ref = new ReferenceParser(tokens, 6);
 		String description = getDescription(tokens);
 		String fullDescription = "enter text in " + description;
-		/* why is this commented out?  Is this written by the caller? Verify and remove if so.
-		if (sLastEventWasWaitForActivity) {
-			writeWaitForView(tokens, 6, lines);
-			sLastEventWasWaitForActivity = false;
-		} 
-		*/
 		if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
 			String enterTextClassIndexTemplate = writeViewClassIndexCommand(Constants.Templates.EDIT_TEXT_CLASS_INDEX, ref, fullDescription);
 			enterTextClassIndexTemplate = enterTextClassIndexTemplate.replace(Constants.VariableNames.TEXT, text);
@@ -1267,6 +1296,47 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		} else {
 			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
 		}
+	}
+	
+	public void copyText(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
+		ReferenceParser ref = new ReferenceParser(tokens, 6);
+		String description = getDescription(tokens);
+		String fullDescription = "copy text " + description;
+		String copyTextVar = tokens.get(2);
+		String copyTextTemplate = null;
+		if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
+			copyTextTemplate = writeViewClassIndexCommand(Constants.Templates.COPY_TEXT_CLASS_INDEX, ref, fullDescription);
+		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.INTERNAL_CLASS_INDEX) {
+			copyTextTemplate = writeViewInternalClassIndexCommand(Constants.Templates.COPY_TEXT_INTERNAL_CLASS_INDEX, ref, fullDescription);
+		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
+			copyTextTemplate = writeViewIDCommand(Constants.Templates.COPY_TEXT_ID, ref, fullDescription);
+		} else {
+			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
+		}
+		copyTextTemplate = copyTextTemplate.replace(Constants.VariableNames.VARIABLE_NAME, copyTextVar);
+		copyTextTemplate = copyTextTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mViewVariableIndex++));
+		lines.add(new LineAndTokens(tokens, copyTextTemplate));
+	}
+	
+	public void pasteText(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
+		ReferenceParser ref = new ReferenceParser(tokens, 6);
+		String description = getDescription(tokens);
+		String fullDescription = "copy text " + description;
+		String copyTextVar = tokens.get(2);
+		String copyTextTemplate = null;
+		if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
+			copyTextTemplate = writeViewClassIndexCommand(Constants.Templates.PASTE_TEXT_CLASS_INDEX, ref, fullDescription);
+		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.INTERNAL_CLASS_INDEX) {
+			copyTextTemplate = writeViewInternalClassIndexCommand(Constants.Templates.PASTE_TEXT_INTERNAL_CLASS_INDEX, ref, fullDescription);
+		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
+			String id = ref.getID();
+			copyTextTemplate = writeViewIDCommand(Constants.Templates.PASTE_TEXT_ID, ref, fullDescription);
+		} else {
+			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
+		}
+		copyTextTemplate = copyTextTemplate.replace(Constants.VariableNames.VARIABLE_NAME, copyTextVar);
+		copyTextTemplate = copyTextTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mViewVariableIndex++));
+		lines.add(new LineAndTokens(tokens, copyTextTemplate));
 	}
 	
 	/**

@@ -6,9 +6,9 @@ import java.util.List;
 import java.util.Stack;
 
 import com.androidApp.EventRecorder.EventRecorder;
+import com.androidApp.Intercept.CopyTextRunnable;
 import com.androidApp.Intercept.InsertRecordWindowCallbackRunnable;
 import com.androidApp.Intercept.MagicOverlay;
-import com.androidApp.Intercept.ViewInsertRecordWindowCallbackRunnable;
 import com.androidApp.Intercept.MagicFrame;
 import com.androidApp.Listeners.RecordListener;
 import com.androidApp.Utility.Constants;
@@ -173,7 +173,7 @@ public class ActivityInterceptor {
 							handleStartActivity(activity);
 							fStart = false;
 						} else if (fFinishing) {
-							
+							copyTextValues(activity);
 							// finishing..remove from the stack.  if it's the last activity, then write that
 							removeActivityFromStack(activity);
 							if (isActivityStackEmpty()) {
@@ -182,7 +182,11 @@ public class ActivityInterceptor {
 						} else {
 								// if the activity is in the stack, and we're resuming it, then we write "goBack()" to the activity
 							if (inActivityStack(activity)  && fResumed) {	
-								handleActivityBack(activity);
+								
+								// sometimes we get 2 starts, so if it's already on the activty stack, we ignore it.
+								if (!isOnTopOfActivityStack(activity)) {
+									handleActivityBack(activity);
+								}
 							} else if (isManualRotation(activity, currentRotation)) {
 								
 								// manual rotation can fire 2 or 3 events: one for the destruction, and 1 or 2 for the creation
@@ -221,6 +225,7 @@ public class ActivityInterceptor {
 			MagicFrame.insertMagicFrame(mInstrumentation, peekActivityOnStack().getActivity(), mEventRecorder, mViewInterceptor);			
 			mInstrumentation.runOnMainSync(new InterceptActivityRunnable(activity));
 			mInstrumentation.runOnMainSync(new InsertRecordWindowCallbackRunnable(activity.getWindow(), mEventRecorder, mViewInterceptor));
+			mInstrumentation.runOnMainSync(new CopyTextRunnable(mEventRecorder, activity));
 		}
 	}
 	
@@ -497,6 +502,14 @@ public class ActivityInterceptor {
 			ActivityInterceptor.this.getViewInterceptor().findMotionEventViews(mActivity);
 			ActivityInterceptor.this.getViewInterceptor().intercept(mActivity);
 		}
+	}
+	
+	/**
+	 * copy text values on activity finish
+	 * @param activity
+	 */
+	public void copyTextValues(Activity activity) {
+		mInstrumentation.runOnMainSync(new CopyTextRunnable(mEventRecorder, activity));
 	}
 }
 

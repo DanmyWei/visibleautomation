@@ -11,6 +11,7 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.support.v4.view.ViewPager;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.Display;
@@ -66,6 +67,7 @@ import com.androidApp.Listeners.RecordOnItemSelectedListener;
 import com.androidApp.Listeners.RecordOnKeyListener;
 import com.androidApp.Listeners.RecordOnLongClickListener;
 import com.androidApp.Listeners.RecordOnMenuItemClickListener;
+import com.androidApp.Listeners.RecordOnPageChangeListener;
 import com.androidApp.Listeners.RecordOnScrollListener;
 import com.androidApp.Listeners.RecordOnTabChangeListener;
 import com.androidApp.Listeners.RecordOnTouchListener;
@@ -304,6 +306,17 @@ public class ViewInterceptor {
 			if (v instanceof NumberPicker) {
 				NumberPicker numberPicker = (NumberPicker) v;
 				replaceNumberPickerListener(mEventRecorder, numberPicker);
+			}
+			
+			// we don't log the exception to the test recorder here, because of issues with obfuscated apks
+			// and the android support library being obfuscated, so there's really not much we can do.
+			try {
+				if (v instanceof ViewPager) {
+					ViewPager viewPager = (ViewPager) v;
+					replaceViewPackerPageChangeListener(mEventRecorder, viewPager);
+				}
+			} catch (Exception ex) {
+				ex.printStackTrace();
 			}
 			
 			// adapter view cases
@@ -557,6 +570,13 @@ public class ViewInterceptor {
 	}
 	
 	
+	/**
+	 * replace the value changed listener for a number picker
+	 * @param eventRecorder
+	 * @param numberPicker
+	 * @throws IllegalAccessException
+	 * @throws NoSuchFieldException
+	 */
 	public static void replaceNumberPickerListener(EventRecorder eventRecorder, NumberPicker numberPicker) throws IllegalAccessException, NoSuchFieldException {
 		NumberPicker.OnValueChangeListener originalValueChangeListener = ListenerIntercept.getValueChangeListener(numberPicker);
 		if (!(originalValueChangeListener instanceof RecordOnValueChangeListener)) {
@@ -565,6 +585,15 @@ public class ViewInterceptor {
 		}
 	}
 	
+	
+	
+	public static void replaceViewPackerPageChangeListener(EventRecorder eventRecorder, ViewPager viewPager) throws IllegalAccessException, NoSuchFieldException {
+		ViewPager.OnPageChangeListener originalPageChangeListener = ListenerIntercept.getPageChangeListener(viewPager);
+		if (!(originalPageChangeListener instanceof RecordOnPageChangeListener)) {
+			RecordOnPageChangeListener recordOnPageChangeListener = new RecordOnPageChangeListener(eventRecorder, originalPageChangeListener, viewPager);
+			viewPager.setOnPageChangeListener(recordOnPageChangeListener);
+		}
+	}
 	/**
 	 * on one of the Android handsets, rather than bringing up an extension to the options menu, they display a popup window with a RecycleListView which
 	 * displays the menu options and the AdapterView.OnItemClickListener() calls the menu item action.  

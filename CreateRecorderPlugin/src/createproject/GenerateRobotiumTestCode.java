@@ -302,15 +302,17 @@ public class GenerateRobotiumTestCode {
 		String srcPath = extDir + File.separator + srcDir;
 		String adbLsCommand = "shell ls " + srcPath;
 		String[] files = Exec.getAdbCommandOutput(androidSDK, adbLsCommand);
-		if (!files[0].contains(RecorderConstants.NO_SUCH_FILE_OR_DIRECTORY)) {
-			for (String file : files) {
-				String deviceFile = srcPath + File.separator + file;
-				String adbPullCommand = "pull " + deviceFile + " " + Constants.Filenames.TEMPORARY_FILE;
-				Exec.executeAdbCommand(androidSDK, adbPullCommand);
-				IFile eclipseFile = destFolder.getFile(file);
-				InputStream fis = new FileInputStream(Constants.Filenames.TEMPORARY_FILE);
-				eclipseFile.create(fis, IFile.FORCE, null);
-				fis.close();
+		if (files.length > 0) {
+			if (!files[0].contains(RecorderConstants.NO_SUCH_FILE_OR_DIRECTORY)) {
+				for (String file : files) {
+					String deviceFile = srcPath + File.separator + file;
+					String adbPullCommand = "pull " + deviceFile + " " + Constants.Filenames.TEMPORARY_FILE;
+					Exec.executeAdbCommand(androidSDK, adbPullCommand);
+					IFile eclipseFile = destFolder.getFile(file);
+					InputStream fis = new FileInputStream(Constants.Filenames.TEMPORARY_FILE);
+					eclipseFile.create(fis, IFile.FORCE, null);
+					fis.close();
+				}
 			}
 		}
 	}
@@ -379,11 +381,6 @@ public class GenerateRobotiumTestCode {
 	
 		// write out the test code, first to a temporary file, then to the actual project file.
 		String handlerDirName = FileUtility.sourceDirectoryFromClassName(testPackage) + File.separator + Constants.Dirs.HANDLERS;
-	
-		// get all the handler names and the associated activities from the handlers directory
-		IFolder handlerFolder = srcFolder.getFolder(handlerDirName);
-		List<String> interstitialActivityHandlers = getHandlerNames(testProject, handlerFolder);
-		List<String> interstitialActivities = getHandlerActivityNames(testProject, handlerFolder);
 		
 		// create the java project (or access it if it already exists
 		IJavaProject javaProject = JavaCore.create(testProject);

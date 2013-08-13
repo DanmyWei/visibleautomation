@@ -8,21 +8,26 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import com.androidApp.EventRecorder.ClassCount;
 import com.androidApp.Intercept.MagicFramePopup;
 import com.androidApp.Test.R;
 
 import android.app.Activity;
 import android.app.Dialog;
+import android.app.Instrumentation;
 import android.content.Context;
 import android.content.res.Resources;
+import android.graphics.Rect;
 import android.os.Build;
 import android.util.Log;
 import android.view.ContextThemeWrapper;
 import android.view.View;
+import android.webkit.WebView;
 import android.widget.ImageView;
 import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Adapter;
 import android.widget.AdapterView;
 import android.widget.AutoCompleteTextView;
@@ -33,6 +38,7 @@ import android.widget.TabHost;
 import android.widget.TextView;
 import android.widget.ScrollView;
 import android.widget.Gallery;
+import android.widget.Toast;
 
 import com.androidApp.Intercept.DirectiveDialogs;
 import com.androidApp.Intercept.MagicOverlay;
@@ -442,12 +448,13 @@ public class TestUtils {
 		}
 	}
 	
+
 	// recursive subfunction which actually does the work to find the index of the view's class.
 	private static boolean classIndex(View vRoot, Class<? extends View> cls, View v, IndexTarget target) {
 		if (vRoot == v) {
 			return true;
 		}
-		if (cls.isAssignableFrom(vRoot.getClass()) && vRoot.isShown()) {
+		if (cls.isAssignableFrom(vRoot.getClass()) && vRoot.isShown() && isViewSufficientlyShown(vRoot)) {
 			target.mCountSoFar++;
 		}
 		if (vRoot instanceof ViewGroup) {
@@ -488,6 +495,72 @@ public class TestUtils {
 			return true;
 		}
 		return false;
+	}
+
+	/**
+	 * Returns the scroll or list parent view
+	 *
+	 * @param view the view who's parent should be returned
+	 * @return the parent scroll view, list view or null
+	 */
+
+	public static View getScrollOrListParent(View view) {
+	    if (!(view instanceof android.widget.AbsListView) && !(view instanceof android.widget.ScrollView) && !(view instanceof WebView)) {
+	        try{
+	            return getScrollOrListParent((View) view.getParent());
+	        }catch(Exception e){
+	            return null;
+	        }
+	    } else {
+	        return view;
+	    }
+	}
+
+	public static float getScrollListWindowHeight(View view) {
+		final int[] xyParent = new int[2];
+		View parent = getScrollOrListParent(view);
+		final float windowHeight;
+		if (parent == null) {
+			WindowManager wm = (WindowManager) view.getContext().getSystemService(Context.WINDOW_SERVICE);
+			windowHeight = wm.getDefaultDisplay().getHeight();
+		} else{
+			parent.getLocationOnScreen(xyParent);
+			windowHeight = xyParent[1] + parent.getHeight();
+		}
+		parent = null;
+		return windowHeight;
+	}
+
+	/**
+	 * Returns true if the view is sufficiently shown
+	 *
+	 * @param view the view to check
+	 * @return true if the view is sufficiently shown
+	 */
+
+	public static boolean isViewSufficientlyShown(View view){
+
+		if (view == null) {
+			return false;
+		}
+		final int[] xyView = new int[2];
+		final int[] xyParent = new int[2];
+		final float viewHeight = view.getHeight();
+		final View parent = getScrollOrListParent(view);
+		view.getLocationOnScreen(xyView);
+
+		if (parent == null) {
+			xyParent[1] = 0;
+		} else {
+			parent.getLocationOnScreen(xyParent);
+		}
+
+		if (xyView[1] + (viewHeight/2.0f) > getScrollListWindowHeight(view)) {
+			return false;
+		} else if(xyView[1] + (viewHeight/2.0f) < xyParent[1]) {
+			return false;
+		}
+		return true;
 	}
 	
 	/**
@@ -920,9 +993,15 @@ public class TestUtils {
 						// dialogs are handled in the other case.
 						Dialog dialog = getDialog(v);
 						if (dialog == null) {
-							Object window = ReflectionUtils.getFieldValue(v, v.getClass(), Constants.Classes.THIS);
-							WindowAndView windowAndView = new WindowAndView(window, v);
-							return windowAndView;
+							
+							// Toasts and other weird things get picked up as popup windows.
+							try {
+								Object window = ReflectionUtils.getFieldValue(v, v.getClass(), Constants.Classes.THIS);
+								WindowAndView windowAndView = new WindowAndView(window, v);
+								return windowAndView;
+							} catch (Exception ex) {
+								return null;
+							}
 						}
 					}
 				}
@@ -1255,4 +1334,45 @@ public class TestUtils {
 		}
 		return null;
 	}
+	
+	
+	/**
+	 * find the view containing event x,y with the greatest "depth" in the tree.
+	 * @param v view (current in recursion)
+	 * @param x coordinates of hit.
+	 * @param y
+	 * @return lowest-level view containing event.
+	 */
+	
+	public static View findViewByXY(View v, float x, float y) {
+		ClassCount depth = new ClassCount(0);
+		Rect hitRect = new Rect();
+		return findViewByXY(v, x, y, depth, hitRect, 0);
+	}
+
+	public static View findViewByXY(View v, float x, float y, ClassCount foundDepth, Rect hitRect, int depth) {
+		if (v.isShown()) {
+			v.getGlobalVisibleRect(hitRect);
+			if (hitRect.contains((int) x, (int) y)) {
+				if (v instanceof ViewGroup) {
+					ViewGroup vg = (ViewGroup) v;
+					for (int i = 0; i < vg.getChildCount(); i++) {
+						View vChild = vg.getChildAt(i);
+						View vCand = findViewByXY(vChild, x, y, foundDepth, hitRect, depth + 1);
+						if (vCand != null) {
+							return vCand;
+						}
+					}
+					
+				} else {
+					if (depth > foundDepth.mCount) {
+						foundDepth.mCount = depth;
+						return v;
+					}
+					return null;
+				}
+			}
+		}
+		return null;	
+	}	
 }

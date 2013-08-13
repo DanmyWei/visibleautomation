@@ -90,6 +90,9 @@ public class RecordTextChangedListener extends RecordListener implements TextWat
 				String reference = mEventRecorder.getViewReference().getReference(mTextView);
 				String massagedString = StringUtils.escapeString(s.toString(), "\"", '\\').replace("\n", "\\n");
 				String logString = '\"' + massagedString + '\"' + "," + start + "," + before + "," + count + "," + reference + "," + description;
+				boolean fKeyText = mfEnterTextByKey ||
+		    			mEventRecorder.matchViewDirective(mTextView, mViewIndex, ViewDirective.ViewOperation.ENTER_TEXT_BY_KEY,
+		    											  ViewDirective.When.ALWAYS);
 				if ((!RecordListener.getEventBlock() || mfBeforeFired) && (IMEMessageListener.getOutstandingKeyCount() > 0)) {
 					if (!mfBeforeFired) {
 						Log.d(TAG, "before not fired in text change listener");
@@ -104,7 +107,7 @@ public class RecordTextChangedListener extends RecordListener implements TextWat
 					} else {
 						mEventRecorder.writeRecord(Constants.EventTags.AFTER_TEXT, logString);
 					}
-				} else {
+				} else if (fKeyText) {
 					mEventRecorder.writeRecord(Constants.EventTags.AFTER_SET_TEXT, logString);
 				}
 			}
