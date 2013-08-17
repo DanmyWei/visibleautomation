@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?eclipse version="3.4"?>
 <plugin name="Visible Automation Plugin"
-	    version="0.8.0">
+	    version="1.0.9">
    <runtime>
 		<library name="libs/emitrobotiumcode.jar"/>
    </runtime>
@@ -38,18 +38,25 @@
                id="GenerateRobotiumTest.createTestAction">
          </action>
         <action
-               label="Recorder Properties"
-               class="createrecorderplugin.popup.actions.RecorderPropertiesAction"
-               menubarPath="CreateRecorderPlugin.menu1/group1"
-               enablesFor="1"
-               id="GenerateRobotiumTest.propertiesAction">
-         </action>
-        <action
                label="Install Saved State Files"
                class="createrecorderplugin.popup.actions.RecorderStateFilesAction"
                menubarPath="CreateRecorderPlugin.menu1/group1"
                enablesFor="1"
                id="GenerateRobotiumTest.stateFilesAction">
+         </action>
+         <action
+               label="Record Test"
+               class="createrecorderplugin.popup.actions.RecordTestAction"
+               menubarPath="CreateRecorderPlugin.menu1/group1"
+               enablesFor="1"
+               id="GenerateRobotiumTest.recordTestAction">
+         </action>
+         <action
+               label="Run Recorded Test"
+               class="createrecorderplugin.popup.actions.PlayTestAction"
+               menubarPath="CreateRecorderPlugin.menu1/group1"
+               enablesFor="1"
+               id="GenerateRobotiumTest.playTestAction">
          </action>
       </objectContribution>
    </extension>
@@ -68,6 +75,14 @@
       <handler
             commandId="CreateRecorderPlugin.createrecorder.commands.installRecorderCommand"
             class="createrecorder.handlers.InstallRecorderHandler">
+      </handler>
+      <handler
+            commandId="CreateRecorderPlugin.createrecorder.commands.recordTestCommand"
+            class="createrecorder.handlers.RecordTestHandler">
+      </handler>
+      <handler
+            commandId="CreateRecorderPlugin.createrecorder.commands.playTestCommand"
+            class="createrecorder.handlers.PlayTestHandler">
       </handler>
   </extension>
    
@@ -167,6 +182,42 @@
                   commandId="CreateRecorderPlugin.createrecorder.commands.installRecorderCommand"
                   tooltip="Install Android Recorder"
                   id="CreateRecorderPlugin.createrecorder.toolbars.installRecorderCommand">
+                  <visibleWhen checkEnabled="false">
+			      	<iterate ifEmpty="false" operator="and">
+			        	<adapt type="org.eclipse.core.resources.IProject">
+			           		<test property="org.eclipse.core.resources.open">
+			           		</test> 
+			           		<test   
+			                 	forcePluginActivation="true"
+			                 	property="org.eclipse.core.resources.projectNature"
+			                 	value="com.android.ide.eclipse.adt.AndroidNature">
+			           		</test> 
+			        	</adapt>
+			     	</iterate>
+			  	</visibleWhen>
+            </command>
+           <command
+                  commandId="CreateRecorderPlugin.createrecorder.commands.recordTestCommand"
+                  tooltip="Record Android Test"
+                  id="CreateRecorderPlugin.createrecorder.toolbars.recordTestCommand">
+                  <visibleWhen checkEnabled="false">
+			      	<iterate ifEmpty="false" operator="and">
+			        	<adapt type="org.eclipse.core.resources.IProject">
+			           		<test property="org.eclipse.core.resources.open">
+			           		</test> 
+			           		<test   
+			                 	forcePluginActivation="true"
+			                 	property="org.eclipse.core.resources.projectNature"
+			                 	value="com.android.ide.eclipse.adt.AndroidNature">
+			           		</test> 
+			        	</adapt>
+			     	</iterate>
+			  	</visibleWhen>
+            </command>
+           <command
+                  commandId="CreateRecorderPlugin.createrecorder.commands.playTestCommand"
+                  tooltip="Record Android Test"
+                  id="CreateRecorderPlugin.createrecorder.toolbars.playTestCommand">
                   <visibleWhen checkEnabled="false">
 			      	<iterate ifEmpty="false" operator="and">
 			        	<adapt type="org.eclipse.core.resources.IProject">
