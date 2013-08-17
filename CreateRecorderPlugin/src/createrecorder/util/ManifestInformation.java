@@ -38,6 +38,7 @@ public class ManifestInformation {
 		int currentIndent = 0;
 		Stack<Pair> stack = new Stack<Pair>();
 		for (String line : lines) {
+			EclipseUtility.printConsole(line);
 			int indent = getIndent(line);
 			if ((currentIndent != 0) && (indent <= currentIndent)) {
 				for (int iPop = 0; iPop < (currentIndent - indent)/2 + 1; iPop++) {
@@ -54,24 +55,28 @@ public class ManifestInformation {
 				String packageAttribute =  extractMatch(line, "package=\"[A-Za-z0-9\\.]*\"");
 				if (packageAttribute != null) {
 					mPackage = extractAttributeValue(packageAttribute);
-				}
+					EclipseUtility.printConsole("Package " + mPackage);
+			}
 			} else if (matchPairArray(stack, MIN_SDK_PATH)) {
 				// A: android:minSdkVersion(0x0101020c)=(type 0x10)0x4
 				String minSDKVersion = extractMatch(line, "0x[0-9a-f]*$");
 				if (minSDKVersion != null) {
 					mMinSDKVersion = Integer.parseInt(minSDKVersion.substring(2), 16);
+					EclipseUtility.printConsole("SDKVersion " + mMinSDKVersion);
 				}
 			} else if (matchPairArray(stack, TARGET_SDK_PATH)) {
 				// A: android:targetSdkVersion(0x01010270)=(type 0x10)0xe
 				String targetSDKVersion = extractMatch(line, "0x[0-9a-f]*$");
 				if (targetSDKVersion != null) {
 					mTargetSDKVersion = Integer.parseInt(targetSDKVersion.substring(2), 16);
+					EclipseUtility.printConsole("TargetSDKVersion " + mTargetSDKVersion);
 				}
 			} else if (matchPairArray(stack, APPLICATION_PATH)) {
 				// A: android:name(0x01010003)="ApiDemosApplication" (Raw: "ApiDemosApplication")
 				String applicationName = extractMatch(line, "=\".*\" \\(");
 				if (applicationName != null) {
 					mApplicationName = applicationName.substring(2, applicationName.length() - 3);
+					EclipseUtility.printConsole("Application Name " + mApplicationName);
 				}
 			} else if (matchPairArray(stack, ACTIVITY)) {
 				 //A: android:name(0x01010003)="ApiDemos" (Raw: "ApiDemos")
@@ -90,6 +95,7 @@ public class ManifestInformation {
 				intentName = intentName.substring(2, intentName.length() - 3);
 				if (intentName.equals(CATEGORY_LAUNCHER) && (mStartActivityName == null)) {
 					mStartActivityName = candActivityName;
+					EclipseUtility.printConsole("Start Activity Name " + mStartActivityName);
 				}
 			} else if (matchPairArray(stack, ACTION_ALIAS)) {
 				// A: android:name(0x01010003)="android.intent.action.MAIN" (Raw: "android.intent.action.MAIN")
@@ -114,11 +120,8 @@ public class ManifestInformation {
 		if (mPackage == null) {
 			return "The package was not specified in AndroidManifest.xml";
 		}
-		if (mTargetSDKVersion == 0) {
-			return "The target SDK version was not specified in AndroidManifest.xml";
-		}
-		if (mMinSDKVersion == 0) {
-			return "The minimum SDK version was not specified in AndroidManifest.xml";
+		if ((mMinSDKVersion == 0) && (mTargetSDKVersion == 0)) {
+			return "The target and minimum SDK versions were not specified in AndroidManifest.xml";
 		}
 		if (mApplicationName == null) {
 			return "The application is not specified in AndroidManifest.xml";

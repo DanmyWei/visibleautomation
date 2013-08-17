@@ -70,10 +70,9 @@ public class TokenScanner {
 			List<String> tokens = lines.get(i);
 			if (!beforeHappened) {
 				beforeHappened = before.test(tokens);
-			} else {
-				if (after.test(tokens)) {
-					return true;
-				}
+			} 
+			if (after.test(tokens)) {
+				return beforeHappened;
 			}
 		}
 		return false;		

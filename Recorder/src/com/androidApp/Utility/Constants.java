@@ -407,6 +407,7 @@ public class Constants {
 		public static final String RESOURCE_ERROR = "resource access error";
 		public static final String SELECT_ITEM_WORKAROUND = "select item workaround";
 		public static final String CLICK_WORKAROUND = "click workaround";
+		public static final String KEYBOARD_NOT_INSTALLED = "The custom keyboard was not installed.  Please go to settings and set it as the default keyboard";
 	}
 	
 	// when ViewDirectives should be applied during record and playback.

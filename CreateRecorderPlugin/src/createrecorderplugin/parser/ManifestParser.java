@@ -11,6 +11,8 @@ import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
+import createrecorder.util.EclipseUtility;
+
 /** 
  * simple SAXParser to extract interesting values from the manifest
   * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
@@ -70,6 +72,7 @@ public class ManifestParser extends Parser {
 	@Override
 	public void startElement(String uri, String localName, String qName, Attributes attributes) {
 		mTokenStack.push(qName);
+	    EclipseUtility.printConsole("ManifestParser: " + localName);
 		if (compareTag(MANIFEST_TAG)) {
 			mPackage = attributes.getValue(PACKAGE_ATTRIBUTE);
 		} else if (compareTag(ACTIVITY_TAG)) {

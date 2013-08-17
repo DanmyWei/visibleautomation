@@ -10,6 +10,10 @@ import com.androidApp.Intercept.MagicFrame;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.StringUtils;
 
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.os.SystemClock;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -26,10 +30,11 @@ import android.widget.TextView;
  */
 public class RecordTextChangedListener extends RecordListener implements TextWatcher {
 	private static final String TAG = "RecordTextChangedListener";
-	protected TextView		mTextView;
-	protected int			mViewIndex;				// for preorder traversal match
-	protected boolean		mfEnterTextByKey;
-	protected boolean		mfBeforeFired = false;
+	protected TextView			mTextView;
+	protected int				mViewIndex;				// for preorder traversal match
+	protected boolean			mfEnterTextByKey;
+	protected boolean			mfBeforeFired = false;
+	protected static boolean	sfShowedKeyboardWarning = false;
 	
 	public RecordTextChangedListener(EventRecorder eventRecorder, TextView textView, int viewIndex) {
 		super(eventRecorder);
@@ -44,7 +49,17 @@ public class RecordTextChangedListener extends RecordListener implements TextWat
 
 	public void beforeTextChanged(CharSequence s, int start, int count, int after) {
 		try {
-			
+			if (!IMEMessageListener.isKeyboardConnected()) {
+				if (!sfShowedKeyboardWarning) {
+					Context context = mTextView.getContext();
+					AlertDialog.Builder builder = new AlertDialog.Builder(context);
+					builder.setTitle(Constants.DisplayStrings.VISIBLE_AUTOMATION);
+					builder.setMessage(Constants.DisplayStrings.KEYBOARD_NOT_INSTALLED);
+					Dialog dialog = builder.create();
+					dialog.show();
+					sfShowedKeyboardWarning = true;
+				}
+			}
 			// we have to test the view directive here, because we don't pass the View down to the event recorder 
 			// which normally gets it.
 			if (!mEventRecorder.matchViewDirective(mTextView, mViewIndex, ViewDirective.ViewOperation.IGNORE_EVENTS,

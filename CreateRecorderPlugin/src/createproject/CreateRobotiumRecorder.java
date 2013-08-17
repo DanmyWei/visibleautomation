@@ -129,6 +129,21 @@ public class CreateRobotiumRecorder  {
 	
 	
 	/**
+	 * copy the eclipse preferences file, so we don't have to fix android properties.
+	 * @param testProject
+	 * @throws CoreException
+	 * @throws IOException
+	 */
+	public static void createEclipseSettings(IProject testProject) throws CoreException, IOException {
+		InputStream isEclipsePrefs = FileUtility.getTemplateStream(Constants.Filenames.ECLIPSE_JDT_PREFS);
+		IFolder settingsFolder = testProject.getFolder(Constants.Dirs.SETTINGS);
+		IFile file = settingsFolder.getFile(Constants.Filenames.ECLIPSE_JDT_PREFS);
+		file.create(isEclipsePrefs, IFile.FORCE, null);	
+		isEclipsePrefs.close();
+	}
+	
+	
+	/**
 	 * create the AllTests.java file, which iterates through the test files and runs them
 	 * @param testProject project 
 	 * @param javaProject java reference to the project so we can create packages and stuff
@@ -155,6 +170,7 @@ public class CreateRobotiumRecorder  {
 		IFolder sourceFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.SRC);
 		IFolder resFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.RES);
 		IFolder assetsFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.ASSETS);
+		IFolder settingsFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.SETTINGS);
 	}
 	
 	/**

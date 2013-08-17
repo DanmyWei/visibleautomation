@@ -34,6 +34,7 @@ import com.androidApp.util.StringUtils;
 import createproject.CreateRobotiumRecorder;
 import createrecorder.util.EclipseUtility;
 import createrecorder.util.RecorderConstants;
+import createrecorderplugin.Activator;
 
 /**
  * given an eclipse project, create the unit test project which will record events for it.
@@ -65,6 +66,12 @@ public class CreateRobotiumRecorderAction implements IObjectActionDelegate {
 	 */
 	public void run(IAction action) {
 		if (mSelection != null) {
+			/*
+			if (!Activator.verifyLicense()) {
+				MessageDialog.openInformation(mShell, "Visible Automation", "failed to validate license");
+				return;
+			}
+			*/
 			try {
 				IProject project = (IProject) mSelection.getFirstElement();
 				IPath projectPath = project.getLocation();
@@ -105,7 +112,7 @@ public class CreateRobotiumRecorderAction implements IObjectActionDelegate {
 			} catch (Exception ex) {
 				MessageDialog.openInformation(
 						mShell,
-						"CreateRecorderPlugin",
+						"Visible Automation",
 						"There was an exception creating the test project " + ex.getMessage());
 				ex.printStackTrace();
 			

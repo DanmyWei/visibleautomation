@@ -310,6 +310,7 @@ public class ViewInterceptor {
 			
 			// we don't log the exception to the test recorder here, because of issues with obfuscated apks
 			// and the android support library being obfuscated, so there's really not much we can do.
+			/*
 			try {
 				if (v instanceof ViewPager) {
 					ViewPager viewPager = (ViewPager) v;
@@ -318,6 +319,7 @@ public class ViewInterceptor {
 			} catch (Exception ex) {
 				ex.printStackTrace();
 			}
+			*/
 			
 			// adapter view cases
 			if (v instanceof AdapterView) {

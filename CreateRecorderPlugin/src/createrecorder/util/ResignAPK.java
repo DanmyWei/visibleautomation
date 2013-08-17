@@ -31,6 +31,7 @@ public class ResignAPK {
 	 */
 	public static boolean resign(Shell shell, String packageName, String apkFile) throws IOException {
 	    String[] pullResults = EclipseExec.getAdbCommandOutput("pull /data/app" + apkFile);
+	    EclipseUtility.printConsole(pullResults);
 	    if (StringUtils.containedInStringArray(Constants.Errors.DOES_NOT_EXIST, pullResults)) {
 	    	MessageDialog.openInformation(shell, "Resign APK", "failed to pull APK from device");
 	    	return false;
@@ -42,6 +43,7 @@ public class ResignAPK {
 	    }
 	    String zipCmd = "zip -d " + apkFile + " META-INF/*";
 		String[] zipResults = Exec.getShellCommandOutput(zipCmd);
+		EclipseUtility.printConsole(zipResults);
 
 	    if (false) {
 			MessageDialog.openInformation(shell,"Resign APK", "failed to remove META-INF directory");
@@ -49,6 +51,59 @@ public class ResignAPK {
 	    }
 	    String home = System.getenv(RecorderConstants.EnvironmentVariables.HOME);
 	    String jarsignerCmd = "/usr/bin/jarsigner -sigalg SHA1withRSA -digestalg SHA1 -keystore " + home + "/.android/debug.keystore -storepass android -keypass android " + apkFile + " androiddebugkey";
+	    if (Exec.executeShellCommand(jarsignerCmd) != 0) {
+	 		MessageDialog.openInformation(shell,"Resign APK", "failed to sign the new APK");	    	  	
+	    	return false;
+	    }
+	    String jarsignerVerifyCmd = "/usr/bin/jarsigner -verify -sigalg SHA1withRSA -digestalg SHA1 -keystore " + home + "/.android/debug.keystore -storepass android -keypass android " + apkFile + " androiddebugkey";
+	    String[] jarsignerVerifyResults = Exec.getShellCommandOutput(jarsignerVerifyCmd);
+	    if (!StringUtils.containedInStringArray(RecorderConstants.VERIFIED, jarsignerVerifyResults)) {
+	 		MessageDialog.openInformation(shell,"Resign APK", "failed to sign the new APK");	    	  	
+	    	return false;	    	
+	    }
+	    String[] uninstallResults = EclipseExec.getAdbCommandOutput("uninstall " + packageName);
+	    EclipseUtility.printConsole(uninstallResults);
+	    if (StringUtils.containedInStringArray(Constants.Errors.FAILURE, uninstallResults)) {
+	 		MessageDialog.openInformation(shell,"Resign APK", "failed to uninstall APK");	    	  	
+	    	return false;
+	    }
+	    String[] installResults = EclipseExec.getAdbCommandOutput("install " + apkFile);
+	    EclipseUtility.printConsole(installResults);
+	    if (StringUtils.containedInStringArray(Constants.Errors.FAILURE, installResults)) {
+	 		MessageDialog.openInformation(shell,"Resign APK", "failed to install APK");	    	  	
+	    	return false;
+	    }
+	    return true;
+	}
+	/**
+	 * variant for win32
+	 * @param packageName
+	 * @param apkFile
+	 * @throws IOException
+	 */
+	
+	public static boolean resignWin32(Shell shell, String packageName, String apkFile) throws IOException {
+	    String[] pullResults = EclipseExec.getAdbCommandOutput("pull /data/app" + apkFile);
+	    EclipseUtility.printConsole(pullResults);
+	    if (StringUtils.containedInStringArray(Constants.Errors.DOES_NOT_EXIST, pullResults)) {
+	    	MessageDialog.openInformation(shell, "Resign APK", "failed to pull APK from device");
+	    	return false;
+	    }
+	    File apkFileRef = new File(apkFile);
+	    if (!apkFileRef.exists()) {
+			MessageDialog.openInformation(shell,"Resign APK","failed to pull /data/app/" + apkFile + " from device");
+	    	return false;
+	    }
+	    String zipCmd = "zip -d " + apkFile + " META-INF/*";
+		String[] zipResults = Exec.getShellCommandOutput(zipCmd);
+	    EclipseUtility.printConsole(zipResults);
+
+	    if (false) {
+			MessageDialog.openInformation(shell,"Resign APK", "failed to remove META-INF directory");
+	    	return false;
+	    }
+	    String home = System.getenv(RecorderConstants.EnvironmentVariables.HOME);
+	    String jarsignerCmd = "jarsigner -sigalg SHA1withRSA -digestalg SHA1 -keystore " + home + "\\.android\\debug.keystore -storepass android -keypass android " + apkFile + " androiddebugkey";
 	    if (Exec.executeShellCommand(jarsignerCmd) != 0) {
 	 		MessageDialog.openInformation(shell,"Resign APK", "failed to sign the new APK");	    	  	
 	    	return false;
@@ -64,40 +119,6 @@ public class ResignAPK {
 	    	return false;
 	    }
 	    return true;
-	}
-	/**
-	 * variant for win32
-	 * @param packageName
-	 * @param apkFile
-	 * @throws IOException
-	 */
-	
-	public static void resignWin32(Shell shell, String packageName, String apkFile) throws IOException {
-	    String zipfile = replaceExtension(apkFile, Constants.Extensions.ZIP);
-	    String[] pullResults = EclipseExec.getAdbCommandOutput("pull " + apkFile);
-	    File apkFileRef = new File(apkFile);
-	    if (!apkFileRef.exists()) {
-			MessageDialog.openInformation(
-					shell,
-					"Resign APK",
-					"failed to pull /data/app/" + apkFile + " from device");
-
-	    }
-	    Exec.executeShellCommand("del /s temp");
-	    Exec.executeShellCommand("mkdir temp");
-	    Exec.executeShellCommand("copy " + apkFile + " temp\\" + zipfile);
-	    Exec.executeShellCommand("unzip temp\\" + zipfile + " -d temp");
-	    Exec.executeShellCommand("rmdir /s temp/META-INF");
-	    Exec.executeShellCommand("del temp\\" + zipfile);
-	    Exec.executeShellCommand("temp", "zip", zipfile, "-r", ".");
-	    Exec.executeShellCommand("move temp\\" + zipfile + " " + apkFile);
-	    String home = System.getenv(RecorderConstants.EnvironmentVariables.HOME);
-	    Exec.executeShellCommand("jarsigner -keystore " + home + "\\.android\\debug.keystore -storepass android -keypass android " + apkFile + " androiddebugkey");
-	    //Exec.executeShellCommand(androidHome + "/tools/zipalign 4 " + apkFile + " tempfile");
-	    //Exec.executeShellCommand("mv tempfile " + apkFile);
-	    String[] uninstallResults = EclipseExec.getAdbCommandOutput("uninstall " + packageName);
-	    String[] installResults = EclipseExec.getAdbCommandOutput("install " + apkFile);
-	    Exec.executeShellCommand("del /s temp");
 	}
 
 

@@ -365,6 +365,8 @@ public class Constants {
 		public static final String VIEW_DIRECTIVES = "view_directives.txt";
 		public static final String NONE = "none";
 		public static final String DIALOG_HANDLERS = "dialog_handlers.txt";
+		public static final String ECLIPSE_JDT_PREFS = "org.eclipse.jdt.core.prefs";
+
 	}
 	
 	// output directories
@@ -384,6 +386,7 @@ public class Constants {
 		public static final String EXTERNAL_STORAGE = "/sdcard";
 		public static final String HANDLERS = "handlers";
 		public static final String DIALOGS = "dialogs";
+		public static final String SETTINGS = ".settings";
 	}
 	
 	// executables

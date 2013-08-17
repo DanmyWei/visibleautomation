@@ -82,6 +82,20 @@ public class FileUtility {
 	}
 	
 	/**
+	 * get the asset stream for a template asset
+	 * @param templateName
+	 * @return
+	 * @throws IOException
+	 */
+	public static InputStream getTemplateStream(String templateName) throws IOException {
+		InputStream is = EmitRobotiumCode.class.getResourceAsStream("/" + templateName);
+		if (is == null) {
+			throw new IOException("failed to open resource " + templateName);
+		}
+		return is;
+	}
+
+	/**
 	 * read a template file into a string
 	 * @param templateName template file from templates directory
 	 * @return file read to string
@@ -126,13 +140,16 @@ public class FileUtility {
 		InputStream fis = EmitRobotiumCode.class.getResourceAsStream("/" + resourceName);
 		int size = fis.available();
 		byte[] data = new byte[size];
-		int nbytesRead = fis.read(data);
-		if (nbytesRead != size) {
-			throw new IOException("size not equal " + size + " !=" + nbytesRead);
+		int readIndex = 0;
+		
+		// loop over, 'cause read doesn't really fucking read.
+		while (readIndex < size) {
+			int nbytesRead = fis.read(data, readIndex, size - readIndex);
+			readIndex += nbytesRead;
 		}
 		fis.close();
 		FileOutputStream fos = new FileOutputStream(targetDirectory + File.separator + resourceName);
-		fos.write(data, 0,nbytesRead);
+		fos.write(data, 0, size);
 		fos.close();
 	}
 
@@ -145,13 +162,14 @@ public class FileUtility {
 		InputStream fis = EmitRobotiumCode.class.getResourceAsStream("/" + resourceName);
 		int size = fis.available();
 		byte[] data = new byte[size];
-		int nbytesRead = fis.read(data);
-		if (nbytesRead != size) {
-			throw new IOException("size not equal " + size + " !=" + nbytesRead);
+		int readIndex = 0;
+		while (readIndex != size) {
+			int nbytesRead = fis.read(data, readIndex, size - readIndex);
+			readIndex += nbytesRead;
 		}
 		fis.close();
 		FileOutputStream fos = new FileOutputStream(resourceName);
-		fos.write(data, 0,nbytesRead);
+		fos.write(data, 0, size);
 		fos.close();
 	}
 
@@ -292,6 +310,7 @@ public class FileUtility {
 		bw.close();
 	}
 	
+	// blow away all the files in a directory
 	public static void deleteAllFilesFromDirectory(File dir) {
 		String[] filenames = dir.list();
 		for (String filename : filenames) {
@@ -299,4 +318,30 @@ public class FileUtility {
 			file.delete();
 		}
 	}
+	
+	
+	// recursively search for a file from a directory
+	public static File findFile(File dir, String target) {
+		if (dir.getName().equals(target)) {
+			return dir;
+		} else {
+			if (dir.isDirectory()) {
+				String[] fileNames = dir.list();
+				for (String fileName : fileNames) {
+					if (fileName.equals(target)) {
+						return new File(dir, fileName);
+					}
+					File file = new File(dir, fileName);
+					if (file.isDirectory()) {
+						File result = findFile(new File(dir, fileName), target);
+						if (result != null) {
+							return result;
+						}
+					}
+				}
+			} 
+			return null;
+		}
+	}
+
 }

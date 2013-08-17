@@ -74,6 +74,7 @@ public class GenerateRobotiumTestCode {
 		IFolder genFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.GEN);
 		IFolder assetsFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.ASSETS);
 		IFolder handlersFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.HANDLERS);
+		IFolder settingsFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.SETTINGS);
 
 	}
 	
@@ -429,6 +430,7 @@ public class GenerateRobotiumTestCode {
 		
 		// write the project.properties file with the android targets
 		createProjectProperties(testProject, androidTarget, projectName);
+		CreateRobotiumRecorder.createEclipseSettings( testProject);
 		createProject(testProject, projectName);
 
 		// create the build.xml, AndroidManifest.xml, and .classpath files

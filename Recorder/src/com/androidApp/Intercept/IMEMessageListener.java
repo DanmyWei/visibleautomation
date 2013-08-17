@@ -48,7 +48,8 @@ public class IMEMessageListener implements Runnable {
 	protected boolean 			mfKeyboardVisible = false;		// flag for IME visibility to others may ask
 	protected ViewInterceptor	mViewInterceptor;				// maintains currently focused view.
 	protected EventRecorder		mEventRecorder;					// to record IME hide/show events.
-	
+	protected static boolean	sfKeyboardConnected;			// the keyboard connected via TCP, else warn user
+
 	public IMEMessageListener(ViewInterceptor viewInterceptor, EventRecorder eventRecorder) {
 		sfTerminate = false;
 		mfKeyboardVisible = false;
@@ -80,6 +81,10 @@ public class IMEMessageListener implements Runnable {
 		sfOutstandingKeyCount--;
 	}
 	
+	public static boolean isKeyboardConnected() {
+		return sfKeyboardConnected;
+	}
+	
 	/**
 	 * background thread to read the socket and see if the IME transmitted show or hide IME messages. 
 	 */
@@ -91,6 +96,7 @@ public class IMEMessageListener implements Runnable {
 			socket.setSoTimeout(READ_TIMEOUT);
 			InputStream is = socket.getInputStream();
 			OutputStream os = socket.getOutputStream();
+			sfKeyboardConnected = true;
 			while (!sfTerminate) {
 				boolean fSuccessfulRead = true;
 				int numBytes = 0;

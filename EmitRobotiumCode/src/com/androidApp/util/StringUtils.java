@@ -6,6 +6,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Iterator;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * general string utilities
@@ -263,5 +265,31 @@ public class StringUtils {
 			}
 		}
 		return false;
+	}
+	
+	/**
+	 * given a string, and a regular expression, return the first match
+	 * @param line target string
+	 * @param regexp regular expression
+	 * @return matching string or null.
+	 */
+	public static String extractMatch(String line, String regexp) {
+		Pattern pattern = Pattern.compile(regexp);
+		Matcher matcher = pattern.matcher(line);
+		if (matcher.find()) {
+			return matcher.group();
+		}
+		return null;
+	}
+	
+	/**
+	 * strip the front and back strings from s
+	 * @param s string to strip
+	 * @param front remove from front
+	 * @param back remove from back
+	 * @return
+	 */
+	public static String stripFrontBack(String s, String front, String back) {
+		return s.substring(front.length(), s.length() - back.length());
 	}
 }

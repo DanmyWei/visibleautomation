@@ -18,6 +18,7 @@ import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.Platform;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.ui.console.ConsolePlugin;
@@ -27,6 +28,7 @@ import org.eclipse.ui.console.IOConsoleOutputStream;
 import org.eclipse.ui.console.MessageConsole;
 import com.android.ide.eclipse.adt.AdtConstants;
 import com.androidApp.emitter.EmitRobotiumCode;
+import com.androidApp.util.FileUtility;
 import com.androidApp.util.StringUtils;
 
 /**
@@ -222,6 +224,11 @@ public class EclipseUtility {
 		}
 	}
 	
+	/**
+	 * utility to create an eclipse console.
+	 * @param name
+	 * @return
+	 */
 	private static MessageConsole findConsole(String name) {
 		  ConsolePlugin plugin = ConsolePlugin.getDefault();
 		  IConsoleManager conMan = plugin.getConsoleManager();
@@ -237,6 +244,10 @@ public class EclipseUtility {
 		  return newConsole;
 	}
 	
+	/**
+	 * print to the eclipse console
+	 * @param s
+	 */
 	public static void printConsole(String s) {
 		if (sMessageConsole == null) {
 			sMessageConsole = EclipseUtility.findConsole(RecorderConstants.VISIBLE_AUTOMATION);
@@ -246,6 +257,42 @@ public class EclipseUtility {
 			sMessageConsoleStream.write(s + "\n");
 		} catch (IOException ex) {
 			System.out.println(s);
+		}
+	}
+	
+	/**
+	 * a lot of the shell functions output arrays of strings, so this utility is handy
+	 */
+	public static void printConsole(String[] sarray) {
+		if (sMessageConsole == null) {
+			sMessageConsole = EclipseUtility.findConsole(RecorderConstants.VISIBLE_AUTOMATION);
+			sMessageConsoleStream = sMessageConsole.newOutputStream();
+		}
+		try {
+			for (int i = 0; i < sarray.length; i++) {
+				sMessageConsoleStream.write(sarray[i] + "\n");
+			}
+		} catch (IOException ex) {
+			for (int i = 0; i < sarray.length; i++) {
+				System.out.println(sarray[i] + "\n");
+			}
+		}
+	}
+	
+	
+	/**
+	 * they keep moving aapt around, so we have to search for it
+	 * @param androidSDK
+	 * @return
+	 */
+	public static File findAAPT(String androidSDK) {
+		String buildToolsPath = androidSDK;
+		File buildToolsDir = new File(buildToolsPath);
+		String os = Platform.getOS();
+		if (os.equals(Platform.OS_WIN32)) {	
+			return FileUtility.findFile(buildToolsDir, RecorderConstants.AAPT_WIN32);
+		} else {
+			return FileUtility.findFile(buildToolsDir, RecorderConstants.AAPT);			
 		}
 	}
 }

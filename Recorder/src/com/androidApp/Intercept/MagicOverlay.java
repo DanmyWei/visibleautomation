@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.List;
 
 import com.androidApp.EventRecorder.EventRecorder;
+import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.Test.ActivityInterceptor;
 import com.androidApp.Test.R;
 import com.androidApp.Utility.Constants;
@@ -456,16 +457,24 @@ public class MagicOverlay extends View implements OnGestureListener {
 				mCurrentViewRect.offset(-mOverlayViewRect.left, -mOverlayViewRect.top);
 				canvas.drawRect(mCurrentViewRect, mViewPaint);
 				String text = mCurrentView.getClass().getSimpleName();
+				try {
+					
+					if (FindListeners.findViewWithListener(mCurrentView) != null) {
+						text += "(has listeners)";
+					}
+				} catch (Exception ex) {
+					
+				}
 
 				if (mCurrentViewRect.top > MIN_TEXT_OFFSET) {
 					// top above
-					canvas.drawText(mCurrentView.getClass().getSimpleName(), mCurrentViewRect.left, mCurrentViewRect.top, mTextPaint);					
+					canvas.drawText(text, mCurrentViewRect.left, mCurrentViewRect.top, mTextPaint);					
 				} else if (mOverlayViewRect.bottom - mCurrentViewRect.bottom > MIN_TEXT_OFFSET) {
 					// below above.
-					canvas.drawText(mCurrentView.getClass().getSimpleName(), mCurrentViewRect.left, mCurrentViewRect.bottom + mViewPaint.getTextSize(), mTextPaint);					
+					canvas.drawText(text, mCurrentViewRect.left, mCurrentViewRect.bottom + mViewPaint.getTextSize(), mTextPaint);					
 				} else {
 					// top below
-					canvas.drawText(mCurrentView.getClass().getSimpleName(), mCurrentViewRect.left, mCurrentViewRect.top + mViewPaint.getTextSize(), mTextPaint);										
+					canvas.drawText(text, mCurrentViewRect.left, mCurrentViewRect.top + mViewPaint.getTextSize(), mTextPaint);										
 				}
 			}				
 		}

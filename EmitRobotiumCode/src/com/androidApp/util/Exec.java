@@ -186,4 +186,33 @@ public class Exec {
         }
 		return null;
  	}
+	
+	/**
+	 * run a shell command and stdout as an inputstream
+	 * @param cmd command to execute
+	 * @return hopefully an input stream
+	 */
+	public static InputStream getShellCommandInputStream(String cmd) {
+		Process proc = null;
+		InputStream procStream = null;
+		try {
+            proc = Runtime.getRuntime().exec(cmd);
+  		  	procStream = proc.getInputStream();
+  		  	return procStream;
+        } catch (IOException e) {
+            System.err.println("failed to execute " + cmd + " " + e.getMessage());
+        }
+		return null;
+ 	}
+	
+	/**
+	 * run an adb command and stdout as an inputstream
+	 * @param cmd command to execute
+	 * @return hopefully an input stream
+	 */
+	
+	public static InputStream getAdbCommandInputStream(String androidSDK, String cmd) {
+		String adbPath = androidSDK + File.separator + Constants.Dirs.PLATFORM_TOOLS + File.separator + Constants.Executables.ADB;
+		return getShellCommandInputStream(adbPath + " " + cmd);
+	}
 }
