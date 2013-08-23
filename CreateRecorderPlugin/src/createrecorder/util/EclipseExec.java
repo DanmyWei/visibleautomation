@@ -101,7 +101,7 @@ public class EclipseExec {
 	public static boolean isDeviceAttached() {
 		String[] adbResults = getAdbCommandOutput("devices");
 		if (adbResults.length > 1) {
-			if (adbResults[0].contains(Constants.Names.DEVICE)) {
+			if (adbResults[1].contains(Constants.Names.DEVICE)) {
 				return true;
 			}
 		}

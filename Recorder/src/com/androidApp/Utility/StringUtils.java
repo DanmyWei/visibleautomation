@@ -144,6 +144,11 @@ public class StringUtils {
 		return Integer.toString(value) + suffix;
 	}
 	
+	/**
+	 * just cut out anything that looks suspicious, OK?
+	 * @param s
+	 * @return
+	 */
 	public static String massageString(String s) {
 		StringBuffer sb = new StringBuffer(s.length());
 		for (int ich = 0; ich < s.length(); ich++) {
@@ -158,5 +163,19 @@ public class StringUtils {
 		}
 		return sb.toString();
 	}
-
+	
+	/**
+	 * is s contained in a string in array
+	 * @param s
+	 * @param array
+	 * @return
+	 */
+	public static boolean containedInStringArray(String s, String[] array) {
+		for (String cand : array) {
+			if (cand.contains(s)) {
+				return true;
+			}
+		}
+		return false;
+	}
 }

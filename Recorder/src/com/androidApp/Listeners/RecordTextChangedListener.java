@@ -31,15 +31,13 @@ import android.widget.TextView;
 public class RecordTextChangedListener extends RecordListener implements TextWatcher {
 	private static final String TAG = "RecordTextChangedListener";
 	protected TextView			mTextView;
-	protected int				mViewIndex;				// for preorder traversal match
 	protected boolean			mfEnterTextByKey;
 	protected boolean			mfBeforeFired = false;
 	protected static boolean	sfShowedKeyboardWarning = false;
 	
-	public RecordTextChangedListener(EventRecorder eventRecorder, TextView textView, int viewIndex) {
+	public RecordTextChangedListener(EventRecorder eventRecorder, TextView textView) {
 		super(eventRecorder);
 		mTextView = textView;
-		mViewIndex = viewIndex;
 		mfEnterTextByKey = false;
 	}
 	
@@ -62,16 +60,16 @@ public class RecordTextChangedListener extends RecordListener implements TextWat
 			}
 			// we have to test the view directive here, because we don't pass the View down to the event recorder 
 			// which normally gets it.
-			if (!mEventRecorder.matchViewDirective(mTextView, mViewIndex, ViewDirective.ViewOperation.IGNORE_EVENTS,
+			if (!mEventRecorder.matchViewDirective(mTextView, ViewDirective.ViewOperation.IGNORE_EVENTS,
 				  							   	   ViewDirective.When.ALWAYS) &&
-				!mEventRecorder.matchViewDirective(mTextView, mViewIndex, ViewDirective.ViewOperation.IGNORE_TEXT_EVENTS, 
+				!mEventRecorder.matchViewDirective(mTextView, ViewDirective.ViewOperation.IGNORE_TEXT_EVENTS, 
 				  						 		   ViewDirective.When.ALWAYS)) {
 				String description = getDescription(mTextView);
 				String reference = mEventRecorder.getViewReference().getReference(mTextView);
 				String massagedString = StringUtils.escapeString(s.toString(), "\"", '\\').replace("\n", "\\n");
 				String logString = '\"' + massagedString + '\"' + "," + start + "," +  count + "," + after + "," + reference + "," + description;
 				boolean fKeyText = mfEnterTextByKey ||
-					    			mEventRecorder.matchViewDirective(mTextView, mViewIndex, ViewDirective.ViewOperation.ENTER_TEXT_BY_KEY,
+					    			mEventRecorder.matchViewDirective(mTextView, ViewDirective.ViewOperation.ENTER_TEXT_BY_KEY,
 					    											  ViewDirective.When.ALWAYS);
 				if (!RecordListener.getEventBlock() && (IMEMessageListener.getOutstandingKeyCount() > 0)) {
 					mfBeforeFired = true;
@@ -97,16 +95,16 @@ public class RecordTextChangedListener extends RecordListener implements TextWat
 	// We can scan the stack to see if the calling method is TextWatcher.afterTextChanged()
 	public void onTextChanged(CharSequence s, int start, int before, int count) {
 		try {
-			if (!mEventRecorder.matchViewDirective(mTextView, mViewIndex, ViewDirective.ViewOperation.IGNORE_EVENTS,
+			if (!mEventRecorder.matchViewDirective(mTextView, ViewDirective.ViewOperation.IGNORE_EVENTS,
 				   	   							   ViewDirective.When.ALWAYS) &&
-				!mEventRecorder.matchViewDirective(mTextView, mViewIndex, ViewDirective.ViewOperation.IGNORE_TEXT_EVENTS, 
+				!mEventRecorder.matchViewDirective(mTextView, ViewDirective.ViewOperation.IGNORE_TEXT_EVENTS, 
 				 		   						   ViewDirective.When.ALWAYS)) {
 				String description = getDescription(mTextView);
 				String reference = mEventRecorder.getViewReference().getReference(mTextView);
 				String massagedString = StringUtils.escapeString(s.toString(), "\"", '\\').replace("\n", "\\n");
 				String logString = '\"' + massagedString + '\"' + "," + start + "," + before + "," + count + "," + reference + "," + description;
 				boolean fKeyText = mfEnterTextByKey ||
-		    			mEventRecorder.matchViewDirective(mTextView, mViewIndex, ViewDirective.ViewOperation.ENTER_TEXT_BY_KEY,
+		    			mEventRecorder.matchViewDirective(mTextView, ViewDirective.ViewOperation.ENTER_TEXT_BY_KEY,
 		    											  ViewDirective.When.ALWAYS);
 				if ((!RecordListener.getEventBlock() || mfBeforeFired) && (IMEMessageListener.getOutstandingKeyCount() > 0)) {
 					if (!mfBeforeFired) {
@@ -116,7 +114,7 @@ public class RecordTextChangedListener extends RecordListener implements TextWat
 					IMEMessageListener.decrementOutstandingKeyCount();
 					setEventBlock(true);
 					if (mfEnterTextByKey ||
-						    mEventRecorder.matchViewDirective(mTextView, mViewIndex, ViewDirective.ViewOperation.ENTER_TEXT_BY_KEY,
+						    mEventRecorder.matchViewDirective(mTextView, ViewDirective.ViewOperation.ENTER_TEXT_BY_KEY,
 															  ViewDirective.When.ALWAYS)) {
 						mEventRecorder.writeRecord(Constants.EventTags.AFTER_TEXT_KEY, logString);
 					} else {

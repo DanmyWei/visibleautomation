@@ -30,28 +30,26 @@ public class CopyTextRunnable implements Runnable {
 		Window w = mActivity.getWindow();
         View v = w.getDecorView().findViewById(android.R.id.content);
         List<ViewDirective> pasteViewDirectives = mRecorder.getMatchingViewDirectives(mActivity, ViewDirective.When.ON_ACTIVITY_START);
-        ClassCount classCount = new ClassCount(0);
-        copyValues(v, classCount, pasteViewDirectives);
+        copyValues(v, pasteViewDirectives);
 	}
 	
-	public void copyValues(View v, ClassCount classCount, List<ViewDirective> pasteViewDirectives) {
+	public void copyValues(View v, List<ViewDirective> pasteViewDirectives) {
 		if (v instanceof TextView) {
 			for (ViewDirective viewDirective : pasteViewDirectives) {
-				if (viewDirective.match(v, classCount.mCount, ViewDirective.ViewOperation.COPY_TEXT,  ViewDirective.When.ON_ACTIVITY_END)) {
+				if (viewDirective.match(v, ViewDirective.ViewOperation.COPY_TEXT,  ViewDirective.When.ON_ACTIVITY_END)) {
 					TextView tv = (TextView) v;
 					String value = tv.getText().toString();
 					mRecorder.setVariableValue(viewDirective.getVariable(), value);
 					String massagedString = StringUtils.escapeString(value.toString(), "\"", '\\').replace("\n", "\\n");
 					String logString = viewDirective.getVariable() + "," + massagedString;
 					mRecorder.writeRecord(Constants.EventTags.COPY_TEXT, v, logString);
-					classCount.mCount++;
 				}
 			}
 		} else if (v instanceof ViewGroup) {
 			ViewGroup vg = (ViewGroup) v;
 			for (int i = 0; i < vg.getChildCount(); i++) {
 				View vChild = vg.getChildAt(i);
-				copyValues(vChild, classCount, pasteViewDirectives);
+				copyValues(vChild, pasteViewDirectives);
 			}
 		}	
 	}	

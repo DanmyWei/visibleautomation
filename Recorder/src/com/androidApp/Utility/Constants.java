@@ -1,6 +1,7 @@
 package com.androidApp.Utility;
 
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -55,6 +56,7 @@ public class Constants {
 		public static final String VIEW_BY_ACTIVITY_ID = "activity_view_id";
 		public static final String VIEW_BY_ACTIVITY_INTERNAL_CLASS = "activity_view_internal_class";
 		public static final String VIEW_BY_ACTIVITY_INTERNAL_CLASS_INDEX = "activity_view_internal_class_index";
+		public static final String VIEW_BY_HIERARCHICAL_REFERENCE = "activity_view_hierarchical_reference";
 	}
 	
 	// classes used in reflection
@@ -170,25 +172,29 @@ public class Constants {
 		ON_PAGE_CHANGE_LISTENER("mOnPageChangeListener", Constants.Classes.ON_PAGE_CHANGE_LISTENER );
 
 		protected final static String TAG = "Fields";
-		public final String mName;
-		public Class mCls;
-		public final int mClassIndex;
+		public final String mName;						// name of the field
+		public Class mCls;								// expected class/type of field
+		public final int mClassIndex;					// index of field within superclass of fields of same type
+		public Field mField;							// generated field via reflection. (performance)
 		
 		private Fields(String name, Class cls) {
 		    mName = name;
 		    mCls = cls;
 		    mClassIndex  = 0;
+		    mField = null;
 		}
 
 		private Fields(String name) {
 		    mName = name;
 		    mCls = null;
 		    mClassIndex = 0;
+		    mField = null;
 		}
 		
 		private Fields(String name, String className) {
 		    mName = name;
 		    mClassIndex = 0;
+		    mField = null;
 		    try {	
 		    	mCls = Class.forName(className);
 		    } catch (ClassNotFoundException cnfex) {
@@ -200,6 +206,7 @@ public class Constants {
 		private Fields(String name, String className, int classIndex) {
 		    mName = name;
 		    mClassIndex = classIndex;
+		    mField = null;
 		    try {	
 		    	mCls = Class.forName(className);
 		    } catch (ClassNotFoundException cnfex) {
@@ -212,6 +219,7 @@ public class Constants {
 		    mName = name;
 		    mCls = cls;
 		    mClassIndex = classIndex;
+		    mField = null;
 		}
 	
 	}
@@ -330,6 +338,7 @@ public class Constants {
 		public static final String PAGE_SCROLL_STATE_CHANGED = "page_scroll_state_changed";
 		public static final String PAGE_SCROLLED = "page_scrolled";
 		public static final String PAGE_SELECTED = "page_selected";
+		public static final String SPINNER_ITEM_SELECTED = "spinner_item_selected";
 	}
 	
 	// description strings 
@@ -362,6 +371,7 @@ public class Constants {
 		public static final String IS_SCROLLING_CONTAINER = "isScrollingContainer";
 		public static final String ON_CLICK = "onClick";
 		public static final String ON_TOUCH = "onTouch";	
+		public static final String ON_INTERCEPT_TOUCH_EVENT = "onInterceptTouchEvent";
 	}
 	
 	public static class Sizes {

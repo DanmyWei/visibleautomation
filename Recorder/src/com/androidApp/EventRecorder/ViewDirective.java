@@ -137,8 +137,8 @@ public class ViewDirective {
 	 * @param when activity_start, etc.
 	 * @return true if it's a match
 	 */
-	public boolean match(View v, int viewIndex, ViewOperation op, When when) {
-		return mViewReference.matchView(v, viewIndex) && (mOperation == op) && (mWhen.match(when));
+	public boolean match(View v, ViewOperation op, When when) {
+		return mViewReference.matchView(v) && (mOperation == op) && (mWhen.match(when));
 	}
 	
 	/**
@@ -150,9 +150,9 @@ public class ViewDirective {
 	 * @param viewDirectiveList
 	 * @return
 	 */
-	public static boolean match(View v, int viewIndex, ViewOperation op, When when, List<ViewDirective> viewDirectiveList) {
+	public static boolean match(View v, ViewOperation op, When when, List<ViewDirective> viewDirectiveList) {
 		for (ViewDirective viewDirective : viewDirectiveList) {
-			if (viewDirective.match(v, viewIndex, op, when)) {
+			if (viewDirective.match(v, op, when)) {
 				return true;
 			}
 		}

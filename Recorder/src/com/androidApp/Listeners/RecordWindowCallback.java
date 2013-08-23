@@ -1,4 +1,6 @@
 package com.androidApp.Listeners;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.TimerTask;
 
 import com.androidApp.EventRecorder.EventRecorder;
@@ -10,9 +12,12 @@ import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.ShowToastRunnable;
 import com.androidApp.Utility.TestUtils;
+import com.androidApp.Intercept.MagicFrame;
 
+import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Context;
+import android.graphics.Rect;
 import android.util.Log;
 import android.view.ActionMode;
 import android.view.ActionMode.Callback;
@@ -21,6 +26,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager.LayoutParams;
 import android.view.accessibility.AccessibilityEvent;
@@ -38,6 +44,7 @@ import android.widget.Toast;
  */
 public class RecordWindowCallback extends RecordListener implements Window.Callback, IOriginalListener {
 	protected static final String 		TAG = "RecordWindowCallback";
+	protected Activity					mActivity;							// activity to replace listeners.
 	protected Window.Callback 			mOriginalCallback;					// AN ACTIVITY! NO KIDDING!
 	protected ViewInterceptor			mViewInterceptor;					// to retain state information to remember the last key or touch
 	protected Context					mContext;							// so we can toast
@@ -46,12 +53,14 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 	protected RecordedTouchTimerTask	mEventRecordTimeoutTask = null;
 	
 	public RecordWindowCallback(Window			window,
+								Activity		activity,
 								Context			context,
 								EventRecorder 	eventRecorder, 
 							    ViewInterceptor	viewInterceptor,
 							    Window.Callback originalCallback) {
 		super(eventRecorder);
 		mWindow = window;
+		mActivity = activity;
 		mOriginalCallback = originalCallback;
 		mViewInterceptor = viewInterceptor;
 		mContext = context;
@@ -101,10 +110,16 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 	public boolean dispatchTouchEvent(MotionEvent event) {
 		if (event.getAction() == MotionEvent.ACTION_DOWN) {
 			mEventRecorder.setEventRecorded(false);
+			View contentView = ((ViewGroup) mWindow.getDecorView()).getChildAt(0);
+			if (contentView instanceof MagicFrame) {
+				contentView = ((ViewGroup) contentView).getChildAt(0);
+			}
+			List<View> hitViews = getHitViews((int) event.getX(), (int) event.getY(), contentView);
+			mViewInterceptor.interceptList(mActivity, hitViews);
+			Log.i(TAG, "hit views = " + hitViews);
 			if (mEventRecordTimeoutTask != null) {
 				mEventRecordTimeoutTask.cancel();
 			}
-			View contentView = mWindow.getDecorView();
 			mEventRecordTimeoutTask = new RecordedTouchTimerTask(contentView, event);
 			SetupListeners.getScanTimer().schedule(new RecordedTouchTimerTask(contentView, event), EVENT_RECORD_TIMEOUT_MSEC);
 		}
@@ -288,5 +303,28 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 			}
 		}
 	}
-
+	
+	// given an event x,y, return the views that were hit.
+	public List<View> getHitViews(int eventX, int eventY, View contentView) {
+		List<View> hitViews = new ArrayList<View>();
+		Rect viewRect = new Rect();
+		getHitViews(eventX, eventY, contentView, viewRect, hitViews);
+		return hitViews;
+	}
+	
+	private void getHitViews(int eventX, int eventY, View v, Rect viewRect, List<View> hitViews) {
+		if (v.isShown() && v.isEnabled()) {
+			v.getGlobalVisibleRect(viewRect);
+			if (viewRect.contains(eventX, eventY)) {
+				hitViews.add(v);
+				if (v instanceof ViewGroup) {
+					ViewGroup vg = (ViewGroup) v;
+					for (int iChild = 0; iChild < vg.getChildCount(); iChild++) {
+						View vChild = vg.getChildAt(iChild);
+						getHitViews(eventX, eventY, vChild, viewRect, hitViews);
+					}
+				} 
+			}
+		} 
+	}
 }

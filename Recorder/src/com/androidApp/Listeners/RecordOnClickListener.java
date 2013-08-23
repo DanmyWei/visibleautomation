@@ -4,6 +4,7 @@ import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.EventRecorder.ViewDirective;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.TestUtils;
 
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -18,11 +19,9 @@ import android.view.ViewParent;
  */
 public class RecordOnClickListener extends RecordListener implements View.OnClickListener, IOriginalListener  {
 	protected View.OnClickListener 	mOriginalOnClickListener;
-	protected int			mViewIndex;
 	
-	public RecordOnClickListener(EventRecorder eventRecorder, int viewIndex, View v) {
+	public RecordOnClickListener(EventRecorder eventRecorder, View v) {
 		super(eventRecorder);
-		mViewIndex = viewIndex;
 		try {
 			mOriginalOnClickListener = ListenerIntercept.getClickListener(v);
 			v.setOnClickListener(this);
@@ -31,12 +30,12 @@ public class RecordOnClickListener extends RecordListener implements View.OnClic
 		}		
 	}
 	
-	public RecordOnClickListener(EventRecorder eventRecorder, int viewIndex, View.OnClickListener originalTouchListener) {
+	public RecordOnClickListener(EventRecorder eventRecorder, View.OnClickListener originalClicksListener) {
 		super(eventRecorder);
-		mViewIndex = viewIndex;
-		mOriginalOnClickListener = originalTouchListener;
+		mOriginalOnClickListener = originalClicksListener;
 	}
 	
+	// IOriginalListener implementation
 	public Object getOriginalListener() {
 		return mOriginalOnClickListener;
 	}
@@ -49,9 +48,11 @@ public class RecordOnClickListener extends RecordListener implements View.OnClic
 		boolean fReentryBlock = getReentryBlock();
 		if (!RecordListener.getEventBlock()) {
 			setEventBlock(true);
+			View rootView = v.getRootView();
+			boolean fIsInDialog = (TestUtils.getDialog(rootView) != null);
+			boolean fWorkaroundDirective = mEventRecorder.matchViewDirective(v, ViewDirective.ViewOperation.CLICK_WORKAROUND, ViewDirective.When.ALWAYS);
 			try {
-				if (mEventRecorder.matchViewDirective(v, mViewIndex, ViewDirective.ViewOperation.CLICK_WORKAROUND,
-					   	   						  ViewDirective.When.ALWAYS)) { 
+				if (fIsInDialog || fWorkaroundDirective) { 
 					mEventRecorder.writeRecord(Constants.EventTags.CLICK_WORKAROUND, v, getDescription(v));
 				} else {
 					mEventRecorder.writeRecord(Constants.EventTags.CLICK, v, getDescription(v));

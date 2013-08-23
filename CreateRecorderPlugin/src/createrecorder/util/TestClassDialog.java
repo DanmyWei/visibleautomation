@@ -18,6 +18,7 @@ public class TestClassDialog {
 	public String getTestClassDialog(Shell shell, String title, String prompt) {
 		if (!EclipseExec.isDeviceAttached()) {
 			MessageDialog.openInformation(shell, RecorderConstants.VISIBLE_AUTOMATION, "No device attached");
+			return null;
 		}
 		ElementListSelectionDialog dialog = new ElementListSelectionDialog(shell, new LabelProvider());
 		dialog.setTitle(RecorderConstants.VISIBLE_AUTOMATION);

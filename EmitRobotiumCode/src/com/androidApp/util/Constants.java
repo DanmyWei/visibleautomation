@@ -50,6 +50,7 @@ public class Constants {
 		DISMISS_DIALOG_BACK_KEY("dismiss_dialog_back_key"),
 		CANCEL_DIALOG("cancel_dialog"),
 		ITEM_SELECTED("item_selected"),
+		SPINNER_ITEM_SELECTED("spinner_item_selected"),
 		DISMISS_POPUP_WINDOW_BACK_KEY("dismiss_popup_window_back_key"),
 		MENU_ITEM_CLICK("menu_item_click"),
 		POPUP_MENU_ITEM_CLICK("popup_menu_item_click"),
@@ -69,7 +70,8 @@ public class Constants {
 		PAGE_SELECTED("page_selected"),
 		COPY_TEXT("copy_text"),
 		PASTE_TEXT("paste_text"),
-		SELECT_BY_TEXT("select_by_text");
+		SELECT_BY_TEXT("select_by_text"), 
+		CLICK_WORKAROUND("click_workaround");
 		
 		public final String mEventName;		
 		private UserEvent(String s) {
@@ -181,6 +183,9 @@ public class Constants {
 		public static final String CLICK_IN_VIEW_ID = "click_in_view_id.txt";
 		public static final String CLICK_IN_VIEW_CLASS_INDEX = "click_in_view_class_index.txt";
 		public static final String CLICK_IN_VIEW_INTERNAL_CLASS_INDEX = "click_in_view_internal_class_index.txt";
+		public static final String CLICK_WORKAROUND_IN_VIEW_ID = "click_workaround_in_view_id.txt";
+		public static final String CLICK_WORKAROUND_IN_VIEW_CLASS_INDEX = "click_workaround_in_view_class_index.txt";
+		public static final String CLICK_WORKAROUND_IN_VIEW_INTERNAL_CLASS_INDEX = "click_workaround_in_view_internal_class_index.txt";
 		public static final String TRAILER = "trailer.txt";
 		public static final String BUILD_XML = "build.xml";
 		public static final String PROJECT_PROPERTIES = "project.properties";
@@ -238,6 +243,7 @@ public class Constants {
 		public static final String WAIT_FOR_WEBVIEW_PAGE_INTERNAL_CLASS_INDEX = "wait_for_webview_page_internal_class_index.txt";
 		public static final String WAIT_FOR_WEBVIEW_PAGE_ID = "wait_for_webview_page_id.txt";
 		public static final String WAIT_FOR_DIALOG_TO_OPEN = "wait_for_dialog_to_open.txt";
+		public static final String WAIT_FOR_DIALOG_TO_OPEN_CONDITIONAL = "wait_for_dialog_to_open_conditional.txt";
 		public static final String CANCEL_DIALOG_TEMPLATE = "dialog_cancel_template.txt";
 		public static final String BINARY_CLASSPATH = "binary_classpath.txt";
 		public static final String PLAYBACK_MOTION_EVENTS = "playback_motion_events.txt";
@@ -336,6 +342,7 @@ public class Constants {
 		public static final String CHILD_POSITION = "%CHILD_POSITION%";
 		public static final String PAGE_ID = "%PAGE_ID%";
 		public static final String VARIABLE_NAME = "%VARIABLE_NAME%";
+		public static final String REAL_INDEX = "%REAL_INDEX%";
 	}
 	
 	// generic names

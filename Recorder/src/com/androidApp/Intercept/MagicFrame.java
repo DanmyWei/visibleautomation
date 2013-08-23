@@ -88,6 +88,8 @@ public class MagicFrame extends FrameLayout {
 		this.setClipToPadding(false);
 		this.setMeasureAllChildren(true);
 		mRecorder = recorder;
+		
+		// we have to do all this via reflection o bypass the guards put in the view parent/childing code
 		Class viewRootImplClass = Class.forName(Constants.Classes.VIEW_ROOT_IMPL);
 		mContentView = (View) ReflectionUtils.getFieldValue(viewRootImpl, viewRootImplClass, Constants.Fields.VIEW);
 		ReflectionUtils.setFieldValue(viewRootImpl, viewRootImplClass, Constants.Fields.VIEW, this);

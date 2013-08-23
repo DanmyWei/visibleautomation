@@ -180,7 +180,7 @@ public class RecordListener {
 	
 	public static String getDescriptionByClassIndex(View v) {
 		View vRoot = v.getRootView();
-		int index = TestUtils.classIndex(vRoot, v);
+		int index = TestUtils.classIndex(vRoot, v, true);
 		return StringUtils.getOrdinal(index) + " " + v.getClass().getSimpleName();
 	}
 }

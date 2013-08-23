@@ -20,6 +20,7 @@ import android.util.Log;
 import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.Window;
 import android.widget.TextView;
 import android.view.ViewGroup;
 import android.view.ViewParent;
@@ -316,6 +317,7 @@ public class RobotiumUtils {
 
 	/**
 	 * scroll the ancestor of the view until the view is fully visible.
+	 * NOTE: this doesn't handle embedded scroll views.
 	 * @param v view to scroll into view.
 	 */
 	public void scrollToViewVisible(Solo solo, View v) {
@@ -689,11 +691,12 @@ public class RobotiumUtils {
 		while (timeoutMsec > 0) {
 			Dialog dialog = ViewExtractor.findDialog(activity);
 			if (dialog != null) {
+				// TODO: this is a cheat. We need to wait for the dialog's contents to be
+				// rendered properly
+				sleep(WAIT_INCREMENT_MSEC);
 				return dialog;
 			}
-			try {
-				Thread.sleep(WAIT_INCREMENT_MSEC);
-			} catch (InterruptedException iex) {}
+			sleep(WAIT_INCREMENT_MSEC);
 			timeoutMsec -= WAIT_INCREMENT_MSEC;
 		}
 		return null;
@@ -804,11 +807,88 @@ public class RobotiumUtils {
 		solo.pressSpinnerItem(spinnerIndex, itemIndex - currentPosition);
 	}
 	
+	/**
+	 * workaround for clicking in dialogs because coordinates are reported incorrectly, so we
+	 * can't do clickInView
+	 * https://code.google.com/p/robotium/issues/detail?id=431
+	 * @param v
+	 */
+	public void performClickWorkaround(View v) {
+		mInstrumentation.runOnMainSync(new PerformClickRunnable(v));
+	}
+	
+	/**
+	 * unlike robotium, which only counts visible views, we like all the views, because the
+	 * playback may not have scrolled back to exactly the same position, so we search the view
+	 * hierarchy for all views, not just those which are visible on the screen (they filter by offscreen/obscured)
+	 * @param viewClass view class to filter by
+	 * @param index index to match
+	 * @return view or null
+	 */
+	public View getView(Class<? extends View> viewClass, int index) {
+		Activity activity = getCurrentActivity();
+		
+		// try dialogs first.
+		View[] viewList = ViewExtractor.getWindowDecorViews();
+		for (int iViewRoot = 0; iViewRoot < viewList.length; iViewRoot++) {
+			if (DialogListener.isDialogOrPopup(activity, viewList[iViewRoot])) {
+				for (int iTry = 0; iTry < 10; iTry++) {
+					View v = getView(viewList[iViewRoot], viewClass, new ClassCount(index));
+					if (v != null) {
+						return v;
+					}
+					sleep(WAIT_INCREMENT_MSEC);
+				}
+			}
+		}
+		Window w = activity.getWindow();
+		View v = w.getDecorView();
+		for (int iTry = 0; iTry < 10; iTry++) {
+			View vResult = getView(v, viewClass, new ClassCount(index));
+			if (vResult != null) {
+				return vResult;
+			}
+			sleep(WAIT_INCREMENT_MSEC);
+		}
+		return null;
+	}
+	
+	protected class ClassCount {
+		public int mIndex;
+		
+		public ClassCount(int index) {
+			mIndex = index;
+		}
+	}
+	
+	// pre-order traversal to search for a matching view with the classCount wrapper for the index.
+	protected View getView(View v, Class<? extends View> viewClass, ClassCount classCount) {
+		if (viewClass.isAssignableFrom(v.getClass())) {
+			if (classCount.mIndex == 0) {
+				return v;
+			} else {
+				classCount.mIndex--;
+			}
+		}  
+		if (v instanceof ViewGroup) {
+			ViewGroup vg = (ViewGroup) v;
+			for (int iChild = 0; iChild < vg.getChildCount(); iChild++) {
+				View vChild = vg.getChildAt(iChild);
+				View vFound = getView(vChild, viewClass, classCount);
+				if (vFound != null) {
+					return vFound;
+				}
+			}
+		}
+		return null;
+	}
+	
 	
 	public void requestFocus(View v, int startInsertion, int endInsertion) {
 		mInstrumentation.runOnMainSync(new RequestFocusRunnable(v, startInsertion, endInsertion));
 	}
 	
+		
 	protected class RequestFocusRunnable implements Runnable {
 		protected View 	mView;
 		protected int 	mStartInsertion;
@@ -853,4 +933,22 @@ public class RobotiumUtils {
 			mEditText.setSelection(mInsertionPt);
 		}
 	}
+	
+	/**
+	 * workaround for the fact that clickInView doesn't work for controls in dialogs.
+	 * @author matt2
+	 *
+	 */
+	protected class PerformClickRunnable implements Runnable {
+		protected View		mView;
+		
+		public PerformClickRunnable(View view) {
+			mView = view;
+		}
+		
+		public void run() {
+			mView.performClick();
+		}
+	}
+
 }

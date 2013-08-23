@@ -22,6 +22,7 @@ import com.androidApp.util.Constants;
 import com.androidApp.util.Exec;
 
 import createproject.CreateRobotiumRecorderBinary;
+import createproject.ProjectInformation;
 import createrecorder.util.AAPTBadgingValues;
 import createrecorder.util.EclipseUtility;
 import createrecorder.util.EclipseExec;
@@ -83,51 +84,57 @@ public class CreateRecorderHandler extends AbstractHandler {
 				MessageDialog.openInformation(shell, "Visible Automation", "could not find aapt in " + androidSDK);
 			} else {
 				String aaptPath = aapt.getAbsolutePath();
+				// use aapt to pull the manifest and the badging information, so we can do the best we can to get the target SDK,
+				// application name, start activity, and application package.
+				String[] manifestLines = Exec.getShellCommandOutput(aaptPath + " dump --values xmltree " + PackageUtils.getPackageName(packagePath) + " AndroidManifest.xml");
+				ManifestInformation manifestInformation = new ManifestInformation(manifestLines);
 				String[] aaptBadgingLines = Exec.getShellCommandOutput(aaptPath + " dump --values badging " +  PackageUtils.getPackageName(packagePath));
-				AAPTBadgingValues badgingValues = new AAPTBadgingValues(aaptBadgingLines);
-				// extract the packge so we can get the AndroidManifest.xml file.
-				createProject(shell, badgingValues);
+				AAPTBadgingValues aaptBadgingValues = new AAPTBadgingValues(aaptBadgingLines);
+				ProjectInformation projectInformation = new ProjectInformation();
+				if (projectInformation.init(shell, aaptBadgingValues, manifestInformation)) {
+					createProject(shell, projectInformation);
+				}
 			}
 		}
 		return null;
 	}
-	
+
 	/**
 	 * create the project from the extracted manifest information
 	 * @param shell
-	 * @param manifestInformation
+	 * @param aaptBadgingValues extracted data from aapt dump badging APK
+	 * @param manifestInformation extracted data from aapt dump --values xmltree APK AndroidManifest.xml
+	 * 
 	 */
-	public void createProject(Shell shell, AAPTBadgingValues aaptBadgingValues) {
+	public void createProject(Shell shell, ProjectInformation projectInformation) {
 		try {
-			String projectName = aaptBadgingValues.getApplicationLabel();
-	
+			String projectName = projectInformation.getApplicationName();
+			String launchableActivity = null;
+
 			// create the new project
 			String newProjectName = projectName + RecorderConstants.RECORDER_SUFFIX;
 			IProject testProject = EclipseUtility.createBaseProject(newProjectName);
 			CreateRobotiumRecorderBinary createRecorder = new CreateRobotiumRecorderBinary();
 			
 			// create the .classpath, AndroidManifest.xml, .project, and project.properties files
-			String target = "target=android-" + Integer.toString(aaptBadgingValues.getSDKVersion());
+			String target = "target=android-" + Integer.toString(projectInformation.getSDKVersion());
 			createRecorder.createProjectProperties(testProject, target);
-			createRecorder.createProject(testProject, aaptBadgingValues.getApplicationLabel());
-			createRecorder.createClasspath(testProject, aaptBadgingValues.getApplicationLabel());
-			createRecorder.createManifest(testProject, target, aaptBadgingValues.getPackage(), Integer.toString(aaptBadgingValues.getSDKVersion()));
+			createRecorder.createProject(testProject, projectInformation.getApplicationName());
+			createRecorder.createClasspath(testProject, projectInformation.getApplicationName());
+			createRecorder.createManifest(testProject, target, projectInformation.getPackageName(), Integer.toString(projectInformation.getSDKVersion()));
 
 			// create the java project, the test class output, and the "AllTests" driver which
 			// iterates over all the test cases in the folder, so we can run with a single-click
 			IJavaProject javaProject = EclipseUtility.createJavaNature(testProject);
 			createRecorder.createFolders(testProject);
 			createRecorder.createEclipseSettings(testProject);
-			createRecorder.createTestClass(testProject, javaProject, aaptBadgingValues.getPackage(), aaptBadgingValues.getLaunchableActivity());
-			createRecorder.createAllTests(testProject, javaProject, aaptBadgingValues.getPackage());
+			createRecorder.createTestClass(testProject, javaProject, projectInformation.getPackageName(), projectInformation.getStartActivity());
+			createRecorder.createAllTests(testProject, javaProject, projectInformation.getPackageName());
 			createRecorder.addLibraries(testProject);
 		} catch (Exception ex) {
-			MessageDialog.openInformation(
-					shell,
-					"CreateRecorderPlugin",
-					"There was an exception creating the test project " + ex.getMessage());
-			ex.printStackTrace();
-		
+			MessageDialog.openInformation(shell, RecorderConstants.VISIBLE_AUTOMATION,
+										  "There was an exception creating the test project " + ex.getMessage());
+			ex.printStackTrace();		
 		}
 	}		
 	   

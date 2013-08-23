@@ -89,13 +89,13 @@ public interface IEmitCode {
 	void writeRotation(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
 	void writeShowIME(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
 	void writeHideIME(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
-	void writeScroll(int scrollListIndex, int scrollFirstVisibleItem, List<String> tokens, List<LineAndTokens> outputLines) throws IOException;
+	void writeScroll(ReferenceParser scrollListRef, int scrollFirstVisibleItem, List<String> tokens, List<LineAndTokens> outputLines) throws IOException;
 	void writeEnterText(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
 	void writeWaitForListClassIndex(List<String> tokens, int itemIndex, List<LineAndTokens> lines) throws IOException;
 	void writeWaitForListIdItem(List<String> tokens, int itemIndex, List<LineAndTokens> lines) throws IOException;
 	void writeItemClick(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
 	void writePopupMenuItemClick(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
-	void writeItemSelected(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
+	void writeSpinnerItemSelected(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
 	void writeChildClick(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
 	void writeGroupClick(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
 	void writeHeader(String 				classPath, 

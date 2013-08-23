@@ -47,7 +47,12 @@ public class RecordOnItemSelectedListener extends RecordListener implements Adap
 		if (!RecordListener.getEventBlock()) {
 			setEventBlock(true);
 			try {
-				mEventRecorder.writeRecord(Constants.EventTags.ITEM_SELECTED, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
+				if (parent instanceof Spinner) {
+					mEventRecorder.writeRecord(Constants.EventTags.SPINNER_ITEM_SELECTED, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
+				} else {
+					mEventRecorder.writeRecord(Constants.EventTags.ITEM_SELECTED, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
+					
+				}
 			} catch (Exception ex) {
 				mEventRecorder.writeException(ex, view, "item selected");
 			}

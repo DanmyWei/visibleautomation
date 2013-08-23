@@ -25,12 +25,10 @@ import android.widget.TextView;
  */
 public class RecordOnItemClickListener extends RecordListener implements AdapterView.OnItemClickListener, IOriginalListener  {
 	protected AdapterView.OnItemClickListener	mOriginalItemClickListener;
-	protected int								mViewIndex;
 	
 	public RecordOnItemClickListener(EventRecorder eventRecorder, AdapterView<?> adapterView, int viewIndex) {
 		super(eventRecorder);
 		mOriginalItemClickListener = adapterView.getOnItemClickListener();
-		mViewIndex = viewIndex;
 		adapterView.setOnItemClickListener(this);
 	}
 	
@@ -60,8 +58,7 @@ public class RecordOnItemClickListener extends RecordListener implements Adapter
 		if (!RecordListener.getEventBlock()) {
 			setEventBlock(true);
 			try {
-				if (mEventRecorder.matchViewDirective(parent, mViewIndex, ViewDirective.ViewOperation.SELECT_BY_TEXT,
-					   	   							   ViewDirective.When.ALWAYS)) {
+				if (mEventRecorder.matchViewDirective(parent, ViewDirective.ViewOperation.SELECT_BY_TEXT, ViewDirective.When.ALWAYS)) {
 					TextView tv = (TextView) TestUtils.findChild(view, 0, TextView.class);
 					if (tv != null) {
 						String text = StringUtils.escapeString(tv.getText().toString(), "\"", '\\').replace("\n", "\\n");

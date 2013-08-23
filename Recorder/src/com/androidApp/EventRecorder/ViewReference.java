@@ -97,13 +97,15 @@ public class ViewReference {
 
 	/** 
 	 * for Robotium functions like clickInList(), the list is referenced by its index in the # of lists displayed on the screen
+	 * and by its class index in the total hierarchy
 	 * @param v
 	 * @return
 	 */
 	public static String getClassIndexReference(View v) {
 		View rootView = v.getRootView();
-		int classIndex = TestUtils.classIndex(rootView, v);
-		return Constants.Reference.CLASS_INDEX + "," + v.getClass().getName() + "," + classIndex;	
+		int classIndexShown = TestUtils.classIndex(rootView, v, true);
+		int classIndexReal = TestUtils.classIndex(rootView, v, false);
+		return Constants.Reference.CLASS_INDEX + "," + v.getClass().getName() + "," + classIndexShown + "," + classIndexReal;	
 	}
 	
 	/**
@@ -253,15 +255,19 @@ public class ViewReference {
 		if (viewParentWithId != null) {
 			int parentIdCount = TestUtils.idCount(rootView, viewParentWithId.getId());
 			if (parentIdCount == 1) {
-				int classIndex = TestUtils.classIndex(viewParentWithId, v);
+				int classIndex = TestUtils.classIndex(viewParentWithId, v, true);
 				return Constants.Reference.CLASS_ID + "," +  TestUtils.getIdForValue(mRIDList, viewParentWithId.getId()) + "," + usableClass.getCanonicalName() + "," + classIndex;
 			} else {
 				if (fInternalClass) {
-					int classIndex = TestUtils.classIndex(rootView, v);
-					return Constants.Reference.INTERNAL_CLASS_INDEX + "," + allocatableClass.getCanonicalName() + "," + usableClass.getCanonicalName() + "," + classIndex;
+					int classIndexShown = TestUtils.classIndex(rootView, v, true);
+					int classIndexReal = TestUtils.classIndex(rootView, v, false);
+					return Constants.Reference.INTERNAL_CLASS_INDEX + "," + allocatableClass.getCanonicalName() + "," + usableClass.getCanonicalName() + "," + 
+						 	classIndexShown + "," + classIndexReal;
 				} else {
-					int classIndex = TestUtils.classIndex(rootView, v);
-					return Constants.Reference.CLASS_INDEX + "," + usableClass.getCanonicalName() + "," + classIndex;
+					int classIndexShown = TestUtils.classIndex(rootView, v, true);
+					int classIndexReal = TestUtils.classIndex(rootView, v, false);
+					return Constants.Reference.CLASS_INDEX + "," + usableClass.getCanonicalName() + "," + 
+							classIndexShown + "," + classIndexReal;
 				}
 			}
 		}

@@ -72,11 +72,13 @@ public class InterceptOnHierarchyChangeListener extends RecordListener implement
 	 * when a child is added, intercept its views, but not immediately, since this is probably called from
 	 * adapter.getView(), and the view's handlers might not be installed yet, so we force a go-round
 	 * with the UI.
+	 * TODO: The problem with this is that the hashtable for the view indices gets re-initialized.
+	 * We need to retain the view index hashtable with the activity in the view interceptor
 	 */
 	@Override
 	public void onChildViewAdded(View parent, View child) {
 		if (!mViewInterceptor.runDeferred(parent, mViewInterceptor.new InterceptViewRunnable(mActivity, child))) {
-			mViewInterceptor.callIntercept(mActivity, child);
+			mViewInterceptor.intercept(mActivity, child);
 		}
 		if (mOriginalOnHierarchyChangeListener != null) {
 			mOriginalOnHierarchyChangeListener.onChildViewAdded(parent, child);

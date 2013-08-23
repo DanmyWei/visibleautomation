@@ -1,5 +1,6 @@
 package com.androidApp.Intercept;
 
+import android.app.Activity;
 import android.view.View;
 import android.view.Window;
 
@@ -18,11 +19,16 @@ import com.androidApp.Utility.Constants;
  */
 public class InsertRecordWindowCallbackRunnable implements Runnable {
 	protected Window			mWindow;					// window containing views of interest
+	protected Activity			mActivity;
 	protected EventRecorder 	mRecorder;					// event recorder interface
 	protected ViewInterceptor 	mViewInterceptor;			// to intercept the views contained in the window
 	
-	public InsertRecordWindowCallbackRunnable(Window window, EventRecorder recorder, ViewInterceptor viewInterceptor) {
+	public InsertRecordWindowCallbackRunnable(Window 			window, 
+											  Activity 			activity, 
+											  EventRecorder 	recorder, 
+											  ViewInterceptor 	viewInterceptor) {
 		mWindow = window;
+		mActivity = activity;
 		mRecorder = recorder;
 		mViewInterceptor = viewInterceptor;
 	}
@@ -34,7 +40,7 @@ public class InsertRecordWindowCallbackRunnable implements Runnable {
 		try {
 			Window.Callback originalCallback = mWindow.getCallback();
 			if (!(originalCallback instanceof RecordWindowCallback)) {
-				RecordWindowCallback recordCallback = new RecordWindowCallback(mWindow, mWindow.getContext(), mRecorder, mViewInterceptor, originalCallback);
+				RecordWindowCallback recordCallback = new RecordWindowCallback(mWindow, mActivity, mWindow.getContext(), mRecorder, mViewInterceptor, originalCallback);
 				mWindow.setCallback(recordCallback);
 			}
 		} catch (Exception ex) {

@@ -37,7 +37,8 @@ public class ReferenceParser {
 	protected String 		mClass;							// view class (fully qualified)
 	protected String		mInternalClass;					// for Class.forName() internal class (fully qualified)
 	protected String		mText;							// hardcoded quoted string or fully qualified resource id
-	protected int 			mIndex;							// class index (if id != null, relative to ancestor, not to entire view hierarchy)
+	protected int 			mIndexShown;					// shown class index (if id != null, relative to ancestor, not to entire view hierarchy)
+	protected int			mIndexReal;						// class index in the view hierarch (includes non-shown views)
 	protected ReferenceType	mType;							// describes how to decompose the reference
 	protected TextType		mTextType;						// string or resource iff mType == TEXT_ID
 	protected IDType		mIDType;						// hardcoded or resource if mType == TEXT_ID, ID or CLASS_INDEX_ID
@@ -49,20 +50,23 @@ public class ReferenceParser {
 		mType = ReferenceType.UNKNOWN;
 		mID = null;
 		mClass = null;
-		mIndex = -1;
+		mIndexShown = -1;
+		mIndexReal = -1;
 		mTextType = TextType.HARDCODED;
 		mIDType = IDType.HARDCODED;
 		if (parts.get(startIndex).equals(Constants.CLASS_INDEX)) {
 			mType = ReferenceType.CLASS_INDEX;
 			mClass = parts.get(startIndex + 1);
-			mIndex = Integer.parseInt(parts.get(startIndex + 2));	
-			mTokensConsumed = 3;
+			mIndexShown = Integer.parseInt(parts.get(startIndex + 2));	
+			mIndexReal = Integer.parseInt(parts.get(startIndex + 3));	
+			mTokensConsumed = 4;
 		} else if (parts.get(startIndex).equals(Constants.INTERNAL_CLASS_INDEX)) {
 			mType = ReferenceType.INTERNAL_CLASS_INDEX;
 			mClass = parts.get(startIndex + 2);
 			mInternalClass = parts.get(startIndex + 1);
-			mIndex = Integer.parseInt(parts.get(startIndex + 3));
-			mTokensConsumed = 3;
+			mIndexShown = Integer.parseInt(parts.get(startIndex + 3));
+			mIndexReal = Integer.parseInt(parts.get(startIndex + 4));	
+			mTokensConsumed = 4;
 		} else if (parts.get(startIndex).equals(Constants.CLASS_INDEX_ID)) {
 			mType = ReferenceType.CLASS_INDEX_ID;
 			mTokensConsumed = 1;
@@ -120,8 +124,12 @@ public class ReferenceParser {
 		return mTextType;
 	}
 	
-	public int getIndex() {
-		return mIndex;
+	public int getShownIndex() {
+		return mIndexShown;
+	}
+	
+	public int getRealIndex() {
+		return mIndexReal;
 	}
 	
 	public String getClassName() {
@@ -155,24 +163,31 @@ public class ReferenceParser {
 			}
 			return mID.equals(b.mID);
 		case CLASS_INDEX:
+		case INTERNAL_CLASS_INDEX:
 			if ((mClass == null) || (b.mClass == null)) {
 				return false;
 			}
-			if ((mIndex == -1) || (b.mIndex == -1)) {
+			if ((mIndexShown == -1) || (b.mIndexShown == -1)) {
 				return false;
 			}
-			return mClass.equals(b.mClass) && (mIndex == b.mIndex);
+			if ((mIndexReal == -1) || (b.mIndexReal == -1)) {
+				return false;
+			}
+			return mClass.equals(b.mClass) && (mIndexShown == b.mIndexShown) && (mIndexReal == b.mIndexReal);
 		case CLASS_INDEX_ID:
 			if ((mClass == null) || (b.mClass == null)) {
 				return false;
 			}
-			if ((mIndex == -1) || (b.mIndex == -1)) {
+			if ((mIndexShown == -1) || (b.mIndexShown == -1)) {
+				return false;
+			}
+			if ((mIndexReal == -1) || (b.mIndexReal == -1)) {
 				return false;
 			}
 			if ((mID == null) || (b.mID == null)) {
 				return false;
 			}			
-			return mID.equals(b.mID) && mClass.equals(b.mClass) && (mIndex == b.mIndex);
+			return mClass.equals(b.mClass) && (mIndexShown == b.mIndexShown) && (mIndexReal == b.mIndexReal);
 		case TEXT_ID:
 			if ((mID == null) || (b.mID == null)) {
 				return false;

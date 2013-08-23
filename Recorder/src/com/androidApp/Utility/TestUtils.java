@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -42,6 +43,7 @@ import android.widget.Toast;
 
 import com.androidApp.Intercept.DirectiveDialogs;
 import com.androidApp.Intercept.MagicOverlay;
+import com.androidApp.Intercept.MagicOverlayDialog;
 import com.androidApp.Intercept.MagicFrame;
 
 /**
@@ -417,12 +419,14 @@ public class TestUtils {
 	 * find the index of v filtered by class in the set of subchildren of vRoot, by preorder traversal
 	 * @param vRoot root to traverse from
 	 * @param v view to find (indexed by class)
+	 * @param fOnlySufficientlyShown robotium only counts by widgets that are visible on the screen,
+	 * which is fine for those losers that count on their fingers, but not what I'd call reliable. Thanks, renas.
 	 * @return index of v by class, or -1 if not found
 	 */
-	public static int classIndex(View vRoot, View v) {
+	public static int classIndex(View vRoot, View v, boolean fOnlySufficientlyShown) {
 		TestUtils testUtils = new TestUtils();
 		IndexTarget target = testUtils.new IndexTarget();
-		if (classIndex(vRoot, v.getClass(), v, target)) {
+		if (classIndex(vRoot, v.getClass(), v, target, fOnlySufficientlyShown)) {
 			return target.mCountSoFar;
 		} else {
 			return -1;
@@ -438,10 +442,10 @@ public class TestUtils {
 	 * @param v view to match
 	 * @return preorder index of the view, filtered by views which match cls
 	 */
-	public static int classIndex(View vRoot, Class<? extends View> cls, View v) {
+	public static int classIndex(View vRoot, Class<? extends View> cls, View v, boolean fOnlySufficientlyShown) {
 		TestUtils testUtils = new TestUtils();
 		IndexTarget target = testUtils.new IndexTarget();
-		if (classIndex(vRoot, cls, v, target)) {
+		if (classIndex(vRoot, cls, v, target, fOnlySufficientlyShown)) {
 			return target.mCountSoFar;
 		} else {
 			return -1;
@@ -450,18 +454,28 @@ public class TestUtils {
 	
 
 	// recursive subfunction which actually does the work to find the index of the view's class.
-	private static boolean classIndex(View vRoot, Class<? extends View> cls, View v, IndexTarget target) {
+	private static boolean classIndex(View 					vRoot, 
+									  Class<? extends View> cls, 
+									  View 					v, 
+									  IndexTarget 			target, 
+									  boolean 				fOnlySufficientlyShown) {
 		if (vRoot == v) {
 			return true;
 		}
-		if (cls.isAssignableFrom(vRoot.getClass()) && vRoot.isShown() && isViewSufficientlyShown(vRoot)) {
-			target.mCountSoFar++;
+		if (fOnlySufficientlyShown) {
+			if (cls.isAssignableFrom(vRoot.getClass()) && vRoot.isShown() && isViewSufficientlyShown(vRoot)) {
+				target.mCountSoFar++;
+			}
+		} else {
+			if (cls.isAssignableFrom(vRoot.getClass())) {
+				target.mCountSoFar++;
+			}	
 		}
 		if (vRoot instanceof ViewGroup) {
 			ViewGroup vg = (ViewGroup) vRoot;
 			for (int iChild = 0; iChild < vg.getChildCount(); iChild++) {
 				View vChild = vg.getChildAt(iChild);
-				if (classIndex(vChild, cls, v, target)) {
+				if (classIndex(vChild, cls, v, target, fOnlySufficientlyShown)) {
 					return true;
 				}
 			}
@@ -648,7 +662,9 @@ public class TestUtils {
 	 */
 	public static boolean isVisibleAutomationView(View v) {
 		return ((v instanceof MagicFrame) || 
-				(v instanceof MagicOverlay) || 
+				(v instanceof MagicOverlay) ||
+				(v instanceof MagicOverlayDialog) || 
+				(v instanceof MagicFramePopup) ||
 				((v instanceof ImageView) && (v.getId() == MagicOverlay.MAGIC_BUTTON_ID)));
 	}
 	
@@ -1375,4 +1391,25 @@ public class TestUtils {
 		}
 		return null;	
 	}	
+	
+	/**
+	 * has this class overridden the default android touch method? 
+	 * @param v view which is probably some weird derived class
+	 * @return true if some non-android superclass has a public onTouch() method
+	 */
+	public static boolean hasOverriddenAndroidTouchMethod(View v) {
+		String[] android_packages = new String[] { Constants.Packages.ANDROID_VIEW, Constants.Packages.ANDROID_WIDGET };
+		String[] methods = new String[] { Constants.Methods.ON_TOUCH, Constants.Methods.ON_INTERCEPT_TOUCH_EVENT };
+		Class<? extends View> c = v.getClass();
+		while (!StringUtils.containedInStringArray(c.getPackage().getName(), android_packages)) {
+			Method[] classMethods = c.getMethods();
+			for (Method method : classMethods) {
+				if (StringUtils.containedInStringArray(method.getName(), methods)) {		
+					return true;
+				}
+			}
+			c = (Class<? extends View>) c.getSuperclass();
+		}
+		return false;
+	}
 }

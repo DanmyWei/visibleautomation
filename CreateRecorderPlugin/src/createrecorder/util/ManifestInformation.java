@@ -207,4 +207,27 @@ public class ManifestInformation {
 		return attribute.substring(ichEqualsQuote + 2, attribute.length() - 1);
 	}
 
+	// get the start activity name.
+	public String getStartActivityName() {
+		return mStartActivityName;
+	}
+
+	// get the target SDK version, or the min SDK version if we have to.
+	public int getSDKVersion() {
+		if (mTargetSDKVersion != 0) {
+			return mTargetSDKVersion;
+		} else {
+			return mMinSDKVersion;
+		}
+	}
+	
+	// return the application name.
+	public String getApplicationName() {
+		return mApplicationName;
+	}
+
+	// retrieve the package name.
+	public String getPackageName() {
+		return mPackage;
+	}
 }

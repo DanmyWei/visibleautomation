@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.List;
 
 import com.androidApp.EventRecorder.EventRecorder;
+import com.androidApp.EventRecorder.HierarchyRef;
 import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.Test.ActivityInterceptor;
 import com.androidApp.Test.R;
@@ -27,6 +28,7 @@ import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Handler;
+import android.util.Log;
 import android.view.Display;
 import android.view.GestureDetector;
 import android.view.GestureDetector.OnGestureListener;

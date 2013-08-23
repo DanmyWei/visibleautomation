@@ -202,18 +202,16 @@ public class EventRecorder extends EventRecorderInterface {
 	/**
 	 * does this view, its preorder index, and the operation. match a directive in the list of view directives?
 	 * @param view view to match
-	 * @param viewIndex index of the view in a preorder traversal of the view hierarchy 
 	 * @param operation view directive operation
 	 * @param viewDirectiveList list of directives for this activity (filtered)
 	 * @return
 	 */
 	public static boolean matchViewDirective(View 					      	view, 
-											 int						  	viewIndex,
 											 ViewDirective.ViewOperation 	operation,
 											 ViewDirective.When				when,
 											 List<ViewDirective> 		  	viewDirectiveList) {
 		for (ViewDirective viewDirective : viewDirectiveList) {
-			if (viewDirective.match(view, viewIndex, operation, when)) {
+			if (viewDirective.match(view, operation, when)) {
 				return true;
 			}
 		}
@@ -224,18 +222,16 @@ public class EventRecorder extends EventRecorderInterface {
 	/**
 	 * match against the internal list
 	 * @param view view to match
-	 * @param viewIndex its index within the view hierarchy: NOTE: BE CAREFUL TO NOT USE THE SAME VIEW MATCHER AS EVENTS
 	 * The Robotium stuff only indexes views based on whats visible, not on the entire view hierarchy
 	 * @param operation operaton to perform
 	 * @param when start, end, or always
 	 * @return true/false
 	 */
 	public boolean matchViewDirective(View 					      	view, 
-									  int						  	viewIndex,
 									  ViewDirective.ViewOperation 	operation,
 									  ViewDirective.When			when) {
 		for (ViewDirective viewDirective : mViewDirectiveList) {
-			if (viewDirective.match(view, viewIndex, operation, when)) {
+			if (viewDirective.match(view, operation, when)) {
 				return true;
 			}
 		}
@@ -246,8 +242,7 @@ public class EventRecorder extends EventRecorderInterface {
 	public void writeRecord(String event, View v, String message) {
 		try {
 			long time = SystemClock.uptimeMillis();
-			int viewIndex = TestUtils.classIndex(v.getRootView(), v);
-			if (!matchViewDirective(v, viewIndex, ViewDirective.ViewOperation.IGNORE_EVENTS, ViewDirective.When.ALWAYS)) {
+			if (!matchViewDirective(v, ViewDirective.ViewOperation.IGNORE_EVENTS, ViewDirective.When.ALWAYS)) {
 				writeRecord(event + ":" + time + "," + getViewReference().getReference(v) + "," + message);
 			}
 			mEventWasRecorded = true;
@@ -267,8 +262,7 @@ public class EventRecorder extends EventRecorderInterface {
 	public void writeRecord(String event, View v) {
 		try {
 			long time = SystemClock.uptimeMillis();
-			int viewIndex = TestUtils.classIndex(v.getRootView(), v);
-			if (!matchViewDirective(v, viewIndex, ViewDirective.ViewOperation.IGNORE_EVENTS, ViewDirective.When.ALWAYS)) {
+			if (!matchViewDirective(v, ViewDirective.ViewOperation.IGNORE_EVENTS, ViewDirective.When.ALWAYS)) {
 				writeRecord(event + ":" + time + "," + getViewReference().getReference(v));
 			}
 			mEventWasRecorded = true;
