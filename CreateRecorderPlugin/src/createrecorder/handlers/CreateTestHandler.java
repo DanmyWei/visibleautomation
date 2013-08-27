@@ -127,7 +127,9 @@ public class CreateTestHandler extends AbstractHandler {
 			// TODO: change this to get the information from the projectInformation, not the emitter.
 			String testClassPath = projectInformation.getStartActivity() + Constants.Extensions.TEST;
 			String testClassName = projectInformation.getStartActivityName() + Constants.Extensions.TEST;
-			String packagePath = projectInformation.getPackageName() +  Constants.Extensions.TEST;
+			
+			// am instrumentation requires this.
+			String packagePath = projectInformation.getPackageName() + ".test";
 			
 			// scan to see if there are any unit tests in the source folder. If so, then we create a unique index.
 			IFolder srcFolder = testProject.getFolder(Constants.Dirs.SRC);
@@ -141,14 +143,20 @@ public class CreateTestHandler extends AbstractHandler {
 				}
 			} else {
 				// create the project if the source folder doesn't exist.
-				String androidTarget = "target=android-" + Integer.toString(projectInformation.getSDKVersion());
+				// apparently, there is no android version 9 anymre
+				String androidTarget = null;
+				if (projectInformation.getSDKVersion() == 9) {
+					androidTarget = "target=android-10";
+				} else {
+					androidTarget = "target=android-" + Integer.toString(projectInformation.getSDKVersion());
+				}
 				codeGenerator.createProject(testProject, emitter, androidTarget, newProjectName, packagePath, testClassPath, testClassName);
 			}
 			codeGenerator.writeTheCode(emitter, outputCode, motionEvents, testProject, packagePath, projectInformation.getPackageName(),
 									   testClassPath, testClassName);
 			writeHandlers(testProject, outputCode);
 			// copy the view_directives.txt file back to the recorder
-			Exec.executeShellCommand("rm /sdcard/events.txt");
+			Exec.executeShellCommand("rm " + Constants.Filenames.VIEW_DIRECTIVES);
 			EclipseExec.executeAdbCommand("pull /sdcard/" + Constants.Filenames.VIEW_DIRECTIVES);
 			String recorderProjectName = projectName + RecorderConstants.RECORDER_SUFFIX;
 			IProject recorderProject = ResourcesPlugin.getWorkspace().getRoot().getProject(recorderProjectName);

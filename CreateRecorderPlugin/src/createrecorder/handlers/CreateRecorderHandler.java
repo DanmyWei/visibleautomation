@@ -2,11 +2,15 @@ package createrecorder.handlers;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
 import org.eclipse.core.commands.ExecutionException;
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.preferences.IPreferencesService;
 import org.eclipse.swt.widgets.Shell;
@@ -64,14 +68,15 @@ public class CreateRecorderHandler extends AbstractHandler {
 
 		TestClassDialog testClassDialog = new TestClassDialog();
 		String packagePath = testClassDialog.getTestClassDialog(shell, "Visible Automation", "Enter classpath of APK to record");
+		String apkFileName = PackageUtils.getPackageName(testClassDialog.mPackagePath);
 		if (packagePath != null) {	
 			try {
 				String os = Platform.getOS();
 				// TODO: TEST THIS
 				if (os.equals(Platform.OS_WIN32)) {	
-					ResignAPK.resignWin32(shell, testClassDialog.mMatchingClass, PackageUtils.getPackageName(testClassDialog.mPackagePath));
+					ResignAPK.resignWin32(shell, testClassDialog.mMatchingClass, apkFileName);
 				} else {
-					ResignAPK.resign(shell, testClassDialog.mMatchingClass, PackageUtils.getPackageName(testClassDialog.mPackagePath));
+					ResignAPK.resign(shell, testClassDialog.mMatchingClass, apkFileName);
 				}
 			} catch (Exception ex) {
 				ex.printStackTrace();
@@ -92,7 +97,7 @@ public class CreateRecorderHandler extends AbstractHandler {
 				AAPTBadgingValues aaptBadgingValues = new AAPTBadgingValues(aaptBadgingLines);
 				ProjectInformation projectInformation = new ProjectInformation();
 				if (projectInformation.init(shell, aaptBadgingValues, manifestInformation)) {
-					createProject(shell, projectInformation);
+					createProject(shell, projectInformation, apkFileName);
 				}
 			}
 		}
@@ -104,9 +109,10 @@ public class CreateRecorderHandler extends AbstractHandler {
 	 * @param shell
 	 * @param aaptBadgingValues extracted data from aapt dump badging APK
 	 * @param manifestInformation extracted data from aapt dump --values xmltree APK AndroidManifest.xml
+	 * @param apkFileName name of the actual apk file name
 	 * 
 	 */
-	public void createProject(Shell shell, ProjectInformation projectInformation) {
+	public void createProject(Shell shell, ProjectInformation projectInformation, String apkFileName) {
 		try {
 			String projectName = projectInformation.getApplicationName();
 			String launchableActivity = null;
@@ -117,7 +123,13 @@ public class CreateRecorderHandler extends AbstractHandler {
 			CreateRobotiumRecorderBinary createRecorder = new CreateRobotiumRecorderBinary();
 			
 			// create the .classpath, AndroidManifest.xml, .project, and project.properties files
-			String target = "target=android-" + Integer.toString(projectInformation.getSDKVersion());
+			// workaround: There is no android SDK=9
+			String target= null;
+			if (projectInformation.getSDKVersion() == 9) {
+				target = "target=android-10";
+			} else {
+				target = "target=android-" + Integer.toString(projectInformation.getSDKVersion());
+			}
 			createRecorder.createProjectProperties(testProject, target);
 			createRecorder.createProject(testProject, projectInformation.getApplicationName());
 			createRecorder.createClasspath(testProject, projectInformation.getApplicationName());
@@ -131,6 +143,8 @@ public class CreateRecorderHandler extends AbstractHandler {
 			createRecorder.createTestClass(testProject, javaProject, projectInformation.getPackageName(), projectInformation.getStartActivity());
 			createRecorder.createAllTests(testProject, javaProject, projectInformation.getPackageName());
 			createRecorder.addLibraries(testProject);
+			IFile file = testProject.getFile(apkFileName);
+			EclipseUtility.copyFileToProjectDirectory(testProject, apkFileName, apkFileName);
 		} catch (Exception ex) {
 			MessageDialog.openInformation(shell, RecorderConstants.VISIBLE_AUTOMATION,
 										  "There was an exception creating the test project " + ex.getMessage());

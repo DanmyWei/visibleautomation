@@ -165,9 +165,17 @@ public class EclipseUtility {
 		file.delete(false, null);
 		file.create(fis, IFile.FORCE, null);	
 	}
+	
 	public static void writeFile(IFolder folder, String srcFileName, String dstFileName) throws CoreException, FileNotFoundException {
 		InputStream fis = new FileInputStream(srcFileName);
 		IFile file = folder.getFile(dstFileName);
+		file.delete(false, null);
+		file.create(fis, IFile.FORCE, null);	
+	}
+	
+	public static void copyFileToProjectDirectory(IProject project, String srcFileName, String dstFileName) throws CoreException, FileNotFoundException {
+		InputStream fis = new FileInputStream(srcFileName);
+		IFile file = project.getFile(dstFileName);
 		file.delete(false, null);
 		file.create(fis, IFile.FORCE, null);	
 	}
@@ -294,5 +302,14 @@ public class EclipseUtility {
 		} else {
 			return FileUtility.findFile(buildToolsDir, RecorderConstants.AAPT);			
 		}
+	}
+	
+	// change the.class.name to the/class/path
+	public static String classNameToPath(String className) {
+		return className.replace('.', File.separatorChar);
+	}
+	// change the.class.name to the/class/path
+	public static String pathToClassName(String className) {
+		return className.replace(File.separatorChar, '.');
 	}
 }

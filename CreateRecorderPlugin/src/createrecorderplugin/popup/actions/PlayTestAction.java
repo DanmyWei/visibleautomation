@@ -26,6 +26,7 @@ import com.androidApp.util.Constants;
 
 import createrecorder.util.EclipseExec;
 import createrecorder.util.EclipseUtility;
+import createrecorder.util.RecorderConstants;
 
 /**
  * when we record a session with the device, we save the files, database, and shared_prefs file into the eclipse
@@ -86,9 +87,9 @@ public class PlayTestAction  implements IObjectActionDelegate {
 				// TODO: a fun and nasty hack.  If the user selects the original package, we find
 				// the package with the .test extension, so it'll work whether he selects the recorder
 				// or the source code.  
-				String testPackage = manifestParser.getPackage();
+				String testPackage = manifestParser.getTargetPackage();
 				if (!testPackage.endsWith(Constants.Extensions.TEST)) {
-					testPackage += Constants.Extensions.TEST;
+					testPackage += ".test";
 				}
 				
 				// uninstall and re-install the test driver
@@ -96,12 +97,37 @@ public class PlayTestAction  implements IObjectActionDelegate {
 				EclipseExec.execADBBackgroundConsoleOutput(uninstallCommand);
 				String installCommand = "adb install " + projectParser.getProjectName() + ".apk";
 				EclipseExec.execADBBackgroundConsoleOutput(installCommand);
-				String instrumentCommand = "shell am instrument -w " + testPackage + "/android.test.InstrumentationTestRunner";
-				EclipseExec.execADBBackgroundConsoleOutput(instrumentCommand);
+				String testPath = EclipseUtility.classNameToPath(testPackage);
+				IFolder classFolder = project.getFolder(Constants.Dirs.SRC + File.separator + testPath);
+				IResource[] packageContents = classFolder.members();
+				if ((packageContents != null) && (packageContents.length > 0)) {
+					IFolder saveStateFolder = project.getFolder(Constants.Dirs.SAVESTATE);
+					
+					// iterate through each class in the src folder, find the associated save state files for that
+					// class and install them on the device, then run each class as a single test case
+					// adb shell am instrument -w -e class com.android.foo.FooTest com.android.foo/android.test.InstrumentationTestRunner
+					for (IResource srcFile : packageContents) {
+						String fileName = srcFile.getName();
+						if ((srcFile.getType() == IResource.FILE) && 
+						    fileName.endsWith(Constants.Extensions.JAVA) &&
+						    !fileName.equals(RecorderConstants.ALLTESTS_FILE)) {
+							String className = testPackage + "." + fileName.substring(0, fileName.length() - 5);
+							IResource saveStateClassResource = saveStateFolder.findMember(className);
+							if ((saveStateClassResource != null) && (saveStateClassResource.getType() == IResource.FOLDER)) {
+								IFolder stateStateClassFolder = (IFolder) saveStateClassResource;
+								RecorderStateFilesAction.restoreStateFiles(stateStateClassFolder, stateStateClassFolder.getName(), Constants.Dirs.EXTERNAL_STORAGE);
+							}
+							String instrumentCommand = "shell am instrument -w -e class " + className + " " + 
+													   testPackage + "/android.test.InstrumentationTestRunner";
+							EclipseExec.execADBBackgroundConsoleOutput(instrumentCommand);
+						}
+					}
+				} else {
+					MessageDialog.openInformation(mShell, RecorderConstants.VISIBLE_AUTOMATION,
+							"the source directory has no test packages");
+				}
 			} catch (Exception ex) {
-				MessageDialog.openInformation(
-						mShell,
-						"Record test",
+				MessageDialog.openInformation(mShell, RecorderConstants.VISIBLE_AUTOMATION,
 						"There was an exception recording the project " + ex.getMessage());
 				ex.printStackTrace();				
 			}

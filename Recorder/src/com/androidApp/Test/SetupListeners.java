@@ -34,9 +34,9 @@ import com.androidApp.Intercept.MagicOverlay;
 import com.androidApp.Intercept.MagicOverlayDialog;
 import com.androidApp.Listeners.RecordWindowCallback;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.DialogUtils;
 import com.androidApp.Utility.FieldUtils;
 import com.androidApp.Utility.ReflectionUtils;
-import com.androidApp.Utility.TestUtils;
 import com.androidApp.Utility.ViewExtractor;
 import com.androidApp.Utility.WindowAndView;
 import com.androidApp.randomtest.RandTest;
@@ -148,17 +148,22 @@ public class SetupListeners {
 					EventRecorder recorder = SetupListeners.this.getRecorder();
 					Instrumentation instrumentation = SetupListeners.this.getInstrumentation();
 					if ((activity != null) && (viewInterceptor != null)) {
-						Dialog dialog = TestUtils.findDialog(activity);
-						if ((dialog != null) && 
+						Dialog dialog = DialogUtils.findDialog(activity);
+						
+						// intercept the dialog if it isn't null and it is showing and if it's not one of ours.
+						if ((dialog != null) && dialog.isShowing() &&
 							(dialog != DirectiveDialogs.getCurrentDialog()) &&
 							(dialog != viewInterceptor.getCurrentDialog())) {
-							instrumentation.runOnMainSync(new InterceptDialogRunnable(activity, dialog, recorder, viewInterceptor));
-							viewInterceptor.setCurrentDialog(dialog);
-							Spinner spinner = TestUtils.isSpinnerDialog(dialog, activity);
-							if (spinner != null) {
-								recorder.writeRecord(Constants.EventTags.CREATE_SPINNER_POPUP_DIALOG, spinner, "create spinner popup dialog");
-							} else {
-								SetupListeners.this.mRecorder.writeRecord(Constants.EventTags.CREATE_DIALOG, "dialog");
+							View contentView = DialogUtils.getDialogContentView(dialog);
+							if ((contentView != null) && contentView.isShown()) {
+								instrumentation.runOnMainSync(new InterceptDialogRunnable(activity, dialog, recorder, viewInterceptor));
+								viewInterceptor.setCurrentDialog(dialog);
+								Spinner spinner = DialogUtils.isSpinnerDialog(dialog, activity);
+								if (spinner != null) {
+									recorder.writeRecord(Constants.EventTags.CREATE_SPINNER_POPUP_DIALOG, spinner, "create spinner popup dialog");
+								} else {
+									SetupListeners.this.mRecorder.writeRecord(Constants.EventTags.CREATE_DIALOG, "dialog");
+								}
 							}
 						}
 					} else {
@@ -192,11 +197,11 @@ public class SetupListeners {
 					
 					// scan for a new popup window, or the options menu
 					if ((recorder != null) && (activity !=  null) && (viewInterceptor != null)) {
-						WindowAndView windowAndView = TestUtils.findPopupWindow(activity);
+						WindowAndView windowAndView = DialogUtils.findPopupWindow(activity);
 						if (windowAndView != null) {
 							if (windowAndView.mWindow instanceof PopupWindow) {
 								PopupWindow popupWindow = (PopupWindow) windowAndView.mWindow;
-								if ((popupWindow != null) && !TestUtils.isPopupWindowEmpty(popupWindow) && (popupWindow != viewInterceptor.getCurrentPopupWindow())) {
+								if ((popupWindow != null) && !DialogUtils.isPopupWindowEmpty(popupWindow) && (popupWindow != viewInterceptor.getCurrentPopupWindow())) {
 									viewInterceptor.setCurrentPopupWindow(popupWindow);
 									handleKnownPopupWindows(activity, popupWindow);
 								}
@@ -238,11 +243,11 @@ public class SetupListeners {
 	 * @throws ClassNotFoundException
 	 */
 	public void handleKnownPopupWindows(Activity activity, PopupWindow popupWindow) throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
-		if (TestUtils.isOptionsMenu(popupWindow)) {
+		if (DialogUtils.isOptionsMenu(popupWindow)) {
 			
 			// NOTE: this may not be neccessary, since we already return the view along with the window, and there's no reason to
 			// compute it twice.
-			View optionsMenuView = TestUtils.findViewForPopup(activity, popupWindow);
+			View optionsMenuView = DialogUtils.findViewForPopup(activity, popupWindow);
 			if (mViewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_MENU) {
 				mRecorder.writeRecord(Constants.EventTags.OPEN_ACTION_MENU_KEY, "open action menu from menu key");
 			} else {
@@ -252,11 +257,11 @@ public class SetupListeners {
 			mInstrumentation.runOnMainSync(new InsertKeyListenerRunnable(optionsMenuView));
 		} else {
 			// the popup window might have an anchor which changes the generated code, to spinner specific output
-			View anchorView = TestUtils.getPopupWindowAnchor(popupWindow);
-			if (TestUtils.isSpinnerPopup(popupWindow)) {
+			View anchorView = DialogUtils.getPopupWindowAnchor(popupWindow);
+			if (DialogUtils.isSpinnerPopup(popupWindow)) {
 				mRecorder.writeRecord(Constants.EventTags.CREATE_SPINNER_POPUP_WINDOW, anchorView, "create spinner popup window");
 				mInstrumentation.runOnMainSync(new InterceptSpinnerPopupWindowRunnable(popupWindow));
-			} else if (TestUtils.isAutoCompleteWindow(popupWindow)) {
+			} else if (DialogUtils.isAutoCompleteWindow(popupWindow)) {
 				mRecorder.writeRecord(Constants.EventTags.CREATE_AUTOCOMPLETE_DROPDOWN, anchorView, "create autocomplete dropdown");
 				mInstrumentation.runOnMainSync(new InterceptAutoCompleteDropdownRunnable(activity, popupWindow));
 			} else {
@@ -272,7 +277,7 @@ public class SetupListeners {
 	 * @return
 	 */
 	public boolean isSpinnerPopup(PopupWindow popupWindow) throws NoSuchFieldException, IllegalAccessException {
-		View anchorView = TestUtils.getPopupWindowAnchor(popupWindow);
+		View anchorView = DialogUtils.getPopupWindowAnchor(popupWindow);
 		return (anchorView instanceof Spinner);
 	}
 	
@@ -355,13 +360,13 @@ public class SetupListeners {
 		}
 		
 		public void run() {
-			View contentView = TestUtils.getDialogContentView(mDialog);
+			View contentView = DialogUtils.getDialogContentView(mDialog);
 			// add magic overlay here
 			try {
 				MagicFrame magicFrame = new MagicFrame(contentView.getContext(), contentView, 0, mRecorder, mViewInterceptor);
 				MagicOverlayDialog.addMagicOverlay(mActivity, mDialog, magicFrame, mRecorder);
 				// spinner dialogs have their own dismiss.
-				if (TestUtils.isSpinnerDialog(contentView)) {
+				if (DialogUtils.isSpinnerDialog(contentView)) {
 					mViewInterceptor.interceptSpinnerDialog(mDialog);
 				} else {
 					mViewInterceptor.interceptDialog(mActivity, mDialog);
@@ -409,7 +414,7 @@ public class SetupListeners {
 		
 		public void run() {
 			try {
-				SetupListeners.this.getViewInterceptor().callIntercept(mActivity, mView);
+				SetupListeners.this.getViewInterceptor().intercept(mActivity, mView);
 				Class viewRootImplClass = Class.forName(Constants.Classes.VIEW_ROOT_IMPL);
 				ViewParent viewParent = mView.getParent();
 				if (viewParent instanceof ViewGroup) {

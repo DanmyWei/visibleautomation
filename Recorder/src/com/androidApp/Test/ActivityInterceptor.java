@@ -24,6 +24,7 @@ import android.content.pm.ActivityInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.os.Debug;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -223,19 +224,28 @@ public class ActivityInterceptor {
 		pushActivityOnStack(activity);
 		if (!MagicFrame.isAlreadyInserted(activity)) {
 			MagicFrame.insertMagicFrame(mInstrumentation, peekActivityOnStack().getActivity(), mEventRecorder, mViewInterceptor);			
+			// NOTE: we install the listeners here, as well as on click, because even though it slows down
+			// the activity startup, it will speed up the key dispatch, which is essential, because the window 
+			// callback has a key dispatch timeout, and the activity startup doesn't
 			mInstrumentation.runOnMainSync(new InterceptActivityRunnable(activity));
-			mInstrumentation.runOnMainSync(new InsertRecordWindowCallbackRunnable(activity.getWindow(), mEventRecorder, mViewInterceptor));
+			mInstrumentation.runOnMainSync(new InsertRecordWindowCallbackRunnable(activity.getWindow(), activity, mEventRecorder, mViewInterceptor));
 			mInstrumentation.runOnMainSync(new CopyTextRunnable(mEventRecorder, activity));
 		}
 	}
 	
+	/**
+	 * in the default android rotation case, it finishes the last activity, then starts the new activity
+	 * with the elements repopulated.
+	 * @param activity
+	 * @param newRotation
+	 */
 	public void handleManualRotation(Activity activity, int newRotation) {
 		mEventRecorder.writeRotation(activity, newRotation);
 		replaceLastActivity(activity);
 		if (!MagicFrame.isAlreadyInserted(activity)) {
 			MagicFrame.insertMagicFrame(mInstrumentation, peekActivityOnStack().getActivity(), mEventRecorder, mViewInterceptor);			
 			mInstrumentation.runOnMainSync(new InterceptActivityRunnable(activity));
-			mInstrumentation.runOnMainSync(new InsertRecordWindowCallbackRunnable(activity.getWindow(), mEventRecorder, mViewInterceptor));
+			mInstrumentation.runOnMainSync(new InsertRecordWindowCallbackRunnable(activity.getWindow(), activity, mEventRecorder, mViewInterceptor));
 		}
 	}
 	
@@ -500,7 +510,9 @@ public class ActivityInterceptor {
 		
 		public void run() {
 			ActivityInterceptor.this.getViewInterceptor().findMotionEventViews(mActivity);
+			//Debug.startMethodTracing(mActivity.getClass().getName());
 			ActivityInterceptor.this.getViewInterceptor().intercept(mActivity);
+			//Debug.stopMethodTracing();
 		}
 	}
 	

@@ -435,7 +435,7 @@ public class GenerateRobotiumTestCode {
 
 		// create the build.xml, AndroidManifest.xml, and .classpath files
 		writeBuildXML(testProject, emitter.getApplicationClassPath());
-		writeManifest(testProject, testClassName, testClassPath, emitter.getApplicationPackage());
+		writeManifest(testProject, testClassName, testPackage, emitter.getApplicationPackage());
 		writeResources(testProject);				
 		writeClasspath(testProject,  projectName, Constants.Filenames.ROBOTIUM_JAR);
 		copyJarToLibs(testProject, Constants.Filenames.UTILITY_JAR);

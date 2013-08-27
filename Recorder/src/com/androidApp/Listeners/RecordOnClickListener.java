@@ -4,7 +4,7 @@ import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.EventRecorder.ViewDirective;
 import com.androidApp.Utility.Constants;
-import com.androidApp.Utility.TestUtils;
+import com.androidApp.Utility.DialogUtils;
 
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -49,7 +49,7 @@ public class RecordOnClickListener extends RecordListener implements View.OnClic
 		if (!RecordListener.getEventBlock()) {
 			setEventBlock(true);
 			View rootView = v.getRootView();
-			boolean fIsInDialog = (TestUtils.getDialog(rootView) != null);
+			boolean fIsInDialog = (DialogUtils.getDialog(rootView) != null);
 			boolean fWorkaroundDirective = mEventRecorder.matchViewDirective(v, ViewDirective.ViewOperation.CLICK_WORKAROUND, ViewDirective.When.ALWAYS);
 			try {
 				if (fIsInDialog || fWorkaroundDirective) { 

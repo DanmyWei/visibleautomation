@@ -34,6 +34,7 @@ import android.widget.AdapterView;
 import android.widget.AutoCompleteTextView;
 import android.widget.EditText;
 import android.widget.ExpandableListView;
+import android.widget.Gallery;
 import android.widget.ListView;
 import android.widget.PopupWindow;
 import android.widget.ScrollView;
@@ -135,7 +136,7 @@ public class RobotiumUtils {
 	// 3. wait for it to actually become visible
 	// 4. click on the item.
 	protected boolean waitAndClickInAdapter(Solo solo, AbsListView absListView, int itemIndex) {
-		scrollToViewVisible(solo, absListView);
+		scrollToViewVisible(absListView);
 		android.view.View adapterViewItem = null; 
 		mInstrumentation.runOnMainSync(new ScrollListRunnable(absListView, itemIndex));
 		if (waitForAdapterViewItem(solo, absListView, itemIndex, VIEW_TIMEOUT_MSEC)) {
@@ -262,6 +263,32 @@ public class RobotiumUtils {
 		return sActivityMonitorRunnable.getPreviousActivity();
 	}
 	
+	/**
+	 * this is an inadequate test for a scrolling container.  We need to also test whether it can be
+	 * scrolled by the content size.
+	 * 
+	 * @param v
+	 * @return
+	 */
+	public static boolean isScrollView(View v) {
+		if ((v instanceof ScrollView) || (v instanceof Gallery) || (v instanceof AdapterView)) {
+			return true;
+		}
+		// HorizontalScrolView may not be defined in earlier android APIs, so we have to extract it via
+		// reflection.
+		try {
+			Class<? extends View> cls = (Class<? extends View>) Class.forName(Constants.Classes.HORIZONTAL_SCROLL_VIEW);
+			if (cls.isAssignableFrom(v.getClass())) {
+				return true;
+			}
+		} catch (Exception ex) {		
+		}
+		
+		if (v.isHorizontalScrollBarEnabled() || v.isVerticalScrollBarEnabled()) {
+			return true;
+		}
+		return false;
+	}
 
 	/**
 	 * get the leastmost scrolling container for this view: NOTE: this may not be the container we're looking for,
@@ -269,11 +296,13 @@ public class RobotiumUtils {
 	 * @param v
 	 * @return
 	 */
-	public static ScrollView getScrollingContainer(View v) {
+	public static View getScrollingContainer(View v) {
 		ViewParent vp = v.getParent();
 		while (vp != null) {
-			if (vp instanceof ScrollView) {
-				return (ScrollView) vp;
+			if (vp instanceof View) {
+				if (isScrollView((View) vp)) {
+					return (View) vp;
+				}
 			}
 			vp = vp.getParent();
 			if ((vp == null) || (vp.getParent() == null)) {
@@ -286,7 +315,7 @@ public class RobotiumUtils {
 	/** 
 	 * return the rectangle of a view relative to its ancestor
 	 */
-	public static Rect getRelativeRect(ScrollView svAncestor, View view) {
+	public static Rect getRelativeRect(View svAncestor, View view) {
 		Rect r = new Rect(view.getLeft(), view.getTop(), view.getRight(), view.getBottom());
 		ViewParent vp = view.getParent();
 		while (vp != svAncestor) {
@@ -320,37 +349,95 @@ public class RobotiumUtils {
 	 * NOTE: this doesn't handle embedded scroll views.
 	 * @param v view to scroll into view.
 	 */
-	public void scrollToViewVisible(Solo solo, View v) {
-		ScrollView scrollingContainer = RobotiumUtils.getScrollingContainer(v);
+	public void scrollToViewVisible(View v) {
+		View scrollingContainer = RobotiumUtils.getScrollingContainer(v);
+		
 		if (scrollingContainer != null) {
-			Rect r = RobotiumUtils.getRelativeRect(scrollingContainer, v);
-			int scrollVertical = 0;
-			int scrollHorizontal = 0;
-			if (r.top < 0) {
-				scrollVertical = r.top;
-			} else if (r.bottom > scrollingContainer.getMeasuredHeight()) {
-				scrollVertical = r.bottom - scrollingContainer.getMeasuredHeight();
+			scrollToViewVisible(scrollingContainer, v);
+		}
+	}
+	
+	Rect getChildBounds(View v) {
+		Rect rect = new Rect();
+		if (v instanceof ViewGroup) {
+			ViewGroup vg = (ViewGroup) v;
+			View vChild = vg.getChildAt(0);
+			rect.left = vChild.getLeft();
+			rect.top = vChild.getTop();
+			rect.right = vChild.getRight();
+			rect.bottom = vChild.getBottom();
+			for (int i = 1; i < vg.getChildCount(); i++) {
+				vChild = vg.getChildAt(i);
+				rect.union(vChild.getLeft(), vChild.getTop());
+				rect.union(vChild.getRight(), vChild.getBottom());
 			}
-			if (r.left < 0) {
-				scrollHorizontal = r.left;
-			} else if (r.right > scrollingContainer.getMeasuredWidth()) {
-				scrollHorizontal = r.right - scrollingContainer.getMeasuredWidth();
-			}
-			if ((scrollVertical != 0) || (scrollHorizontal != 0)) {
-				int originalScrollX = scrollingContainer.getScrollX();
-				int originalScrollY = scrollingContainer.getScrollY();
-				Runnable runnable = new ScrollViewRunnable(scrollingContainer, scrollHorizontal, scrollVertical);
-				mInstrumentation.runOnMainSync(runnable);
-				int timeout = WAIT_SCROLL_MSEC;
-				while (timeout > 0) {
-					int currentScrollX = scrollingContainer.getScrollX();
-					int currentScrollY = scrollingContainer.getScrollY();
-					if ((currentScrollX == originalScrollX + scrollHorizontal) && (currentScrollY == originalScrollY + scrollVertical)) {
-						break;
-					}
-					sleep(WAIT_INCREMENT_MSEC);
-					timeout -= WAIT_INCREMENT_MSEC;
+		} else {
+			rect.left = 0;
+			rect.top = 0;
+			rect.right = v.getWidth();
+			rect.top = v.getHeight();
+		}
+		return rect;
+	}
+	
+	// recursive subfunction
+	// TODO: bound the scroll to the bounds.
+	protected void scrollToViewVisible(View scrollingContainer, View v) {
+		
+		// recursively scroll the parent to make it visible.
+		View scrollingContainerContainer = RobotiumUtils.getScrollingContainer(scrollingContainer);
+		if (scrollingContainerContainer != null) {
+			scrollToViewVisible(scrollingContainerContainer, v);
+		}
+		Rect r = RobotiumUtils.getRelativeRect(scrollingContainer, v);
+		int scrollVertical = 0;
+		int scrollHorizontal = 0;
+		if (r.top < 0) {
+			scrollVertical = r.top;
+		} else if (r.bottom > scrollingContainer.getHeight()) {
+			scrollVertical = r.bottom - scrollingContainer.getHeight();
+		}
+		if (r.left < 0) {
+			scrollHorizontal = r.left;
+		} else if (r.right > scrollingContainer.getWidth()) {
+			scrollHorizontal = r.right - scrollingContainer.getWidth();
+		}
+		// the scrolling container offsets its children's by the scroll amount, but obviously, it cannot
+		// scroll past the children's bounds
+		Rect childRect = getChildBounds(scrollingContainer);
+		
+		// try to align the views center to center
+		int centerVerticalOffset = scrollingContainer.getHeight()/2 - (r.bottom - r.top)/2;
+		scrollVertical -= centerVerticalOffset;
+		int centerHorizontalOffset = scrollingContainer.getWidth()/2 - (r.right - r.left)/2;
+		scrollHorizontal -= centerVerticalOffset;
+		if (scrollVertical < childRect.top){
+			scrollVertical = 0;
+		}
+		if (scrollVertical > childRect.bottom - scrollingContainer.getBottom()) {
+			scrollVertical = childRect.bottom - scrollingContainer.getBottom();
+		}
+		if (scrollHorizontal < childRect.left) {
+			scrollHorizontal = 0;
+		}
+		if (scrollHorizontal > childRect.right - scrollingContainer.getRight()) {
+			scrollHorizontal = childRect.right - scrollingContainer.getRight();
+		}
+		
+		int originalScrollX = scrollingContainer.getScrollX();
+		int originalScrollY = scrollingContainer.getScrollY();
+		if ((scrollVertical != originalScrollX) || (scrollHorizontal != originalScrollY)) {
+			Runnable runnable = new ScrollViewRunnable(scrollingContainer, scrollHorizontal, scrollVertical);
+			mInstrumentation.runOnMainSync(runnable);
+			int timeout = WAIT_SCROLL_MSEC;
+			while (timeout > 0) {
+				int currentScrollX = scrollingContainer.getScrollX();
+				int currentScrollY = scrollingContainer.getScrollY();
+				if ((currentScrollX == originalScrollX + scrollHorizontal) && (currentScrollY == originalScrollY + scrollVertical)) {
+					break;
 				}
+				sleep(WAIT_INCREMENT_MSEC);
+				timeout -= WAIT_INCREMENT_MSEC;
 			}
 		}
 	}
@@ -362,7 +449,7 @@ public class RobotiumUtils {
 	 * @param v view to click on
 	 */
 	public boolean clickOnViewAndScrollIfNeeded(Solo solo, View v) {
-		scrollToViewVisible(solo, v);
+		scrollToViewVisible(v);
 		solo.clickOnView(v, true);
 		return true;
 	}
@@ -883,6 +970,9 @@ public class RobotiumUtils {
 		return null;
 	}
 	
+	public boolean waitForView(View v, long timeoutMsec) {
+		return Waiter.waitForView(v, timeoutMsec);
+	}
 	
 	public void requestFocus(View v, int startInsertion, int endInsertion) {
 		mInstrumentation.runOnMainSync(new RequestFocusRunnable(v, startInsertion, endInsertion));

@@ -35,8 +35,9 @@ import com.androidApp.Intercept.directivedialogs.OnViewSelectionListener;
 import com.androidApp.Test.ActivityInterceptor;
 import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.DialogUtils;
+import com.androidApp.Utility.ResourceUtils;
 import com.androidApp.Utility.StringUtils;
-import com.androidApp.Utility.TestUtils;
 
 /**
  * dialogs which are displayed from the magic overlay to enter information for view directives,
@@ -136,14 +137,14 @@ public class DirectiveDialogs {
 		public void onClick(DialogInterface dialog, int which) {
 			if (which == 0) {
 				try {
-					TextView dialogTitle = TestUtils.getDialogTitleView(mMagicOverlayDialog.getTargetDialog());
+					TextView dialogTitle = DialogUtils.getDialogTitleView(mMagicOverlayDialog.getTargetDialog());
 					if (dialogTitle != null) {
 						String title = dialogTitle.getText().toString();
 						if (title != null) {
 							Resources res = mMagicOverlayDialog.getActivity().getResources();
 							EventRecorder eventRecorder = DirectiveDialogs.this.getEventRecorder();
 							List<Object> resourceIds =  eventRecorder.getViewReference().getStringList();		
-							List<String> resIds = TestUtils.getIdForString(res, resourceIds, title);
+							List<String> resIds = ResourceUtils.getIdForString(res, resourceIds, title);
 							if (resIds.size() == 1) {
 								String msg = mMagicOverlayDialog.getActivity().getClass().getName() + "," + resIds.get(0);
 								eventRecorder.writeRecord(Constants.EventTags.INTERSTITIAL_DIALOG_TITLE_ID, msg);

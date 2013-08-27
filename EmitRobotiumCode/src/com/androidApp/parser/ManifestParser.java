@@ -24,12 +24,15 @@ public class ManifestParser extends Parser {
 	protected final String ACTIVITY_TAG = "manifest.application.activity";
 	protected final String ACTION_TAG = "manifest.application.activity.intent-filter.action";
 	protected final String CATEGORY_TAG = "manifest.application.activity.intent-filter.category";
+	protected final String INSTRUMENTATION_TAG = "manifest.instrumentation";
 	protected final String USES_SDK_TAG = "manifest.uses-sdk";
 	protected final String MIN_SDK_VERSION_ATTRIBUTE = "android:minSdkVersion";
 	protected final String PACKAGE_ATTRIBUTE = "package";
+	protected final String TARGET_PACKAGE_ATTRIBUTE = "android:targetPackage";
 	protected final String NAME_ATTRIBUTE = "android:name";
 	protected final String LAUNCHER_VALUE = "android.intent.category.LAUNCHER";
 	protected String mPackage = null;
+	protected String mTargetPackage = null;
 	protected String mCandidateActivity = null;
 	protected String mStartActivity = null;
 	protected String mMinSdkVersion = null;
@@ -53,6 +56,11 @@ public class ManifestParser extends Parser {
 		SAXParser parser = factory.newSAXParser();
 		parser.parse(manifestFile, this);
 	}
+	
+	public String getTargetPackage() {
+		return mTargetPackage;
+	}
+	
 	
 	public String getPackage() {
 		return mPackage;
@@ -88,6 +96,8 @@ public class ManifestParser extends Parser {
 			if (nameValue.equals(LAUNCHER_VALUE)) {
 				mStartActivity = mCandidateActivity;
 			}		
+		} else if (compareTag(INSTRUMENTATION_TAG)) {
+			mTargetPackage = attributes.getValue(TARGET_PACKAGE_ATTRIBUTE);
 		} else if (compareTag(USES_SDK_TAG)) {
 			mMinSdkVersion = attributes.getValue(MIN_SDK_VERSION_ATTRIBUTE);
 		}

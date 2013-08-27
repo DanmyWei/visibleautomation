@@ -130,17 +130,17 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	/**
 	 * actually emit robotium code from a recorded file
 	 * TODO: change this so it returns the target class path and class name, not modifying statics
-	 * @param br BufferedReader on events.txt file
-	 * @param line line read from caller (br is sequential)
-	 * @param nextLine line after line read from caller
-	 * @param appOutput application output class: lines for main and interstitial activities.
-	 * @param lines output lines
+	 * @param tokenLines vector of parsed lines read from events.txt
+	 * @param startReadIndex starting index
+	 * @param outputCode code output and last read index (for recursion into conditional/interstitials)
+	 * @param motionEvents motion events parsed 
+	 * @param outputType controls termination for main or interstitial runs
 	 * @throws IOException
 	 * @throws EmitterException
 	 */
 	@Override
 	public CodeOutput emit(List<List<String>>								tokenLines,
-							int												currentReadIndex,
+							int												startReadIndex,
 							Hashtable<CodeDefinition, List<LineAndTokens>>	outputCode,
 							List<MotionEventList> 							motionEvents,
 							OutputType										outputType) throws IOException, EmitterException {
@@ -153,7 +153,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		Stack<String> activityStack = new Stack<String>();
 		TokenScanner tokenScanner = new TokenScanner();					// for predicate test against read lines
 		int readIndex;
-		for (readIndex = currentReadIndex; readIndex < tokenLines.size(); readIndex++) {
+		for (readIndex = startReadIndex; readIndex < tokenLines.size(); readIndex++) {
 			List<String> tokens = tokenLines.get(readIndex);
 			try {
 				
@@ -261,7 +261,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 					
 					// if we're in an interstitial, that means that it's time to go, but don't forget to add the next wait for activity call
 					if ((outputType == OutputType.INTERSTITIAL_ACTIVITY) || (outputType == OutputType.INTERSTITIAL_DIALOG)) {
-						return new CodeOutput(lines, currentReadIndex + 1);
+						return new CodeOutput(lines, readIndex + 1);
 					}
 				} else if (Constants.ActivityEvent.ACTIVITY_BACK.equals(action) || Constants.UserEvent.ACTIVITY_BACK_KEY.equals(action)) {
 					if (!activityStack.isEmpty()) {
@@ -419,8 +419,8 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 					}
 				}
 			} catch (Exception ex) {
-				System.err.println("error parsing line " + currentReadIndex);
-				System.err.println("line = " + tokenLines.get(currentReadIndex));
+				System.err.println("error parsing line " + startReadIndex);
+				System.err.println("line = " + tokenLines.get(startReadIndex));
 				ex.printStackTrace();
 				System.exit(-1);
 			}

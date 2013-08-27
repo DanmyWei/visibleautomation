@@ -16,8 +16,8 @@ import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.Intercept.DirectiveDialogs.OnBaseDialogSelectionListener;
 import com.androidApp.Intercept.MagicOverlay.ClickMode;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.ResourceUtils;
 import com.androidApp.Utility.StringUtils;
-import com.androidApp.Utility.TestUtils;
 
 /**
  * variant of magic overlays which takes a dialog parameter
@@ -78,7 +78,7 @@ public class MagicOverlayDialog extends MagicOverlay {
 						if (text != null) {
 							Resources res = getActivity().getResources();
 							List<Object> resourceIds =  mRecorder.getViewReference().getStringList();		
-							List<String> resIds = TestUtils.getIdForString(res, resourceIds, text);
+							List<String> resIds = ResourceUtils.getIdForString(res, resourceIds, text);
 							if (resIds.size() == 1) {
 								String msg = getActivity().getClass().getName() + "," + resIds.get(0);
 								mRecorder.writeRecord(Constants.EventTags.INTERSTITIAL_DIALOG_CONTENTS_ID, msg);
