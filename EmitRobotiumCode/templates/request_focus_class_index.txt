@@ -1,4 +1,4 @@
 		// %DESCRIPTION%
 		View view%VARIABLE_INDEX% = robotiumUtils.getView(%CLASSPATH%.class, %REAL_INDEX%);
-		robotiumUtils.scrollToViewVisible(solo, view%VARIABLE_INDEX%);
+		robotiumUtils.scrollToViewVisible(view%VARIABLE_INDEX%);
 		robotiumUtils.requestFocus(view%VARIABLE_INDEX%, %INSERTION_START%, %INSERTION_END%);

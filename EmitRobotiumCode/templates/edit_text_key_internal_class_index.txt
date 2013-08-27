@@ -1,4 +1,4 @@
 		// %DESCRIPTION%
 		android.widget.EditText editText%VARIABLE_INDEX% = (android.widget.EditText) robotiumUtils.getView((Class<? extends View>) Class.forName("%INTERNAL_CLASS%"), %REAL_INDEX%);
-		robotiumUtils.scrollToViewVisible(solo, editText%VARIABLE_INDEX%);
+		robotiumUtils.scrollToViewVisible(editText%VARIABLE_INDEX%);
 		robotiumUtils.enterText(editText%VARIABLE_INDEX%, %INSERT%, "%TEXT%");

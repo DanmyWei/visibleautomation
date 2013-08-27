@@ -21,11 +21,11 @@ import com.androidApp.util.PlaybackMotionEvents;
 public class %TESTCLASSNAME% extends ActivityInstrumentationTestCase2 {
   	private Solo 			solo;
   	private RobotiumUtils	robotiumUtils;
-  	protected static final int ACTIVITY_WAIT_MSEC = 30000;		// wait 30 seconds for new activities by default
-  	protected static final int WEBVIEW_WAIT_MSEC = 10000;		// wait 10 seconds for URL load by default
+  	protected static final int ACTIVITY_WAIT_MSEC = 60000;		// wait 60 seconds for new activities by default
+  	protected static final int WEBVIEW_WAIT_MSEC = 100000;		// wait 10 seconds for URL load by default
 	protected static final int DIALOG_CLOSE_TIMEOUT = 30000;		// wait 30 seconds for dialogs to close.
 	protected static final int DIALOG_OPEN_TIMEOUT = 30000;		// wait 30 seconds for dialogs to open.
-  	protected static final int VIEW_WAIT_MSEC = 15000;			// wait 15 seconds for views to appear
+  	protected static final int VIEW_WAIT_MSEC = 120000;			// wait 120 seconds for views to appear
   	protected static Class<? extends Activity> sActivityClass;
  	protected static final String TESTCLASSNAME = %TESTCLASSNAME%.class.getSimpleName();	// for motion event directory reference
   	

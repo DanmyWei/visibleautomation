@@ -1,4 +1,4 @@
 		// %DESCRIPTION%
 		ExpandableListView expandableListView%VARIABLE_INDEX% = (ExpandableListView) RobotiumUtils.getView(ExpandableListView.class, %REAL_INDEX%);
-		scrollToViewVisible(solo, expandableListView%VARIABLE_INDEX%);
+		scrollToViewVisible(expandableListView%VARIABLE_INDEX%);
 		robotiumUtils.clickChild(expandableListView%VARIABLE_INDEX%, %ITEM_INDEX%);

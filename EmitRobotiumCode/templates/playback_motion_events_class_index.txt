@@ -1,6 +1,6 @@
 		// %DESCRIPTION%
 		%CLASSPATH% view%VARIABLE_INDEX% = (%CLASSPATH%) robotiumUtils.getView(%CLASSPATH%.class, %REAL_INDEX%);
-		robotiumUtils.scrollToViewVisible(solo, view%VARIABLE_INDEX%);
+		robotiumUtils.scrollToViewVisible(view%VARIABLE_INDEX%);
 		PlaybackMotionEvents motionEvents%MOTION_EVENT_VARIABLE_INDEX% = new PlaybackMotionEvents(getInstrumentation(), TESTCLASSNAME + "/%UNIQUE_NAME%_MotionEvents%MOTION_EVENT_VARIABLE_INDEX%.txt");
 		motionEvents%MOTION_EVENT_VARIABLE_INDEX%.playback(getInstrumentation(), view%VARIABLE_INDEX%, false);
 		
