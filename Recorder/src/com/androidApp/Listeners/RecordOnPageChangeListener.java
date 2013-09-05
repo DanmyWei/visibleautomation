@@ -4,6 +4,7 @@ import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.Utility.Constants;
 
+import android.app.Activity;
 import android.support.v4.view.ViewPager;
 
 /**
@@ -17,21 +18,22 @@ public class RecordOnPageChangeListener extends RecordListener implements ViewPa
 	protected ViewPager.OnPageChangeListener 	mOriginalOnPageChangeListener;
 	protected ViewPager							mViewPager;
 	
-	public RecordOnPageChangeListener(EventRecorder eventRecorder, ViewPager viewPager) {
-		super(eventRecorder);
+	public RecordOnPageChangeListener(String activityName, EventRecorder eventRecorder, ViewPager viewPager) {
+		super(activityName, eventRecorder);
 		mViewPager = viewPager;
 		try {
 			mOriginalOnPageChangeListener = ListenerIntercept.getPageChangeListener(viewPager);
 			viewPager.setOnPageChangeListener(this);
 		} catch (Exception ex) {
-			mEventRecorder.writeException(ex, viewPager, "create on page change listener");
+			mEventRecorder.writeException(ex, activityName, viewPager, "create on page change listener");
 		}		
 	}
 	
-	public RecordOnPageChangeListener(EventRecorder 					eventRecorder, 
-									  ViewPager.OnPageChangeListener originalPageChangeListener,
-									  ViewPager						 viewPager) {
-		super(eventRecorder);
+	public RecordOnPageChangeListener(String							activityName,
+									  EventRecorder 					eventRecorder, 
+									  ViewPager.OnPageChangeListener 	originalPageChangeListener,
+									  ViewPager						 	viewPager) {
+		super(activityName, eventRecorder);
 		mViewPager = viewPager;
 		mOriginalOnPageChangeListener = originalPageChangeListener;
 	}
@@ -47,9 +49,9 @@ public class RecordOnPageChangeListener extends RecordListener implements ViewPa
 			setEventBlock(true);
 			try {
 				String logMsg = Integer.toString(state) + "," + getDescription(mViewPager);
-				mEventRecorder.writeRecord(Constants.EventTags.PAGE_SCROLL_STATE_CHANGED, mViewPager, logMsg);
+				mEventRecorder.writeRecord(Constants.EventTags.PAGE_SCROLL_STATE_CHANGED, mActivityName, mViewPager, logMsg);
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, mViewPager, "on page scroll state changed");
+				mEventRecorder.writeException(ex, mActivityName, mViewPager, "on page scroll state changed");
 			}
 		}
 		if (!fReentryBlock) {
@@ -68,9 +70,9 @@ public class RecordOnPageChangeListener extends RecordListener implements ViewPa
 				String logMsg = Integer.toString(position) + "," + 
 								Float.toString(positionOffset) + "," +
 								Integer.toString(positionOffsetPixels) + "," + getDescription(mViewPager);
-				mEventRecorder.writeRecord(Constants.EventTags.PAGE_SCROLLED, logMsg);
+				mEventRecorder.writeRecord(mActivityName, Constants.EventTags.PAGE_SCROLLED, logMsg);
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, mViewPager, "on page scroll state changed");
+				mEventRecorder.writeException(ex, mActivityName, mViewPager, "on page scroll state changed");
 			}
 		}
 		if (!fReentryBlock) {
@@ -87,9 +89,9 @@ public class RecordOnPageChangeListener extends RecordListener implements ViewPa
 			setEventBlock(true);
 			try {
 				String logMsg = Integer.toString(position) + "," + getDescription(mViewPager);
-				mEventRecorder.writeRecord(Constants.EventTags.PAGE_SELECTED, logMsg);
+				mEventRecorder.writeRecord(mActivityName, Constants.EventTags.PAGE_SELECTED, logMsg);
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, mViewPager, "on page scroll state changed");
+				mEventRecorder.writeException(ex, mActivityName, mViewPager, "on page scroll state changed");
 			}
 		}
 		if (!fReentryBlock) {

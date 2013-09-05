@@ -44,7 +44,7 @@ public class InsertRecordWindowCallbackRunnable implements Runnable {
 				mWindow.setCallback(recordCallback);
 			}
 		} catch (Exception ex) {
-			mRecorder.writeException(ex, "installing window callback recorder");
+			mRecorder.writeException(mActivity.getClass().getName(), ex, "installing window callback recorder");
 		}
 	}
 

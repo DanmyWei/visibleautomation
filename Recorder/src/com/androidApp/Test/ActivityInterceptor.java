@@ -220,7 +220,7 @@ public class ActivityInterceptor {
 	
 	public void handleNewActivity(Activity activity) {
 		String logMsg =  activity.getClass().getName() + "," + activity.toString();
-		mEventRecorder.writeRecord(Constants.EventTags.ACTIVITY_FORWARD, logMsg);
+		mEventRecorder.writeRecord(activity.toString(), Constants.EventTags.ACTIVITY_FORWARD, logMsg);
 		pushActivityOnStack(activity);
 		if (!MagicFrame.isAlreadyInserted(activity)) {
 			MagicFrame.insertMagicFrame(mInstrumentation, peekActivityOnStack().getActivity(), mEventRecorder, mViewInterceptor);			
@@ -263,9 +263,9 @@ public class ActivityInterceptor {
 		try {
 			mEventRecorder.getViewReference().initializeWithActivity(activity, mInstrumentation);
 			String packageName = getPackageName(activity);
-			mEventRecorder.writeRecord(Constants.EventTags.PACKAGE, packageName);
+			mEventRecorder.writeRecord(activity.toString(), Constants.EventTags.PACKAGE, packageName);
 		} catch (Exception ex) {
-			mEventRecorder.writeException(ex, "getting package name");
+			mEventRecorder.writeException(activity.toString(), ex, "getting package name");
 		}
 	}
 	
@@ -273,10 +273,10 @@ public class ActivityInterceptor {
 		if (mViewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_BACK) {
 			mViewInterceptor.setLastKeyAction(-1);
 			String logMsg = activity.getClass().getName() + "," + activity;
-			mEventRecorder.writeRecord(Constants.EventTags.ACTIVITY_BACK_KEY, logMsg);
+			mEventRecorder.writeRecord(activity.toString(), Constants.EventTags.ACTIVITY_BACK_KEY, logMsg);
 		} else {
 			String logMsg = activity.getClass().getName() + "," + activity;
-			mEventRecorder.writeRecord(Constants.EventTags.ACTIVITY_BACK, logMsg);
+			mEventRecorder.writeRecord(activity.toString(), Constants.EventTags.ACTIVITY_BACK, logMsg);
 		}
 	}
 	
@@ -285,10 +285,10 @@ public class ActivityInterceptor {
         long time = SystemClock.uptimeMillis();
 		if (mViewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_BACK) {
 			mViewInterceptor.setLastKeyAction(-1);
- 			mEventRecorder.writeRecord(Constants.EventTags.ACTIVITY_BACK_KEY + ":" + time);
+ 			mEventRecorder.writeRecord(activity, Constants.EventTags.ACTIVITY_BACK_KEY);
 		} else {
 			String logMsg = activity.getClass().getName() + "," + "no previous activity";
-			mEventRecorder.writeRecord(Constants.EventTags.ACTIVITY_BACK + ":" + time);
+			mEventRecorder.writeRecord(activity, Constants.EventTags.ACTIVITY_BACK);
 		}
 	}
 	
@@ -510,9 +510,7 @@ public class ActivityInterceptor {
 		
 		public void run() {
 			ActivityInterceptor.this.getViewInterceptor().findMotionEventViews(mActivity);
-			//Debug.startMethodTracing(mActivity.getClass().getName());
 			ActivityInterceptor.this.getViewInterceptor().intercept(mActivity);
-			//Debug.stopMethodTracing();
 		}
 	}
 	

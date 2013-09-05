@@ -99,13 +99,10 @@ public class SetupListeners {
 		mContext = context;
 		mRecorder = new EventRecorder(mInstrumentation, mContext, Constants.Files.EVENTS, Constants.Files.VIEW_DIRECTIVES, fBinary);
 		mViewInterceptor = new ViewInterceptor(mRecorder, mRecordTest);
-		mIMEMessageListener = new IMEMessageListener(mViewInterceptor, mRecorder);
-		Thread thread = new Thread(mIMEMessageListener);
-		thread.start();
 	}
 	
 	/**
-	 * Initializes the global timer, activity interceptor, dialog listener, and 
+	 * Initializes the global timer, activity interceptor, dialog listener, IME listener, and 
 	 * popup window listener, then launches the activity
 	 * @throws IOException
 	 */
@@ -124,6 +121,9 @@ public class SetupListeners {
 			}
 		} catch (InterruptedException iex) {
 		}
+		mIMEMessageListener = new IMEMessageListener(mViewInterceptor, mActivityInterceptor, mRecorder);
+		Thread thread = new Thread(mIMEMessageListener);
+		thread.start();
 		Intent intent = new Intent(Intent.ACTION_MAIN);
 		intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 		// so we can get the package name to write in the manifest and classpath
@@ -160,9 +160,9 @@ public class SetupListeners {
 								viewInterceptor.setCurrentDialog(dialog);
 								Spinner spinner = DialogUtils.isSpinnerDialog(dialog, activity);
 								if (spinner != null) {
-									recorder.writeRecord(Constants.EventTags.CREATE_SPINNER_POPUP_DIALOG, spinner, "create spinner popup dialog");
+									recorder.writeRecord(Constants.EventTags.CREATE_SPINNER_POPUP_DIALOG, activity.toString(), spinner, "create spinner popup dialog");
 								} else {
-									SetupListeners.this.mRecorder.writeRecord(Constants.EventTags.CREATE_DIALOG, "dialog");
+									SetupListeners.this.mRecorder.writeRecord(activity.toString(), Constants.EventTags.CREATE_DIALOG, "dialog");
 								}
 							}
 						}
@@ -211,16 +211,16 @@ public class SetupListeners {
 									// rather than an extension submenu, sometimes it comes up as another completely unrecognizable
 									// class, and we can't access the onDismissListener, so we poll for the dismissal
 									viewInterceptor.setCurrentFloatingWindow(windowAndView.mWindow);
-									recorder.writeRecord(Constants.EventTags.CREATE_POPUP_WINDOW, "create floating window " + windowAndView.mWindow.getClass().getName());
+									recorder.writeRecord(activity.getClass().getName(), Constants.EventTags.CREATE_POPUP_WINDOW, "create floating window " + windowAndView.mWindow.getClass().getName());
 									instrumentation.runOnMainSync(new InterceptFloatingWindowRunnable(activity, windowAndView.mView, windowAndView.mWindow));
 								}
 							}
 						} else if (viewInterceptor.getCurrentFloatingWindow() != null) {
 							if (viewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_BACK) {
-								recorder.writeRecord(Constants.EventTags.DISMISS_POPUP_WINDOW_BACK_KEY, "dismiss floating window with the back key");
+								recorder.writeRecord(activity.getClass().getName(), Constants.EventTags.DISMISS_POPUP_WINDOW_BACK_KEY, "dismiss floating window with the back key");
 								viewInterceptor.setLastKeyAction(-1);
 							} else {
-								recorder.writeRecord(Constants.EventTags.DISMISS_POPUP_WINDOW, "dismiss floating window");
+								recorder.writeRecord(activity.getClass().getName(), Constants.EventTags.DISMISS_POPUP_WINDOW, "dismiss floating window");
 							}
 							viewInterceptor.setCurrentFloatingWindow(null);
 						}
@@ -249,9 +249,9 @@ public class SetupListeners {
 			// compute it twice.
 			View optionsMenuView = DialogUtils.findViewForPopup(activity, popupWindow);
 			if (mViewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_MENU) {
-				mRecorder.writeRecord(Constants.EventTags.OPEN_ACTION_MENU_KEY, "open action menu from menu key");
+				mRecorder.writeRecord(activity.getClass().getName(), Constants.EventTags.OPEN_ACTION_MENU_KEY, "open action menu from menu key");
 			} else {
-				mRecorder.writeRecord(Constants.EventTags.OPEN_ACTION_MENU, "open action menu");
+				mRecorder.writeRecord(activity.getClass().getName(), Constants.EventTags.OPEN_ACTION_MENU, "open action menu");
 			}
 			// TODO: is this needed?
 			mInstrumentation.runOnMainSync(new InsertKeyListenerRunnable(optionsMenuView));
@@ -259,14 +259,14 @@ public class SetupListeners {
 			// the popup window might have an anchor which changes the generated code, to spinner specific output
 			View anchorView = DialogUtils.getPopupWindowAnchor(popupWindow);
 			if (DialogUtils.isSpinnerPopup(popupWindow)) {
-				mRecorder.writeRecord(Constants.EventTags.CREATE_SPINNER_POPUP_WINDOW, anchorView, "create spinner popup window");
-				mInstrumentation.runOnMainSync(new InterceptSpinnerPopupWindowRunnable(popupWindow));
+				mRecorder.writeRecord(Constants.EventTags.CREATE_SPINNER_POPUP_WINDOW, activity.toString(), anchorView, "create spinner popup window");
+				mInstrumentation.runOnMainSync(new InterceptSpinnerPopupWindowRunnable(activity, popupWindow));
 			} else if (DialogUtils.isAutoCompleteWindow(popupWindow)) {
-				mRecorder.writeRecord(Constants.EventTags.CREATE_AUTOCOMPLETE_DROPDOWN, anchorView, "create autocomplete dropdown");
+				mRecorder.writeRecord(Constants.EventTags.CREATE_AUTOCOMPLETE_DROPDOWN, activity.toString(), anchorView, "create autocomplete dropdown");
 				mInstrumentation.runOnMainSync(new InterceptAutoCompleteDropdownRunnable(activity, popupWindow));
 			} else {
-				mRecorder.writeRecord(Constants.EventTags.CREATE_POPUP_WINDOW, "create popup window");
-				mInstrumentation.runOnMainSync(new InterceptPopupWindowRunnable(popupWindow));
+				mRecorder.writeRecord(activity.toString(), Constants.EventTags.CREATE_POPUP_WINDOW, "create popup window");
+				mInstrumentation.runOnMainSync(new InterceptPopupWindowRunnable(activity, popupWindow));
 			}		
 		}
 	}
@@ -324,13 +324,11 @@ public class SetupListeners {
 		}
 		@Override
 		public void run() {
-			InterceptKeyViewMenu interceptKeyView = new InterceptKeyViewMenu(mExpandedMenuView.getContext(), 
+			Activity activity = (Activity) mExpandedMenuView.getContext();
+			InterceptKeyViewMenu interceptKeyView = new InterceptKeyViewMenu(activity, mExpandedMenuView.getContext(), 
 																			 SetupListeners.this.getRecorder(),
 																			 SetupListeners.this.getViewInterceptor());
 			((ViewGroup) mExpandedMenuView).addView(interceptKeyView);
-			/*
-			interceptKeyView.requestFocus();
-			*/	
 		}
 	}
 	/**
@@ -363,16 +361,16 @@ public class SetupListeners {
 			View contentView = DialogUtils.getDialogContentView(mDialog);
 			// add magic overlay here
 			try {
-				MagicFrame magicFrame = new MagicFrame(contentView.getContext(), contentView, 0, mRecorder, mViewInterceptor);
+				MagicFrame magicFrame = new MagicFrame(contentView.getContext(), mActivity, contentView, 0, mRecorder, mViewInterceptor);
 				MagicOverlayDialog.addMagicOverlay(mActivity, mDialog, magicFrame, mRecorder);
 				// spinner dialogs have their own dismiss.
 				if (DialogUtils.isSpinnerDialog(contentView)) {
-					mViewInterceptor.interceptSpinnerDialog(mDialog);
+					mViewInterceptor.interceptSpinnerDialog(mActivity.toString(), mDialog);
 				} else {
-					mViewInterceptor.interceptDialog(mActivity, mDialog);
+					mViewInterceptor.interceptDialog(mActivity, mActivity.toString(), mDialog);
 				}
 			} catch (Exception ex) {
-				mRecorder.writeException(ex, "Intercepting dialog");
+				mRecorder.writeException(mActivityName, ex, "Intercepting dialog");
 			}
 		}
 	}
@@ -382,16 +380,18 @@ public class SetupListeners {
 	 */
 	protected class InterceptPopupWindowRunnable implements Runnable {
 		protected PopupWindow mPopupWindow;
+		protected Activity mActivity;
 		
-		public InterceptPopupWindowRunnable(PopupWindow popupWindow) {
+		public InterceptPopupWindowRunnable(Activity activity, PopupWindow popupWindow) {
 			mPopupWindow = popupWindow;
+			mActivity = activity;
 		}
 		
 		public void run() {
 			View contentView = mPopupWindow.getContentView();
 			if (contentView != null) {
 				MagicFramePopup magicFramePopup = new MagicFramePopup(contentView.getContext(), mPopupWindow, mRecorder, mViewInterceptor);
-				SetupListeners.this.getViewInterceptor().interceptPopupWindow(SetupListeners.this.mRecorder, mPopupWindow);
+				SetupListeners.this.getViewInterceptor().interceptPopupWindow(mActivity, mActivity.toString(), SetupListeners.this.mRecorder, mPopupWindow);
 			}
 		}
 	}
@@ -414,7 +414,7 @@ public class SetupListeners {
 		
 		public void run() {
 			try {
-				SetupListeners.this.getViewInterceptor().intercept(mActivity, mView);
+				SetupListeners.this.getViewInterceptor().intercept(mActivity, mActivity.toString(), mView);
 				Class viewRootImplClass = Class.forName(Constants.Classes.VIEW_ROOT_IMPL);
 				ViewParent viewParent = mView.getParent();
 				if (viewParent instanceof ViewGroup) {
@@ -422,14 +422,14 @@ public class SetupListeners {
 					// can't insert under ViewRootImpl
 					for (int i = 0; i < vg.getChildCount(); i++) {
 						View vChild = vg.getChildAt(i);
-						MagicFrame magicFrame = new MagicFrame(mActivity, vChild, 0, SetupListeners.this.getRecorder(), SetupListeners.this.getViewInterceptor());
+						MagicFrame magicFrame = new MagicFrame(vChild.getContext(), mActivity, vChild, 0, SetupListeners.this.getRecorder(), SetupListeners.this.getViewInterceptor());
 					}
 				} else {
 					// TODO: this obviously has to be fixed.
 					Log.e(TAG, "we cannot intercept floating windows with non-view groups yet");
 				}
 			} catch (Exception ex) {
-				SetupListeners.this.mRecorder.writeException(ex, "while trying to intercept view");
+				SetupListeners.this.mRecorder.writeException(mActivityName, ex, "while trying to intercept view");
 			}
 		}
 	}
@@ -442,15 +442,17 @@ public class SetupListeners {
 	 */
 	protected class InterceptSpinnerPopupWindowRunnable implements Runnable {
 		protected PopupWindow mPopupWindow;
+		protected Activity		mActivity;
 		
-		public InterceptSpinnerPopupWindowRunnable(PopupWindow popupWindow) {
+		public InterceptSpinnerPopupWindowRunnable(Activity activity, PopupWindow popupWindow) {
 			mPopupWindow = popupWindow;
+			mActivity = activity;
 		}
 		public void run() {
 			View contentView = mPopupWindow.getContentView();
 			if (contentView != null && !(contentView instanceof MagicFrame)) {
 				MagicFramePopup magicFramePopup = new MagicFramePopup(contentView.getContext(), mPopupWindow, mRecorder, mViewInterceptor);
-				SetupListeners.this.getViewInterceptor().interceptSpinnerPopupWindow(mPopupWindow);
+				SetupListeners.this.getViewInterceptor().interceptSpinnerPopupWindow(mActivity.toString(), mPopupWindow);
 			}
 		}
 	}
@@ -473,7 +475,7 @@ public class SetupListeners {
 			View contentView = mPopupWindow.getContentView();
 			if (contentView != null && !(contentView instanceof MagicFrame)) {
 				MagicFramePopup magicFramePopup = new MagicFramePopup(contentView.getContext(), mPopupWindow, mRecorder, mViewInterceptor);
-				SetupListeners.this.getViewInterceptor().interceptAutocompleteDropdown(mActivity, mPopupWindow);
+				SetupListeners.this.getViewInterceptor().interceptAutocompleteDropdown(mActivity, mActivity.toString(), mPopupWindow);
 			}
 		}
 	}

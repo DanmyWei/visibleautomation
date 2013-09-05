@@ -126,28 +126,111 @@ public class EventRecorder extends EventRecorderInterface {
 	}
 	
 	// write a record to the output
-	public synchronized void writeRecord(String s)  {
+	public synchronized void writeRecord(Activity a, String s)  {
 		mEventWasRecorded = true;
-		writeLog(mRecordFileName, s);
+		writeRecordTime(a.getClass().getName(), s);
 	}
 		
 	/**
 	 * write an event with time in milliseconds <event>:<time>
 	 * @param event event to write out (from Constants.EventTags)
 	 */
-	public void writeRecordTime(String event) {
+	public void writeRecordTime(String activityName, String event) {
 		mEventWasRecorded = true;
 		long time = SystemClock.uptimeMillis();
-		writeLog(mRecordFileName, event + ":" + time);
+		writeLog(mRecordFileName, activityName + ":" + event + ":" + time);
 	}
 	
 	// wrapper to write a record with an event, time and message to the system	
-	public void writeRecord(String event, String message) {
+	public void writeRecord(String activityName, String event, String message) {
 		mEventWasRecorded = true;
 		long time = SystemClock.uptimeMillis();
-		writeLog(mRecordFileName, event + ":" + time + "," + message);
+		writeLog(mRecordFileName, activityName + ":" + event + ":" + time + "," + message);
 	}
 	
+	// yet another wrapper with just a view to be described.
+	public void writeRecord(String event, String activityName, View v) {
+		try {
+			if (!matchViewDirective(v, ViewDirective.ViewOperation.IGNORE_EVENTS, ViewDirective.When.ALWAYS)) {
+				writeRecord(activityName, event,getViewReference().getReference(v));
+			}
+			mEventWasRecorded = true;
+		} catch (Exception ex) {
+			writeException(activityName, ex,  "while getting reference for view in event " + event);
+		}
+	}
+	
+	/**
+	 * to enforce consistent exception logging
+	 * @param ex the offending exception
+	 * @param message descriptive message
+	 */
+	public void writeException(String activityName, Exception ex, String message) {
+		writeRecord(activityName, Constants.EventTags.EXCEPTION, ex.getMessage() + ": " + message);
+		ex.printStackTrace();
+	}
+	
+	/**
+	 * write exception: (view parameter variant) all exceptions should go through this interface
+	 * @param ex exception to write
+	 * @param v view to generate reference from
+	 * @param message error message in addition to exception message
+	 */
+	public void writeException(Exception ex, String activityName, View v, String message) {
+		try {
+			writeRecord(activityName, Constants.EventTags.EXCEPTION, ex.getMessage() + ": " + getViewReference().getReference(v) + ": " + message);
+		} catch (Exception ex3) {
+			writeException(activityName, ex3,  "while getting reference for view " + v);
+		}
+		ex.printStackTrace();
+	}
+	/**
+	 * write out the rotation expression: rotation:<time>,<rotation:0,90,180,270>,activity,activity_description
+	 * @param recorder event recorder reference
+	 * @param activity
+	 * @param rotation
+	 */
+	public void writeRotation(Activity activity, int rotation) {
+		int rotationValue = 0;
+		if (rotation == Surface.ROTATION_0) {
+			rotationValue = 0;
+		} else if (rotation == Surface.ROTATION_90) {
+			rotationValue = 90;
+		} else if (rotation == Surface.ROTATION_180) {
+			rotationValue = 180;
+		} else if (rotation == Surface.ROTATION_270) {
+			rotationValue = 270;
+		}
+		String logMsg = Integer.toString(rotationValue) + "," + activity.getClass().getName() + "," + activity.toString();
+		writeRecord(activity.toString(), Constants.EventTags.ROTATION, logMsg);
+	}
+	
+	/**
+	 *  wrapper for wrapper to write a record with an event, time view description, and message to the system	
+	 * @param event
+	 * @param activityName actually activity.toString(), because we want the unique name.
+	 * @param v view to describe
+	 * @param message
+	 */
+	public void writeRecord(String event, String activityName, View v, String message) {
+		try {
+			long time = SystemClock.uptimeMillis();
+			if (!matchViewDirective(v, ViewDirective.ViewOperation.IGNORE_EVENTS, ViewDirective.When.ALWAYS)) {
+				writeRecord(activityName, event, getViewReference().getReference(v) + "," + message);
+			}
+			mEventWasRecorded = true;
+		} catch (Exception ex) {
+			// TEMPORARY: the IME keeps sending events long after we have died died died,
+			// so we suppress the exceptions
+			if (!event.equals(Constants.EventTags.SHOW_IME) && 
+				!event.equals(Constants.EventTags.HIDE_IME) &&
+				!event.equals(Constants.EventTags.HIDE_IME_BACK_KEY)) {
+				writeRecord(activityName, Constants.EventTags.EXCEPTION, "while getting reference for view in event " + event + " " + message);
+
+			}
+		}
+	}
+
 	// for copy and paste (from DirectiveIDalogs)
 	public String getVariableValue(String var) {
 		return mVariableTable.get(var);
@@ -237,82 +320,5 @@ public class EventRecorder extends EventRecorderInterface {
 		}
 		return false;
 	}
-	
-	// wrapper for wrapper to write a record with an event, time view description, and message to the system	
-	public void writeRecord(String event, View v, String message) {
-		try {
-			long time = SystemClock.uptimeMillis();
-			if (!matchViewDirective(v, ViewDirective.ViewOperation.IGNORE_EVENTS, ViewDirective.When.ALWAYS)) {
-				writeRecord(event + ":" + time + "," + getViewReference().getReference(v) + "," + message);
-			}
-			mEventWasRecorded = true;
-		} catch (Exception ex) {
-			// TEMPORARY: the IME keeps sending events long after we have died died died,
-			// so we suppress the exceptions
-			if (!event.equals(Constants.EventTags.SHOW_IME) && 
-				!event.equals(Constants.EventTags.HIDE_IME) &&
-				!event.equals(Constants.EventTags.HIDE_IME_BACK_KEY)) {
-				writeRecord(Constants.EventTags.EXCEPTION, "while getting reference for view in event " + event + " " + message);
 
-			}
-		}
-	}
-	
-	// yet another wrapper with just a view to be described.
-	public void writeRecord(String event, View v) {
-		try {
-			long time = SystemClock.uptimeMillis();
-			if (!matchViewDirective(v, ViewDirective.ViewOperation.IGNORE_EVENTS, ViewDirective.When.ALWAYS)) {
-				writeRecord(event + ":" + time + "," + getViewReference().getReference(v));
-			}
-			mEventWasRecorded = true;
-		} catch (Exception ex) {
-			writeException(ex,  "while getting reference for view in event " + event);
-		}
-	}
-	
-	/**
-	 * to enforce consistent exception logging
-	 * @param ex the offending exception
-	 * @param message descriptive message
-	 */
-	public void writeException(Exception ex, String message) {
-		writeRecord(Constants.EventTags.EXCEPTION, ex.getMessage() + ": " + message);
-		ex.printStackTrace();
-	}
-	
-	/**
-	 * write exception: (view parameter variant) all exceptions should go through this interface
-	 * @param ex exception to write
-	 * @param v view to generate reference from
-	 * @param message error message in addition to exception message
-	 */
-	public void writeException(Exception ex, View v, String message) {
-		try {
-			writeRecord(Constants.EventTags.EXCEPTION, ex.getMessage() + ": " + getViewReference().getReference(v) + ": " + message);
-		} catch (Exception ex3) {
-			writeException(ex3,  "while getting reference for view " + v);
-		}
-		ex.printStackTrace();
-	}
-	/**
-	 * write out the rotation expression: rotation:<time>,<rotation:0,90,180,270>,activity,activity_description
-	 * @param recorder event recorder reference
-	 * @param activity
-	 * @param rotation
-	 */
-	public void writeRotation(Activity activity, int rotation) {
-		int rotationValue = 0;
-		if (rotation == Surface.ROTATION_0) {
-			rotationValue = 0;
-		} else if (rotation == Surface.ROTATION_90) {
-			rotationValue = 90;
-		} else if (rotation == Surface.ROTATION_180) {
-			rotationValue = 180;
-		} else if (rotation == Surface.ROTATION_270) {
-			rotationValue = 270;
-		}
-		String logMsg = Integer.toString(rotationValue) + "," + activity.getClass().getName() + "," + activity.toString();
-		writeRecord(Constants.EventTags.ROTATION, logMsg);
-	}
 }

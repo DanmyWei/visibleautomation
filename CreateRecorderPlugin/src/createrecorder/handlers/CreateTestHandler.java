@@ -69,13 +69,22 @@ public class CreateTestHandler extends AbstractHandler {
 		TestClassDialog testClassDialog = new TestClassDialog();
 		String packagePath = testClassDialog.getTestClassDialog(shell, "Visible Automation", "Enter classpath of APK to test");
 		if (packagePath != null) {
+			String apkFileName = PackageUtils.getPackageName(testClassDialog.mPackagePath);
+			
+			// pull the APK file from the device, so we can re-install it when we run on another device
+		    String[] pullResults = EclipseExec.getAdbCommandOutput("pull /data/app" + apkFileName);
+		    EclipseUtility.printConsole(pullResults);
+		    if (StringUtils.containedInStringArray(Constants.Errors.DOES_NOT_EXIST, pullResults)) {
+		    	MessageDialog.openInformation(shell, RecorderConstants.VISIBLE_AUTOMATION, "failed to pull APK from device");
+		    	return false;
+		    }
 			
 			// get the android sdk directory from the eclipse ADT preferences
 			IPreferencesService service = Platform.getPreferencesService();
 			String androidSDK = service.getString(RecorderConstants.ECLIPSE_ADT, RecorderConstants.ANDROID_SDK, null, null);
 			File aapt = EclipseUtility.findAAPT(androidSDK);
 			if (aapt == null) {
-				MessageDialog.openInformation(shell, "CreateTestHandler", "could not find aapt in " + androidSDK);
+				MessageDialog.openInformation(shell, RecorderConstants.VISIBLE_AUTOMATION, "could not find aapt in " + androidSDK);
 			} else {
 				// use aapt to pull the manifest and the badging information, so we can do the best we can to get the target SDK,
 				// application name, start activity, and application package.

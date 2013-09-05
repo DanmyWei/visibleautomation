@@ -4,6 +4,7 @@ import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
 
+import android.app.Activity;
 import android.os.SystemClock;
 import android.view.View;
 import android.widget.AdapterView;
@@ -17,8 +18,8 @@ import android.widget.AdapterView;
 public class RecordOnItemLongClickListener extends RecordListener implements AdapterView.OnItemLongClickListener, IOriginalListener  {
 	protected AdapterView.OnItemLongClickListener	mOriginalItemLongClickListener;
 	
-	public RecordOnItemLongClickListener(EventRecorder eventRecorder, AdapterView<?> adapterView) {
-		super(eventRecorder);
+	public RecordOnItemLongClickListener(String activityName, EventRecorder eventRecorder, AdapterView<?> adapterView) {
+		super(activityName, eventRecorder);
 		mOriginalItemLongClickListener = adapterView.getOnItemLongClickListener();
 		adapterView.setOnItemLongClickListener(this);
 	}
@@ -36,9 +37,9 @@ public class RecordOnItemLongClickListener extends RecordListener implements Ada
 		if (!RecordListener.getEventBlock()) {
 			setEventBlock(true);
 			try {
-				mEventRecorder.writeRecord(Constants.EventTags.ITEM_LONG_CLICK, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
+				mEventRecorder.writeRecord(mActivityName, Constants.EventTags.ITEM_LONG_CLICK, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, view, "item long click");
+				mEventRecorder.writeException(ex, mActivityName, view, "item long click");
 			}
 		}
 		if (!fReentryBlock) {

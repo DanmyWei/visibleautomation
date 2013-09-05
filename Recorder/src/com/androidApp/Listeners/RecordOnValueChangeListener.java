@@ -4,6 +4,7 @@ import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.Utility.Constants;
 
+import android.app.Activity;
 import android.widget.NumberPicker;
 import android.widget.TabHost;
 
@@ -16,8 +17,8 @@ public class RecordOnValueChangeListener extends RecordListener implements Numbe
 	protected NumberPicker.OnValueChangeListener 	mOriginalValueChangeListenerListener;
 	protected NumberPicker							mNumberPicker;
 	
-	public RecordOnValueChangeListener(EventRecorder eventRecorder, NumberPicker numberPicker) {
-		super(eventRecorder);
+	public RecordOnValueChangeListener(String activityName, EventRecorder eventRecorder, NumberPicker numberPicker) {
+		super(activityName, eventRecorder);
 		try {
 			mNumberPicker = numberPicker;
 			mOriginalValueChangeListenerListener = ListenerIntercept.getValueChangeListener(numberPicker);
@@ -27,10 +28,11 @@ public class RecordOnValueChangeListener extends RecordListener implements Numbe
 		}		
 	}
 	
-	public RecordOnValueChangeListener(EventRecorder eventRecorder, 
-									   NumberPicker.OnValueChangeListener originalValueChangeListener, 
-									   NumberPicker numberPicker) {
-		super(eventRecorder);
+	public RecordOnValueChangeListener(String								activityName,
+									   EventRecorder 						eventRecorder, 
+									   NumberPicker.OnValueChangeListener 	originalValueChangeListener, 
+									   NumberPicker 						numberPicker) {
+		super(activityName, eventRecorder);
 		try {
 			mNumberPicker = numberPicker;
 			mNumberPicker.setOnValueChangedListener(this);
@@ -42,7 +44,7 @@ public class RecordOnValueChangeListener extends RecordListener implements Numbe
 	@Override
 	public void onValueChange(NumberPicker arg0, int oldVal, int newVal) {
 		String msg = Integer.toString(oldVal) + "," + Integer.toString(newVal);
-		mEventRecorder.writeRecord(Constants.EventTags.VALUE_CHANGE, mNumberPicker, msg);
+		mEventRecorder.writeRecord(Constants.EventTags.VALUE_CHANGE, mActivityName, mNumberPicker, msg);
 		
 	}	
 }

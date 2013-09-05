@@ -4,6 +4,7 @@ import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.Utility.Constants;
 
+import android.app.Activity;
 import android.os.SystemClock;
 import android.view.MotionEvent;
 import android.view.View;
@@ -20,17 +21,17 @@ import android.view.View.OnLongClickListener;
 public class RecordOnLongClickListener extends RecordListener implements OnLongClickListener, IOriginalListener {
 	protected OnLongClickListener 	mOriginalOnLongClickListener;
 	
-	public RecordOnLongClickListener(EventRecorder eventRecorder, View v) {
-		super(eventRecorder);
+	public RecordOnLongClickListener(String activityName, EventRecorder eventRecorder, View v) {
+		super(activityName, eventRecorder);
 		try {
 			mOriginalOnLongClickListener = ListenerIntercept.getLongClickListener(v);
 		} catch (Exception ex) {
-			mEventRecorder.writeException(ex, v, "create long click listener");
+			mEventRecorder.writeException(ex, activityName, v, "create long click listener");
 		}		
 	}
 	
-	public RecordOnLongClickListener(EventRecorder eventRecorder, OnLongClickListener originalLongClickListener) {
-		super(eventRecorder);
+	public RecordOnLongClickListener(String activityName, EventRecorder eventRecorder, OnLongClickListener originalLongClickListener) {
+		super(activityName, eventRecorder);
 		mOriginalOnLongClickListener = originalLongClickListener;
 	}
 	
@@ -52,9 +53,9 @@ public class RecordOnLongClickListener extends RecordListener implements OnLongC
 			setEventBlock(true);
 			try {
 				String description = getDescription(v);
-				mEventRecorder.writeRecord(Constants.EventTags.LONG_CLICK, v, description);
+				mEventRecorder.writeRecord(Constants.EventTags.LONG_CLICK, mActivityName, description);
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, v, "long click");
+				mEventRecorder.writeException(ex, mActivityName, v, "long click");
 			}
 		}
 		if (!fReentryBlock) {

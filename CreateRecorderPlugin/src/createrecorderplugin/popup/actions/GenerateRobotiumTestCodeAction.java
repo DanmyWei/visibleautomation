@@ -51,6 +51,7 @@ import com.androidApp.parser.ManifestParser;
 import com.androidApp.parser.ProjectParser;
 import com.androidApp.parser.ProjectPropertiesScan;
 import com.androidApp.util.Constants;
+import com.androidApp.util.Exec;
 import com.androidApp.util.FileUtility;
 import com.androidApp.util.StringUtils;
 
@@ -159,7 +160,9 @@ public class GenerateRobotiumTestCodeAction implements IObjectActionDelegate {
 				codeGenerator.writeTheCode(emitter, outputCode, motionEvents, testProject, packagePath, 
 										   manifestParser.getPackage(), testClassPath, testClassName);
 				CreateTestHandler.writeHandlers(testProject, outputCode);
-				// copy the view_directives.txt file back to the recorder
+				// copy the view_directives.txt file back to the recorder.  Remove it first, so we don't
+				// pick it up from a stale run.
+				Exec.executeShellCommand("rm " + Constants.Filenames.VIEW_DIRECTIVES);
 				EclipseExec.executeAdbCommand("pull /sdcard/" + Constants.Filenames.VIEW_DIRECTIVES);
 				String recorderProjectName = newProjectName + RecorderConstants.RECORDER_SUFFIX;
 				IProject recorderProject = ResourcesPlugin.getWorkspace().getRoot().getProject(recorderProjectName);

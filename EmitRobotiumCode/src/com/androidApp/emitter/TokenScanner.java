@@ -77,6 +77,31 @@ public class TokenScanner {
 		}
 		return false;		
 	}
+
+	/**
+	 * same as happensBefore, except that it scans backward
+	 * @param lines list of token lists representing events.
+	 * @param startIndex start index to scan from
+	 * @param before must be true before 
+	 * @param after must be true after.
+	 * @return
+	 */
+	public static boolean happenedBefore(List<List<String>> lines,
+										 int 				startIndex, 
+										 Predicate 			before, 
+										 Predicate 			after) {
+		boolean beforeHappened = false;
+		for (int i = startIndex; i >= 0; i--) {
+			List<String> tokens = lines.get(i);
+			if (!beforeHappened) {
+				beforeHappened = before.test(tokens);
+			}
+			if (after.test(tokens)) {
+				return beforeHappened;
+			}
+		}
+		return false;
+	}	
 	
 	public static int findPrevious(List<List<String>> lines, int startIndex, Predicate predicate) {
 		for (int i = startIndex - 1; i >= 0; i--) {
@@ -90,14 +115,15 @@ public class TokenScanner {
 										  
 	
 	/**
-	 * simple predicate for "was this event sent by the user?"
+	 * simple predicate for "was this event sent by the user?" 
+	 * NOTE: need to test rotation case where application caused the rotation, not the user.
 	 * @author matt2
 	 *
 	 */
 	public class UserEventPredicate implements Predicate {
 		public boolean test(List<String> tokens) {
 			String action = tokens.get(0);
-			return Constants.UserEvent.isUserEvent(action);
+			return Constants.UserEvent.isUserEvent(action) || Constants.SystemEvent.ROTATION.equals(action);
 		}
 	}
 	

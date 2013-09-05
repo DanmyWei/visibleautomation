@@ -67,7 +67,7 @@ public class CreateRecorderHandler extends AbstractHandler {
 		*/
 
 		TestClassDialog testClassDialog = new TestClassDialog();
-		String packagePath = testClassDialog.getTestClassDialog(shell, "Visible Automation", "Enter classpath of APK to record");
+		String packagePath = testClassDialog.getTestClassDialog(shell, RecorderConstants.VISIBLE_AUTOMATION, "Enter classpath of APK to record");
 		String apkFileName = PackageUtils.getPackageName(testClassDialog.mPackagePath);
 		if (packagePath != null) {	
 			try {
@@ -86,7 +86,7 @@ public class CreateRecorderHandler extends AbstractHandler {
 			File aapt = EclipseUtility.findAAPT(androidSDK);
 			// aapt has moved from android-sdks/platform-tools to android-sdks/build-tools/17.0.0 in version 21.
 			if (aapt == null) {
-				MessageDialog.openInformation(shell, "Visible Automation", "could not find aapt in " + androidSDK);
+				MessageDialog.openInformation(shell, RecorderConstants.VISIBLE_AUTOMATION, "could not find aapt in " + androidSDK);
 			} else {
 				String aaptPath = aapt.getAbsolutePath();
 				// use aapt to pull the manifest and the badging information, so we can do the best we can to get the target SDK,
@@ -143,8 +143,26 @@ public class CreateRecorderHandler extends AbstractHandler {
 			createRecorder.createTestClass(testProject, javaProject, projectInformation.getPackageName(), projectInformation.getStartActivity());
 			createRecorder.createAllTests(testProject, javaProject, projectInformation.getPackageName());
 			createRecorder.addLibraries(testProject);
-			IFile file = testProject.getFile(apkFileName);
+			
+			// copy the .apk that we're testing against to the project directory, so we can install it if needed
 			EclipseUtility.copyFileToProjectDirectory(testProject, apkFileName, apkFileName);
+			
+			// check to see if the keyboard and logservice are installed.
+			if (!InstallRecorderHandler.isPackageInstalled(RecorderConstants.KEYBOARD_PACKAGE)) {
+				if (MessageDialog.openConfirm(shell, RecorderConstants.VISIBLE_AUTOMATION,
+											  "The custom keyboard is not installed, do you wish to install it now?")) {
+					if (InstallRecorderHandler.installAPKFromTemplate(shell, RecorderConstants.KEYBOARD_APK, RecorderConstants.KEYBOARD_PACKAGE)) {
+						MessageDialog.openInformation(shell, RecorderConstants.VISIBLE_AUTOMATION,	
+													  "Please set the keyboard as the default input method from settings on your device");
+					} 
+				}
+			}
+			if (!InstallRecorderHandler.isPackageInstalled(RecorderConstants.LOGSERVICE_PACKAGE)) {
+				if (MessageDialog.openConfirm(shell, RecorderConstants.VISIBLE_AUTOMATION,
+											  "The Log Service is not installed. Do you want to install it now?")) {
+					InstallRecorderHandler.installAPKFromTemplate(shell, RecorderConstants.KEYBOARD_APK, RecorderConstants.KEYBOARD_PACKAGE);
+				}
+			}
 		} catch (Exception ex) {
 			MessageDialog.openInformation(shell, RecorderConstants.VISIBLE_AUTOMATION,
 										  "There was an exception creating the test project " + ex.getMessage());

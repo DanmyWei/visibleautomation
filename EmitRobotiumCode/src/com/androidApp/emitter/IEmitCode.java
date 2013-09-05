@@ -110,6 +110,7 @@ public interface IEmitCode {
 	String writeViewClassIndexCommand(String templateFile, ReferenceParser ref, String fullDescription) throws IOException;
 	void waitForPageToLoad(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
 	String readApplicationPackage(String eventsFileName) throws IOException ;
+	boolean scanTargetPackage(List<List<String>> lines);
 	LineAndTokens activityCondition(List<String> tokens, String activityName, String functionName) throws IOException;
 	LineAndTokens dialogCondition(List<String> tokens, CodeDefinition codeDef, String functionName) throws IOException;
 

@@ -32,7 +32,6 @@ public class PasteTextRunnable implements Runnable {
 		Window w = mActivity.getWindow();
         View v = w.getDecorView().findViewById(android.R.id.content);
         List<ViewDirective> pasteViewDirectives = mRecorder.getMatchingViewDirectives(mActivity, ViewDirective.When.ON_ACTIVITY_START);
-        ClassCount classCount = new ClassCount(0);
         pasteValues(v, pasteViewDirectives);
 	}
 	
@@ -46,7 +45,7 @@ public class PasteTextRunnable implements Runnable {
 						et.setText(value);
 						String massagedString = StringUtils.escapeString(value.toString(), "\"", '\\').replace("\n", "\\n");
 						String logString = viewDirective.getVariable() + "," + massagedString;
-						mRecorder.writeRecord(Constants.EventTags.PASTE_TEXT, v, logString);
+						mRecorder.writeRecord(Constants.EventTags.PASTE_TEXT, mActivity.toString(), v, logString);
 					}
 				}
 			}

@@ -7,6 +7,7 @@ import com.androidApp.Utility.Constants;
 
 import android.app.ActionBar;
 import android.app.ActionBar.Tab;
+import android.app.Activity;
 import android.app.FragmentTransaction;
 import android.view.View;
 
@@ -19,14 +20,14 @@ public class RecordActionBarTabListener extends RecordListener implements Action
 	protected ActionBar.TabListener mOriginalTabListener;
 	protected int 					mTabIndex;
 	
-	public RecordActionBarTabListener(EventRecorder eventRecorder, ActionBar actionBar, int index) {
-		super(eventRecorder);
+	public RecordActionBarTabListener(String activityName, EventRecorder eventRecorder, ActionBar actionBar, int index) {
+		super(activityName, eventRecorder);
 		try {
 			mTabIndex = index;
 			mOriginalTabListener = InterceptActionBar.getTabListener(actionBar, index);
 			actionBar.getTabAt(index).setTabListener(this);
 		} catch (Exception ex) {
-			mEventRecorder.writeException(ex, "create record action bar tab listener");
+			mEventRecorder.writeException(mActivityName, ex, "create record action bar tab listener");
 		}		
 	}
 
@@ -34,7 +35,7 @@ public class RecordActionBarTabListener extends RecordListener implements Action
 	@Override
 	public void onTabSelected(Tab tab, FragmentTransaction ft) {
 		String message = Integer.toString(mTabIndex) + "," + "select tab " + tab.getText();
-		mEventRecorder.writeRecord(Constants.EventTags.SELECT_ACTIONBAR_TAB, message);
+		mEventRecorder.writeRecord(mActivityName, Constants.EventTags.SELECT_ACTIONBAR_TAB, message);
 		if (mOriginalTabListener != null) {
 			mOriginalTabListener.onTabSelected(tab, ft);
 		}

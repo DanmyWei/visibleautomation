@@ -7,6 +7,7 @@ import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.TestUtils;
 
 import android.widget.PopupWindow;
+import android.app.Activity;
 import android.view.KeyEvent;
 import android.view.View;
 
@@ -28,12 +29,13 @@ public class RecordAutoCompleteDropdownOnDismissListener extends RecordListener 
 	public RecordAutoCompleteDropdownOnDismissListener() {
 	}
 	
-	public RecordAutoCompleteDropdownOnDismissListener(EventRecorder 					eventRecorder, 
-												     ViewInterceptor				viewInterceptor,
-												     View							anchorView,
-												     PopupWindow					popupWindow, 
-												     PopupWindow.OnDismissListener 	originalDismissListener) {
-		super(eventRecorder);
+	public RecordAutoCompleteDropdownOnDismissListener(String							activityName,
+													   EventRecorder 					eventRecorder, 
+												       ViewInterceptor					viewInterceptor,
+												       View								anchorView,
+												       PopupWindow						popupWindow, 
+												       PopupWindow.OnDismissListener 	originalDismissListener) {
+		super(activityName, eventRecorder);
 		mViewInterceptor = viewInterceptor;
 		mOriginalOnDismissListener = originalDismissListener;
 		mAnchorView = anchorView;
@@ -58,13 +60,13 @@ public class RecordAutoCompleteDropdownOnDismissListener extends RecordListener 
 			setEventBlock(true);
 			try {
 				if (mViewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_BACK){
-					mEventRecorder.writeRecord(Constants.EventTags.DISMISS_AUTOCOMPLETE_DROPDOWN_BACK_KEY, mAnchorView, "dismiss autocomplete dropdown window");					
+					mEventRecorder.writeRecord(Constants.EventTags.DISMISS_AUTOCOMPLETE_DROPDOWN_BACK_KEY, mActivityName, mAnchorView, "dismiss autocomplete dropdown window");					
 				} else {
-					mEventRecorder.writeRecord(Constants.EventTags.DISMISS_AUTOCOMPLETE_DROPDOWN, mAnchorView, "dismiss autocomplete dropdown window");
+					mEventRecorder.writeRecord(Constants.EventTags.DISMISS_AUTOCOMPLETE_DROPDOWN, mActivityName, mAnchorView, "dismiss autocomplete dropdown window");
 				}
 				mViewInterceptor.setLastKeyAction(-1);
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, Constants.EventTags.DISMISS_AUTOCOMPLETE_DROPDOWN);
+				mEventRecorder.writeException(mActivityName, ex, Constants.EventTags.DISMISS_AUTOCOMPLETE_DROPDOWN);
 			}
 		}
 		if (!fReentryBlock) {

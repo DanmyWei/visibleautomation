@@ -1,2 +1,2 @@
 		// %DESCRIPTION%
-		solo.waitForDialogToClose(DIALOG_CLOSE_TIMEOUT);
+		robotiumUtils.waitForDialogToClose(robotiumUtils.getCurrentActivity(), DIALOG_CLOSE_TIMEOUT);

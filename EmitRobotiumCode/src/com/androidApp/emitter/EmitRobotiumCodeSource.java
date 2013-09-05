@@ -11,6 +11,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
@@ -83,6 +85,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		return mTargetPackage;
 	}
 	
+	
 	/**
 	 * take the events file name (which may be the reserved word "device", and emit the test code into
 	 * an array list of the output code with its associated source tokens
@@ -100,11 +103,24 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		List<String> lines = FileUtility.readToLines(is);
 		is.close();
 		List<List<String>> tokenLines = tokenizeLines(lines);
-		scanTargetPackage(tokenLines);
-		CodeOutput mainLines = emit(tokenLines, 0, outputCode, motionEvents, OutputType.MAIN);
+		// because the output is written by multiple threads, it needs to be sorted by timestamp. The
+		// dialog and popup output are written by a timer thread, which can interleave with the activity transition
+		Collections.sort(tokenLines, new TimestampComparator());
+		OrderByActivity orderByActivity = new OrderByActivity();
+		List<List<String>> orderedTokenLines = orderByActivity.orderTokensByActivity(tokenLines);
+		for (List<String> tokens : orderedTokenLines) {
+			System.out.println(tokens.toString());
+		}
+		scanTargetPackage(orderedTokenLines);
+		CodeOutput mainLines = emit(orderedTokenLines, 0, outputCode, motionEvents, OutputType.MAIN);
 		outputCode.put(new CodeDefinition(Constants.MAIN, null), mainLines.mLineAndTokens);
 	}
 
+	/**
+	 * scan for the target package token (3rd token in package:237353376,com.skype.raider)
+	 * @param lines
+	 * @return
+	 */
 	public boolean scanTargetPackage(List<List<String>> lines) {
 		for (List<String> tokens : lines) {
 			String action = tokens.get(0);
@@ -125,6 +141,24 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 			tokenLines.add(st.toList());
 		}
 		return tokenLines;
+	}
+	
+	/**
+	 * the timestamp is the second element in each token list. sort by it
+	 * @author matt2
+	 *
+	 */
+
+	protected class TimestampComparator implements Comparator {
+
+		@Override
+		public int compare(Object arg0, Object arg1) {
+			List<String> tokens0 = (List<String>) arg0;
+			List<String> tokens1 = (List<String>) arg1;
+			long timestamp0 = Long.parseLong(tokens0.get(2));
+			long timestamp1 = Long.parseLong(tokens1.get(2));
+			return (int) (timestamp0 - timestamp1);
+		}		
 	}
 	
 	/**
@@ -200,9 +234,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 				}
 				
 				// then everything else is switched on the event name.
-				if (Constants.ActivityEvent.PACKAGE.equals(action)) {
-					mTargetPackage = tokens.get(2);
-				} else if (Constants.ActivityEvent.INTERSTITIAL_ACTIVITY.equals(action)) {
+				if (Constants.ActivityEvent.INTERSTITIAL_ACTIVITY.equals(action)) {
 					String newActivityName = tokens.get(2);
 					CodeOutput activityCode = handleInterstitialActivity(tokenLines, tokenScanner, readIndex, outputCode, motionEvents, tokens);
 					lines.addAll(activityCode.mLineAndTokens);
@@ -1181,17 +1213,17 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		}
 		
 		// TODO: add to constants
-		String orientationConstant = "Surface.ROTATION_0";
+		String orientationConstant = "ActivityInfo.SCREEN_ORIENTATION_PORTRAIT";
 		if (rotation == 0) {
-			orientationConstant = "Surface.ROTATION_0";
+			orientationConstant = "ActivityInfo.SCREEN_ORIENTATION_PORTRAIT";
 		} else if (rotation == 90) {
-			orientationConstant = "Surface.ROTATION_90";
+			orientationConstant = "ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE";
 		} else if (rotation == 180) {
-			orientationConstant = "Surface.ROTATION_180";
+			orientationConstant = "ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT";
 		} else if (rotation == 270) {
-			orientationConstant = "Surface.ROTATION_270";
+			orientationConstant = "ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE";
 		} else {
-			throw new EmitterException("Rotation value " + rotation + " is not 0,90,180,270");
+			throw new EmitterException("Rotation value " + rotation + " is not one of 0,90,180,270");
 		}
 		String fullDescription = "rotate the screen " + rotation + " degrees";
 		rotationTemplate = rotationTemplate.replace(Constants.VariableNames.ORIENTATION, orientationConstant);
@@ -1885,6 +1917,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	 * read the target package in advance, because that gives us the name of the application that we're testing
 	 * and we can get the directory of the test app that we're generating to read the handlers from so we can
 	 * insert them in the output code.
+	 * NOTE: if this would set the target package member variable, it would make scanTargetPackage obsolete
 	 * @param eventsFileName
 	 * @return
 	 * @throws IOException
@@ -1896,9 +1929,9 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		while (line != null) {
 			SuperTokenizer st = new SuperTokenizer(line, "\"", ":,", '\\');
 			List<String> tokens = st.toList();
-			String action = tokens.get(0);
-			if (Constants.ActivityEvent.ACTIVITY_FORWARD.equals(action)) {
-				targetPackage = tokens.get(2);
+			String action = tokens.get(1);
+			if (Constants.ActivityEvent.PACKAGE.equals(action)) {
+				targetPackage = tokens.get(3);
 				break;
 			}
 			line = br.readLine();

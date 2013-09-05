@@ -28,21 +28,27 @@ public class RecordOnHierarchyChangeListener extends RecordListener implements O
 	protected OnHierarchyChangeListener 	mOriginalOnHierarchyChangeListener;
 	protected ViewInterceptor 				mViewInterceptor;
 	
-	public RecordOnHierarchyChangeListener(EventRecorder eventRecorder, ViewInterceptor viewInterceptor, ViewGroup vg) {
-		super(eventRecorder);
+	public RecordOnHierarchyChangeListener(Activity 		activity,
+										   String			activityName,
+										   EventRecorder 	eventRecorder, 
+										   ViewInterceptor 	viewInterceptor, 
+										   ViewGroup 		vg) {
+		super(activityName, eventRecorder);
 		mViewInterceptor = viewInterceptor;
 		try {
 			mOriginalOnHierarchyChangeListener = ListenerIntercept.getOnHierarchyChangeListener(vg);
 			vg.setOnHierarchyChangeListener(this);
 		} catch (Exception ex) {
-			mEventRecorder.writeException(ex, (View) vg, "create on click listener");
+			mEventRecorder.writeException(ex, activityName, (View) vg, "create on click listener");
 		}		
 	}
 	
-	public RecordOnHierarchyChangeListener(EventRecorder 				eventRecorder, 
+	public RecordOnHierarchyChangeListener(Activity 					activity, 
+			   							   String						activityName,
+			   							   EventRecorder 				eventRecorder, 
 										   ViewInterceptor 				viewInterceptor, 
 										   OnHierarchyChangeListener 	orginalOnHierarchyChangeListener) {
-		super(eventRecorder);
+		super(activityName, eventRecorder);
 		mViewInterceptor  = viewInterceptor;
 		mOriginalOnHierarchyChangeListener = orginalOnHierarchyChangeListener;
 	}
@@ -54,7 +60,7 @@ public class RecordOnHierarchyChangeListener extends RecordListener implements O
 	@Override
 	public void onChildViewAdded(View parent, View child) {
 		Activity activity = (Activity) parent.getContext();
-		mViewInterceptor.intercept(activity, child);
+		mViewInterceptor.intercept(activity, mActivityName, child);
 		
 	}
 

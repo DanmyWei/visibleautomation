@@ -12,6 +12,7 @@ import com.androidApp.Utility.ReflectionUtils;
 import com.androidApp.Utility.StringUtils;
 import com.androidApp.Utility.TestUtils;
 
+import android.app.Activity;
 import android.os.SystemClock;
 import android.view.MenuItem;
 import android.view.View;
@@ -26,14 +27,14 @@ import android.widget.TextView;
 public class RecordOnItemClickListener extends RecordListener implements AdapterView.OnItemClickListener, IOriginalListener  {
 	protected AdapterView.OnItemClickListener	mOriginalItemClickListener;
 	
-	public RecordOnItemClickListener(EventRecorder eventRecorder, AdapterView<?> adapterView, int viewIndex) {
-		super(eventRecorder);
+	public RecordOnItemClickListener(String activityName, EventRecorder eventRecorder, AdapterView<?> adapterView, int viewIndex) {
+		super(activityName, eventRecorder);
 		mOriginalItemClickListener = adapterView.getOnItemClickListener();
 		adapterView.setOnItemClickListener(this);
 	}
 	
-	public RecordOnItemClickListener(EventRecorder eventRecorder, AdapterView.OnItemClickListener originalListener) {
-		super(eventRecorder);
+	public RecordOnItemClickListener(String activityName, EventRecorder eventRecorder, AdapterView.OnItemClickListener originalListener) {
+		super(activityName, eventRecorder);
 		mOriginalItemClickListener = originalListener;
 	}
 		
@@ -62,13 +63,13 @@ public class RecordOnItemClickListener extends RecordListener implements Adapter
 					TextView tv = (TextView) TestUtils.findChild(view, 0, TextView.class);
 					if (tv != null) {
 						String text = StringUtils.escapeString(tv.getText().toString(), "\"", '\\').replace("\n", "\\n");
-						mEventRecorder.writeRecord(Constants.EventTags.ITEM_CLICK_BY_TEXT, text + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));	
+						mEventRecorder.writeRecord(mActivityName, Constants.EventTags.ITEM_CLICK_BY_TEXT, text + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));	
 					}
 				} else {
-					mEventRecorder.writeRecord(Constants.EventTags.ITEM_CLICK, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));	
+					mEventRecorder.writeRecord(mActivityName, Constants.EventTags.ITEM_CLICK, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));	
 				}
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, view, "item click");
+				mEventRecorder.writeException(ex, mActivityName, view, "item click");
 			}	
 		}
 		if (!fReentryBlock) {

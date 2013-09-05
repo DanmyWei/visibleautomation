@@ -16,6 +16,7 @@ import junit.framework.TestCase;
 import android.app.Activity;
 import android.view.Surface;
 import android.widget.PopupWindow;
+import android.content.pm.ActivityInfo;
 import com.androidApp.util.PlaybackMotionEvents;
 
 public class %TESTCLASSNAME% extends ActivityInstrumentationTestCase2 {

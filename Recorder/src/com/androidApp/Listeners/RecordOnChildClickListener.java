@@ -4,6 +4,7 @@ import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
 
+import android.app.Activity;
 import android.os.SystemClock;
 import android.util.Log;
 import android.view.View;
@@ -19,18 +20,18 @@ public class RecordOnChildClickListener extends RecordListener implements Expand
 	protected ExpandableListView.OnChildClickListener	mOriginalChildClickListener;
 	protected final String TAG = "RecordOnChildClickListener";
 	
-	public RecordOnChildClickListener(EventRecorder eventRecorder, ExpandableListView expandableListView) {
-		super(eventRecorder);
+	public RecordOnChildClickListener(String activityName, EventRecorder eventRecorder, ExpandableListView expandableListView) {
+		super(activityName, eventRecorder);
 		try {
 			mOriginalChildClickListener = ListenerIntercept.getOnChildClickListener(expandableListView);
 			expandableListView.setOnChildClickListener(this);
 		} catch (Exception ex) {
-			mEventRecorder.writeException(ex, expandableListView, "create on Child click listener");
+			mEventRecorder.writeException(ex, activityName, expandableListView, "create on Child click listener");
 		}		
 	}
 	
-	public RecordOnChildClickListener(EventRecorder eventRecorder, ExpandableListView.OnChildClickListener originalListener) {
-		super(eventRecorder);
+	public RecordOnChildClickListener(String activityName, EventRecorder eventRecorder, ExpandableListView.OnChildClickListener originalListener) {
+		super(activityName, eventRecorder);
 		mOriginalChildClickListener = originalListener;
 	}
 		
@@ -55,9 +56,9 @@ public class RecordOnChildClickListener extends RecordListener implements Expand
 			int flatListIndex = parent.getFlatListPosition(parent.getPackedPositionForChild(groupPosition, childPosition));
 			Log.i(TAG, "group position = " + groupPosition + " childPosition = " + childPosition + " list index = " + flatListIndex);
 			try {
-				mEventRecorder.writeRecord(Constants.EventTags.CHILD_CLICK, groupPosition + "," + childPosition + "," + flatListIndex + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
+				mEventRecorder.writeRecord(mActivityName, Constants.EventTags.CHILD_CLICK, groupPosition + "," + childPosition + "," + flatListIndex + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, view, "item click");
+				mEventRecorder.writeException(ex, mActivityName, view, "item click");
 			}	
 		}
 		if (!fReentryBlock) {

@@ -4,6 +4,7 @@ import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
 
+import android.app.Activity;
 import android.os.SystemClock;
 import android.view.View;
 import android.widget.AdapterView;
@@ -17,15 +18,15 @@ import android.widget.Spinner;
 public class RecordOnItemSelectedListener extends RecordListener implements AdapterView.OnItemSelectedListener, IOriginalListener  {
 	protected AdapterView.OnItemSelectedListener	mOriginalItemSelectedListener;
 	
-	public RecordOnItemSelectedListener(EventRecorder eventRecorder, AdapterView adapterView) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
-		super(eventRecorder);
+	public RecordOnItemSelectedListener(String activityName, EventRecorder eventRecorder, AdapterView adapterView) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
+		super(activityName, eventRecorder);
 		mOriginalItemSelectedListener = ListenerIntercept.getItemSelectedListener(adapterView);
 		adapterView.setOnItemSelectedListener(this);
 	}
 
 	
-	public RecordOnItemSelectedListener(EventRecorder eventRecorder, AdapterView.OnItemSelectedListener	originalItemSelectedListener) {
-		super(eventRecorder);
+	public RecordOnItemSelectedListener(String activityName, EventRecorder eventRecorder, AdapterView.OnItemSelectedListener	originalItemSelectedListener) {
+		super(activityName, eventRecorder);
 		mOriginalItemSelectedListener = originalItemSelectedListener;
 	}
 	
@@ -48,13 +49,13 @@ public class RecordOnItemSelectedListener extends RecordListener implements Adap
 			setEventBlock(true);
 			try {
 				if (parent instanceof Spinner) {
-					mEventRecorder.writeRecord(Constants.EventTags.SPINNER_ITEM_SELECTED, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
+					mEventRecorder.writeRecord(mActivityName, Constants.EventTags.SPINNER_ITEM_SELECTED, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
 				} else {
-					mEventRecorder.writeRecord(Constants.EventTags.ITEM_SELECTED, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
+					mEventRecorder.writeRecord(mActivityName, Constants.EventTags.ITEM_SELECTED, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
 					
 				}
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, view, "item selected");
+				mEventRecorder.writeException(ex, mActivityName, view, "item selected");
 			}
 		}
 		if (!fReentryBlock) {

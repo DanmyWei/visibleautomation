@@ -33,7 +33,8 @@ public class MagicFrame extends FrameLayout {
 	protected EventRecorder				mRecorder;
 	protected ViewInterceptor			mViewInterceptor;					// to log key events for activity/ime dismissal.
 	protected View						mContentView;						// actual content view being masked
-
+	protected Activity					mActivity;							// to associate events with an activity
+	
 	public static boolean isAlreadyInserted(Activity activity) {
 		Window window = activity.getWindow();
 		ViewGroup decorView = (ViewGroup) window.getDecorView();
@@ -55,13 +56,20 @@ public class MagicFrame extends FrameLayout {
 	/**
 	 * frame for intercepting pre-IME events, so we can pick up the back/home/menu keys
 	 * @param context for view creation
+	 * @param activity to associate logged events with activity
 	 * @param contentView to reparent so we can intercept the pre-IME events.
 	 * @param index index to insert within parent (when we have multiple elements to insert in a layout
 	 * @param recorder to record events
 	 * @param viewInterceptor to register the last action key.
 	 */
-	public MagicFrame(Context context, View contentView, int index, EventRecorder recorder, ViewInterceptor viewInterceptor) {
+	public MagicFrame(Context 			context, 
+					  Activity			activity,
+					  View 				contentView, 
+					  int 				index, 
+					  EventRecorder 	recorder, 
+					  ViewInterceptor 	viewInterceptor) {
 		super(context);
+		mActivity = activity;
 		this.setClipChildren(false);
 		this.setClipToPadding(false);
 		this.setMeasureAllChildren(true);
@@ -75,15 +83,17 @@ public class MagicFrame extends FrameLayout {
 	/**
 	 * variant for ViewRootImpl
 	 * @param context
-	 * @param viewRootImpl
+	 * @param activity to associate logged events with activity
+     * @param viewRootImpl
 	 * @param recorder
 	 * @param viewInterceptor
 	 * @throws ClassNotFoundException
 	 * @throws NoSuchFieldException
 	 * @throws IllegalAccessException
 	 */
-	public MagicFrame(Context context, ViewParent viewRootImpl, EventRecorder recorder, ViewInterceptor viewInterceptor) throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException{
+	public MagicFrame(Context context, Activity activity, ViewParent viewRootImpl, EventRecorder recorder, ViewInterceptor viewInterceptor) throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException{
 		super(context);
+		mActivity = activity;
 		this.setClipChildren(false);
 		this.setClipToPadding(false);
 		this.setMeasureAllChildren(true);
@@ -142,25 +152,25 @@ public class MagicFrame extends FrameLayout {
 			case KeyEvent.KEYCODE_BACK:
 				mViewInterceptor.setLastKeyAction(KeyEvent.KEYCODE_BACK);
 				if (v != null) {
-					mRecorder.writeRecord(Constants.EventTags.KEY_BACK, v);
+					mRecorder.writeRecord(Constants.EventTags.KEY_BACK, mActivity.toString(), v);
 				} else {
-					mRecorder.writeRecordTime(Constants.EventTags.KEY_BACK);
+					mRecorder.writeRecordTime(mActivity.getClass().getName(), Constants.EventTags.KEY_BACK);
 				}
 				break;
 			case KeyEvent.KEYCODE_MENU:
 				mViewInterceptor.setLastKeyAction(KeyEvent.KEYCODE_MENU);
 				if (v != null) {
-					mRecorder.writeRecord(Constants.EventTags.KEY_MENU, v);
+					mRecorder.writeRecord(Constants.EventTags.KEY_MENU, mActivity.toString(), v);
 				} else {
-					mRecorder.writeRecordTime(Constants.EventTags.KEY_MENU);
+					mRecorder.writeRecordTime(mActivity.getClass().getName(), Constants.EventTags.KEY_MENU);
 				}
 				break;
 			case KeyEvent.KEYCODE_HOME:
 				mViewInterceptor.setLastKeyAction(KeyEvent.KEYCODE_HOME);
 				if (v != null) {
-					mRecorder.writeRecord(Constants.EventTags.KEY_HOME, v);
+					mRecorder.writeRecord(Constants.EventTags.KEY_HOME, mActivity.toString(), v);
 				} else {
-					mRecorder.writeRecordTime(Constants.EventTags.KEY_HOME);
+					mRecorder.writeRecordTime(mActivity.getClass().getName(), Constants.EventTags.KEY_HOME);
 				}
 				break;
 			default:

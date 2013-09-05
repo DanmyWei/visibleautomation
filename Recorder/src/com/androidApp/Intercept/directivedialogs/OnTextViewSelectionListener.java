@@ -36,47 +36,47 @@ public class OnTextViewSelectionListener implements DialogInterface.OnClickListe
 			switch (which) {
 				case 0:
 				{
-					mDirectiveDialogs.getEventRecorder().writeRecord(Constants.EventTags.IGNORE_EVENTS, currentView);
+					mDirectiveDialogs.getEventRecorder().writeRecord(Constants.EventTags.IGNORE_EVENTS, activity.toString(), currentView);
 					ViewDirective ignoreDirective = new ViewDirective(ref, ViewOperation.IGNORE_EVENTS, When.ON_ACTIVITY_START, null);
 					recorder.addViewDirective(ignoreDirective);
 				} 
 				break;
 				case 1:
 				{
-					mDirectiveDialogs.getEventRecorder().writeRecord(Constants.EventTags.IGNORE_CLICK_EVENTS, currentView);
+					mDirectiveDialogs.getEventRecorder().writeRecord(Constants.EventTags.IGNORE_CLICK_EVENTS, activity.toString(), currentView);
 					ViewDirective ignoreClickDirective = new ViewDirective(ref, ViewOperation.IGNORE_CLICK_EVENTS, When.ON_ACTIVITY_START, null);
 					recorder.addViewDirective(ignoreClickDirective);
 				} 
 				break;
 				case 2:
 				{
-					mDirectiveDialogs.getEventRecorder().writeRecord(Constants.EventTags.IGNORE_TEXT_EVENTS, currentView);
+					mDirectiveDialogs.getEventRecorder().writeRecord(Constants.EventTags.IGNORE_TEXT_EVENTS, activity.toString(), currentView);
 					ViewDirective ignoreTextDirective = new ViewDirective(ref, ViewOperation.IGNORE_TEXT_EVENTS, When.ON_ACTIVITY_START, null);
 					recorder.addViewDirective(ignoreTextDirective);
 				} 
 				break;
 				case 3:
 				{
-					mDirectiveDialogs.getEventRecorder().writeRecord(Constants.EventTags.MOTION_EVENTS, currentView);
+					mDirectiveDialogs.getEventRecorder().writeRecord(Constants.EventTags.MOTION_EVENTS, activity.toString(), currentView);
 					ViewDirective motionDirective = new ViewDirective(ref, ViewOperation.MOTION_EVENTS, When.ON_ACTIVITY_START, null);
 					recorder.addViewDirective(motionDirective);
 					try {
-						ViewInterceptor.replaceTouchListener(recorder, currentView);
+						ViewInterceptor.replaceTouchListener(activity.toString(), recorder, currentView);
 					} catch (Exception ex) {
-						recorder.writeException(ex, "replace touch listener in directive dialog");
+						recorder.writeException(activity.getClass().getName(), ex, "replace touch listener in directive dialog");
 					}
 				}
 				break;
 				case 4:
 				{
-					mDirectiveDialogs.getEventRecorder().writeRecord(Constants.EventTags.COPY_TEXT, currentView);
+					mDirectiveDialogs.getEventRecorder().writeRecord(Constants.EventTags.COPY_TEXT, activity.toString(), currentView);
 					Dialog newDialog = DirectiveDialogs.createTextEntryDialog(currentView.getContext(), Constants.DisplayStrings.COPY_TEXT, 
 															 				 new CopyDialogClickListener(mDirectiveDialogs));
 					newDialog.show();
 				}
 				case 5:
 				{
-					mDirectiveDialogs.getEventRecorder().writeRecord(Constants.EventTags.CLICK_WORKAROUND, currentView);
+					mDirectiveDialogs.getEventRecorder().writeRecord(Constants.EventTags.CLICK_WORKAROUND, activity.toString(), currentView);
 					ViewDirective ignoreClickDirective = new ViewDirective(ref, ViewOperation.CLICK_WORKAROUND, When.ON_ACTIVITY_START, null);
 					recorder.addViewDirective(ignoreClickDirective);
 				} 

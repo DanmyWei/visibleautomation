@@ -44,13 +44,13 @@ import android.widget.Toast;
  */
 public class RecordWindowCallback extends RecordListener implements Window.Callback, IOriginalListener {
 	protected static final String 		TAG = "RecordWindowCallback";
-	protected Activity					mActivity;							// activity to replace listeners.
 	protected Window.Callback 			mOriginalCallback;					// AN ACTIVITY! NO KIDDING!
 	protected ViewInterceptor			mViewInterceptor;					// to retain state information to remember the last key or touch
 	protected Context					mContext;							// so we can toast
 	protected Window					mWindow;							// so we can get the root view
 	protected long						EVENT_RECORD_TIMEOUT_MSEC = 500;	// timeout before event can be recorded
 	protected RecordedTouchTimerTask	mEventRecordTimeoutTask = null;
+	protected Activity					mActivity;
 	
 	public RecordWindowCallback(Window			window,
 								Activity		activity,
@@ -58,7 +58,7 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 								EventRecorder 	eventRecorder, 
 							    ViewInterceptor	viewInterceptor,
 							    Window.Callback originalCallback) {
-		super(eventRecorder);
+		super(activity.getClass().getName(), eventRecorder);
 		mWindow = window;
 		mActivity = activity;
 		mOriginalCallback = originalCallback;
@@ -82,13 +82,13 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 			mEventRecorder.setEventRecorded(false);
 			switch (event.getKeyCode()) {
 			case KeyEvent.KEYCODE_BACK:
-				mEventRecorder.writeRecordTime(Constants.EventTags.MENU_BACK_KEY);
+				mEventRecorder.writeRecordTime(mActivityName, Constants.EventTags.MENU_BACK_KEY);
 				break;
 			case KeyEvent.KEYCODE_MENU:
-				mEventRecorder.writeRecordTime(Constants.EventTags.MENU_MENU_KEY);
+				mEventRecorder.writeRecordTime(mActivityName, Constants.EventTags.MENU_MENU_KEY);
 				break;
 			case KeyEvent.KEYCODE_HOME:
-				mEventRecorder.writeRecordTime(Constants.EventTags.KEY_HOME);
+				mEventRecorder.writeRecordTime(mActivityName, Constants.EventTags.KEY_HOME);
 				break;
 			} 
 		}
@@ -115,7 +115,7 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 				contentView = ((ViewGroup) contentView).getChildAt(0);
 			}
 			List<View> hitViews = getHitViews((int) event.getX(), (int) event.getY(), contentView);
-			mViewInterceptor.interceptList(mActivity, hitViews);
+			mViewInterceptor.interceptList(mActivity, mActivity.toString(), hitViews);
 			Log.i(TAG, "hit views = " + hitViews);
 			if (mEventRecordTimeoutTask != null) {
 				mEventRecordTimeoutTask.cancel();
@@ -174,12 +174,12 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 					MenuItem menuItem = menu.getItem(iItem);
 					MenuItem.OnMenuItemClickListener originalClickListener = ListenerIntercept.getOnMenuItemClickListener(menuItem);
 					if (!(originalClickListener instanceof RecordOnMenuItemClickListener)) {
-						RecordOnMenuItemClickListener recordOnMenuItemClickListener = new RecordOnMenuItemClickListener(mEventRecorder, originalClickListener);
+						RecordOnMenuItemClickListener recordOnMenuItemClickListener = new RecordOnMenuItemClickListener(mActivity.toString(), mEventRecorder, originalClickListener);
 						menuItem.setOnMenuItemClickListener(recordOnMenuItemClickListener);
 					}
 				}
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, "while attempting to intercept menu on click listener");
+				mEventRecorder.writeException(mActivityName, ex, "while attempting to intercept menu on click listener");
 			}
 		}
 		return mOriginalCallback.onMenuOpened(featureId, menu);
@@ -229,7 +229,7 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 		Log.i(TAG, "onPanelClosed featureId = " + featureId);
 		if (featureId == 0) {
 			mViewInterceptor.setCurrentOptionsMenuView(null);
-			mEventRecorder.writeRecordTime(Constants.EventTags.CLOSE_OPTIONS_MENU);
+			mEventRecorder.writeRecordTime(mActivityName, Constants.EventTags.CLOSE_OPTIONS_MENU);
 		}
 		mOriginalCallback.onPanelClosed(featureId, menu);
 		

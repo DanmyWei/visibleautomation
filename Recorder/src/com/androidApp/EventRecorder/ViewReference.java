@@ -187,7 +187,8 @@ public class ViewReference {
 		Class viewClass = v.getClass();
 		while (viewClass != View.class) {
 			try {
-				Class c = Class.forName(viewClass.getCanonicalName());
+				//Class c = Class.forName(viewClass.getCanonicalName());
+				Class c = Class.forName(viewClass.getName());
 				break;
 			} catch (ClassNotFoundException cnfex) {
 				viewClass = viewClass.getSuperclass();
@@ -222,7 +223,9 @@ public class ViewReference {
 	public String getReference(View v) throws IllegalAccessException, IOException {
 		Class<? extends View> allocatableClass = getAllocatableClass(v);
 		Class<? extends View> usableClass = getUsableClass(mInstrumentation.getContext(), v, mfBinary);
-		boolean fInternalClass = (usableClass != allocatableClass);
+		
+		// it's internal if the allocatable class or the original class is different than the usable class
+		boolean fInternalClass = (usableClass != allocatableClass) && (usableClass != v.getClass());
 	
 		// first, try the id, and verify that it is unique.
 		int id = v.getId();
@@ -262,7 +265,7 @@ public class ViewReference {
 				if (fInternalClass) {
 					int classIndexShown = TestUtils.classIndex(rootView, v, true);
 					int classIndexReal = TestUtils.classIndex(rootView, v, false);
-					return Constants.Reference.INTERNAL_CLASS_INDEX + "," + allocatableClass.getCanonicalName() + "," + usableClass.getCanonicalName() + "," + 
+					return Constants.Reference.INTERNAL_CLASS_INDEX + "," + allocatableClass.getName() + "," + usableClass.getCanonicalName() + "," + 
 						 	classIndexShown + "," + classIndexReal;
 				} else {
 					int classIndexShown = TestUtils.classIndex(rootView, v, true);

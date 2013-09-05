@@ -5,6 +5,7 @@ import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.StringUtils;
 
+import android.app.Activity;
 import android.os.SystemClock;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -18,8 +19,8 @@ import android.widget.TextView;
  * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class FinishTextChangedListener extends RecordListener implements TextWatcher {
-	public FinishTextChangedListener(EventRecorder eventRecorder) {
-		super(eventRecorder);
+	public FinishTextChangedListener(String activityName, EventRecorder eventRecorder) {
+		super(activityName, eventRecorder);
 	}
 	
 	// since these methods are called in a chain, rather than wrapping the native listeners, we don't need to block re-entrancy

@@ -9,6 +9,7 @@ import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.ReflectionUtils;
 
 
+import android.app.Activity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewParent;
@@ -22,23 +23,23 @@ import android.view.View.OnTouchListener;
  */
 public class RecordOnTouchListener extends RecordListener implements OnTouchListener, IOriginalListener  {
 	protected OnTouchListener 	mOriginalOnTouchListener;
-	protected boolean				mFirstEventFired;				// in ViewGroups, the listener does not receive ACTION_DOWN events.
+	protected boolean			mTouchDown;			
 	
-	public RecordOnTouchListener(EventRecorder eventRecorder, View v) {
-		super(eventRecorder);
+	public RecordOnTouchListener(String activityName, EventRecorder eventRecorder, View v) {
+		super(activityName, eventRecorder);
 		try {
 			mOriginalOnTouchListener = ListenerIntercept.getTouchListener(v);
 			v.setOnTouchListener(this);
-			mFirstEventFired = true;
+			mTouchDown = false;
 		} catch (Exception ex) {
-			mEventRecorder.writeException(ex, v, "create on touch listener");
+			mEventRecorder.writeException(ex, activityName, v, "create on touch listener");
 		}		
 	}
 	
-	public RecordOnTouchListener(EventRecorder eventRecorder, OnTouchListener originalTouchListener) {
-		super(eventRecorder);
+	public RecordOnTouchListener(String activityName, EventRecorder eventRecorder, OnTouchListener originalTouchListener) {
+		super(activityName, eventRecorder);
 		mOriginalOnTouchListener = originalTouchListener;
-		mFirstEventFired = true;
+		mTouchDown = false;
 	}
 	
 	public Object getOriginalListener() {
@@ -59,6 +60,7 @@ public class RecordOnTouchListener extends RecordListener implements OnTouchList
 				String eventName = Constants.EventTags.UNKNOWN;
 				if (event.getAction() == MotionEvent.ACTION_DOWN) {
 					eventName = Constants.EventTags.TOUCH_DOWN;
+					mTouchDown = true;
 				} else if (event.getAction() == MotionEvent.ACTION_UP) {
 					eventName = Constants.EventTags.TOUCH_UP;
 				} else if (event.getAction() == MotionEvent.ACTION_MOVE) {
@@ -66,19 +68,20 @@ public class RecordOnTouchListener extends RecordListener implements OnTouchList
 				} else if (event.getAction() == MotionEvent.ACTION_CANCEL) {
 					eventName = Constants.EventTags.TOUCH_CANCEL;
 				}
-				
-				String description = getDescription(v);
-				// we want to save the widget size in the down case, because the motion events have to be
-				// scaled on playback in case it's a different device
-				String logString = v.getWidth() + "," + v.getHeight() + "," + 
-							 	   event.getX() + "," + event.getY() + "," + 
-							 	   mEventRecorder.getViewReference().getReference(v) + "," + description;
-				mEventRecorder.writeRecord(eventName, logString);
+				if (mTouchDown) {
+					String description = getDescription(v);
+					// we want to save the widget size in the down case, because the motion events have to be
+					// scaled on playback in case it's a different device
+					String logString = v.getWidth() + "," + v.getHeight() + "," + 
+								 	   event.getX() + "," + event.getY() + "," + 
+								 	   mEventRecorder.getViewReference().getReference(v) + "," + description;
+					mEventRecorder.writeRecord(mActivityName, eventName, logString);
+				}
 				if (event.getAction() == MotionEvent.ACTION_UP) {
-					mFirstEventFired = true;
+					mTouchDown = false;
 				}
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, v, "on touch");
+				mEventRecorder.writeException(ex, mActivityName, v, "on touch");
 			}
 		} 
 		if (!fReentryBlock) {

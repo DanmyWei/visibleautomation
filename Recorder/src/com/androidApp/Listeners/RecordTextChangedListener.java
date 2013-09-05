@@ -10,6 +10,7 @@ import com.androidApp.Intercept.MagicFrame;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.StringUtils;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
@@ -35,8 +36,8 @@ public class RecordTextChangedListener extends RecordListener implements TextWat
 	protected boolean			mfBeforeFired = false;
 	protected static boolean	sfShowedKeyboardWarning = false;
 	
-	public RecordTextChangedListener(EventRecorder eventRecorder, TextView textView) {
-		super(eventRecorder);
+	public RecordTextChangedListener(String activityName, EventRecorder eventRecorder, TextView textView) {
+		super(activityName, eventRecorder);
 		mTextView = textView;
 		mfEnterTextByKey = false;
 	}
@@ -75,20 +76,20 @@ public class RecordTextChangedListener extends RecordListener implements TextWat
 					mfBeforeFired = true;
 					setEventBlock(true);
 					if (fKeyText) {
-						mEventRecorder.writeRecord(Constants.EventTags.BEFORE_TEXT_KEY, logString);
+						mEventRecorder.writeRecord(mActivityName, Constants.EventTags.BEFORE_TEXT_KEY, logString);
 						mfEnterTextByKey = true;
 					} else {
-						mEventRecorder.writeRecord(Constants.EventTags.BEFORE_TEXT, logString);
+						mEventRecorder.writeRecord(mActivityName, Constants.EventTags.BEFORE_TEXT, logString);
 					}
 				} else if (fKeyText) {
 					// the text was set programmatically..this gets written as a wait.
 					if (mTextView.getVisibility() == View.VISIBLE) {
-						mEventRecorder.writeRecord(Constants.EventTags.BEFORE_SET_TEXT, logString);
+						mEventRecorder.writeRecord(mActivityName, Constants.EventTags.BEFORE_SET_TEXT, logString);
 					}
 				}
 			}
 		} catch (Exception ex) {
-			mEventRecorder.writeException(ex, mTextView, " before text changed");
+			mEventRecorder.writeException(ex, mActivityName, mTextView, " before text changed");
 		}	
 	}
 
@@ -116,16 +117,16 @@ public class RecordTextChangedListener extends RecordListener implements TextWat
 					if (mfEnterTextByKey ||
 						    mEventRecorder.matchViewDirective(mTextView, ViewDirective.ViewOperation.ENTER_TEXT_BY_KEY,
 															  ViewDirective.When.ALWAYS)) {
-						mEventRecorder.writeRecord(Constants.EventTags.AFTER_TEXT_KEY, logString);
+						mEventRecorder.writeRecord(mActivityName, Constants.EventTags.AFTER_TEXT_KEY, logString);
 					} else {
-						mEventRecorder.writeRecord(Constants.EventTags.AFTER_TEXT, logString);
+						mEventRecorder.writeRecord(mActivityName, Constants.EventTags.AFTER_TEXT, logString);
 					}
 				} else if (fKeyText) {
-					mEventRecorder.writeRecord(Constants.EventTags.AFTER_SET_TEXT, logString);
+					mEventRecorder.writeRecord(mActivityName, Constants.EventTags.AFTER_SET_TEXT, logString);
 				}
 			}
 		} catch (Exception ex) {
-			mEventRecorder.writeException(ex, mTextView, "on text changed");
+			mEventRecorder.writeException(ex, mActivityName, mTextView, "on text changed");
 		}	
 	}
 }

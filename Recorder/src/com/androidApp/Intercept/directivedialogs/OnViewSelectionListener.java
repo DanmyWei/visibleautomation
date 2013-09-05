@@ -35,34 +35,34 @@ public class OnViewSelectionListener implements DialogInterface.OnClickListener 
 			switch (which) {
 				case 0:
 				{
-					mDirectiveDialogs.getEventRecorder().writeRecord(Constants.EventTags.IGNORE_EVENTS, currentView);
+					mDirectiveDialogs.getEventRecorder().writeRecord(Constants.EventTags.IGNORE_EVENTS, activity.toString(), currentView);
 					ViewDirective ignoreDirective = new ViewDirective(ref, ViewOperation.IGNORE_EVENTS, When.ON_ACTIVITY_START, null);
 					recorder.addViewDirective(ignoreDirective);
 				}
 				break;
 				case 1:
 				{
-					mDirectiveDialogs.getEventRecorder().writeRecord(Constants.EventTags.IGNORE_CLICK_EVENTS, currentView);
+					mDirectiveDialogs.getEventRecorder().writeRecord(Constants.EventTags.IGNORE_CLICK_EVENTS, activity.toString(), currentView);
 					ViewDirective ignoreClickDirective = new ViewDirective(ref, ViewOperation.IGNORE_CLICK_EVENTS, When.ON_ACTIVITY_START, null);
 					recorder.addViewDirective(ignoreClickDirective);
 				}
 				break;
 				case 2:
 				{
-					mDirectiveDialogs.getEventRecorder().writeRecord(Constants.EventTags.IGNORE_LONG_CLICK_EVENTS, currentView);
+					mDirectiveDialogs.getEventRecorder().writeRecord(Constants.EventTags.IGNORE_LONG_CLICK_EVENTS, activity.toString(), currentView);
 					ViewDirective ignoreClickDirective = new ViewDirective(ref, ViewOperation.IGNORE_LONG_CLICK_EVENTS, When.ON_ACTIVITY_START, null);
 					recorder.addViewDirective(ignoreClickDirective);
 				}
 				break;
 				case 3:
 				{
-					mDirectiveDialogs.getEventRecorder().writeRecord(Constants.EventTags.MOTION_EVENTS, currentView);
+					mDirectiveDialogs.getEventRecorder().writeRecord(Constants.EventTags.MOTION_EVENTS, activity.toString(), currentView);
 					ViewDirective motionDirective = new ViewDirective(ref, ViewOperation.MOTION_EVENTS, When.ON_ACTIVITY_START, null);
 					recorder.addViewDirective(motionDirective);
 					try {
-						ViewInterceptor.replaceTouchListener(recorder, currentView);
+						ViewInterceptor.replaceTouchListener(activity.toString(), recorder, currentView);
 					} catch (Exception ex) {
-						recorder.writeException(ex, "replace touch listener in directive dialog");
+						recorder.writeException(activity.getClass().getName(), ex, "replace touch listener in directive dialog");
 					}
 				} 
 				break;

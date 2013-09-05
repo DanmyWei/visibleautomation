@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
+import android.util.Log;
 import android.view.View;
 
 import com.androidApp.Utility.Constants;
@@ -18,6 +19,7 @@ import com.androidApp.Utility.Constants;
  *
  */
 public class ViewDirective {
+	protected static final String TAG = "ViewDirective";
 	public enum ViewOperation {
 		COPY_TEXT("copy_text"),									// <view_reference>,copy_text,<when>,variable_name
 		PASTE_TEXT("paste_text"),								// <view_reference>,paste_text,<when>,variable_name
@@ -153,6 +155,7 @@ public class ViewDirective {
 	public static boolean match(View v, ViewOperation op, When when, List<ViewDirective> viewDirectiveList) {
 		for (ViewDirective viewDirective : viewDirectiveList) {
 			if (viewDirective.match(v, op, when)) {
+				Log.i(TAG, "v matched view directive " + viewDirective + " op = " + op + " when = " + when);
 				return true;
 			}
 		}

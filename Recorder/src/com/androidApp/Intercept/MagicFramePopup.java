@@ -52,7 +52,7 @@ public class MagicFramePopup extends MagicFrame {
 			// we have to have focus, otherwise, we don't get the back key.
 			this.requestFocus();
 		} catch (Exception ex) {
-			recorder.writeException(ex,  "trying to intercept popup window");
+			recorder.writeException(mActivity.getClass().getName(), ex,  "trying to intercept popup window");
 		}
 	}
 	

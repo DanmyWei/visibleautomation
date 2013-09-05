@@ -62,6 +62,12 @@ public class EmitRobotiumCode {
 		String eventsFileName = args[0];
 		String viewDirectiveFileName = args[1];
 		String targetProject = args[2];
+		String testProjectName = null;
+		if (targetProject.lastIndexOf(File.separatorChar) != -1) {
+			testProjectName = targetProject.substring(targetProject.lastIndexOf(File.separatorChar) + 1) + Constants.Extensions.TEST;
+		} else {
+			testProjectName = targetProject + Constants.Extensions.TEST;
+		}
 		boolean fBinary = false;
 		if (args.length == 3) {
 			fBinary = args[2].equals("binary");
@@ -95,8 +101,7 @@ public class EmitRobotiumCode {
 		// read any conditional code from the handlers directory
 		Hashtable<CodeDefinition, List<LineAndTokens>> outputCode = new Hashtable<CodeDefinition, List<LineAndTokens>>();
 		String applicationPackage = emitter.readApplicationPackage(eventsFileName);
-		String testClassName = StringUtils.getNameFromClassPath(applicationPackage) + Constants.Extensions.TEST;
-		File handlersDir = new File(testClassName, Constants.Dirs.HANDLERS);
+		File handlersDir = new File(testProjectName, Constants.Dirs.HANDLERS);
 		readHandlers(handlersDir, outputCode);
 		
 		// grab the  generate the test code.
@@ -111,14 +116,15 @@ public class EmitRobotiumCode {
 		String testClassPath = emitter.getApplicationClassPath() + Constants.Extensions.TEST;
 		
 		// generated test class name
-		String srcDirName = testClassName + File.separator + Constants.Dirs.SRC;
+		String srcDirName = testProjectName + File.separator + Constants.Dirs.SRC;
 		String packageFilePath = srcDirName + File.separator + FileUtility.sourceDirectoryFromClassName(testClassPath);
-		String templateFileName = testClassName + "." + Constants.Extensions.JAVA;
+		String templateFileName = testProjectName + "." + Constants.Extensions.JAVA;
 		// asset directory to write motion event files to
-		String assetDirName = testClassName + File.separator + Constants.Dirs.ASSETS;
+		String assetDirName = testProjectName + File.separator + Constants.Dirs.ASSETS;
 		
 		// TODO: should change this variable
 		int uniqueFileIndex = FileUtility.uniqueFileIndex(packageFilePath, templateFileName);
+		String testClassName = testProjectName;
 		if (uniqueFileIndex != 0) {
 			testClassName += Integer.toString(uniqueFileIndex) ;
 		}

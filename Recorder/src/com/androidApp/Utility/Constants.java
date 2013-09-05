@@ -35,9 +35,14 @@ public class Constants {
 	// view listener references.
 	public static final String ACTIVITY = "activity";
 	public static final String UTF_8 = "UTF-8";
+	public static final String NO_ACTIIVTY_NAME = "no_activity_name";
+	
 	public static class Packages {
 		public static final String ANDROID_VIEW = "android.view";
 		public static final String ANDROID_WIDGET = "android.widget";
+		public static final String ANDROID_INTERNAL_WIDGET = "com.android.internal.widget";
+		public static final String ANDROID_INTERNAL_VIEW = "com.android.internal.view";
+		public static final String ANDROID_INTERNAL_MENU = "com.android.internal.view.menu";
 	}
 	// view/widget reference types
 	

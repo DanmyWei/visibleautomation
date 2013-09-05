@@ -8,6 +8,7 @@ import com.androidApp.Utility.StringUtils;
 import com.androidApp.Utility.TestUtils;
 import com.androidApp.Utility.ViewExtractor;
 
+import android.app.Activity;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.view.MenuItem;
@@ -38,13 +39,17 @@ public class RecordListener {
 	
 	// latch to indicate that an event has been fired since the latch was reset.
 	protected static boolean	sfEventLatch;
-
+	
+	// retain the activity name so we can record it to associate events with the activity.
+	protected String			mActivityName;
+	
 	public RecordListener() {
 		mEventRecorder = null;
 	}
 	
-	public RecordListener(EventRecorder eventRecorder) {
+	public RecordListener(String activityName, EventRecorder eventRecorder) {
 		mEventRecorder = eventRecorder;
+		mActivityName = activityName;
 	}
 	
 	/**

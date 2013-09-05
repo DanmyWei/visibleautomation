@@ -42,7 +42,7 @@ public class CopyTextRunnable implements Runnable {
 					mRecorder.setVariableValue(viewDirective.getVariable(), value);
 					String massagedString = StringUtils.escapeString(value.toString(), "\"", '\\').replace("\n", "\\n");
 					String logString = viewDirective.getVariable() + "," + massagedString;
-					mRecorder.writeRecord(Constants.EventTags.COPY_TEXT, v, logString);
+					mRecorder.writeRecord(Constants.EventTags.COPY_TEXT, mActivity.toString(), v, logString);
 				}
 			}
 		} else if (v instanceof ViewGroup) {

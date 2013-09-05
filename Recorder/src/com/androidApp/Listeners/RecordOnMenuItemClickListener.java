@@ -5,6 +5,7 @@ import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.ReflectionUtils;
 
+import android.app.Activity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -20,18 +21,18 @@ public class RecordOnMenuItemClickListener extends RecordListener implements Men
 	protected MenuItem.OnMenuItemClickListener	mOriginalMenuItemClickListener;
 	protected MenuItem mMenuItem;
 	
-	public RecordOnMenuItemClickListener(EventRecorder eventRecorder, MenuItem menuItem) {
-		super(eventRecorder);
+	public RecordOnMenuItemClickListener(String activityName, EventRecorder eventRecorder, MenuItem menuItem) {
+		super(activityName, eventRecorder);
 		mMenuItem = menuItem;
 		try {
 			mOriginalMenuItemClickListener = ListenerIntercept.getOnMenuItemClickListener(menuItem);
 		} catch (Exception ex) {
-			mEventRecorder.writeException(ex, "create onMenuItemClickListener");
+			mEventRecorder.writeException(mActivityName, ex, "create onMenuItemClickListener");
 		}
 	}
 	
-	public RecordOnMenuItemClickListener(EventRecorder eventRecorder, MenuItem.OnMenuItemClickListener originalListener) {
-		super(eventRecorder);
+	public RecordOnMenuItemClickListener(String activityName, EventRecorder eventRecorder, MenuItem.OnMenuItemClickListener originalListener) {
+		super(activityName, eventRecorder);
 		mOriginalMenuItemClickListener = originalListener;
 	}
 	
@@ -46,9 +47,10 @@ public class RecordOnMenuItemClickListener extends RecordListener implements Men
 			setEventBlock(true);
 			try {
 				int position = RecordOnMenuItemClickListener.getMenuItemIndex(item);
-				mEventRecorder.writeRecord(Constants.EventTags.MENU_ITEM_CLICK, item.getItemId() + "," + position + "," + RecordListener.getDescription(item));
+				String id = "0x" + Integer.toHexString(item.getItemId());
+				mEventRecorder.writeRecord(mActivityName, Constants.EventTags.MENU_ITEM_CLICK, id + "," + position + "," + RecordListener.getDescription(item));
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, "menu item click " + ex.getMessage());
+				mEventRecorder.writeException(mActivityName, ex, "menu item click " + ex.getMessage());
 			}	
 		}
 		if (!fReentryBlock) {

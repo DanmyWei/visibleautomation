@@ -6,6 +6,7 @@ import com.androidApp.EventRecorder.ViewDirective;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.DialogUtils;
 
+import android.app.Activity;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewParent;
@@ -20,18 +21,18 @@ import android.view.ViewParent;
 public class RecordOnClickListener extends RecordListener implements View.OnClickListener, IOriginalListener  {
 	protected View.OnClickListener 	mOriginalOnClickListener;
 	
-	public RecordOnClickListener(EventRecorder eventRecorder, View v) {
-		super(eventRecorder);
+	public RecordOnClickListener(String activityName, EventRecorder eventRecorder, View v) {
+		super(activityName, eventRecorder);
 		try {
 			mOriginalOnClickListener = ListenerIntercept.getClickListener(v);
 			v.setOnClickListener(this);
 		} catch (Exception ex) {
-			mEventRecorder.writeException(ex, v, "create on click listener");
+			mEventRecorder.writeException(ex, activityName, v, "create on click listener");
 		}		
 	}
 	
-	public RecordOnClickListener(EventRecorder eventRecorder, View.OnClickListener originalClicksListener) {
-		super(eventRecorder);
+	public RecordOnClickListener(String activityName, EventRecorder eventRecorder, View.OnClickListener originalClicksListener) {
+		super(activityName, eventRecorder);
 		mOriginalOnClickListener = originalClicksListener;
 	}
 	
@@ -53,12 +54,12 @@ public class RecordOnClickListener extends RecordListener implements View.OnClic
 			boolean fWorkaroundDirective = mEventRecorder.matchViewDirective(v, ViewDirective.ViewOperation.CLICK_WORKAROUND, ViewDirective.When.ALWAYS);
 			try {
 				if (fIsInDialog || fWorkaroundDirective) { 
-					mEventRecorder.writeRecord(Constants.EventTags.CLICK_WORKAROUND, v, getDescription(v));
+					mEventRecorder.writeRecord(Constants.EventTags.CLICK_WORKAROUND, mActivityName, v, getDescription(v));
 				} else {
-					mEventRecorder.writeRecord(Constants.EventTags.CLICK, v, getDescription(v));
+					mEventRecorder.writeRecord(Constants.EventTags.CLICK, mActivityName, v, getDescription(v));
 				}
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, v, "on click");
+				mEventRecorder.writeException(ex, mActivityName, v, "on click");
 			}
 		}
 		if (!fReentryBlock) {

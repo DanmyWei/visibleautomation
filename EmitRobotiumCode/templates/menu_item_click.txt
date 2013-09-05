@@ -1,1 +1,1 @@
-		getInstrumentation().invokeMenuActionSync(robotiumUtils.getCurrentActivity(), %MENU_ITEM_ID%, 0);
+		TestCase.assertTrue(robotiumUtils.invokeMenuAction(%MENU_ITEM_ID%, VIEW_WAIT_MSEC));

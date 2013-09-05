@@ -6,6 +6,7 @@ import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.TestUtils;
 
+import android.app.Activity;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.os.SystemClock;
@@ -26,8 +27,8 @@ public class RecordSpinnerDialogOnDismissListener extends RecordListener impleme
 	public RecordSpinnerDialogOnDismissListener() {
 	}
 	
-	public RecordSpinnerDialogOnDismissListener(EventRecorder eventRecorder, ViewInterceptor viewInterceptor, DialogInterface.OnDismissListener originalDismissListener) {
-		super(eventRecorder);
+	public RecordSpinnerDialogOnDismissListener(String activityName, EventRecorder eventRecorder, ViewInterceptor viewInterceptor, DialogInterface.OnDismissListener originalDismissListener) {
+		super(activityName, eventRecorder);
 		mOriginalOnDismissListener = originalDismissListener;
 		mViewInterceptor = viewInterceptor;
 	}
@@ -46,13 +47,13 @@ public class RecordSpinnerDialogOnDismissListener extends RecordListener impleme
 				mViewInterceptor.setCurrentDialog(null);
 				String description = getDescription(dialog);
 				if (mViewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_BACK) {
-					mEventRecorder.writeRecord(Constants.EventTags.DISMISS_SPINNER_DIALOG_BACK_KEY, description);
+					mEventRecorder.writeRecord(mActivityName, Constants.EventTags.DISMISS_SPINNER_DIALOG_BACK_KEY, description);
 					mViewInterceptor.setLastKeyAction(-1);
 				} else {
-					mEventRecorder.writeRecord(Constants.EventTags.DISMISS_SPINNER_DIALOG, description);
+					mEventRecorder.writeRecord(mActivityName, Constants.EventTags.DISMISS_SPINNER_DIALOG, description);
 				}
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, "on dismiss dialog");
+				mEventRecorder.writeException(mActivityName, ex, "on dismiss dialog");
 			}
 		}
 		if (!fReentryBlock) {

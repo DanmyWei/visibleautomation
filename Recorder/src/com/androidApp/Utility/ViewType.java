@@ -3,7 +3,11 @@ package com.androidApp.Utility;
 import java.lang.reflect.Method;
 import java.util.List;
 
+import android.graphics.Rect;
+import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.Gallery;
@@ -22,6 +26,7 @@ import com.androidApp.Utility.Constants.Methods;
 import com.androidApp.Utility.Constants.Packages;
 
 public class ViewType {
+	protected static final String TAG = "ViewType";
 
 	/**
 	 * is this view a child of the action bar?
@@ -116,29 +121,76 @@ public class ViewType {
 	 * @param v
 	 * @return true if we should listen to motion events
 	 */
-	public static boolean listenMotionEvents(List<View> motionEventViewList, View v) throws IllegalAccessException, NoSuchFieldException{
+	public static boolean listenMotionEvents(View v) throws IllegalAccessException, NoSuchFieldException{
 		
 		// I really dislike this hardcoded bullshit that is certain to break in later versions.  We need to have a 
 		// "blacklist" as well as a "whitelist" for motion events. Or Something Better Than This Implementation
 		// which sucks Giant Donkey Dicks
 		if (!(v instanceof AdapterView)) {
 			if (isScrollView(v)) {
+				Log.i(TAG, v + " is a scroll view");
 				return true;
 			}
-			if (v.isHorizontalScrollBarEnabled() || v.isVerticalScrollBarEnabled()) {
+			if (canScroll(v)) {
+				Log.i(TAG, v + " has scrollbars enabled");
 				return true;
 			}
+			/* this is apparently all text views and buttons and everything so Im temporarily dyking it 
+			 * out until I can figure out how to tighten it up a bit.
 			if (v instanceof TextView) {
 				TextView tv = (TextView) v;
-				if (!isScrollingTextView(tv)) {
-					return false;
+				if (isScrollingTextView(tv)) {
+					Log.i(TAG, v + " is a scrolling text view");
+					return true;
 				}
 			}
-		}
-		if (motionEventViewList != null) {
-			return motionEventViewList.contains(v);
+			*/
 		}
 		return false;
+	}
+
+	/**
+	 * can we scroll this? Really?
+	 * @param v
+	 * @return
+	 */
+	public static boolean canScroll(View v) {
+		if (v.isHorizontalScrollBarEnabled() || v.isVerticalScrollBarEnabled()) {
+			Rect childBounds = getChildBounds(v);
+			return (v.isHorizontalScrollBarEnabled() && (childBounds.width() > v.getWidth())) ||
+					(v.isVerticalScrollBarEnabled() && (childBounds.height() > v.getHeight()));
+		}
+		return false;
+	}
+	
+	/**
+	 * get the bounds of a view's children, or its bounds if it has no children
+	 * @param v
+	 * @return
+	 */
+	public static Rect getChildBounds(View v) {
+		Rect rect = new Rect();
+		if (v instanceof ViewGroup) {
+			ViewGroup vg = (ViewGroup) v;
+			if (vg.getChildCount() > 0) {
+				View vChild = vg.getChildAt(0);
+				rect.left = vChild.getLeft();
+				rect.top = vChild.getTop();
+				rect.right = vChild.getRight();
+				rect.bottom = vChild.getBottom();
+				for (int i = 1; i < vg.getChildCount(); i++) {
+					vChild = vg.getChildAt(i);
+					rect.union(vChild.getLeft(), vChild.getTop());
+					rect.union(vChild.getRight(), vChild.getBottom());
+				}
+				return rect;
+			}
+		} 
+		rect.left = 0;
+		rect.top = 0;
+		rect.right = v.getWidth();
+		rect.top = v.getHeight();
+		return rect;
 	}
 
 	/**
@@ -156,19 +208,32 @@ public class ViewType {
 	 * has this class overridden the default android touch method? 
 	 * @param v view which is probably some weird derived class
 	 * @return true if some non-android superclass has a public onTouch() method
+	 * NOTE: #1 get methods with correct signature
+	 * #2 package comparison is wrong, just ensure not the android internals (inverse of what it does
 	 */
 	public static boolean hasOverriddenAndroidTouchMethod(View v) {
-		String[] android_packages = new String[] { Constants.Packages.ANDROID_VIEW, Constants.Packages.ANDROID_WIDGET };
+		String[] android_packages = new String[] { Constants.Packages.ANDROID_VIEW, 
+												  Constants.Packages.ANDROID_WIDGET,
+												  Constants.Packages.ANDROID_INTERNAL_WIDGET,
+												  Constants.Packages.ANDROID_INTERNAL_VIEW,
+												  Constants.Packages.ANDROID_INTERNAL_MENU };
 		String[] methods = new String[] { Constants.Methods.ON_TOUCH, Constants.Methods.ON_INTERCEPT_TOUCH_EVENT };
 		Class<? extends View> c = v.getClass();
-		while (!StringUtils.containedInStringArray(c.getPackage().getName(), android_packages)) {
-			Method[] classMethods = c.getMethods();
-			for (Method method : classMethods) {
-				if (StringUtils.containedInStringArray(method.getName(), methods)) {		
-					return true;
-				}
+		try {
+			Method onTouchMethod = c.getMethod(Constants.Methods.ON_TOUCH, MotionEvent.class);
+			String packageName = onTouchMethod.getDeclaringClass().getPackage().getName();
+			if (!StringUtils.containedInStringArray(packageName, android_packages)) {
+				return true;
 			}
-			c = (Class<? extends View>) c.getSuperclass();
+		} catch (NoSuchMethodException nsmex) {
+		}
+		try {
+			Method onInterceptTouchEventMethod = c.getMethod(Constants.Methods.ON_INTERCEPT_TOUCH_EVENT, MotionEvent.class);
+			String packageName = onInterceptTouchEventMethod.getDeclaringClass().getPackage().getName();
+			if (!StringUtils.containedInStringArray(packageName, android_packages)) {
+				return true;
+			}			
+		} catch (NoSuchMethodException nsmex) {
 		}
 		return false;
 	}

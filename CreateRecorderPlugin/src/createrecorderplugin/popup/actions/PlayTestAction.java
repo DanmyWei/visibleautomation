@@ -2,6 +2,7 @@ package createrecorderplugin.popup.actions;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
@@ -23,7 +24,9 @@ import com.androidApp.parser.ManifestParser;
 import com.androidApp.parser.ProjectParser;
 import com.androidApp.parser.ProjectPropertiesScan;
 import com.androidApp.util.Constants;
+import com.androidApp.util.FileUtility;
 
+import createrecorder.handlers.InstallRecorderHandler;
 import createrecorder.util.EclipseExec;
 import createrecorder.util.EclipseUtility;
 import createrecorder.util.RecorderConstants;
@@ -93,10 +96,38 @@ public class PlayTestAction  implements IObjectActionDelegate {
 				}
 				
 				// uninstall and re-install the test driver
+				// NOTE: we need to re-install the .APK if it's not installed on the device.
 				String uninstallCommand = "adb uninstall " + testPackage;
 				EclipseExec.execADBBackgroundConsoleOutput(uninstallCommand);
 				String installCommand = "adb install " + projectParser.getProjectName() + ".apk";
 				EclipseExec.execADBBackgroundConsoleOutput(installCommand);
+				// NOTE: need to get the apkFileName from the root directory of the project.
+				if (!InstallRecorderHandler.isPackageInstalled(manifestParser.getTargetPackage())) {
+					if (MessageDialog.openConfirm(mShell, RecorderConstants.VISIBLE_AUTOMATION,
+							  "The application is not installed on this device.  Do you wish to install it now?")) {
+						 File[] apkFiles = FileUtility.getFilesByExtension(projectDir, "apk");
+						 if ((apkFiles != null) && (apkFiles.length > 0)) {
+							 String apkFileName = apkFiles[0].getName();
+							 InstallRecorderHandler.installAPKFromFile(mShell, apkFileName);
+						 } else {
+								MessageDialog.openInformation(mShell, RecorderConstants.VISIBLE_AUTOMATION,	
+										  "There is no APK in the project to install");
+							 
+						 }
+					}		
+				}
+				// install the soft keyboard if neccessary
+				if (!InstallRecorderHandler.isPackageInstalled(RecorderConstants.KEYBOARD_PACKAGE)) {
+					if (MessageDialog.openConfirm(mShell, RecorderConstants.VISIBLE_AUTOMATION,
+												  "The custom keyboard is not installed, do you wish to install it now?")) {
+						if (InstallRecorderHandler.installAPKFromTemplate(mShell, RecorderConstants.KEYBOARD_APK, RecorderConstants.KEYBOARD_PACKAGE)) {
+							MessageDialog.openInformation(mShell, RecorderConstants.VISIBLE_AUTOMATION,	
+														  "Please set the keyboard as the default input method from settings on your device");
+						} 
+					}
+				}
+
+				// 
 				String testPath = EclipseUtility.classNameToPath(testPackage);
 				IFolder classFolder = project.getFolder(Constants.Dirs.SRC + File.separator + testPath);
 				IResource[] packageContents = classFolder.members();
@@ -133,5 +164,4 @@ public class PlayTestAction  implements IObjectActionDelegate {
 			}
 		}
 	}
-
 }

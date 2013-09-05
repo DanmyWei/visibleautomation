@@ -19,6 +19,7 @@ import android.app.Activity;
 import android.view.Surface;
 import android.widget.PopupWindow;
 import android.widget.ExpandableListView;
+import android.content.pm.ActivityInfo;
 
 public class %TESTCLASSNAME% extends ActivityInstrumentationTestCase2<%CLASSNAME%> {
   	private Solo 			solo;

@@ -5,6 +5,7 @@ import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 
+import android.app.Activity;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.os.SystemClock;
@@ -22,19 +23,19 @@ public class RecordOnFocusChangeListener extends RecordListener implements View.
 	protected View.OnFocusChangeListener 	mOriginalOnFocusChangeListener;
 	protected ViewInterceptor				mViewInterceptor;
 	
-	public RecordOnFocusChangeListener(EventRecorder eventRecorder, ViewInterceptor viewInterceptor, View view) {
-		super(eventRecorder);
+	public RecordOnFocusChangeListener(String activityName, EventRecorder eventRecorder, ViewInterceptor viewInterceptor, View view) {
+		super(activityName, eventRecorder);
 		mViewInterceptor = viewInterceptor;
 		try {
 			mOriginalOnFocusChangeListener = view.getOnFocusChangeListener();
 			view.setOnFocusChangeListener(mOriginalOnFocusChangeListener);
 		} catch (Exception ex) {
-			mEventRecorder.writeException(ex, "create on focus change listener");
+			mEventRecorder.writeException(mActivityName, ex, "create on focus change listener");
 		}
 	}
 	
-	public RecordOnFocusChangeListener(EventRecorder eventRecorder, ViewInterceptor viewInterceptor, View.OnFocusChangeListener originalFocusChangeListener) {
-		super(eventRecorder);
+	public RecordOnFocusChangeListener(String activityName, EventRecorder eventRecorder, ViewInterceptor viewInterceptor, View.OnFocusChangeListener originalFocusChangeListener) {
+		super(activityName, eventRecorder);
 		mViewInterceptor = viewInterceptor;
 		mOriginalOnFocusChangeListener = originalFocusChangeListener;
 	}
@@ -63,15 +64,15 @@ public class RecordOnFocusChangeListener extends RecordListener implements View.
 					if (v instanceof TextView) {
 						TextView tv = (TextView) v;
 						String msg = Integer.toString(tv.getSelectionStart()) + "," +  Integer.toString(tv.getSelectionEnd());
-						mEventRecorder.writeRecord(Constants.EventTags.GET_FOCUS, v, msg);
+						mEventRecorder.writeRecord(Constants.EventTags.GET_FOCUS, mActivityName, v, msg);
 					} else {
-						mEventRecorder.writeRecord(Constants.EventTags.GET_FOCUS, v);
+						mEventRecorder.writeRecord(Constants.EventTags.GET_FOCUS, mActivityName, v);
 					}
 				} else {
-					mEventRecorder.writeRecord(Constants.EventTags.LOSE_FOCUS, v);
+					mEventRecorder.writeRecord(Constants.EventTags.LOSE_FOCUS, mActivityName, v);
 				}
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, v, "on focus change " + hasFocus);
+				mEventRecorder.writeException(ex, mActivityName, v, "on focus change " + hasFocus);
 			}
 		}
 		if (!fReentryBlock) {

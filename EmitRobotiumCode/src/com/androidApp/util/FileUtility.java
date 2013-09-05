@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -343,5 +344,31 @@ public class FileUtility {
 			return null;
 		}
 	}
+	
+	/**
+	 * filter files in a directory by extension.
+	 * @param dir
+	 * @param extension
+	 * @return
+	 */
+	public static File[] getFilesByExtension(File dir, String extension) {
+		FileUtility fileUtility = new FileUtility();
+		return dir.listFiles(fileUtility.new ExtensionFilter(extension));
+	}
 
+
+	// extension filter.
+	protected class ExtensionFilter implements FilenameFilter {
+		String mExtension;
+		
+		public ExtensionFilter(String extension) {
+			mExtension = extension;
+		}
+
+		@Override
+		public boolean accept(File dir, String filename) {
+			return filename.endsWith("." + mExtension);
+		}
+		
+	}
 }

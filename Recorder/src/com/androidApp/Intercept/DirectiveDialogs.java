@@ -108,8 +108,9 @@ public class DirectiveDialogs {
 			if (which == 0) {
 				// prevent 'doubling'
 				if (!DirectiveDialogs.this.getEventRecorder().isInterstitialActivity(DirectiveDialogs.this.getActivity())) {
-					String logMsg =  DirectiveDialogs.this.getActivity().getClass().getName();
-					DirectiveDialogs.this.getEventRecorder().writeRecord(Constants.EventTags.INTERSTITIAL_ACTIVITY, logMsg);
+					Activity activity = DirectiveDialogs.this.getActivity();
+					String logMsg =  activity.getClass().getName();
+					DirectiveDialogs.this.getEventRecorder().writeRecord(activity.getClass().getName(), Constants.EventTags.INTERSTITIAL_ACTIVITY, logMsg);
 					DirectiveDialogs.this.getEventRecorder().addInterstitialActivity(DirectiveDialogs.this.getActivity());
 				}
 			} else if (which == 1) {
@@ -146,12 +147,14 @@ public class DirectiveDialogs {
 							List<Object> resourceIds =  eventRecorder.getViewReference().getStringList();		
 							List<String> resIds = ResourceUtils.getIdForString(res, resourceIds, title);
 							if (resIds.size() == 1) {
-								String msg = mMagicOverlayDialog.getActivity().getClass().getName() + "," + resIds.get(0);
-								eventRecorder.writeRecord(Constants.EventTags.INTERSTITIAL_DIALOG_TITLE_ID, msg);
+								Activity activity = mMagicOverlayDialog.getActivity();
+								String msg = activity.getClass().getName() + "," + resIds.get(0);
+								eventRecorder.writeRecord(activity.getClass().getName(), Constants.EventTags.INTERSTITIAL_DIALOG_TITLE_ID, msg);
 							} else {
 								String escapedTitle = StringUtils.escapeString(title, "\"", '\\').replace("\n", "\\n");
-								String msg = mMagicOverlayDialog.getActivity().getClass().getName() + "," + "\"" + escapedTitle + "\"";
-								eventRecorder.writeRecord(Constants.EventTags.INTERSTITIAL_DIALOG_TITLE_TEXT, msg);
+								Activity activity = mMagicOverlayDialog.getActivity();
+								String msg = activity.getClass().getName() + "," + "\"" + escapedTitle + "\"";
+								eventRecorder.writeRecord(activity.getClass().getName(), Constants.EventTags.INTERSTITIAL_DIALOG_TITLE_TEXT, msg);
 							}
 						} else {
 							Toast.makeText(mMagicOverlayDialog.getActivity(), Constants.DisplayStrings.NO_DIALOG_TITLE, Toast.LENGTH_SHORT).show();

@@ -81,14 +81,14 @@ public class MagicOverlayDialog extends MagicOverlay {
 							List<String> resIds = ResourceUtils.getIdForString(res, resourceIds, text);
 							if (resIds.size() == 1) {
 								String msg = getActivity().getClass().getName() + "," + resIds.get(0);
-								mRecorder.writeRecord(Constants.EventTags.INTERSTITIAL_DIALOG_CONTENTS_ID, msg);
+								mRecorder.writeRecord(mActivity.getClass().getName(), Constants.EventTags.INTERSTITIAL_DIALOG_CONTENTS_ID, msg);
 								Toast.makeText(getActivity(), "marking dialog with " + text, Toast.LENGTH_SHORT).show();
 
 							} else {
 								String escapedText = StringUtils.escapeString(text, "\"", '\\').replace("\n", "\\n");;
 								String msg = getActivity().getClass().getName() + "," + "\"" + escapedText + "\"";
 								Toast.makeText(getActivity(), "marking dialog with " + text, Toast.LENGTH_SHORT).show();
-								mRecorder.writeRecord(Constants.EventTags.INTERSTITIAL_DIALOG_CONTENTS_TEXT, msg);
+								mRecorder.writeRecord(mActivity.getClass().getName(), Constants.EventTags.INTERSTITIAL_DIALOG_CONTENTS_TEXT, msg);
 							}
 						} else {
 							Toast.makeText(getActivity(), Constants.DisplayStrings.NO_DIALOG_TITLE, Toast.LENGTH_SHORT).show();
