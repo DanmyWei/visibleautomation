@@ -10,8 +10,7 @@
         android:name="android.test.InstrumentationTestRunner"
         android:targetPackage="%TARGET_PACKAGE%" />
 
-    <application android:label="%TARGET_PACKAGE%.test" 
-        		 android:debuggable="true">
+    <application android:label="%TARGET_PACKAGE%.test">
         <uses-library android:name="android.test.runner" />
        <service android:name="com.androidApp.LogService.LogService" >
             <intent-filter>

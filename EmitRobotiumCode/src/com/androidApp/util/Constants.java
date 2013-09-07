@@ -308,7 +308,7 @@ public class Constants {
 		public static final String VIEW_INDEX = "%VIEW_INDEX%";
 		public static final String ID = "%ID%";
 		public static final String ROBOTIUM_JAR = "%ROBOTIUM_JAR%";
-		public static final String TARGETPACKAGE = "%TARGET_PACKAGE%";
+		public static final String TARGET_PACKAGE = "%TARGET_PACKAGE%";
 		public static final String TARGET_PROJECT = "%TARGET_PROJECT%";
 		public static final String TEXT = "%TEXT%";
 		public static final String FUNCTION_NAME = "%FUNCTION_NAME%";
@@ -382,6 +382,7 @@ public class Constants {
 		public static final String RES = "res";
 		public static final String DRAWABLE = "drawable";
 		public static final String LIBS = "libs";
+		public static final String BIN = "bin";
 		public static final String PLATFORM_TOOLS = "platform-tools";
 		public static final String PLATFORM_TOOLS_22 = "build-tools/17.0.0";
 		public static final String GEN = "gen";
@@ -407,6 +408,7 @@ public class Constants {
 		public static final String JAVA = "java";
 		public static final String TEXT = "txt";
 		public static final String ZIP = "zip";
+		public static final String APK = "apk";
 	}
 	
 	public static class SoloFunctions {

@@ -7,7 +7,10 @@ package createrecorder.util;
 public class RecorderConstants {
 	public static final String ALLTESTS_FILE = "AllTests.java";
 	public static final String CLASSPATH_TEMPLATE = "classpath_template_createrecorder.txt";
-	public static final String MANIFEST_TEMPLATE = "manifest_template_createrecorder.txt";
+	public static final String MANIFEST_TEMPLATE_RECORDER = "manifest_template_createrecorder.txt";
+	public static final String MANIFEST_TEMPLATE_BINARY_RECORDER = "manifest_template_createrecorder_binary.txt";
+	public static final String MANIFEST_TEMPLATE_TEST = "manifest_template_createtest.txt";
+	public static final String MANIFEST_TEMPLATE_BINARY_TEST = "manifest_template_createtest_binary.txt";
 	public static final String PROJECT_PROPERTIES_TEMPLATE = "project_properties_createrecorder.txt";
 	public static final String PROJECT_TEMPLATE = "project_template_createrecorder.txt";
 	public static final String TESTCLASS_TEMPLATE = "testclass_template_createrecorder.txt";

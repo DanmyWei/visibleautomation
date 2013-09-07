@@ -176,18 +176,23 @@ public class SetupRobotiumProject {
 	 * @param testClassName name of the test class.
 	 * @param testClassPath fully.qualified.testClass.path
 	 * @param targetPackage package of test class
+	 * @param manifestTemplate (different for binary and source)
 	 * @throws IOException
 	 */
-	public static void writeManifest(String dirname, String testClassName, String testClassPath, String targetPackage) throws IOException {
-		String manifest = createManifest(testClassName, testClassPath, targetPackage); 
-		FileUtility.writeString(dirname + File.separator + Constants.Filenames.ANDROID_MANIFEST_XML, manifest);
+	public static void writeManifest(String dirname, 
+									 String targetPackage, 
+									 int  	minSDKVersion,
+									 String manifestTemplate) throws IOException {
+		String manifest = createManifest(targetPackage, minSDKVersion, manifestTemplate); 
+		FileUtility.writeString(dirname + File.separator + manifestTemplate, manifest);
 	}
 	
-	public static String createManifest(String testClassName, String testClassPath, String targetPackage) throws IOException {
-		String manifest = FileUtility.readTemplate(Constants.Templates.ANDROID_MANIFEST_XML); 
-		manifest = manifest.replace(Constants.VariableNames.CLASSPATH, testClassPath);
-		manifest = manifest.replace(Constants.VariableNames.TARGETPACKAGE, targetPackage);
-		manifest = manifest.replace(Constants.VariableNames.CLASSNAME, testClassName);
+	public static String createManifest(String 	targetPackage, 
+										int		minSDKVersion,
+										String 	manifestTemplate) throws IOException {
+		String manifest = FileUtility.readTemplate(manifestTemplate); 
+		manifest = manifest.replace(Constants.VariableNames.TARGET_PACKAGE, targetPackage);
+		manifest = manifest.replace(Constants.VariableNames.MIN_SDK_VERSION, Integer.toString(minSDKVersion));
 		return manifest;
 	}
 	

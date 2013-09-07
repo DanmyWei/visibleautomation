@@ -19,6 +19,7 @@ import java.util.Map.Entry;
 import java.util.Stack;
 
 import com.androidApp.emitter.IEmitCode.LineAndTokens;
+import com.androidApp.parser.ManifestParser;
 import com.androidApp.parser.ProjectPropertiesScan;
 import com.androidApp.savestate.SaveState;
 import com.androidApp.savestate.SaveStateException;
@@ -90,6 +91,15 @@ public class EmitRobotiumCode {
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
+		
+		// scan the project manifest
+		File manifestFile = new File(targetProject, Constants.Filenames.ANDROID_MANIFEST_XML);
+		ManifestParser manifestParser = null;
+		try {
+			manifestParser = new ManifestParser(manifestFile);
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
 
 		// grab the events file
 		eventsFileName = SetupRobotiumProject.getEventsFile(eventsFileName);
@@ -141,7 +151,8 @@ public class EmitRobotiumCode {
 				SetupRobotiumProject.writeBuildXML(testClassName, emitter.getApplicationClassPath());
 				SetupRobotiumProject.copyBuildFiles(testClassName, projectPropertiesScan.getTarget());
 				SetupRobotiumProject.copyLibraries(dirs.mLibDir);
-				SetupRobotiumProject.writeManifest(testClassName, testClassName, testClassPath, emitter.getApplicationPackage());
+				SetupRobotiumProject.writeManifest(testClassPath, emitter.getApplicationPackage(), 
+												   manifestParser.getMinSDKVersion(), Constants.Filenames.ANDROID_MANIFEST_XML);
 				SetupRobotiumProject.copyTestDriverFile(packageFilePath, emitter.getApplicationClassPath() + Constants.Extensions.TEST);
 				SetupRobotiumProject.writeResources(dirs, testClassName);
 				if (fBinary) {

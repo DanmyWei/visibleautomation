@@ -39,8 +39,8 @@ public class InstallRecorderHandler extends AbstractHandler {
 	 * @return
 	 */
 	public static boolean isPackageInstalled(String packageName) {
-		String[] results = EclipseExec.getAdbCommandOutput("shell pm list packages -3 " + packageName);
-		return results.length == 1;
+		String[] results = EclipseExec.getAdbCommandOutput("shell pm list packages " + packageName);
+		return results.length >= 1;
 	}
 
 	/**
@@ -75,7 +75,7 @@ public class InstallRecorderHandler extends AbstractHandler {
 	    if (StringUtils.containedInStringArray(Constants.Errors.FAILURE, installResults)) {
 			MessageDialog.openInformation(shell, RecorderConstants.VISIBLE_AUTOMATION, 
 										  "failed to install the APK file " + apkFile + 
-										  "onto your device. Check the eclipse log for details");
+										  " onto your device. Check the eclipse log for details");
 	    	return false;
 	    }
 	    return true;

@@ -54,7 +54,7 @@ import createrecorder.util.RecorderConstants;
 import createrecorder.util.TestClassDialog;
 
 /**
- * eclipse plugin handler to create the test project.
+ * eclipse plugin handler to create the test project for binary APKs
  * @author Matthew
   * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  *
@@ -67,7 +67,7 @@ public class CreateTestHandler extends AbstractHandler {
 		
 		// prompt the user for the classpath of the APK file to test
 		TestClassDialog testClassDialog = new TestClassDialog();
-		String packagePath = testClassDialog.getTestClassDialog(shell, "Visible Automation", "Enter classpath of APK to test");
+		String packagePath = testClassDialog.getTestClassDialog(shell, RecorderConstants.VISIBLE_AUTOMATION, "Enter classpath of APK to test");
 		if (packagePath != null) {
 			String apkFileName = PackageUtils.getPackageName(testClassDialog.mPackagePath);
 			
@@ -96,7 +96,9 @@ public class CreateTestHandler extends AbstractHandler {
 				ProjectInformation projectInformation = new ProjectInformation();
 				if (projectInformation.init(shell, aaptBadgingValues, manifestInformation)) {
 					// and create the project from the badging information
-					createProject(shell, projectInformation);
+					createProject(shell, projectInformation, apkFileName);
+				} else {
+					MessageDialog.openInformation(shell, RecorderConstants.VISIBLE_AUTOMATION, "failed to initialize project information");
 				}
 			}
 		}
@@ -108,7 +110,7 @@ public class CreateTestHandler extends AbstractHandler {
 	 * @param shell eclipse shell
 	 * @param manifestInformation parsed aapt manifest information
 	 */
-	public void createProject(Shell shell, ProjectInformation projectInformation) {
+	public void createProject(Shell shell, ProjectInformation projectInformation, String apkFileName) {
 		String eventsFileName = Constants.Names.DEVICE;
 		try {
 			// get the android SDK directory so we can execute adb
@@ -152,14 +154,18 @@ public class CreateTestHandler extends AbstractHandler {
 				}
 			} else {
 				// create the project if the source folder doesn't exist.
-				// apparently, there is no android version 9 anymre
-				String androidTarget = null;
+				// apparently, there is no android version 9 anymore
+				int sdkVersion = 10;
 				if (projectInformation.getSDKVersion() == 9) {
-					androidTarget = "target=android-10";
+					sdkVersion = 10;
 				} else {
-					androidTarget = "target=android-" + Integer.toString(projectInformation.getSDKVersion());
+					sdkVersion = projectInformation.getSDKVersion();
 				}
-				codeGenerator.createProject(testProject, emitter, androidTarget, newProjectName, packagePath, testClassPath, testClassName);
+				
+				// copy the .apk that we're testing against to the project directory, so we can install it if needed
+				EclipseUtility.copyFileToProjectDirectory(testProject, apkFileName, apkFileName);
+				codeGenerator.createProject(testProject, emitter, sdkVersion, newProjectName, packagePath,
+											null, RecorderConstants.MANIFEST_TEMPLATE_BINARY_TEST);
 			}
 			codeGenerator.writeTheCode(emitter, outputCode, motionEvents, testProject, packagePath, projectInformation.getPackageName(),
 									   testClassPath, testClassName);

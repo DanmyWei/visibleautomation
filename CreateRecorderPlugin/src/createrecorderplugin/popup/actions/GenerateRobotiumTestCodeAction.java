@@ -56,6 +56,7 @@ import com.androidApp.util.FileUtility;
 import com.androidApp.util.StringUtils;
 
 import createproject.GenerateRobotiumTestCode;
+import createproject.ProjectInformation;
 import createrecorder.handlers.CreateTestHandler;
 import createrecorder.util.EclipseUtility;
 import createrecorder.util.EclipseExec;
@@ -113,15 +114,14 @@ public class GenerateRobotiumTestCodeAction implements IObjectActionDelegate {
 				File projectFile = new File(projectDir,  Constants.Filenames.PROJECT_FILENAME);
 				File projectPropertiesFile = new File(projectDir,  Constants.Filenames.PROJECT_PROPERTIES_FILENAME);
 				ManifestParser manifestParser = null;
-				ProjectParser projectParser = null;
 				ProjectPropertiesScan projectPropertiesScan = null;
 				try {
 					manifestParser = new ManifestParser(manifestFile);
-					projectParser = new ProjectParser(projectFile);
 					projectPropertiesScan = new ProjectPropertiesScan(projectPropertiesFile);
 				} catch (Exception ex) {
 					ex.printStackTrace();
 				}
+
 				// read the events file and generate the code into a hashtable, with code for the main test class
 				// and the activity handler classes.
 				GenerateRobotiumTestCode codeGenerator = new GenerateRobotiumTestCode();
@@ -155,7 +155,8 @@ public class GenerateRobotiumTestCodeAction implements IObjectActionDelegate {
 						testClassName += Integer.toString(uniqueFileIndex) ;
 					} 
 				} else {
-					codeGenerator.createProject(testProject, emitter, projectPropertiesScan.getTarget(), newProjectName, packagePath, testClassPath, testClassName);
+					codeGenerator.createProject(testProject, emitter, projectPropertiesScan.getTargetSDK(), newProjectName, packagePath, 
+												project.getName(), RecorderConstants.MANIFEST_TEMPLATE_TEST);
 				}
 				codeGenerator.writeTheCode(emitter, outputCode, motionEvents, testProject, packagePath, 
 										   manifestParser.getPackage(), testClassPath, testClassName);

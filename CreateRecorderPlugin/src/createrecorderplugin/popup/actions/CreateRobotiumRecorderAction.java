@@ -97,10 +97,13 @@ public class CreateRobotiumRecorderAction implements IObjectActionDelegate {
 				IProject testProject = EclipseUtility.createBaseProject(newProjectName);
 				
 				// create the .classpath, AndroidManifest.xml, .project, and project.properties files
-				createRecorder.createProjectProperties(testProject, projectPropertiesScan.getTarget());
+				createRecorder.createProjectProperties(testProject, projectPropertiesScan.getTargetSDK());
 				createRecorder.createProject(testProject,  projectParser.getProjectName());
 				createRecorder.createClasspath(testProject, projectParser.getProjectName());
-				createRecorder.createManifest(testProject, projectPropertiesScan.getTarget(), manifestParser.getPackage(), manifestParser.getMinSDKVersion());
+				createRecorder.createManifest(testProject, manifestParser.getPackage(), 
+											  projectPropertiesScan.getTargetSDK(),
+											  manifestParser.getMinSDKVersion(),
+											  RecorderConstants.MANIFEST_TEMPLATE_RECORDER);
 
 				// create the java project, the test class output, and the "AllTests" driver which
 				// iterates over all the test cases in the folder, so we can run with a single-click

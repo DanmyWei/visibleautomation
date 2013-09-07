@@ -69,28 +69,25 @@ public class CreateRobotiumRecorder  {
 	/**
 	 * populate the template for the AndroidManifest.xml file
 	 * @param testProject android project under test.
-	 * @param android target
+	 * @param targetSDK integer android SDK level
 	 * @param packageName from the manifest
 	 * @param minSDKVersion min-sdk-version from the manifest
+	 * @param manifestTemplate different for binary vs source (binary doesn't support debuggable=true)s
 	 * @throws CoreException
 	 * @throws IOException
 	 * TODO: add target-sdk-version into manifest
 	 */
-	public void createManifest(IProject testProject, String target, String packageName, String minSDKVersion) throws CoreException, IOException, EmitterException {
-		String manifest = FileUtility.readTemplate(RecorderConstants.MANIFEST_TEMPLATE);
-		manifest = manifest.replace(Constants.VariableNames.CLASSPACKAGE, packageName);
-		if (minSDKVersion != null) {
-			manifest = manifest.replace(Constants.VariableNames.MIN_SDK_VERSION, minSDKVersion);
+	public void createManifest(IProject testProject, 
+							   String 	packageName, 
+							   int 		minSDKVersion,
+							   int 		targetSDK, 
+							   String 	manifestTemplate) throws CoreException, IOException, EmitterException {
+		String manifest = FileUtility.readTemplate(manifestTemplate);
+		manifest = manifest.replace(Constants.VariableNames.TARGET_PACKAGE, packageName);
+		if (minSDKVersion != 0) {
+			manifest = manifest.replace(Constants.VariableNames.MIN_SDK_VERSION, Integer.toString(minSDKVersion));
 		} else {
-			int ichDash = target.indexOf('-');
-			if (ichDash == -1) {
-				throw new EmitterException("failed to find SDK target in project.properties or AndroidManifest.xml");
-			}
-			String sdkVersion = target.substring(ichDash + 1);
-			if (!StringUtils.isNumber(sdkVersion)) {
-				throw new EmitterException("found target in project.properties, but it's ill-formed");
-			}
-			manifest = manifest.replace(Constants.VariableNames.MIN_SDK_VERSION, sdkVersion);
+			manifest = manifest.replace(Constants.VariableNames.MIN_SDK_VERSION, Integer.toString(targetSDK));
 		}
 		IFile file = testProject.getFile(Constants.Filenames.ANDROID_MANIFEST_XML);
 		InputStream is = new StringBufferInputStream(manifest);
@@ -117,11 +114,19 @@ public class CreateRobotiumRecorder  {
 	/**
 	 * create the project.properties file
 	 * @param testProject reference to the project
-	 * @param target platform from project.properties
+	 * @param SDKVersion platform from project.properties
 	 * @throws CoreException
 	 * @throws IOException
 	 */
-	public void createProjectProperties(IProject testProject, String target) throws CoreException, IOException {
+	public void createProjectProperties(IProject testProject, int SDKVersion) throws CoreException, IOException {
+		String target= null;
+		
+		// workaround: There is no android SDK=9
+		if (SDKVersion == 9) {
+			target = "target=android-10";
+		} else {
+			target = "target=android-" + Integer.toString(SDKVersion);
+		}
 		String projectProperties = FileUtility.readTemplate(RecorderConstants.PROJECT_PROPERTIES_TEMPLATE);
 		projectProperties = projectProperties.replace(Constants.VariableNames.TARGET, target);
 		EclipseUtility.writeString(testProject, Constants.Filenames.PROJECT_PROPERTIES_FILENAME, projectProperties);

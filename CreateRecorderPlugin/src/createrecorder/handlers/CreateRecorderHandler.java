@@ -3,6 +3,7 @@ package createrecorder.handlers;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
@@ -22,6 +23,7 @@ import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.window.Window;
 
+import com.androidApp.emitter.EmitterException;
 import com.androidApp.util.Constants;
 import com.androidApp.util.Exec;
 
@@ -43,6 +45,7 @@ import createrecorderplugin.popup.actions.CreateRobotiumRecorderAction;
  * Our recorder handler extends AbstractHandler, an IHandler base class.
  * @see org.eclipse.core.commands.IHandler
  * @see org.eclipse.core.commands.AbstractHandler
+ * this handles the binary instrumentation recorder case
   * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class CreateRecorderHandler extends AbstractHandler {
@@ -123,17 +126,14 @@ public class CreateRecorderHandler extends AbstractHandler {
 			CreateRobotiumRecorderBinary createRecorder = new CreateRobotiumRecorderBinary();
 			
 			// create the .classpath, AndroidManifest.xml, .project, and project.properties files
-			// workaround: There is no android SDK=9
-			String target= null;
-			if (projectInformation.getSDKVersion() == 9) {
-				target = "target=android-10";
-			} else {
-				target = "target=android-" + Integer.toString(projectInformation.getSDKVersion());
-			}
-			createRecorder.createProjectProperties(testProject, target);
+			createRecorder.createProjectProperties(testProject, projectInformation.getSDKVersion());
 			createRecorder.createProject(testProject, projectInformation.getApplicationName());
 			createRecorder.createClasspath(testProject, projectInformation.getApplicationName());
-			createRecorder.createManifest(testProject, target, projectInformation.getPackageName(), Integer.toString(projectInformation.getSDKVersion()));
+			createRecorder.createManifest(testProject,
+										  projectInformation.getPackageName(), 
+										  projectInformation.getMinSDKVersion(),
+										  projectInformation.getSDKVersion(), 
+									      RecorderConstants.MANIFEST_TEMPLATE_BINARY_RECORDER);
 
 			// create the java project, the test class output, and the "AllTests" driver which
 			// iterates over all the test cases in the folder, so we can run with a single-click
@@ -175,7 +175,7 @@ public class CreateRecorderHandler extends AbstractHandler {
      * @return
      */
     String[] getDevicePackages() {
-        return EclipseExec.getAdbCommandOutput("shell pm list packages -3");
+        return EclipseExec.getAdbCommandOutput("shell pm list packages");
     }
 
 	/**

@@ -151,33 +151,37 @@ public class EclipseUtility {
 	 * @param s string to write to the file.
 	 * @throws CoreException
 	 */
-	public static void writeString(IProject project, String filename, String s) throws CoreException {
+	public static void writeString(IProject project, String filename, String s) throws CoreException, IOException {
 		IFile file = project.getFile(filename);
 		file.delete(false, null);
 		InputStream is = new StringBufferInputStream(s);
 		file.create(is, IFile.FORCE, null);
+		is.close();
 	}
 	
 
-	public static void writeResource(IFolder folder, String resourceName) throws CoreException {
+	public static void writeResource(IFolder folder, String resourceName) throws CoreException, IOException {
 		InputStream fis = EmitRobotiumCode.class.getResourceAsStream("/" + resourceName);
 		IFile file = folder.getFile(resourceName);
 		file.delete(false, null);
 		file.create(fis, IFile.FORCE, null);	
+		fis.close();
 	}
 	
-	public static void writeFile(IFolder folder, String srcFileName, String dstFileName) throws CoreException, FileNotFoundException {
+	public static void writeFile(IFolder folder, String srcFileName, String dstFileName) throws CoreException, FileNotFoundException, IOException {
 		InputStream fis = new FileInputStream(srcFileName);
 		IFile file = folder.getFile(dstFileName);
 		file.delete(false, null);
 		file.create(fis, IFile.FORCE, null);	
+		fis.close();
 	}
 	
-	public static void copyFileToProjectDirectory(IProject project, String srcFileName, String dstFileName) throws CoreException, FileNotFoundException {
+	public static void copyFileToProjectDirectory(IProject project, String srcFileName, String dstFileName) throws CoreException, FileNotFoundException, IOException {
 		InputStream fis = new FileInputStream(srcFileName);
 		IFile file = project.getFile(dstFileName);
 		file.delete(false, null);
 		file.create(fis, IFile.FORCE, null);	
+		fis.close();
 	}
 
 	

@@ -83,8 +83,22 @@ public class GenerateRobotiumTestCode {
 		EclipseUtility.writeString(project, Constants.Filenames.BUILD_XML, buildXML);
 	}
 	
-	public void writeManifest(IProject project, String testClassName, String testClassPath, String targetPackage) throws CoreException, IOException {
-		String manifest = SetupRobotiumProject.createManifest(testClassName, testClassPath, targetPackage); 
+	/**
+	 * wrapper for createManifest, which handles the eclipse project write
+	 * @param project eclipse project
+	 * @param testClassName
+	 * @param testClassPath
+	 * @param targetPackage 
+	 * @param minSDKVersion
+	 * @param manifestTemplate manifest template (different between binary and source)
+	 * @throws CoreException
+	 * @throws IOException
+	 */
+	public void writeManifest(IProject 	project, 
+							  String 	targetPackage,
+							  int 		minSDKVersion,
+							  String 	manifestTemplate) throws CoreException, IOException {
+		String manifest = SetupRobotiumProject.createManifest(targetPackage, minSDKVersion, manifestTemplate); 
 		EclipseUtility.writeString(project, Constants.Filenames.ANDROID_MANIFEST_XML, manifest);
 	}	
 	
@@ -96,8 +110,9 @@ public class GenerateRobotiumTestCode {
 	 * @throws CoreException
 	 * @throws IOException
 	 */
-	public void createProjectProperties(IProject testProject, String target, String projectName) throws CoreException, IOException {
+	public void createProjectProperties(IProject testProject, int SDKLevel, String projectName) throws CoreException, IOException {
 		String projectProperties = FileUtility.readTemplate(RecorderConstants.PROJECT_PROPERTIES_TEMPLATE);
+		String target = "target=android-" + SDKLevel;
 		projectProperties = projectProperties.replace(Constants.VariableNames.TARGET, target);
 		projectProperties = projectProperties.replace(Constants.VariableNames.CLASSNAME, projectName);
 		EclipseUtility.writeString(testProject, Constants.Filenames.PROJECT_PROPERTIES_FILENAME, projectProperties);
@@ -114,7 +129,6 @@ public class GenerateRobotiumTestCode {
 	public void createProject(IProject testProject, String projectName) throws CoreException, IOException {
 		String project = FileUtility.readTemplate(GenerateRobotiumTestCode.class, RecorderConstants.PROJECT_TEMPLATE);
 		project = project.replace(Constants.VariableNames.CLASSNAME, projectName);
-		project = project.replace(Constants.VariableNames.MODE, Constants.Names.TEST);
 		IFile file = testProject.getFile(Constants.Filenames.PROJECT_FILENAME);
 		file.delete(false, null);
 		InputStream is = new StringBufferInputStream(project);
@@ -407,37 +421,37 @@ public class GenerateRobotiumTestCode {
 	 * robotium and robotiumutils libraries to the libs ir
 	 * @param testProject test project that we're creating
 	 * @param emitter emitter so we can get the package and stuff.
-	 * @param androidTarget target platform (like android-14, or something like that.
+	 * @param targerSDK target platform (like android-14 "14", or something like that.
 	 * @param projectName name of the project to create (check if this is the same as testClassName)
 	 * @param testPackage fully.qualified.java.class.package.test
-	 * @param testClassPath filesystem path to the output test class
-	 * @param testClassName Actual output file name
+	 * @param targetName name of the target project to write in the classpath (null if none)
+	 * @param manifestTemplate AndroidManifest.xml (changes between source and binary)
 	 * @throws CoreException
 	 * @throws IOException
 	 */
 
 	public void createProject(IProject 	testProject, 
 							  IEmitCode emitter,
-							  String 	androidTarget,
+							  int 		targetSDK,
 							  String 	projectName,
 							  String 	testPackage,
-							  String 	testClassPath,
-							  String 	testClassName) throws CoreException, IOException {
+							  String 	targetName,
+							  String	manifestTemplate) throws CoreException, IOException {
 		// create the java project and required subfolders.
-		IFolder srcFolder = testProject.getFolder(Constants.Dirs.SRC);
 		IJavaProject javaProject = EclipseUtility.createJavaNature(testProject);
 		createFolders(testProject);
+		IFolder srcFolder = testProject.getFolder(Constants.Dirs.SRC);
 		
 		// write the project.properties file with the android targets
-		createProjectProperties(testProject, androidTarget, projectName);
+		createProjectProperties(testProject, targetSDK, projectName);
 		CreateRobotiumRecorder.createEclipseSettings( testProject);
 		createProject(testProject, projectName);
 
 		// create the build.xml, AndroidManifest.xml, and .classpath files
 		writeBuildXML(testProject, emitter.getApplicationClassPath());
-		writeManifest(testProject, testClassName, testPackage, emitter.getApplicationPackage());
+		writeManifest(testProject, emitter.getApplicationPackage(), targetSDK, manifestTemplate);
 		writeResources(testProject);				
-		writeClasspath(testProject,  projectName, Constants.Filenames.ROBOTIUM_JAR);
+		writeClasspath(testProject,  targetName, Constants.Filenames.ROBOTIUM_JAR);
 		copyJarToLibs(testProject, Constants.Filenames.UTILITY_JAR);
 		copyJarToLibs(testProject, Constants.Filenames.ROBOTIUM_JAR);
 
@@ -446,11 +460,6 @@ public class GenerateRobotiumTestCode {
 		packCode.open(null);
 		copyTestDriverFile(packCode, testPackage, emitter.getApplicationClassPath());
 		packCode.close();
-		
-		// create the handlers folder
-		String handlerPackage = testPackage + "." + Constants.Dirs.HANDLERS;
-		IPackageFragment packHandler = javaProject.getPackageFragmentRoot(srcFolder).createPackageFragment(handlerPackage, false, null);
-
 	}
 
 }

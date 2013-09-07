@@ -24,6 +24,7 @@ public class ManifestParser extends Parser {
 	protected final String ACTIVITY_TAG = "manifest.application.activity";
 	protected final String ACTION_TAG = "manifest.application.activity.intent-filter.action";
 	protected final String CATEGORY_TAG = "manifest.application.activity.intent-filter.category";
+	protected final String APPLICATION_TAG = "manifest.application";
 	protected final String INSTRUMENTATION_TAG = "manifest.instrumentation";
 	protected final String USES_SDK_TAG = "manifest.uses-sdk";
 	protected final String MIN_SDK_VERSION_ATTRIBUTE = "android:minSdkVersion";
@@ -35,7 +36,8 @@ public class ManifestParser extends Parser {
 	protected String mTargetPackage = null;
 	protected String mCandidateActivity = null;
 	protected String mStartActivity = null;
-	protected String mMinSdkVersion = null;
+	protected String mApplication = null;
+	protected int mMinSdkVersion = 0;
 	
 	/** 
 	 * constructor variant which takes the filename
@@ -81,8 +83,12 @@ public class ManifestParser extends Parser {
 		}
 	}
 	
-	public String getMinSDKVersion() {
+	public int getMinSDKVersion() {
 		return mMinSdkVersion;
+	}
+	
+	public String getApplication() {
+		return mApplication;
 	}
 	@Override
 	public void startElement(String uri, String localName, String qName, Attributes attributes) {
@@ -98,8 +104,10 @@ public class ManifestParser extends Parser {
 			}		
 		} else if (compareTag(INSTRUMENTATION_TAG)) {
 			mTargetPackage = attributes.getValue(TARGET_PACKAGE_ATTRIBUTE);
+		} else if (compareTag(APPLICATION_TAG)) {
+			mApplication = attributes.getValue(NAME_ATTRIBUTE);
 		} else if (compareTag(USES_SDK_TAG)) {
-			mMinSdkVersion = attributes.getValue(MIN_SDK_VERSION_ATTRIBUTE);
+			mMinSdkVersion = Integer.parseInt(attributes.getValue(MIN_SDK_VERSION_ATTRIBUTE));
 		}
 	}
 }

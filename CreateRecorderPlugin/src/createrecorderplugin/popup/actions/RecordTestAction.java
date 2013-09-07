@@ -89,9 +89,9 @@ public class RecordTestAction  implements IObjectActionDelegate {
 				if (!testPackage.endsWith("test")) {
 					testPackage += ".test";
 				}
-				String uninstallCommand = "adb uninstall " + testPackage;
+				String uninstallCommand = "uninstall " + testPackage;
 				EclipseExec.execADBBackgroundConsoleOutput(uninstallCommand);
-				String installCommand = "adb install " + projectParser.getProjectName() + ".apk";
+				String installCommand = "install " + projectParser.getProjectName() + ".apk";
 				EclipseExec.execADBBackgroundConsoleOutput(installCommand);
 				String adbCommand = "shell am instrument -w " + testPackage + "/android.test.InstrumentationTestRunner";
 				EclipseExec.execADBBackgroundConsoleOutput(adbCommand);

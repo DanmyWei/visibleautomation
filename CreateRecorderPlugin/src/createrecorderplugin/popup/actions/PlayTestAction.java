@@ -97,9 +97,10 @@ public class PlayTestAction  implements IObjectActionDelegate {
 				
 				// uninstall and re-install the test driver
 				// NOTE: we need to re-install the .APK if it's not installed on the device.
-				String uninstallCommand = "adb uninstall " + testPackage;
+				String uninstallCommand = "uninstall " + testPackage;
 				EclipseExec.execADBBackgroundConsoleOutput(uninstallCommand);
-				String installCommand = "adb install " + projectParser.getProjectName() + ".apk";
+				String installCommand = "install " + projectPath + File.separator + Constants.Dirs.BIN + File.separator + 
+										projectParser.getProjectName() + "." + Constants.Extensions.APK;
 				EclipseExec.execADBBackgroundConsoleOutput(installCommand);
 				// NOTE: need to get the apkFileName from the root directory of the project.
 				if (!InstallRecorderHandler.isPackageInstalled(manifestParser.getTargetPackage())) {

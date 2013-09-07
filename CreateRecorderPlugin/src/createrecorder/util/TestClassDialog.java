@@ -23,7 +23,7 @@ public class TestClassDialog {
 		ElementListSelectionDialog dialog = new ElementListSelectionDialog(shell, new LabelProvider());
 		dialog.setTitle(RecorderConstants.VISIBLE_AUTOMATION);
 		dialog.setMessage("Select a package from the device");
-		String[] matchingClasses = EclipseExec.getAdbCommandOutput("shell pm list packages -f -3");
+		String[] matchingClasses = EclipseExec.getAdbCommandOutput("shell pm list packages -f");
 		String[] displayStrings = new String[matchingClasses.length];
 		
 		// strip out the display strings
