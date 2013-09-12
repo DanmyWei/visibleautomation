@@ -230,6 +230,23 @@ public class EventRecorder extends EventRecorderInterface {
 			}
 		}
 	}
+	
+	/**
+	 * write record with a predefined view reference (for view detach, where we can't get view references)
+	 * @param event event name
+	 * @param activityName activity for ordering output events
+	 * @param viewReference
+	 * @param message
+	 */
+	public void writeRecord(String event, String activityName, String viewReference, String message) {
+		try {
+			long time = SystemClock.uptimeMillis();
+			writeRecord(activityName, event, viewReference + "," + message);
+			mEventWasRecorded = true;
+		} catch (Exception ex) {
+			writeRecord(activityName, Constants.EventTags.EXCEPTION, "while getting reference for view in event " + event + " " + message);
+		}
+	}
 
 	// for copy and paste (from DirectiveIDalogs)
 	public String getVariableValue(String var) {

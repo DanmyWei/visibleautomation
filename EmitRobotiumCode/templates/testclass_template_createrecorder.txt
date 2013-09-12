@@ -6,14 +6,14 @@ import com.androidApp.Test.RecordTest;
 import %CLASSPACKAGE%.%CLASSNAME%;
 
 
-public class %CLASSNAME%Recorder extends RecordTest<%CLASSNAME%, %CLASSNAME%Recorder> {
+public class %CLASSNAME%Recorder extends RecordTest<%CLASSNAME%> {
 
 	public %CLASSNAME%Recorder() throws IOException {
-		super(%CLASSNAME%.class, %CLASSNAME%Recorder.class);
+		super(%CLASSNAME%.class);
 	}
 
 	public %CLASSNAME%Recorder(Class<%CLASSNAME%> activityClass) throws IOException {
-		super(activityClass, %CLASSNAME%Recorder.class);
+		super(activityClass);
 	}
 
 	@Override
@@ -24,6 +24,6 @@ public class %CLASSNAME%Recorder extends RecordTest<%CLASSNAME%, %CLASSNAME%Reco
 
 	public void setUp() throws Exception { 
 		super.setUp();
-		initialize(ApiDemos.class, %CLASSNAME%Recorder.class);
+		initialize(ApiDemos.class);
 	}
 }

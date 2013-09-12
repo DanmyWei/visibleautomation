@@ -39,8 +39,9 @@ public class HierarchyRef {
 		int ichOpen = ref.indexOf('[');
 		int ichClose = ref.indexOf(']');
 		if (ichOpen != -1 && ichClose != -1) {
-			mClassName = ref.substring(0, ichOpen - 1);
-			mChildIndex = Integer.parseInt(ref.substring(ichOpen + 1, ichClose - 1));
+			mClassName = ref.substring(0, ichOpen);
+			String indexString = ref.substring(ichOpen + 1, ichClose);
+			mChildIndex = Integer.parseInt(indexString);
 		} else {
 			mClassName = ref;
 			mChildIndex = -1;

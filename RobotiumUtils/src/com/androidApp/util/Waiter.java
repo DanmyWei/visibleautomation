@@ -72,7 +72,7 @@ public class Waiter {
 	}
 
 	public static boolean waitForView(View v, long timeoutMsec) {
-		while (isObscured(v)) {
+		while (isObscured(v) && (timeoutMsec > 0)) {
 			Log.i(TAG, v + " is obscured");
 			timeoutMsec -= RobotiumUtils.WAIT_INCREMENT_MSEC;
 			RobotiumUtils.sleep(RobotiumUtils.WAIT_INCREMENT_MSEC);

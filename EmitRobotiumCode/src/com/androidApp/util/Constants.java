@@ -71,7 +71,8 @@ public class Constants {
 		COPY_TEXT("copy_text"),
 		PASTE_TEXT("paste_text"),
 		SELECT_BY_TEXT("select_by_text"), 
-		CLICK_WORKAROUND("click_workaround");
+		CLICK_WORKAROUND("click_workaround"), 
+		INTERSTITIAL_VIEW("interstitial_view");
 		
 		public final String mEventName;		
 		private UserEvent(String s) {

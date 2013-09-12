@@ -13,6 +13,7 @@ import com.androidApp.EventRecorder.ViewDirective;
 import com.androidApp.EventRecorder.ViewDirective.ViewOperation;
 import com.androidApp.EventRecorder.ViewDirective.When;
 import com.androidApp.Intercept.DirectiveDialogs;
+import com.androidApp.Listeners.RecordOnAttachStateChangeListener;
 import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 
@@ -69,6 +70,17 @@ public class OnListSelectionListener implements DialogInterface.OnClickListener 
 					recorder.writeRecord(Constants.EventTags.SELECT_ITEM_WORKAROUND, activity.toString(), currentView);
 					ViewDirective selectDirective = new ViewDirective(ref, ViewOperation.SELECT_ITEM_WORKAROUND, When.ON_ACTIVITY_START, null);
 					recorder.addViewDirective(selectDirective);
+				}
+				break;
+				case 4:
+				{
+					recorder.writeRecord(Constants.EventTags.INTERSTITIAL_VIEW, activity.toString(), currentView);
+					try {
+						String ref2 = recorder.getViewReference().getReference(currentView);
+						currentView.addOnAttachStateChangeListener(new RecordOnAttachStateChangeListener(activity.toString(), recorder, ref2));
+					} catch (Exception ex) {
+						recorder.writeException(activity.toString(), ex, "while setting attach state change listener");				
+					}
 				}
 				break;
 			}

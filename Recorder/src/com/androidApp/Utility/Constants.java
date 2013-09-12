@@ -125,7 +125,6 @@ public class Constants {
 		TEXT_WATCHER_LIST("mListeners", ArrayList.class),
 		TOUCH_LISTENER("mOnTouchListener", View.OnTouchListener.class),
 		CLICK_LISTENER("mOnClickListener", View.OnClickListener.class),
-		DRAG_LISTENER("mOnDragListener", View.OnDragListener.class),
 		FOCUS_CHANGE_LISTENER("mOnFocusChangeListener", View.OnFocusChangeListener.class),
 		ONITEM_CLICK_LISTENER("mOnItemClickListener", AdapterView.OnItemClickListener.class),
 		ITEM_CLICK_LISTENER("mItemClickListener", AdapterView.OnItemClickListener.class), 	// from ListPopupWindow
@@ -344,6 +343,8 @@ public class Constants {
 		public static final String PAGE_SCROLLED = "page_scrolled";
 		public static final String PAGE_SELECTED = "page_selected";
 		public static final String SPINNER_ITEM_SELECTED = "spinner_item_selected";
+		public static final String INTERSTITIAL_VIEW = "interstitial_view";
+		public static final String VIEW_DETACH = "view_detach";
 	}
 	
 	// description strings 
@@ -419,9 +420,10 @@ public class Constants {
 		public static final String VIEW_REFERENCE_FAILED = "Failed to generate view reference";
 		public static final String INSERT_BY_CHARACTER = "Insert text by keys";
 		public static final String NO_DIALOG_TITLE = "Unable to find dialog title";
-		public static final String RESOURCE_ERROR = "resource access error";
-		public static final String SELECT_ITEM_WORKAROUND = "select item workaround";
-		public static final String CLICK_WORKAROUND = "click workaround";
+		public static final String RESOURCE_ERROR = "Resource access error";
+		public static final String SELECT_ITEM_WORKAROUND = "Select item workaround";
+		public static final String CLICK_WORKAROUND = "Click workaround";
+		public static final String INTERSTITIAL_VIEW = "Interstitial View";
 		public static final String KEYBOARD_NOT_INSTALLED = "The custom keyboard was not installed.  Please go to settings and set it as the default keyboard";
 	}
 	

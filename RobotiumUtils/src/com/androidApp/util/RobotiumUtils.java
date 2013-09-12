@@ -61,6 +61,8 @@ public class RobotiumUtils {
 	protected static int WAIT_INCREMENT_MSEC = 100;									// poll interval for wait timers.
 	protected static int WAIT_SCROLL_MSEC = 2000;									// wait at most this long for a scroll to complete
 	protected static int TEXT_FOCUS_TIMEOUT_MSEC = 5000;							// time to wait for text focus (obviously should be much shorter than this
+	protected static int DIALOG_GETVIEW_RETRY_COUNT = 10;							// how many times do we try to get a view in dialog?
+	protected static int GETVIEW_RETRY_COUNT = 100;									// how many times in view.
 	protected static ActivityMonitorRunnable	sActivityMonitorRunnable = null;	// so we can "expect" activity transitions
 	protected Instrumentation					mInstrumentation;					// instrumentation handle
 	/**
@@ -322,7 +324,9 @@ public class RobotiumUtils {
 			r.offset(((View) vp).getLeft(), ((View) vp).getTop());
 			vp = vp.getParent();
 		}
-		r.offset(-svAncestor.getScrollX(), -svAncestor.getScrollY());
+		
+		// the ancestor's scroll position is taken into account for the left and top of the child
+		//r.offset(-svAncestor.getScrollX(), -svAncestor.getScrollY());
 		return r;
 	}
 	
@@ -340,7 +344,7 @@ public class RobotiumUtils {
 			mYScroll = yScroll;
 		}
 		public void run() {
-			mView.scrollBy(mXScroll, mYScroll);
+			mView.scrollTo(mXScroll, mYScroll);
 		}
 	}
 
@@ -357,7 +361,12 @@ public class RobotiumUtils {
 		}
 	}
 	
-	Rect getChildBounds(View v) {
+	/**
+	 * get the bounds of a view's children, or its bounds if it has no children
+	 * @param v
+	 * @return
+	 */
+	public static Rect getChildBounds(View v) {
 		Rect rect = new Rect();
 		if (v instanceof ViewGroup) {
 			ViewGroup vg = (ViewGroup) v;
@@ -392,25 +401,22 @@ public class RobotiumUtils {
 		Rect r = RobotiumUtils.getRelativeRect(scrollingContainer, v);
 		int scrollVertical = 0;
 		int scrollHorizontal = 0;
+		// try to align the child centered on its ancestor, not just top-to-top or bottom-to-bottom.
+		int centerVerticalOffset = scrollingContainer.getHeight()/2 - (r.bottom - r.top)/2;
+		int centerHorizontalOffset = scrollingContainer.getWidth()/2 - (r.right - r.left)/2;
 		if (r.top < 0) {
-			scrollVertical = r.top;
+			scrollVertical = r.top - centerVerticalOffset;
 		} else if (r.bottom > scrollingContainer.getHeight()) {
-			scrollVertical = r.bottom - scrollingContainer.getHeight();
+			scrollVertical = r.bottom - scrollingContainer.getHeight() + centerVerticalOffset;
 		}
 		if (r.left < 0) {
-			scrollHorizontal = r.left;
+			scrollHorizontal = r.left - centerHorizontalOffset;
 		} else if (r.right > scrollingContainer.getWidth()) {
-			scrollHorizontal = r.right - scrollingContainer.getWidth();
+			scrollHorizontal = r.right - scrollingContainer.getWidth() + centerHorizontalOffset;
 		}
 		// the scrolling container offsets its children's by the scroll amount, but obviously, it cannot
 		// scroll past the children's bounds
 		Rect childRect = getChildBounds(scrollingContainer);
-		
-		// try to align the views center to center
-		int centerVerticalOffset = scrollingContainer.getHeight()/2 - (r.bottom - r.top)/2;
-		scrollVertical -= centerVerticalOffset;
-		int centerHorizontalOffset = scrollingContainer.getWidth()/2 - (r.right - r.left)/2;
-		scrollHorizontal -= centerVerticalOffset;
 		if (scrollVertical < childRect.top){
 			scrollVertical = 0;
 		}
@@ -451,6 +457,8 @@ public class RobotiumUtils {
 	public boolean clickOnViewAndScrollIfNeeded(Solo solo, View v) {
 		scrollToViewVisible(v);
 		solo.clickOnView(v, true);
+		// TEMPORARY
+		sleep(WAIT_INCREMENT_MSEC);
 		return true;
 	}
 	
@@ -790,6 +798,26 @@ public class RobotiumUtils {
 	}
 	
 	/**
+	 * wait for a dialog to close, by not finding a dialog, because the solo.waitForDialogToClose() (LAME)
+	 * just checks to see if the number of windows have changed, and the dialog may already have closed
+	 * so we wait for the timeout.
+	 * @param activity
+	 * @param timeoutMsec
+	 * @return
+	 */
+	public static boolean waitForDialogToClose(Activity activity, long timeoutMsec) {
+		while (timeoutMsec > 0) {
+			Dialog dialog = ViewExtractor.findDialog(activity);
+			if (dialog == null) {
+				return true;
+			}
+			sleep(WAIT_INCREMENT_MSEC);
+			timeoutMsec -= WAIT_INCREMENT_MSEC;
+		}
+		return false;
+	}
+	
+	/**
 	 * unfortunatey, KeyCharacterMap returns null for backspace, so we have to improvise.  Chances are
 	 * that there are other codes that don't work as well, so we'll have to find them as we go along
 	 * TODO: pre-allocate the keyCharactermap for performance
@@ -904,6 +932,42 @@ public class RobotiumUtils {
 		mInstrumentation.runOnMainSync(new PerformClickRunnable(v));
 	}
 	
+	protected  void getAllViews(View v, Class<? extends View> viewClass, List<View> viewList) {
+		if (viewClass.isAssignableFrom(v.getClass())) {
+			viewList.add(v);
+		} else if (v instanceof ViewGroup) {
+			ViewGroup vg = (ViewGroup) v;
+			for (int i = 0; i < vg.getChildCount(); i++) {
+				View vChild = vg.getChildAt(i);
+				getAllViews(vChild, viewClass, viewList);
+			}
+		}
+	}
+	
+	public List<View> getAllViews(View v, Class<? extends View> viewClass) {
+		List<View> arrayList = new ArrayList<View>();
+		getAllViews(v, viewClass, arrayList);
+		return arrayList;
+	}
+	
+	/**
+	 * fortunately, Instrumentation.invokeMenuActionSync() returns a boolean flag on success, so we test
+	 * it in a wait timeout loop
+	 * @param menuItemId
+	 * @param timeoutMsec
+	 * @return
+	 */
+	public boolean invokeMenuAction(int menuItemId, long timeoutMsec) {
+		boolean fSuccess = false;
+		while ((timeoutMsec > 0) && !fSuccess) {
+			fSuccess = mInstrumentation.invokeMenuActionSync(getCurrentActivity(), menuItemId, 0);
+			if (!fSuccess) {
+				sleep(WAIT_INCREMENT_MSEC);
+				timeoutMsec -= WAIT_INCREMENT_MSEC;
+			}
+		}
+		return fSuccess;
+	}
 	/**
 	 * unlike robotium, which only counts visible views, we like all the views, because the
 	 * playback may not have scrolled back to exactly the same position, so we search the view
@@ -919,7 +983,7 @@ public class RobotiumUtils {
 		View[] viewList = ViewExtractor.getWindowDecorViews();
 		for (int iViewRoot = 0; iViewRoot < viewList.length; iViewRoot++) {
 			if (DialogListener.isDialogOrPopup(activity, viewList[iViewRoot])) {
-				for (int iTry = 0; iTry < 10; iTry++) {
+				for (int iTry = 0; iTry < DIALOG_GETVIEW_RETRY_COUNT; iTry++) {
 					View v = getView(viewList[iViewRoot], viewClass, new ClassCount(index));
 					if (v != null) {
 						return v;
@@ -930,16 +994,15 @@ public class RobotiumUtils {
 		}
 		Window w = activity.getWindow();
 		View v = w.getDecorView();
-		for (int iTry = 0; iTry < 10; iTry++) {
+		for (int iTry = 0; iTry < GETVIEW_RETRY_COUNT; iTry++) {
 			View vResult = getView(v, viewClass, new ClassCount(index));
 			if (vResult != null) {
 				return vResult;
-			}
+			} 
 			sleep(WAIT_INCREMENT_MSEC);
 		}
 		return null;
 	}
-	
 	protected class ClassCount {
 		public int mIndex;
 		

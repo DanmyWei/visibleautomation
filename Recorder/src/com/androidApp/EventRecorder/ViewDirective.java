@@ -34,10 +34,11 @@ public class ViewDirective {
 		IGNORE_CLICK_EVENTS("ignore_click_events"),
 		IGNORE_LONG_CLICK_EVENTS("ignore_long_click_events"),
 		IGNORE_SCROLL_EVENTS("ignore_scroll_events"),
-		IGNORE_ITEM_SELECT_EVENTS("ignore_item_select_events"),
+		IGNORE_ITEM_SELECT_EVENTS("ignore_item_select_events"),	
 		IGNORE_TEXT_EVENTS("ignore_text_events"), 
 		CLICK_WORKAROUND("click_workaround"), 
-		SELECT_ITEM_WORKAROUND("select_item_workaround");
+		SELECT_ITEM_WORKAROUND("select_item_workaround"),
+		INTERSTITIAL_VIEW("interstitial_view");
 		
 		public String mName;
 		
@@ -54,6 +55,9 @@ public class ViewDirective {
 			return null;
 		}
 	}
+	
+	// This needs to be extended to reflect the previous operation.
+	// NOTE: use proper enums with strings
 	public enum When {
 		ON_ACTIVITY_START,		// perform the operation when the activity starts
 		ON_VALUE_CHANGE,		// perform the operation when the view value is changed

@@ -2,15 +2,14 @@ package %CLASSPACKAGE%.test;
 import android.app.Activity;
 import com.androidApp.Test.RecordTestBinary;
 
-public class %CLASSNAME%Recorder extends RecordTestBinary<%CLASSNAME%Recorder> {
+public class %CLASSNAME%Recorder extends RecordTestBinary {
 
 	public %CLASSNAME%Recorder() throws Exception {
-		super("%CLASSPATH%", %CLASSNAME%Recorder.class);
+		super("%CLASSPATH%");
 	}
 
 	public void setUp() throws Exception { 
-		sActivityClass = (Class<? extends Activity>) Class.forName("%CLASSPATH%");
-		initialize(sActivityClass);
+		initialize("%CLASSPATH%");
 	}
 	
 	@Override

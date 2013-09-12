@@ -7,7 +7,6 @@ import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.HierarchyRef;
 import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.Test.ActivityInterceptor;
-import com.androidApp.Test.R;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.FileUtils;
 

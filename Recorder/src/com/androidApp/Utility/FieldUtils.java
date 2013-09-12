@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.HashSet;
 
-import com.androidApp.Test.R;
-
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.util.Log;

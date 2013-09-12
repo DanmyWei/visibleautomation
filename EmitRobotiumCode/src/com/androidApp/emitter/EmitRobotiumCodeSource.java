@@ -494,8 +494,21 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 																												   2, newActivityName, false),
 																			   tokenScanner.new UserEventPredicate());
 		int causingLineIndex = TokenScanner.findPrevious(tokenLines, currentReadIndex, causingPredicate);
-		List<String> precedingTokens = tokenLines.get(causingLineIndex);
-		CodeDefinition codeDef = new CodeDefinition(newActivityName, precedingTokens);
+		CodeDefinition codeDef;
+		if (causingLineIndex == -1) {
+			TokenScanner.Predicate previousActivityPredicate = tokenScanner.new ActivityTransitionPredicate();
+			int previousActivityIndex = TokenScanner.findPrevious(tokenLines, currentReadIndex, previousActivityPredicate);
+			if (previousActivityIndex != -1) {
+				List<String> precedingTokens = tokenLines.get(previousActivityIndex);
+				codeDef = new CodeDefinition(newActivityName, precedingTokens);
+			} else {
+				List<String> precedingTokens = tokenLines.get(0);
+				codeDef = new CodeDefinition(newActivityName, precedingTokens);
+			}		
+		} else {
+			List<String> precedingTokens = tokenLines.get(causingLineIndex);
+			codeDef = new CodeDefinition(newActivityName, precedingTokens);
+		}
 		CodeOutput activityOutput = emit(tokenLines, currentReadIndex + 1, outputCode, motionEvents, OutputType.INTERSTITIAL_ACTIVITY);
 		String functionName = addLinesAsFunction(tokens, newActivityName, activityOutput.mLineAndTokens, functionTemplateName, outputCode);
 		List<LineAndTokens> activityLines = new ArrayList<LineAndTokens>();

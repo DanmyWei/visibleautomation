@@ -77,14 +77,14 @@ public class SetupListeners {
 	 * @throws Exception
 	 */
 	public SetupListeners(Instrumentation 			instrumentation, 
-						  Class<? extends Activity> activityClass,
+						  String					activityName,
 						  IRecordTest				recordTest,
 						  boolean					fBinary) throws Exception {
 		mInstrumentation = instrumentation;
-		mActivityName = activityClass.getCanonicalName();
+		mActivityName = activityName;
 		mRecordTest = recordTest;
 		mExpandedMenuViewClass = Class.forName(Constants.Classes.EXPANDED_MENU_VIEW);
-		setUp(activityClass, fBinary);
+		setUp(fBinary);
 	}
 	
 	/**
@@ -106,9 +106,12 @@ public class SetupListeners {
 	 * popup window listener, then launches the activity
 	 * @throws IOException
 	 */
-	public void setUp(Class<? extends Activity> activityClass, boolean fBinary) throws Exception {
+	public void setUp(boolean fBinary) throws Exception {
+
 		initRecorder(getInstrumentation().getContext(), fBinary);
+
 		sScanTimer = new Timer();
+		// TEMPORARY
 		mActivityInterceptor = new ActivityInterceptor(getRecorder(), getViewInterceptor());
 		setupDialogListener();
 		setupPopupWindowListener();
@@ -122,13 +125,15 @@ public class SetupListeners {
 		} catch (InterruptedException iex) {
 		}
 		mIMEMessageListener = new IMEMessageListener(mViewInterceptor, mActivityInterceptor, mRecorder);
+
 		Thread thread = new Thread(mIMEMessageListener);
 		thread.start();
 		Intent intent = new Intent(Intent.ACTION_MAIN);
 		intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 		// so we can get the package name to write in the manifest and classpath
 		intent.setClassName(getInstrumentation().getTargetContext(), mActivityName);
-		getInstrumentation().startActivitySync(intent);
+		//getInstrumentation().startActivitySync(intent);
+		getInstrumentation().getTargetContext().startActivity(intent);
 	}
 
 	/** 
@@ -254,7 +259,7 @@ public class SetupListeners {
 				mRecorder.writeRecord(activity.getClass().getName(), Constants.EventTags.OPEN_ACTION_MENU, "open action menu");
 			}
 			// TODO: is this needed?
-			mInstrumentation.runOnMainSync(new InsertKeyListenerRunnable(optionsMenuView));
+			mInstrumentation.runOnMainSync(new InsertKeyListenerRunnable(activity, optionsMenuView));
 		} else {
 			// the popup window might have an anchor which changes the generated code, to spinner specific output
 			View anchorView = DialogUtils.getPopupWindowAnchor(popupWindow);
@@ -319,13 +324,15 @@ public class SetupListeners {
 	 */
 	protected class InsertKeyListenerRunnable implements Runnable {
 		protected View mExpandedMenuView;
-		public InsertKeyListenerRunnable(View v) {
+		protected Activity mActivity;
+		
+		public InsertKeyListenerRunnable(Activity activity, View v) {
 			mExpandedMenuView = v;
+			mActivity = activity;
 		}
 		@Override
 		public void run() {
-			Activity activity = (Activity) mExpandedMenuView.getContext();
-			InterceptKeyViewMenu interceptKeyView = new InterceptKeyViewMenu(activity, mExpandedMenuView.getContext(), 
+			InterceptKeyViewMenu interceptKeyView = new InterceptKeyViewMenu(mActivity, mExpandedMenuView.getContext(), 
 																			 SetupListeners.this.getRecorder(),
 																			 SetupListeners.this.getViewInterceptor());
 			((ViewGroup) mExpandedMenuView).addView(interceptKeyView);

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?eclipse version="3.4"?>
 <plugin name="Visible Automation Plugin"
-	    version="1.0.9">
+	    version="1.0.13">
    <runtime>
 		<library name="libs/emitrobotiumcode.jar"/>
    </runtime>
