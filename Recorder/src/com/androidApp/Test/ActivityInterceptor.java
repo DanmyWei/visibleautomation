@@ -285,10 +285,11 @@ public class ActivityInterceptor {
         long time = SystemClock.uptimeMillis();
 		if (mViewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_BACK) {
 			mViewInterceptor.setLastKeyAction(-1);
- 			mEventRecorder.writeRecord(activity, Constants.EventTags.ACTIVITY_BACK_KEY);
+			String logMsg = activity.getClass().getName() + "," + "no previous activity";
+			mEventRecorder.writeRecord(activity.toString(), Constants.EventTags.ACTIVITY_BACK_KEY, logMsg);
 		} else {
 			String logMsg = activity.getClass().getName() + "," + "no previous activity";
-			mEventRecorder.writeRecord(activity, Constants.EventTags.ACTIVITY_BACK);
+			mEventRecorder.writeRecord(activity.toString(), Constants.EventTags.ACTIVITY_BACK, logMsg);
 		}
 	}
 	

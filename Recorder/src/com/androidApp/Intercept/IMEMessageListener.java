@@ -12,9 +12,11 @@ import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.Test.ActivityInterceptor;
 import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.TestUtils;
 
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.View;
 
 /**
  * listen for up/down messages from our custom IME.
@@ -121,20 +123,23 @@ public class IMEMessageListener implements Runnable {
 						 * is up or down.
 						 */
 						if (!mfKeyboardVisible) {
-							mEventRecorder.writeRecord(Constants.EventTags.SHOW_IME, mActivityInterceptor.getCurrentActivity().toString(),
-													  mViewInterceptor.getFocusedView(), "IME displayed");
+							View focusedView = mViewInterceptor.getFocusedView();
+							mEventRecorder.writeRecord(Constants.EventTags.SHOW_IME, TestUtils.getViewActivity(focusedView).toString(),
+													  focusedView, "IME displayed");
 						}
 						mfKeyboardVisible = true;
 					} else if (msg.equals(HIDE_IME)) {
 						if (mfKeyboardVisible) {	// see comment above
-							mEventRecorder.writeRecord(Constants.EventTags.HIDE_IME, mActivityInterceptor.getCurrentActivity().toString(),
-													   mViewInterceptor.getFocusedView(), "IME hidden");
+							View focusedView = mViewInterceptor.getFocusedView();
+							mEventRecorder.writeRecord(Constants.EventTags.HIDE_IME, TestUtils.getViewActivity(focusedView).toString(),
+													   focusedView, "IME hidden");
 						}
 						mfKeyboardVisible = false;
 					} else if (msg.equals(HIDE_IME_BACK_KEY)) {
 						if (mfKeyboardVisible) {
-		                    mEventRecorder.writeRecord(Constants.EventTags.HIDE_IME_BACK_KEY, mActivityInterceptor.getCurrentActivity().toString(),
-		                    						   mViewInterceptor.getFocusedView(), "IME hidden by back key pressed");
+							View focusedView = mViewInterceptor.getFocusedView();
+		                    mEventRecorder.writeRecord(Constants.EventTags.HIDE_IME_BACK_KEY, TestUtils.getViewActivity(focusedView).toString(),
+		                    						   focusedView, "IME hidden by back key pressed");
 		                    mViewInterceptor.setLastKeyAction(-1);
 						}
 						mfKeyboardVisible = false;

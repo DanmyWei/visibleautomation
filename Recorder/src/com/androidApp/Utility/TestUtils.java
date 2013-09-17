@@ -8,6 +8,7 @@ import com.androidApp.EventRecorder.ClassCount;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.graphics.Rect;
 import android.util.Log;
 import android.view.ContextThemeWrapper;
@@ -694,5 +695,21 @@ public class TestUtils {
 			}
 		}
 		return null;	
+	}
+	
+	/**
+	 * get the activity for a view.  A view may be of a child of a dialog, in which case, getContext()
+	 * returns a contextWrapper with the activity as contextWraper.getBaseContext()
+	 * @param v
+	 * @return
+	 */
+	public static Activity getViewActivity(View v) {
+		Context context = v.getContext();
+		if (context instanceof Activity) {
+			return (Activity) context;
+		} else if (context instanceof ContextWrapper) {
+			return (Activity) ((ContextWrapper) context).getBaseContext();
+		}
+		return null;
 	}
 }

@@ -107,7 +107,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		// dialog and popup output are written by a timer thread, which can interleave with the activity transition
 		Collections.sort(tokenLines, new TimestampComparator());
 		OrderByActivity orderByActivity = new OrderByActivity();
-		List<List<String>> orderedTokenLines = orderByActivity.orderTokensByActivity(tokenLines);
+		List<List<String>> orderedTokenLines = orderByActivity.orderEventsByActivity(tokenLines);
 		for (List<String> tokens : orderedTokenLines) {
 			System.out.println(tokens.toString());
 		}
@@ -238,11 +238,11 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 					String newActivityName = tokens.get(2);
 					CodeOutput activityCode = handleInterstitialActivity(tokenLines, tokenScanner, readIndex, outputCode, motionEvents, tokens);
 					lines.addAll(activityCode.mLineAndTokens);
-					readIndex = activityCode.mNextLineIndex - 1; 	// loop increments this
+					readIndex = activityCode.mNextLineIndex; 	// loop increments this
 				} else if (Constants.UserEvent.isInterstitialDialogEvent(action)) {
 					CodeOutput dialogCode = handleInterstitialDialog(tokenLines, tokenScanner, readIndex, outputCode, motionEvents, tokens);
 					lines.addAll(dialogCode.mLineAndTokens);
-					readIndex = dialogCode.mNextLineIndex - 1;	// loop increments this
+					readIndex = dialogCode.mNextLineIndex;	// loop increments this
 				} else if (Constants.ActivityEvent.ACTIVITY_FORWARD.equals(action)) {
 					String activityClass = tokens.get(2);
 					activityStack.push(activityClass);
@@ -293,7 +293,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 					
 					// if we're in an interstitial, that means that it's time to go, but don't forget to add the next wait for activity call
 					if ((outputType == OutputType.INTERSTITIAL_ACTIVITY) || (outputType == OutputType.INTERSTITIAL_DIALOG)) {
-						return new CodeOutput(lines, readIndex + 1);
+						return new CodeOutput(lines, readIndex);
 					}
 				} else if (Constants.ActivityEvent.ACTIVITY_BACK.equals(action) || Constants.UserEvent.ACTIVITY_BACK_KEY.equals(action)) {
 					if (!activityStack.isEmpty()) {
@@ -312,7 +312,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 						
 						// the handler is responsible for managing the activity transition, so the back event is part of it
 						if ((outputType == OutputType.INTERSTITIAL_ACTIVITY) || (outputType == OutputType.INTERSTITIAL_DIALOG)) {
-							return new CodeOutput(lines, readIndex + 1);
+							return new CodeOutput(lines, readIndex);
 						}
 					}
 				} else {
@@ -342,13 +342,13 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 						mLastEventWasWaitForDialog = true;
 						writeDismissDialog(tokens, lines);
 						if (outputType == OutputType.INTERSTITIAL_DIALOG) {
-							return new CodeOutput(lines, readIndex + 1);
+							return new CodeOutput(lines, readIndex);
 						}
 					} else if (Constants.UserEvent.CANCEL_DIALOG.equals(action)) {
 						mLastEventWasWaitForDialog = true;
 						writeCancelDialog(tokens, lines);
 						if (outputType == OutputType.INTERSTITIAL_DIALOG) {
-							return new CodeOutput(lines, readIndex + 1);
+							return new CodeOutput(lines, readIndex);
 						}
 					} else if (Constants.SystemEvent.CREATE_DIALOG.equals(action)) {
 						// if the dialog doesn't have any interaction from the user before it disappears, it's a 
@@ -1915,12 +1915,10 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		if (a.size() != b.size()) {
 			return false;			
 		} else {
-			for (int i = 0; i < a.size(); i++) {
-				if (i != 1) {
-					if (!a.get(i).equals(b.get(i))) {
-						return false;
-					}
-				}	
+			for (int i = 1; i < a.size(); i++) {
+				if (!a.get(i).equals(b.get(i))) {
+					return false;
+				}
 			}
 			return true;
 		}

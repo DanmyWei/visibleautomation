@@ -9,6 +9,7 @@ import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.Test.ActivityInterceptor;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.FileUtils;
+import com.androidApp.Utility.TestUtils;
 
 import android.animation.Animator;
 import android.animation.Animator.AnimatorListener;
@@ -431,7 +432,9 @@ public class MagicOverlay extends View implements OnGestureListener {
 		// reach the content view.
 		while (mCurrentView != mContentView) {
 			mCurrentView = (View)  mCurrentView.getParent();
+			Activity activity = TestUtils.getViewActivity(mCurrentView);
 			mCurrentView.getGlobalVisibleRect(currentViewRect);
+			Log.i(TAG, "activity = " + activity);
 			currentViewRect.offset(offsetX, offsetY);
 			if (currentViewRect.contains(eventX, eventY)) {
 				break;

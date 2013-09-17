@@ -53,7 +53,7 @@ public class OnListSelectionListener implements DialogInterface.OnClickListener 
 					try {
 						ViewInterceptor.replaceTouchListener(activity.toString(), recorder, currentView);
 					} catch (Exception ex) {
-						recorder.writeException(activity.getClass().getName(), ex, "replace touch listener in directive dialog");
+						recorder.writeException(activity.toString(), ex, "replace touch listener in directive dialog");
 					}
 					recorder.addViewDirective(motionDirective);
 				}

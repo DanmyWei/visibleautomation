@@ -48,15 +48,15 @@ public class InterceptKeyViewMenu extends EditText {
 			switch (event.getKeyCode()) {
 			case KeyEvent.KEYCODE_BACK:
 				mViewInterceptor.setLastKeyAction(KeyEvent.KEYCODE_BACK);
-				mRecorder.writeRecordTime(mActivity.getClass().getName(), Constants.EventTags.MENU_BACK_KEY);
+				mRecorder.writeRecordTime(mActivity.toString(), Constants.EventTags.MENU_BACK_KEY);
 				break;
 			case KeyEvent.KEYCODE_MENU:
 				mViewInterceptor.setLastKeyAction(KeyEvent.KEYCODE_MENU);
-				mRecorder.writeRecordTime(mActivity.getClass().getName(), Constants.EventTags.MENU_MENU_KEY);
+				mRecorder.writeRecordTime(mActivity.toString(), Constants.EventTags.MENU_MENU_KEY);
 				break;
 			case KeyEvent.KEYCODE_HOME:
 				mViewInterceptor.setLastKeyAction(KeyEvent.KEYCODE_HOME);
-				mRecorder.writeRecordTime(mActivity.getClass().getName(), Constants.EventTags.MENU_MENU_KEY);
+				mRecorder.writeRecordTime(mActivity.toString(), Constants.EventTags.MENU_MENU_KEY);
 				break;
 			} 
 		}

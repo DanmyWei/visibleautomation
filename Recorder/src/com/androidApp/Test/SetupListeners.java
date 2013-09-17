@@ -216,16 +216,16 @@ public class SetupListeners {
 									// rather than an extension submenu, sometimes it comes up as another completely unrecognizable
 									// class, and we can't access the onDismissListener, so we poll for the dismissal
 									viewInterceptor.setCurrentFloatingWindow(windowAndView.mWindow);
-									recorder.writeRecord(activity.getClass().getName(), Constants.EventTags.CREATE_POPUP_WINDOW, "create floating window " + windowAndView.mWindow.getClass().getName());
+									recorder.writeRecord(activity.toString(), Constants.EventTags.CREATE_POPUP_WINDOW, "create floating window " + windowAndView.mWindow.getClass().getName());
 									instrumentation.runOnMainSync(new InterceptFloatingWindowRunnable(activity, windowAndView.mView, windowAndView.mWindow));
 								}
 							}
 						} else if (viewInterceptor.getCurrentFloatingWindow() != null) {
 							if (viewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_BACK) {
-								recorder.writeRecord(activity.getClass().getName(), Constants.EventTags.DISMISS_POPUP_WINDOW_BACK_KEY, "dismiss floating window with the back key");
+								recorder.writeRecord(activity.toString(), Constants.EventTags.DISMISS_POPUP_WINDOW_BACK_KEY, "dismiss floating window with the back key");
 								viewInterceptor.setLastKeyAction(-1);
 							} else {
-								recorder.writeRecord(activity.getClass().getName(), Constants.EventTags.DISMISS_POPUP_WINDOW, "dismiss floating window");
+								recorder.writeRecord(activity.toString(), Constants.EventTags.DISMISS_POPUP_WINDOW, "dismiss floating window");
 							}
 							viewInterceptor.setCurrentFloatingWindow(null);
 						}
@@ -254,9 +254,9 @@ public class SetupListeners {
 			// compute it twice.
 			View optionsMenuView = DialogUtils.findViewForPopup(activity, popupWindow);
 			if (mViewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_MENU) {
-				mRecorder.writeRecord(activity.getClass().getName(), Constants.EventTags.OPEN_ACTION_MENU_KEY, "open action menu from menu key");
+				mRecorder.writeRecord(activity.toString(), Constants.EventTags.OPEN_ACTION_MENU_KEY, "open action menu from menu key");
 			} else {
-				mRecorder.writeRecord(activity.getClass().getName(), Constants.EventTags.OPEN_ACTION_MENU, "open action menu");
+				mRecorder.writeRecord(activity.toString(), Constants.EventTags.OPEN_ACTION_MENU, "open action menu");
 			}
 			// TODO: is this needed?
 			mInstrumentation.runOnMainSync(new InsertKeyListenerRunnable(activity, optionsMenuView));

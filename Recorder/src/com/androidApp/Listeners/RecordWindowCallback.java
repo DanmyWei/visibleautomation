@@ -82,13 +82,13 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 			mEventRecorder.setEventRecorded(false);
 			switch (event.getKeyCode()) {
 			case KeyEvent.KEYCODE_BACK:
-				mEventRecorder.writeRecordTime(mActivityName, Constants.EventTags.MENU_BACK_KEY);
+				mEventRecorder.writeRecordTime(mActivity.toString(), Constants.EventTags.MENU_BACK_KEY);
 				break;
 			case KeyEvent.KEYCODE_MENU:
-				mEventRecorder.writeRecordTime(mActivityName, Constants.EventTags.MENU_MENU_KEY);
+				mEventRecorder.writeRecordTime(mActivity.toString(), Constants.EventTags.MENU_MENU_KEY);
 				break;
 			case KeyEvent.KEYCODE_HOME:
-				mEventRecorder.writeRecordTime(mActivityName, Constants.EventTags.KEY_HOME);
+				mEventRecorder.writeRecordTime(mActivity.toString(), Constants.EventTags.KEY_HOME);
 				break;
 			} 
 		}

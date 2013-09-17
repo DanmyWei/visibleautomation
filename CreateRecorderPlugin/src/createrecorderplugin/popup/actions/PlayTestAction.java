@@ -117,16 +117,6 @@ public class PlayTestAction  implements IObjectActionDelegate {
 						 }
 					}		
 				}
-				// install the soft keyboard if neccessary
-				if (!InstallRecorderHandler.isPackageInstalled(RecorderConstants.KEYBOARD_PACKAGE)) {
-					if (MessageDialog.openConfirm(mShell, RecorderConstants.VISIBLE_AUTOMATION,
-												  "The custom keyboard is not installed, do you wish to install it now?")) {
-						if (InstallRecorderHandler.installAPKFromTemplate(mShell, RecorderConstants.KEYBOARD_APK, RecorderConstants.KEYBOARD_PACKAGE)) {
-							MessageDialog.openInformation(mShell, RecorderConstants.VISIBLE_AUTOMATION,	
-														  "Please set the keyboard as the default input method from settings on your device");
-						} 
-					}
-				}
 
 				// 
 				String testPath = EclipseUtility.classNameToPath(testPackage);
