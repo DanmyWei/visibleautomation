@@ -47,8 +47,13 @@ public class RecordOnClickListener extends RecordListener implements View.OnClic
 	 */
 	public void onClick(View v) {
 		boolean fReentryBlock = getReentryBlock();
-		if (!RecordListener.getEventBlock()) {
+		if (!RecordListener.getEventBlock() && mEventRecorder.hasTouchedDown()) {
+			mEventRecorder.setTouchedDown(true);
 			setEventBlock(true);
+			
+			// see if we're in a dialog.  There's a problem with android instrumentation where if the IME
+			// is up that the click event is sent to the wrong location, so we direct the emitter to
+			// call performClick() instead with the CLICK_WORKAROUND event tag
 			View rootView = v.getRootView();
 			boolean fIsInDialog = (DialogUtils.getDialog(rootView) != null);
 			boolean fWorkaroundDirective = mEventRecorder.matchViewDirective(v, ViewDirective.ViewOperation.CLICK_WORKAROUND, ViewDirective.When.ALWAYS);

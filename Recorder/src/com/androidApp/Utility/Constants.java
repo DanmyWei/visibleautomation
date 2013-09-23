@@ -345,6 +345,7 @@ public class Constants {
 		public static final String SPINNER_ITEM_SELECTED = "spinner_item_selected";
 		public static final String INTERSTITIAL_VIEW = "interstitial_view";
 		public static final String VIEW_DETACH = "view_detach";
+		public static final String ACTIVITY_FINISH = "activity_finish";
 	}
 	
 	// description strings 

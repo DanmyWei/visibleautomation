@@ -50,6 +50,10 @@ public class RecordOnScrollListener extends RecordListener implements AbsListVie
 	 * @param firstVisibleItem first visible item
 	 * @param visibleItemCount number of visible items
 	 * @param totalItemCount total # of items in the list view.
+	 * TODO: for other event handlers, we check for touch_down before actually recording the event,
+	 * but in the scroll case, the down event precedes a series of scroll events, followed by a 
+	 * touch_up or touch_cancel, and it's a bit tricky to pick up the down event, so for now, 
+	 * I'm going to blow it off, even though self-scrolling is a very common event.
 	 */
 	public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
 		boolean fReentryBlock = getReentryBlock();

@@ -182,8 +182,9 @@ public class DialogUtils {
         if (v != null) { 
             Context viewContext = v.getContext();
             // dialogs use a context theme wrapper, not a context, so we have to extract he context from the theme wrapper's
-            // base context
-            if (viewContext instanceof ContextThemeWrapper) {
+            // base context. Dialogs can also have nested Context Theme wrappers, so we have to loop to get the "true"
+            // base context.
+            while (viewContext instanceof ContextThemeWrapper) {
                 ContextThemeWrapper ctw = (ContextThemeWrapper) viewContext;
                 viewContext = ctw.getBaseContext();
             }           

@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringBufferInputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.eclipse.core.resources.IContainer;
@@ -19,6 +20,7 @@ import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.Platform;
+import org.eclipse.core.runtime.preferences.IPreferencesService;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.ui.console.ConsolePlugin;
@@ -316,4 +318,46 @@ public class EclipseUtility {
 	public static String pathToClassName(String className) {
 		return className.replace(File.separatorChar, '.');
 	}
+	
+	/**
+	 * get the android SDK levels by iterating over the android-sdk/platforms directory and extracting
+	 * the android levels
+	 * @return vector of integers of the available android levels.
+	 */
+	public static int[] getAndroidSDKLevels() {
+		IPreferencesService service = Platform.getPreferencesService();
+		String androidSDK = service.getString(RecorderConstants.ECLIPSE_ADT, RecorderConstants.ANDROID_SDK, null, null);
+		File platformsDir = new File(androidSDK + File.separator + RecorderConstants.PLATFORMS);
+		String[] platforms = platformsDir.list();
+		List<String> androidPlatforms = new ArrayList<String>();
+		for (String platform : platforms) {
+			if (platform.startsWith(RecorderConstants.ANDROID)) {
+				String level = platform.substring(RecorderConstants.ANDROID.length() + 1);
+				androidPlatforms.add(level);
+			}
+		}
+		int[] androidLevels = new int[androidPlatforms.size()];
+		for (int i = 0; i < androidPlatforms.size(); i++) {
+			androidLevels[i] = Integer.parseInt(androidPlatforms.get(i));
+			
+		}
+		return androidLevels;
+	}
+	
+	/**
+	 * get the same or next higher android SDK, or the SDK if it wasn't found.
+	 * @param level
+	 * @return
+	 */
+	public static int getBestAndroidSDKLevel(int level) {
+		int[] availableLevels = getAndroidSDKLevels();
+		Arrays.sort(availableLevels);
+		for (int availableLevel : availableLevels) {
+			if (availableLevel >= level) {
+				return availableLevel;
+			}
+		}
+		return level;
+	}
+	
 }

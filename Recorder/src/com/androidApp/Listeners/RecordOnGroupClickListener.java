@@ -52,7 +52,8 @@ public class RecordOnGroupClickListener extends RecordListener implements Expand
 
 	public boolean onGroupClick(ExpandableListView parent, View view, int groupPosition, long id) {
 		boolean fReentryBlock = getReentryBlock();
-		if (!RecordListener.getEventBlock()) {
+		if (!RecordListener.getEventBlock() && mEventRecorder.hasTouchedDown()) {
+			mEventRecorder.setTouchedDown(true);
 			setEventBlock(true);
 			int flatListIndex = parent.getFlatListPosition(parent.getPackedPositionForGroup(groupPosition));
 			Log.i(TAG, "group position = " + groupPosition + " list index = " + flatListIndex);

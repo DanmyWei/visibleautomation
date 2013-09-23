@@ -108,9 +108,6 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		Collections.sort(tokenLines, new TimestampComparator());
 		OrderByActivity orderByActivity = new OrderByActivity();
 		List<List<String>> orderedTokenLines = orderByActivity.orderEventsByActivity(tokenLines);
-		for (List<String> tokens : orderedTokenLines) {
-			System.out.println(tokens.toString());
-		}
 		scanTargetPackage(orderedTokenLines);
 		CodeOutput mainLines = emit(orderedTokenLines, 0, outputCode, motionEvents, OutputType.MAIN);
 		outputCode.put(new CodeDefinition(Constants.MAIN, null), mainLines.mLineAndTokens);
@@ -244,54 +241,14 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 					lines.addAll(dialogCode.mLineAndTokens);
 					readIndex = dialogCode.mNextLineIndex;	// loop increments this
 				} else if (Constants.ActivityEvent.ACTIVITY_FORWARD.equals(action)) {
-					String activityClass = tokens.get(2);
-					activityStack.push(activityClass);
+					handleActivityForward(tokens, tokenLines, readIndex, tokenScanner, activityStack, lines);
 					
-					// if this is the first activity_forward, then record the classpath so we can construct the output project
-					if (mTargetClassPath == null) {
-						mTargetClassPath = tokens.get(2);
+					// if we're in an interstitial, that means that it's time to go
+					if ((outputType == OutputType.INTERSTITIAL_ACTIVITY) || (outputType == OutputType.INTERSTITIAL_DIALOG)) {
+						return new CodeOutput(lines, readIndex);
 					}
-					mLastEventWasWaitForActivity = true;
-					// if there is no user event between this and the next activity, then don't write the waitForActivity()
-					// call, because this is based on a timer or network request, and we shouldn't bother waiting for 
-					// activities that the user isn't going to interact with. What we do next depends on if we 
-					// do activity_forward or go_back next.  If it's activity_forward, we skip to it, if it's
-					// activit_back, we skip over it.
-					
-					boolean fUserInteraction = TokenScanner.happensBefore(tokenLines, readIndex + 1, 
-																	   	  tokenScanner.new UserEventPredicate(), 
-																	   	  tokenScanner.new ActivityTransitionPredicate());
-					if (!fUserInteraction) {
-						int goBackIndex = TokenScanner.scanForward(tokenLines, readIndex + 1, 
-												   				  tokenScanner.new EventListPredicate(Constants.ActivityEvent.ACTIVITY_BACK.mEventName));
-						int goForwardIndex = TokenScanner.scanForward(tokenLines, readIndex + 1, 
-																	  tokenScanner.new EventListPredicate(Constants.ActivityEvent.ACTIVITY_FORWARD.mEventName));
-						// don't forget that next iteration skips
-						if ((goBackIndex != -1) && (goBackIndex < goForwardIndex)) {
-							readIndex = goBackIndex;
-						} else if (goForwardIndex != -1) {
-							readIndex = goForwardIndex - 1;
-						}
-
-					} else {
-						boolean fInterstitialActivityMatch = TokenScanner.happensBefore(tokenLines, readIndex + 1,
-																						tokenScanner.new EventParameterPredicate(Constants.ActivityEvent.INTERSTITIAL_ACTIVITY.mEventName, 2, activityClass),
-																					    tokenScanner.new ActivityTransitionPredicate());
-						// if an interstitial activity (with the same activity name)was marked after this activity_forward 
-						// transition, and there is no activity transition, between us, then DO NOT write the waitActivity() 
-						// call, because it should be taken care of by the condition.
-						if (!fInterstitialActivityMatch) {
-							// applications can use the same activity class with different contents in the intent, so we have to
-							// write different "wait" cases.
-							if (mfActivityMatches) {
-								writeWaitForMatchingActivity(mActivityVariable, tokens, lines);
-							} else {
-								writeWaitForActivity(tokens, lines);
-							}
-						}
-					}
-					
-					// if we're in an interstitial, that means that it's time to go, but don't forget to add the next wait for activity call
+				} else if (Constants.ActivityEvent.ACTIVITY_FINISH.equals(action)) {
+					// if we're in an interstitial, that means that it's time to go
 					if ((outputType == OutputType.INTERSTITIAL_ACTIVITY) || (outputType == OutputType.INTERSTITIAL_DIALOG)) {
 						return new CodeOutput(lines, readIndex);
 					}
@@ -367,6 +324,18 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 						}
 					} else if (Constants.SystemEvent.SHOW_IME.equals(action)) {
 						writeShowIME(tokens, lines);
+					} else if (Constants.UserEvent.KEY_BACK.equals(action)) {
+						// if the user has hit the back key, it can be read by the application. In the 90% case, it's backing
+						// out of the current activity, but the activity may do something else. In the case of skype, it
+						// hides the IME if it's up, which is something we're very very interested in, because of state management
+						// TODO: no matter what, we should send the back key, but we need to filter out the activity_back_key
+						// case as well (revisit this)
+						TokenScanner.Predicate anyEventPredicate = tokenScanner.new OrPredicate(tokenScanner.new SystemEventPredicate(),
+																								tokenScanner.new UserEventPredicate());
+						if (TokenScanner.happensBefore(tokenLines, readIndex - 1,
+													   tokenScanner.new EventListPredicate(Constants.UserEvent.HIDE_IME.mEventName), anyEventPredicate)) {
+							writeHideIMEBackKey(tokens, lines);					   
+						}
 					} else if (Constants.UserEvent.HIDE_IME_BACK_KEY.equals(action)) {
 						
 						// always hide on the back key
@@ -459,7 +428,62 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		} 
 		return new CodeOutput(lines, readIndex);
 	}
+
+	public void handleActivityForward(List<String>			tokens,
+									  List<List<String>>	tokenLines,
+									  int					readIndex,
+									  TokenScanner			tokenScanner,
+									  Stack<String> 		activityStack,
+									  List<LineAndTokens> 	lines) throws IOException {
+			
+		String activityClass = tokens.get(2);
+		activityStack.push(activityClass);
+		
+		// if this is the first activity_forward, then record the classpath so we can construct the output project
+		if (mTargetClassPath == null) {
+			mTargetClassPath = tokens.get(2);
+		}
+		mLastEventWasWaitForActivity = true;
+		// if there is no user event between this and the next activity, then don't write the waitForActivity()
+		// call, because this is based on a timer or network request, and we shouldn't bother waiting for 
+		// activities that the user isn't going to interact with. What we do next depends on if we 
+		// do activity_forward or go_back next.  If it's activity_forward, we skip to it, if it's
+		// activit_back, we skip over it.
+		
+		boolean fUserInteraction = TokenScanner.happensBefore(tokenLines, readIndex + 1, 
+														   	  tokenScanner.new UserEventPredicate(), 
+														   	  tokenScanner.new ActivityTransitionPredicate());
+		if (!fUserInteraction) {
+			int goBackIndex = TokenScanner.scanForward(tokenLines, readIndex + 1, 
+									   				   tokenScanner.new EventListPredicate(Constants.ActivityEvent.ACTIVITY_BACK.mEventName));
+			int goForwardIndex = TokenScanner.scanForward(tokenLines, readIndex + 1, 
+														  tokenScanner.new EventListPredicate(Constants.ActivityEvent.ACTIVITY_FORWARD.mEventName));
+			// don't forget that next iteration skips
+			if ((goBackIndex != -1) && (goBackIndex < goForwardIndex)) {
+				readIndex = goBackIndex;
+			} else if (goForwardIndex != -1) {
+				readIndex = goForwardIndex - 1;
+			}
 	
+		} else {
+			boolean fInterstitialActivityMatch = TokenScanner.happensBefore(tokenLines, readIndex + 1,
+																			tokenScanner.new EventParameterPredicate(Constants.ActivityEvent.INTERSTITIAL_ACTIVITY.mEventName, 2, activityClass),
+																		    tokenScanner.new ActivityTransitionPredicate());
+			// if an interstitial activity (with the same activity name)was marked after this activity_forward 
+			// transition, and there is no activity transition, between us, then DO NOT write the waitActivity() 
+			// call, because it should be taken care of by the condition.
+			if (!fInterstitialActivityMatch) {
+				// applications can use the same activity class with different contents in the intent, so we have to
+				// write different "wait" cases.
+				if (mfActivityMatches) {
+					writeWaitForMatchingActivity(mActivityVariable, tokens, lines);
+				} else {
+					writeWaitForActivity(tokens, lines);
+				}
+			}
+		}
+	}
+
 	public CodeOutput handleInterstitialActivity(List<List<String>>								tokenLines,
 												 TokenScanner									tokenScanner,
 												 int											currentReadIndex,
@@ -1274,8 +1298,8 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		}
 	}
 	/**
-	 * write out the show ime command:
-	 * show_ime:195773901,id,com.example.android.apis.R$id.radio_button
+	 * write out the hide_ime_back_key command:
+	 * hide_ime_back_key:2724264,id,0x7f080102,android.widget.EditText,IME hidden by back key pressed
 	 * @param tokens parsed from a line in events.txt
 	 * @param lines output list of java instructions
 	 * @throws IOException if the template file can't be read
@@ -1293,6 +1317,35 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 				lines.add(new LineAndTokens(tokens, hideImeClassIndexTemplate));			
 			} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.INTERNAL_CLASS_INDEX) {
 				String hideImeInternalClassIndexTemplate = writeViewInternalClassIndexCommand(Constants.Templates.HIDE_IME_INTERNAL_CLASS_INDEX, ref, fullDescription);
+				lines.add(new LineAndTokens(tokens, hideImeInternalClassIndexTemplate));							
+			}
+		} else {
+			String hideImeTemplate = FileUtility.readTemplate(Constants.Templates.SHOW_IME);
+			lines.add(new LineAndTokens(tokens, hideImeTemplate));			
+		}
+	}
+	
+	/**
+	 * this is for the case where the IME is hidden by the application, in response to hitting the back key
+	 * @tokens hide_ime:2727115,id,0x7f080102,android.widget.EditText,IME hidden
+	 * previous line key_back:2727544,class_index,android.widget.LinearLayout,0,0
+	 * @param lines
+	 * @throws IOException
+	 * @throws EmitterException
+	 */
+	public void writeHideIMEBackKey(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
+		if (tokens.size() > 3) {
+			ReferenceParser ref = new ReferenceParser(tokens, 2);
+			String description = getDescription(tokens);
+			String fullDescription = "hide IME for " + description;
+			if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
+				String hideImeViewTemplate = writeViewIDCommand(Constants.Templates.HIDE_IME_BACK_KEY_ID, ref, fullDescription);
+				lines.add(new LineAndTokens(tokens, hideImeViewTemplate));
+			} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
+				String hideImeClassIndexTemplate = writeViewClassIndexCommand(Constants.Templates.HIDE_IME_BACK_KEY_CLASS_INDEX, ref, fullDescription);
+				lines.add(new LineAndTokens(tokens, hideImeClassIndexTemplate));			
+			} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.INTERNAL_CLASS_INDEX) {
+				String hideImeInternalClassIndexTemplate = writeViewInternalClassIndexCommand(Constants.Templates.HIDE_IME_BACK_KEY_INTERNAL_CLASS_INDEX, ref, fullDescription);
 				lines.add(new LineAndTokens(tokens, hideImeInternalClassIndexTemplate));							
 			}
 		} else {

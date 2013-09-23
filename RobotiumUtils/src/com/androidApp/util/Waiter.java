@@ -44,7 +44,7 @@ public class Waiter {
 			return false;
 		}
 		view.getGlobalVisibleRect(viewRect);
-		if (viewRect.contains(targetRect)) {
+		if (viewRect.contains(targetRect) && view.isClickable()) {
 			if (level >= targetLevel) {
 				return true;
 			} else {

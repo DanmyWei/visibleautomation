@@ -48,6 +48,8 @@ public class RecordTextChangedListener extends RecordListener implements TextWat
 
 	public void beforeTextChanged(CharSequence s, int start, int count, int after) {
 		try {
+			
+			// warn the user if the keyboard is not connected and communicating with the application
 			if (!IMEMessageListener.isKeyboardConnected()) {
 				if (!sfShowedKeyboardWarning) {
 					Context context = mTextView.getContext();

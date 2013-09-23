@@ -102,12 +102,17 @@ public class RobotiumUtils {
 	 * @return list of TextViews in the list
 	 */
 	public boolean waitAndClickInAdapterByClassIndex(Solo solo, int adapterViewIndex, int itemIndex) {
+
 		boolean foundView = solo.waitForView(android.widget.AbsListView.class, adapterViewIndex + 1, VIEW_TIMEOUT_MSEC);
 		if (!foundView) {
 			return false;
 		}
 		android.widget.AbsListView absListView = (android.widget.AbsListView) solo.getView(android.widget.AbsListView.class, adapterViewIndex);
-		return waitAndClickInAdapter(solo, absListView, itemIndex);
+		if (waitForView(absListView, VIEW_TIMEOUT_MSEC)) {
+			return waitAndClickInAdapter(solo, absListView, itemIndex);
+		} else {
+			return false;
+		}
 	}
 	
 	/**
@@ -129,7 +134,11 @@ public class RobotiumUtils {
 			RobotiumUtils.sleep(VIEW_POLL_INTERVAL_MSEC);
 			waitMsec -= VIEW_POLL_INTERVAL_MSEC;
 		}
-		return waitAndClickInAdapter(solo, absListView, itemIndex);
+		if (waitForView(absListView, VIEW_TIMEOUT_MSEC)) {
+			return waitAndClickInAdapter(solo, absListView, itemIndex);
+		} else {
+			return false;
+		}
 	}
 	
 	// click on an adapter item, which isn't as simple as you might think
@@ -489,7 +498,16 @@ public class RobotiumUtils {
 	        sActivityMonitorRunnable.getCurrentLayoutListener().waitForLayout(VIEW_TIMEOUT_MSEC);
 		}
 	}
-	
+
+	/**
+	 * some applications (read SKYPE) listen to the back key and hide the IME explicitly, so we force the IME up
+	 * (which does nothing if it's up already), then send the back key.
+	 * @param v
+	 */
+	public  void hideIMEWithBackKey(View v) {
+		showIME(v);
+        mInstrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK);          
+	}
 	
 	/**
 	 * wait for a layout
@@ -953,6 +971,9 @@ public class RobotiumUtils {
 	/**
 	 * fortunately, Instrumentation.invokeMenuActionSync() returns a boolean flag on success, so we test
 	 * it in a wait timeout loop
+	 * TODO: Unfortunately, if the menu item doesn't have a callback, or doesn't invoke a submenu, then this 
+	 * fails (i.e. if the menu item does nothing). 
+	 * TODO: test with submenus. 
 	 * @param menuItemId
 	 * @param timeoutMsec
 	 * @return
@@ -1003,6 +1024,7 @@ public class RobotiumUtils {
 		}
 		return null;
 	}
+	
 	protected class ClassCount {
 		public int mIndex;
 		
@@ -1033,6 +1055,12 @@ public class RobotiumUtils {
 		return null;
 	}
 	
+	/**
+	 * a REAL waitForView() that doesn't just wait for it to exist, but also not obscured
+	 * @param v
+	 * @param timeoutMsec
+	 * @return
+	 */
 	public boolean waitForView(View v, long timeoutMsec) {
 		return Waiter.waitForView(v, timeoutMsec);
 	}

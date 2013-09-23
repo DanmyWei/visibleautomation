@@ -39,11 +39,20 @@ public class RecordOnTabChangeListener extends RecordListener implements TabHost
 		}	
 	}
 	
+	// this is for old-style tab events, where it passes the tab id in the onTabChanged()
 	@Override
 	public void onTabChanged(String tabId) {
-		mEventRecorder.writeRecord(Constants.EventTags.SELECT_TAB, mActivityName, mTabHost, tabId);
-		if (mOriginalTabListener != null) {
-			mOriginalTabListener.onTabChanged(tabId);
+		boolean fReentryBlock = getReentryBlock();
+		if (!RecordListener.getEventBlock() && mEventRecorder.hasTouchedDown()) {
+			mEventRecorder.setTouchedDown(true);
+			setEventBlock(true);
+			mEventRecorder.writeRecord(Constants.EventTags.SELECT_TAB, mActivityName, mTabHost, tabId);
 		}
+		if (!fReentryBlock) {
+			if (mOriginalTabListener != null) {
+				mOriginalTabListener.onTabChanged(tabId);
+			}
+		}
+		setEventBlock(false);
 	}	
 }

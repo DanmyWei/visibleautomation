@@ -38,6 +38,8 @@ public class EventRecorder extends EventRecorderInterface {
 	protected List<Class <? extends Activity>> 	mInterstitialActivityList;			// list of random popup activities, for ads and such
 	protected Hashtable<String,String> 			mVariableTable;						// variable hashtable
 	protected boolean							mEventWasRecorded;					// indicate that click/key event was recorded (or not)
+	protected boolean							mfTouchDown;						// RecordWindowCallback recorded a touch down event
+	
 	/**
 	 * constructor which opens the recording file, which is stashed somewhere on the sdcard.
 	 * @param instrumentation instrumentation handle
@@ -58,6 +60,7 @@ public class EventRecorder extends EventRecorderInterface {
 		mViewReference = new ViewReference(instrumentation, fBinary);
 		mVariableTable = new Hashtable<String,String>();
 		mViewDirectiveList = new ArrayList<ViewDirective>();
+		mfTouchDown = false;
 		try {
 			InputStream isViewDirective  = instrumentation.getContext().getAssets().open(Constants.Asset.VIEW_DIRECTIVES);
 			if (isViewDirective != null) {
@@ -125,6 +128,17 @@ public class EventRecorder extends EventRecorderInterface {
 		mEventWasRecorded = f;
 	}
 	
+	// the user has touched down.  This means that the listener is getting fired on a real event, not
+	// an application self-event.
+	public boolean hasTouchedDown() {
+		return mfTouchDown;
+	}
+	
+	public void setTouchedDown(boolean f) {
+		mfTouchDown = f;
+	}
+	
+
 	// write a record to the output
 	public synchronized void writeRecord(Activity a, String s)  {
 		mEventWasRecorded = true;

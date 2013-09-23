@@ -49,8 +49,8 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 	protected Context					mContext;							// so we can toast
 	protected Window					mWindow;							// so we can get the root view
 	protected long						EVENT_RECORD_TIMEOUT_MSEC = 500;	// timeout before event can be recorded
-	protected RecordedTouchTimerTask	mEventRecordTimeoutTask = null;
 	protected Activity					mActivity;
+	protected boolean					mfTouchDown;						// touch down was fired.
 	
 	public RecordWindowCallback(Window			window,
 								Activity		activity,
@@ -64,6 +64,7 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 		mOriginalCallback = originalCallback;
 		mViewInterceptor = viewInterceptor;
 		mContext = context;
+		mfTouchDown = false;
 	}
 	
 	public Object getOriginalListener() {
@@ -106,22 +107,27 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 		return mOriginalCallback.dispatchKeyShortcutEvent(event);
 	}
 
+	/**
+	 * sometimes, actually pretty often, views get created dynamically, and the global layout listener and on
+	 * hierarchy changed listeners don't handle the incoming event.  
+	 */
+	
 	@Override
 	public boolean dispatchTouchEvent(MotionEvent event) {
 		if (event.getAction() == MotionEvent.ACTION_DOWN) {
+			// at this point, the event hasn't been recorded. and we're a real boy! so that means
+			// that listeners should actually record us, as opposed to self-events.
 			mEventRecorder.setEventRecorded(false);
+			mEventRecorder.setTouchedDown(true);
+		
+			// get the content view from the app.  If we've inserted the magic frame (and frankly, we should have
+			// at this point), the content is the first child of the magic frame.
 			View contentView = ((ViewGroup) mWindow.getDecorView()).getChildAt(0);
 			if (contentView instanceof MagicFrame) {
 				contentView = ((ViewGroup) contentView).getChildAt(0);
 			}
 			List<View> hitViews = getHitViews((int) event.getX(), (int) event.getY(), contentView);
 			mViewInterceptor.interceptList(mActivity, mActivity.toString(), hitViews);
-			Log.i(TAG, "hit views = " + hitViews);
-			if (mEventRecordTimeoutTask != null) {
-				mEventRecordTimeoutTask.cancel();
-			}
-			mEventRecordTimeoutTask = new RecordedTouchTimerTask(contentView, event);
-			SetupListeners.getScanTimer().schedule(new RecordedTouchTimerTask(contentView, event), EVENT_RECORD_TIMEOUT_MSEC);
 		}
 		Log.i(TAG, "dispatch touchEvent action = " + event.getAction());
 		return mOriginalCallback.dispatchTouchEvent(event);
@@ -262,48 +268,7 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 	public EventRecorder getEventRecorder() {
 		return mEventRecorder;
 	}
-	
-	/**
-	 * so, what's happened here is that the user has clicked on something and it's ben detected by
-	 * RecordWindowCallback, but none of the listeners have written the event using the event recorder before the
-	 * specified time, so we try to find the view that the user clicked on, and tell him with a toast that
-	 * the event wasn't listened to. This is handy for finding custom widgets that use custom listeners.
-	 * Now, the user may have clicked another object before the timer has expired, and the event recorder
-	 * just uses a flag saying, "hey, we haven't recorded the last event". In theory, I should have a  
-	 * flag stack for each touch event, but the actual event is out of scope by the time it's fired, so it
-	 * would be a huge pain in the ass to match up against for what is really a convenience feature.
-	 * Since this is based on a timer, there's an implicit race condition, but since it's just "informative"
-	 * we don't really care too much.
-	 * @author matt2
-	 *
-	 */
-	public class RecordedTouchTimerTask extends TimerTask {
-		protected View		mViewRoot;						// root view to recurse from to find offending view
-		protected float 	mEventX;						//  motion event info
-		protected float 	mEventY;
-		protected int 		mEventAction;
 		
-		// remember, the event queue can trash events, so we just store what we need.
-		public RecordedTouchTimerTask(View viewRoot, MotionEvent motionEvent) {
-			mViewRoot = viewRoot;
-			mEventAction = motionEvent.getAction();
-			mEventX = motionEvent.getX();
-			mEventY = motionEvent.getY();
-		}
-		
-		public void run() {
-			RecordWindowCallback.this.mEventRecordTimeoutTask = null;
-			if (!RecordWindowCallback.this.getEventRecorder().eventWasRecorded()) {
-				View target = TestUtils.findViewByXY(mViewRoot, mEventX, mEventY);
-				if ((target != null) && !(target instanceof MagicOverlay) && !(target instanceof MagicOverlayDialog)) {
-					String toastMsg = "event not recorded for " + target.getClass().getSimpleName();
-					Instrumentation instrumentation = RecordWindowCallback.this.mEventRecorder.getInstrumentation();
-					ShowToastRunnable.showToast(instrumentation, RecordWindowCallback.this.mContext, toastMsg);
-				}
-			}
-		}
-	}
-	
 	// given an event x,y, return the views that were hit.
 	public List<View> getHitViews(int eventX, int eventY, View contentView) {
 		List<View> hitViews = new ArrayList<View>();

@@ -121,12 +121,9 @@ public class CreateRobotiumRecorder  {
 	public void createProjectProperties(IProject testProject, int SDKVersion) throws CoreException, IOException {
 		String target= null;
 		
-		// workaround: There is no android SDK=9
-		if (SDKVersion == 9) {
-			target = "target=android-10";
-		} else {
-			target = "target=android-" + Integer.toString(SDKVersion);
-		}
+		int bestAvailableSDKLevel = EclipseUtility.getBestAndroidSDKLevel(SDKVersion);
+		EclipseUtility.printConsole("best available SDK level = " + bestAvailableSDKLevel);
+		target = "target=android-" + bestAvailableSDKLevel;
 		String projectProperties = FileUtility.readTemplate(RecorderConstants.PROJECT_PROPERTIES_TEMPLATE);
 		projectProperties = projectProperties.replace(Constants.VariableNames.TARGET, target);
 		EclipseUtility.writeString(testProject, Constants.Filenames.PROJECT_PROPERTIES_FILENAME, projectProperties);

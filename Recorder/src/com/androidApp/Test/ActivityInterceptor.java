@@ -423,6 +423,8 @@ public class ActivityInterceptor {
 		for (ActivityState cand : mActivityStack) {
 			if ((cand.getActivity() == null) || (cand.getActivity().isFinishing())) {
 				removeList.add(cand);
+				String logMsg = "finishing activity " + cand.getActivity().toString();
+				mEventRecorder.writeRecord(cand.getActivity().toString(), Constants.EventTags.ACTIVITY_FINISH, logMsg);
 				Log.i(TAG, "removing activity " + cand.getActivityUniqueName() + " at position " + iPos);
 			}
 			iPos--;

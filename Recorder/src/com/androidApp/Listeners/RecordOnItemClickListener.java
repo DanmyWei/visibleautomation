@@ -56,7 +56,8 @@ public class RecordOnItemClickListener extends RecordListener implements Adapter
 
 	public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 		boolean fReentryBlock = getReentryBlock();
-		if (!RecordListener.getEventBlock()) {
+		if (!RecordListener.getEventBlock() && mEventRecorder.hasTouchedDown()) {
+			mEventRecorder.setTouchedDown(true);
 			setEventBlock(true);
 			try {
 				if (mEventRecorder.matchViewDirective(parent, ViewDirective.ViewOperation.SELECT_BY_TEXT, ViewDirective.When.ALWAYS)) {

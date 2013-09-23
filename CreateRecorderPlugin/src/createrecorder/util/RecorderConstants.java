@@ -37,6 +37,8 @@ public class RecorderConstants {
 	public static final String BUILD_TOOLS = "build-tools";
 	public static final String AAPT = "aapt";
 	public static final String AAPT_WIN32 = "aapt.exe";
+	public static final String PLATFORMS = "platforms";
+	public static final String ANDROID = "android";
 	
 	// eclipse preference keys.
 	public static class Preferences {

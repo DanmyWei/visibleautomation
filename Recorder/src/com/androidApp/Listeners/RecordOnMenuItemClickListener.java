@@ -43,7 +43,8 @@ public class RecordOnMenuItemClickListener extends RecordListener implements Men
 	@Override
 	public boolean onMenuItemClick(MenuItem item) {
 		boolean fReentryBlock = getReentryBlock();
-		if (!RecordListener.getEventBlock()) {
+		if (!RecordListener.getEventBlock() && mEventRecorder.hasTouchedDown()) {
+			mEventRecorder.setTouchedDown(true);
 			setEventBlock(true);
 			try {
 				int position = RecordOnMenuItemClickListener.getMenuItemIndex(item);

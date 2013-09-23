@@ -102,6 +102,7 @@ public class SoftKeyboard extends InputMethodService
     
     private String mWordSeparators;
     private static TCPListener sTCPListener;
+    private static boolean sfUserClosedKeyboard;
     
     /**
      * Main initialization of the input method component.  Be sure to call
@@ -112,6 +113,7 @@ public class SoftKeyboard extends InputMethodService
         Log.i(TAG, "onCreate");
         mInputMethodManager = (InputMethodManager)getSystemService(INPUT_METHOD_SERVICE);
         mWordSeparators = getResources().getString(R.string.word_separators);
+        sfUserClosedKeyboard = false;
         if (sTCPListener == null) {
         	try {
         		sTCPListener = new TCPListener(TCPPORT);
@@ -126,6 +128,11 @@ public class SoftKeyboard extends InputMethodService
     public static TCPListener getTCPListener() {
     	return sTCPListener;
     }
+    
+    public static void setUserClosedKeyboard(boolean f) {
+    	sfUserClosedKeyboard = f;
+    }
+    
     /**
      * This is the point where you can do all of your UI initialization.  It
      * is called after creation and any configuration change.
@@ -268,7 +275,11 @@ public class SoftKeyboard extends InputMethodService
     @Override
     public void onFinishInputView (boolean finishingInput) {
         Log.i(TAG, "onFinishInputView");
-       	sTCPListener.broadcast(HIDE_IME);
+        if (sfUserClosedKeyboard) {
+        	sTCPListener.broadcast(HIDE_IME_BACK_KEY);
+        } else {
+        	sTCPListener.broadcast(HIDE_IME);
+        }
     	super.onFinishInputView(finishingInput);
     }
     /**
@@ -556,7 +567,8 @@ public class SoftKeyboard extends InputMethodService
     public void onKey(int primaryCode, int[] keyCodes) {
     	Log.i(TAG, "onKey " + primaryCode);
 
-    	sTCPListener.broadcast(SEND_KEY);
+    	// broadcast the key to anyone who's willing to listen (hopefully it's just our recording application)
+    	sTCPListener.broadcast(SEND_KEY + ":" + Integer.toString(primaryCode));
     	try {
     		String s = sTCPListener.readAck();
     		if (!s.equals(ACK)) {
@@ -578,6 +590,7 @@ public class SoftKeyboard extends InputMethodService
         } else if (primaryCode == Keyboard.KEYCODE_SHIFT) {
             handleShift();
         } else if (primaryCode == Keyboard.KEYCODE_CANCEL) {
+        	sfUserClosedKeyboard = true;
             handleClose();
             return;
         } else if (primaryCode == LatinKeyboardView.KEYCODE_OPTIONS) {
@@ -759,6 +772,7 @@ public class SoftKeyboard extends InputMethodService
     }
 
     public void swipeDown() {
+    	sfUserClosedKeyboard = true;
         handleClose();
         Log.i(TAG,  "swipe down");
     }
@@ -786,6 +800,7 @@ public class SoftKeyboard extends InputMethodService
  */
     public boolean onShowInputRequested (int flags, boolean configChange) {
     	boolean f = super.onShowInputRequested(flags, configChange);
+    	sfUserClosedKeyboard = false;
     	Log.i(TAG, "onShowInputRequested");
     	sTCPListener.broadcast(SHOW_IME);
     	return f;

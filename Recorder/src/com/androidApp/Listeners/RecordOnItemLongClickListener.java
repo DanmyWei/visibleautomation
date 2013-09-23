@@ -34,7 +34,8 @@ public class RecordOnItemLongClickListener extends RecordListener implements Ada
 	public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
 		boolean fConsumeEvent = false;
 		boolean fReentryBlock = getReentryBlock();
-		if (!RecordListener.getEventBlock()) {
+		if (!RecordListener.getEventBlock() && mEventRecorder.hasTouchedDown()) {
+			mEventRecorder.setTouchedDown(true);
 			setEventBlock(true);
 			try {
 				mEventRecorder.writeRecord(mActivityName, Constants.EventTags.ITEM_LONG_CLICK, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));

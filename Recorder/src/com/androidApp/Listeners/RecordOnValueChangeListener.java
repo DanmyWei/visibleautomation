@@ -42,9 +42,20 @@ public class RecordOnValueChangeListener extends RecordListener implements Numbe
 	}
 
 	@Override
-	public void onValueChange(NumberPicker arg0, int oldVal, int newVal) {
-		String msg = Integer.toString(oldVal) + "," + Integer.toString(newVal);
-		mEventRecorder.writeRecord(Constants.EventTags.VALUE_CHANGE, mActivityName, mNumberPicker, msg);
-		
+	public void onValueChange(NumberPicker numberPicker, int oldVal, int newVal) {	
+		boolean fReentryBlock = getReentryBlock();
+		if (!RecordListener.getEventBlock() && mEventRecorder.hasTouchedDown()) {
+			mEventRecorder.setTouchedDown(true);
+			setEventBlock(true);
+			String msg = Integer.toString(oldVal) + "," + Integer.toString(newVal);
+			mEventRecorder.writeRecord(Constants.EventTags.VALUE_CHANGE, mActivityName, mNumberPicker, msg);
+		}
+		if (!fReentryBlock) {
+			if (mOriginalValueChangeListenerListener != null) {
+				mOriginalValueChangeListenerListener.onValueChange(numberPicker, oldVal, newVal);
+			}
+		}
+		setEventBlock(false);
+	
 	}	
 }

@@ -45,9 +45,12 @@ public class RecordOnItemSelectedListener extends RecordListener implements Adap
 	@Override
 	public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
 		boolean fReentryBlock = getReentryBlock();
-		if (!RecordListener.getEventBlock()) {
+		if (!RecordListener.getEventBlock() && mEventRecorder.hasTouchedDown()) {
 			setEventBlock(true);
+			mEventRecorder.setTouchedDown(false);
 			try {
+				
+				// I UTTERLY LOATHE having to do this, but I've not much of a choice.
 				if (parent instanceof Spinner) {
 					mEventRecorder.writeRecord(mActivityName, Constants.EventTags.SPINNER_ITEM_SELECTED, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
 				} else {

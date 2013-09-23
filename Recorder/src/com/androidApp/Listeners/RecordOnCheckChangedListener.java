@@ -36,8 +36,9 @@ public class RecordOnCheckChangedListener extends RecordListener implements Comp
 	
 	public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 		boolean fReentryBlock = getReentryBlock();
-		if (!RecordListener.getEventBlock()) {
+		if (!RecordListener.getEventBlock() && mEventRecorder.hasTouchedDown()) {
 			setEventBlock(true);
+			mEventRecorder.setTouchedDown(false);
 			try {
 				String fullDescription = isChecked + "," + mEventRecorder.getViewReference().getReference(buttonView);
 				mEventRecorder.writeRecord(mActivityName, Constants.EventTags.CHECKED, fullDescription);

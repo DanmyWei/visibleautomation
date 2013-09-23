@@ -48,6 +48,8 @@ public class RecordOnTouchListener extends RecordListener implements OnTouchList
 	
 	/**
 	 * record the actual touch event
+	 * TODO: we should ensure that the event does actually come through RecordWindowCallback,
+	 * but self-motion events are as rare as hen's teeth, and we need to handle move and up as well as down
 	 * <touch_down/touch_up/touch_move>:time,x,y,<reference>,<description>
 	 * 
 	 */

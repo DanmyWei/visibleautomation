@@ -85,6 +85,7 @@ public class LatinKeyboardView extends KeyboardView {
     @Override
     public boolean handleBack() {
     	boolean f = super.handleBack();
+    	SoftKeyboard.setUserClosedKeyboard(true);
        	SoftKeyboard.getTCPListener().broadcast(SoftKeyboard.HIDE_IME_BACK_KEY);
     	Log.i(TAG, "handle back");
     	return f;

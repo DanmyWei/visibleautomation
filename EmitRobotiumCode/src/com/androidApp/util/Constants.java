@@ -61,6 +61,7 @@ public class Constants {
 		CHILD_CLICK("child_click"),
 		GROUP_CLICK("group_click"),
 		HIDE_IME_BACK_KEY("hide_ime_back_key"),	
+		HIDE_IME("hide_ime"),	
 		ACTIVITY_BACK_KEY("activity_back_key"), 
 		GET_FOCUS("get_focus"),
 		INTERSTITIAL_DIALOG_TITLE_ID("interstitial_dialog_title_id"),
@@ -72,7 +73,8 @@ public class Constants {
 		PASTE_TEXT("paste_text"),
 		SELECT_BY_TEXT("select_by_text"), 
 		CLICK_WORKAROUND("click_workaround"), 
-		INTERSTITIAL_VIEW("interstitial_view");
+		INTERSTITIAL_VIEW("interstitial_view"), 
+		KEY_BACK("key_back");
 		
 		public final String mEventName;		
 		private UserEvent(String s) {
@@ -111,7 +113,8 @@ public class Constants {
 		PACKAGE("package"),
 		ACTIVITY_FORWARD("activity_forward"),
 		ACTIVITY_BACK("activity_back"), 
-		INTERSTITIAL_ACTIVITY("interstitial_activity");
+		INTERSTITIAL_ACTIVITY("interstitial_activity"),
+		ACTIVITY_FINISH("activity_finish");
 		
 		public final String mEventName;		
 		private ActivityEvent(String s) {
@@ -229,6 +232,9 @@ public class Constants {
 		public static final String HIDE_IME_ID = "hide_ime_id.txt";
 		public static final String HIDE_IME_CLASS_INDEX = "hide_ime_class_index.txt";
 		public static final String HIDE_IME_INTERNAL_CLASS_INDEX = "hide_ime_internal_class_index.txt";
+		public static final String HIDE_IME_BACK_KEY_ID = "hide_ime_back_key_id.txt";
+		public static final String HIDE_IME_BACK_KEY_CLASS_INDEX = "hide_ime_back_key_class_index.txt";
+		public static final String HIDE_IME_BACK_KEY_INTERNAL_CLASS_INDEX = "hide_ime_back_key_internal_class_index.txt";
 		public static final String DISMISS_AUTOCOMPLETE_DROPDOWN_ID = "dismiss_autocomplete_dropdown_id.txt";
 		public static final String DISMISS_POPUP_WINDOW = "dismiss_popup_window.txt";
 		public static final String DISMISS_AUTOCOMPLETE_DROPDOWN_CLASS_INDEX = "dismiss_autocomplete_dropdown_class_index.txt";

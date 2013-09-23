@@ -14,6 +14,7 @@ import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.TestUtils;
 
+import android.inputmethodservice.Keyboard;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
@@ -143,9 +144,14 @@ public class IMEMessageListener implements Runnable {
 		                    mViewInterceptor.setLastKeyAction(-1);
 						}
 						mfKeyboardVisible = false;
-					} else if (msg.equals(SEND_KEY)) {
-						incrementOutstandingKeyCount();
-						Log.i(TAG, "received send_key");
+					} else if (msg.startsWith(SEND_KEY)) {
+						int ichColon = msg.indexOf(':');
+						int keyCode = Integer.parseInt(msg.substring(ichColon + 1));
+						if (!isNonKeycode(keyCode)) {
+							incrementOutstandingKeyCount();
+							
+						}
+						Log.i(TAG, "received send_key code = 0x" + Integer.toHexString(keyCode));
 						os.write(ACK.getBytes());
 						// we need to send an acknowledgement to force a a round trip before android sends the key event
 						// in order to prevent a race condition.
@@ -158,4 +164,12 @@ public class IMEMessageListener implements Runnable {
 		}
 	}
 
+	// these keys are not actually send to the edit text.
+	private static boolean isNonKeycode(int keyCode) {
+		return (keyCode == Keyboard.KEYCODE_CANCEL) ||
+				(keyCode == Keyboard.KEYCODE_SHIFT) ||
+				(keyCode == Keyboard.KEYCODE_MODE_CHANGE) ||
+				(keyCode == Keyboard.KEYCODE_ALT) ||
+				(keyCode == Keyboard.KEYCODE_DONE);
+	}
 }

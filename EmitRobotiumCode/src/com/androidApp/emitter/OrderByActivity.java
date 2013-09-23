@@ -2,6 +2,7 @@ package com.androidApp.emitter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Stack;
 
 import com.androidApp.util.Constants;
 
@@ -31,8 +32,8 @@ public class OrderByActivity {
 			mfDone = false;
 		}
 		
-		public void addEvents(List<String> Events) {
-			mEventLines.add(Events);
+		public void addEvent(List<String> event) {
+			mEventLines.add(event);
 		}
 		
 		public String getActivityName() {
@@ -50,6 +51,10 @@ public class OrderByActivity {
 		public void setDone(boolean f) {
 			mfDone = f;
 		}
+		
+		public String toString() {
+			return mActivityName;
+		}
 	}
 	
 	public List<List<String>> orderEventsByActivity(List<List<String>> EventLines) {
@@ -64,8 +69,9 @@ public class OrderByActivity {
 	public List<List<String>> outputOrderedEvents(List<ActivityEvents>	 activityEventList) {
 		List<List<String>> outputEvents = new ArrayList<List<String>>();
 		for (ActivityEvents ActivityEvents : activityEventList) {
-			for (List<String> EventLine : ActivityEvents.getEventLines()) {
-				outputEvents.add(EventLine.subList(1,  EventLine.size()));
+			for (List<String> eventLine : ActivityEvents.getEventLines()) {
+				System.out.println(eventLine.toString());
+				outputEvents.add(eventLine.subList(1,  eventLine.size()));
 			}			
 		}
 		return outputEvents;
@@ -74,36 +80,103 @@ public class OrderByActivity {
 	/**
 	 * take the activity-intereaved list of Eventized events, ond return a list of events ordered by activity
 	 */
-	public void orderEventsByActivity(List<List<String>> 	 EventLines, 
+	public void orderEventsByActivity(List<List<String>> 	 eventLines, 
 									  List<ActivityEvents>	 activityEventList,
 									  int					 startIndex) {
-		ActivityEvents previousActivityEvents = null;
-		String currentActivityName = null;
-		for (int iLine = startIndex; iLine < EventLines.size(); iLine++) {
-			List<String> EventLine = EventLines.get(iLine);
-			String activityName = EventLine.get(0);
-			
-			// if an event for a new activity has arrived, then the previous activity is done, and new
-			// events on that activity will start a new sequence.  The previous activity is set to the current
-			// activity and the current activity is set to the new activity.  We also re-get the activity event list
-			// since we may be returning to the previous activity.
-			if (currentActivityName == null) {
-				currentActivityName = activityName;
-			} else if (!activityName.equals(currentActivityName)) {
-				if (previousActivityEvents != null) {
-					previousActivityEvents.setDone(true);
+		// push and pop activities based on activity_forward/back/back_key/finish
+		Stack<ActivityEvents>	activityStack = new Stack<ActivityEvents>();
+		String currentActivity = null;
+		for (List<String> eventLine : eventLines) {
+			String activity = eventLine.get(0);
+			String action = eventLine.get(1);
+			if (Constants.ActivityEvent.ACTIVITY_FORWARD.equals(action)) {
+				//  push the activity onto the stack and add the forward event.
+				ActivityEvents activityEvents = new ActivityEvents(activity);
+				activityEvents.addEvent(eventLine);
+				activityStack.push(activityEvents);	
+				currentActivity = activity;
+			} else if (Constants.ActivityEvent.ACTIVITY_BACK.equals(action) ||
+					   Constants.UserEvent.ACTIVITY_BACK_KEY.equals(action)) {
+				// activity_back is actually registered to the activity going back TO, not the activity back from.
+				// normally, I'd just pop it, but activities not on top of the stack can be finished. Also, don't forget to add the actual event.
+				if (inActivityStack(activity, activityStack)) {
+					ActivityEvents activityEvents = getFromActivityStack(activity, activityStack);
+					activityEvents.addEvent(eventLine);
+					System.out.println("activity " + currentActivity + " adding " + activityEvents.getEventLines().size() + " events ");
+					ActivityEvents currentActivityEvents = getFromActivityStack(currentActivity, activityStack);
+					activityEventList.add(currentActivityEvents);
+					removeFromActivityStack(currentActivity, activityStack);
+					currentActivity = activity;
 				}
-				previousActivityEvents = getActivityEventList(currentActivityName, activityEventList);
-				currentActivityName = activityName;
+				
+			// back activity_finish is registered for the actual activity.
+			} else if (Constants.ActivityEvent.ACTIVITY_FINISH.equals(action)) {
+				if (inActivityStack(activity, activityStack)) {
+					ActivityEvents activityEvents = getFromActivityStack(activity, activityStack);
+					activityEvents.addEvent(eventLine);
+					System.out.println("activity " + activity + " adding " + activityEvents.getEventLines().size() + " events ");
+					activityEventList.add(activityEvents);
+					removeFromActivityStack(activity, activityStack);
+				}
+			} else {
+				
+				// normal case, add the events to the activity
+				ActivityEvents activityEvents = getFromActivityStack(activity, activityStack);
+				if (activityEvents != null) {
+					activityEvents.addEvent(eventLine);
+				} else {
+					System.out.println("failed to find activity " + activity + " in " + activityStack);
+				}
 			}
-			
-			ActivityEvents activityEvents = getActivityEventList(activityName, activityEventList);			
-			if (activityEvents == null) {
-				activityEvents = new ActivityEvents(activityName);
-				activityEventList.add(activityEvents);
-			}
-			activityEvents.addEvents(EventLine);
 		}
+		while (!activityStack.isEmpty()) {
+			ActivityEvents activityEvents= activityStack.pop();
+			activityEventList.add(activityEvents);
+		}
+	}
+	
+	/**
+	 * is this activity name in the activity stack?
+	 * @param activity activity to search for
+	 * @param activityStack current activity stack
+	 * @return
+	 */
+	protected boolean inActivityStack(String activity, Stack<ActivityEvents> activityStack) {
+		for (ActivityEvents activityEvents : activityStack) {
+			if (activityEvents.getActivityName().equals(activity)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	protected ActivityEvents getFromActivityStack(String activity, Stack<ActivityEvents> activityStack) {
+		ActivityEvents activityEventMatch = null;
+		for (ActivityEvents activityEvents : activityStack) {
+			if (activityEvents.getActivityName().equals(activity)) {
+				activityEventMatch = activityEvents;
+			}
+		}
+		return activityEventMatch;
+	}
+
+	/**
+	 * remove an activity from the stack
+	 * @param activity activity to search for
+	 * @param activityStack current activity stack
+	 */
+	protected boolean removeFromActivityStack(String activity, Stack<ActivityEvents> activityStack) {
+		ActivityEvents activityEventMatch = null;
+		for (ActivityEvents activityEvents : activityStack) {
+			if (activityEvents.getActivityName().equals(activity)) {
+				activityEventMatch = activityEvents;
+			}
+		}
+		if (activityEventMatch != null) {
+			activityStack.remove(activityEventMatch);
+			return true;
+		}
+		return false;
 	}
 	
 	/**
