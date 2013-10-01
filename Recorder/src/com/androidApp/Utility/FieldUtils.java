@@ -23,6 +23,11 @@ public class FieldUtils {
 	public FieldUtils(Context instrumentationContext, Context targetContext) throws IOException {
 		ApplicationInfo appInfo = targetContext.getApplicationInfo();
 		int targetSdkVersion = appInfo.targetSdkVersion;
+		
+		// minimum is 2.3.3
+		if (targetSdkVersion < 10) {
+			targetSdkVersion = 10;
+		}
 		String whitelistName = "/raw/whitelist_android_" + Integer.toString(targetSdkVersion) + ".txt";
 		String[] whiteListClasses = FileUtils.readJarResource(FieldUtils.class, whitelistName);
 		mWhiteList = new HashSet<String>();

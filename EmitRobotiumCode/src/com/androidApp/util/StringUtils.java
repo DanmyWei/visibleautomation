@@ -292,4 +292,25 @@ public class StringUtils {
 	public static String stripFrontBack(String s, String front, String back) {
 		return s.substring(front.length(), s.length() - back.length());
 	}
+	
+	/**
+	 * create an exported library entry for a jar file.
+	 * @param jarfile
+	 * @return
+	 */
+	public static String createClasspathLibraryEntry(String jarfile, boolean fExport) {
+		return "\t<classpathentry exported=\"" + Boolean.toString(fExport) + "\" kind=\"lib\" path=\"libs/" + jarfile + "\"/>\n";
+	}
+	
+	/**
+	 * given the list of jarfiles, create the .classpath file entries.
+	 */
+	public static String createJarClasspathEntries(List<String> jarfiles, boolean fExport) {
+		StringBuffer sb = new StringBuffer();
+		for (String jarfile : jarfiles) {
+			sb.append(createClasspathLibraryEntry(jarfile, fExport));
+		}
+		return sb.toString();
+	}
+
 }

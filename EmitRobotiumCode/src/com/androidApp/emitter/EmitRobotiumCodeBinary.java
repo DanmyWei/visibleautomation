@@ -35,8 +35,12 @@ public class EmitRobotiumCodeBinary extends EmitRobotiumCodeSource {
 						    String 			testPackage, 
 						    String 			testClassName, 
 						    String 			className, 
+						    int				targetSDK,
+						    List<String>	supportLibraries,
 						    BufferedWriter 	bw) throws IOException {
 		String header = FileUtility.readTemplate(Constants.Templates.BINARY_HEADER);
+		String robotiumUtilsPackage = SetupRobotiumProject.getRobotiumUtilsPackage(targetSDK, supportLibraries);
+		header = header.replace(Constants.VariableNames.ROBOTIUMTUILS_PACKAGE, 	robotiumUtilsPackage);
 		header = header.replace(Constants.VariableNames.TESTPACKAGE, testPackage);
 		header = header.replace(Constants.VariableNames.CLASSPATH, classPath);
 		header = header.replace(Constants.VariableNames.CLASSNAME, className);

@@ -10,7 +10,10 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Map.Entry;
 
+import com.androidApp.emitter.IEmitCode.LineAndTokens;
+import com.androidApp.util.Constants;
 import com.androidApp.util.SuperTokenizer;
 
 /**
@@ -90,31 +93,61 @@ public class CodeDefinition {
 		}
 	}
 	protected String 			mActivityName;		// name of the activity or activity dialog was created in
+	protected String			mCodeType;			// function_call or function_def
+	protected String			mFunctionName;		// name of the function
 	protected String 			mDialogTag;			// tag used to ID dialog if dialog case, else null
 	protected Type 				mType;				// activity or dialog
 	protected DialogScanType 	mDialogScanType;	// scan dialog by title or text from content
 	protected DialogTagType		mDialogTagType;		// tag is string resource id or quoted text
 	protected List<String>		mPrecedingTokens;	// tokens which preceded this condition. (like a button click causing a dialog)
 	
-	public CodeDefinition(String activityName, List<String> precedingTokens) {
+	
+	// code definition for main activity code
+	public CodeDefinition(String activityName) {
+		mCodeType = Constants.FUNCTION_DEF;
 		mActivityName = activityName;
+		mFunctionName = Constants.MAIN;
+		mType = Type.ACTIVITY;
+		mPrecedingTokens = null;
+	}
+	
+	// code definition for interstitial activity function definitions
+	public CodeDefinition(String activityName, String codeType, String functionName, List<String> precedingTokens) {
+		mActivityName = activityName;
+		mCodeType = codeType;
+		mFunctionName = functionName;
 		mType = Type.ACTIVITY;
 		mPrecedingTokens = precedingTokens;
 	}
 	
+	// code definition for interstitial dialog function definitions
 	public CodeDefinition(String 			activityName, 
+						  String			codeType,
+						  String			functionName,
 						  String 			dialogTag, 
 						  DialogScanType 	scanType, 
 						  DialogTagType 	tagType, 
 						  List<String> 		precedingTokens) {
 		mActivityName = activityName;
+		mCodeType = codeType;
+		mFunctionName = functionName;
 		mDialogTag = dialogTag;
 		mType = Type.DIALOG;
 		mDialogScanType = scanType;
 		mDialogTagType = tagType;
 		mPrecedingTokens = precedingTokens;
 	}
-		
+	
+	public CodeDefinition(CodeDefinition codeDef) {
+		mActivityName = codeDef.mActivityName;
+		mCodeType = codeDef.mCodeType;
+		mFunctionName = codeDef.mFunctionName;
+		mDialogTag = codeDef.mDialogTag;
+		mType = codeDef.mType;
+		mDialogScanType = codeDef.mDialogScanType;
+		mDialogTagType = codeDef.mDialogTagType;
+		mPrecedingTokens = codeDef.mPrecedingTokens;	
+	}
 	
 	/**
 	 * parse a code definition from a string.
@@ -129,10 +162,22 @@ public class CodeDefinition {
 		List<String> tokens = st.toList();
 		String tokenType = tokens.get(0);
 		if (Type.ACTIVITY.mName.equalsIgnoreCase(tokenType)) {
-			return new CodeDefinition(tokens.get(1), null);
+			if (tokens.size() == 2) {
+				return new CodeDefinition(tokens.get(1));
+			} else {
+				String activityName = tokens.get(1);
+				String codeType = tokens.get(2);
+				String functionName = tokens.get(3);
+				return new CodeDefinition(activityName, codeType, functionName, null);
+			}
 		} else if (Type.DIALOG.mName.equalsIgnoreCase(tokenType)) {
-			return new CodeDefinition(tokens.get(1), tokens.get(2), DialogScanType.fromString(tokens.get(3)), 
-									  DialogTagType.fromString(tokens.get(4)), null);
+			String activityName = tokens.get(1);
+			String codeType = tokens.get(2);
+			String functionName = tokens.get(3);
+			String dialogTag = tokens.get(4);
+			DialogScanType dialogScanType = DialogScanType.fromString(tokens.get(5));
+			DialogTagType dialogTagType = DialogTagType.fromString(tokens.get(6));
+			return new CodeDefinition(activityName, codeType, functionName, dialogTag, dialogScanType, dialogTagType, null);
 		} else {
 			throw new EmitterException("unknown code definition type " + tokenType);
 		}
@@ -199,18 +244,24 @@ public class CodeDefinition {
 		return count;			
 	}
 	
+	/**
+	 * is this code defintion the same as another code definition?
+	 */
 	@Override
 	public boolean equals(Object o) {
 		if (o instanceof CodeDefinition) {
 			CodeDefinition b = (CodeDefinition) o;
 			if (mType == Type.ACTIVITY) {
-				return mActivityName.equals(b.mActivityName);
+				if (mActivityName.equals(b.mActivityName) && (mCodeType.equals(b.mCodeType))) {
+					return mFunctionName.equals(b.mFunctionName);
+				}
 			} else {
-				if (mActivityName.equals(b.mActivityName)) {
-					return mDialogTag.equals(b.mDialogTag) && 
-							(mDialogScanType == b.mDialogScanType) &&
-							(mDialogTagType == b.mDialogTagType);
-							
+				if (mActivityName.equals(b.mActivityName) && (mCodeType.equals(b.mCodeType))) {
+					if (mDialogTag.equals(b.mDialogTag) && 
+						(mDialogScanType == b.mDialogScanType) &&
+						(mDialogTagType == b.mDialogTagType)) {
+						return mFunctionName.equals(b.mFunctionName);
+					}							
 				}
 			}
 		}
@@ -220,9 +271,9 @@ public class CodeDefinition {
 	@Override
 	public int hashCode() {
 		if (mType == Type.ACTIVITY) {
-			return mActivityName.hashCode();
+			return mActivityName.hashCode() + mFunctionName.hashCode();
 		} else {
-			return mActivityName.hashCode() + mDialogTag.hashCode();
+			return mActivityName.hashCode() + mDialogTag.hashCode() + mFunctionName.hashCode();
 		}
 	}
 	public String getActivityName() {
@@ -235,6 +286,14 @@ public class CodeDefinition {
 	
 	public Type getType() {
 		return mType;
+	}
+	
+	public String getCodeType() {
+		return mCodeType;
+	}
+	
+	public String getFunctionName() {
+		return mFunctionName;
 	}
 	
 	public DialogScanType getDialogScanType() {
@@ -286,4 +345,23 @@ public class CodeDefinition {
 			}
 		}
 	}
+	
+
+	/**
+	 * find the function definition associated with this function call.
+	 * @param codeDefTarget codeDefTarget function call
+	 * @param outputCode hashtable of output code for main and functions
+	 */
+	public static CodeDefinition findFunctionDefinition(CodeDefinition codeDefTarget, Hashtable<CodeDefinition, List<LineAndTokens>> outputCode) {
+		for (Entry<CodeDefinition, List<LineAndTokens>> entry : outputCode.entrySet()) {
+			CodeDefinition codeDefCand = entry.getKey();
+			if (codeDefCand.getCodeType().equals(Constants.FUNCTION_DEF)) {
+				if (codeDefCand.getFunctionName().equals(codeDefTarget.getFunctionName())) {
+					return codeDefCand;
+				}
+			}
+		}
+		return null;
+	}
+
 }

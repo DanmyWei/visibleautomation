@@ -9,11 +9,15 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringBufferInputStream;
+import java.util.Hashtable;
 import java.util.List;
+import java.util.Map.Entry;
 
 import org.eclipse.core.resources.IProject;
 
 import org.eclipse.core.runtime.CoreException;
+
+import com.androidApp.emitter.CodeDefinition;
 import com.androidApp.emitter.EmitRobotiumCodeBinary;
 import com.androidApp.emitter.EmitRobotiumCodeSource;
 import com.androidApp.emitter.IEmitCode;
@@ -47,35 +51,12 @@ public class GenerateRobotiumTestCodeBinary extends GenerateRobotiumTestCode {
 	 * @throws IOException if the file can't be written
 	 */
 	@Override
-	public void writeClasspath(IProject project, String projectNameUnused, String robotiumJar) throws IOException, CoreException {
-		String classpath = SetupRobotiumProject.createClasspathBinary(robotiumJar);
+	public void writeClasspath(IProject 	project, 
+							   String 		projectName, 
+							   String 		robotiumJar,
+							   int			targetSDK,
+							   List<String> supportLibraries) throws IOException, CoreException {
+		String classpath = SetupRobotiumProject.createClasspathBinary(robotiumJar, targetSDK, supportLibraries);
 		EclipseUtility.writeString(project, Constants.Filenames.CLASSPATH, classpath);
 	}
-
-	/**
-	 * write the header (which includes the imports, classname, class defintion, and initialization functions)
-	 * followed by the main body code, then the functions for conditional activities and dialogs, then the close brace.
-	 * 
-	 */
-	@Override
-	public void writeTestCode(IEmitCode 			emitter, 
-							  List<LineAndTokens> 	mainCode, 
-							  List<LineAndTokens> 	functionCode,
-							  String 				packagePath, 
-							  String 				testClassName, 
-							  String 				outputCodeFileName) throws IOException {
-		// write the header template, the emitter output, and the trailer temoplate.
-		BufferedWriter bw = new BufferedWriter(new FileWriter(outputCodeFileName));
-		emitter.writeHeader(emitter.getApplicationClassPath(), packagePath, testClassName, emitter.getApplicationClassName(), bw);
-		String testFunction = FileUtility.readTemplate(Constants.Templates.BINARY_TEST_FUNCTION);
-		bw.write(testFunction);
-		emitter.writeLines(bw, mainCode);
-		emitter.writeTrailer(bw);
-		if (functionCode != null) {
-			emitter.writeLines(bw, functionCode);
-		}		
-		emitter.writeTrailer(bw);
-		bw.close();
-	}			
-
 }

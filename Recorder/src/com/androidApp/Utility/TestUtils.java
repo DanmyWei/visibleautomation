@@ -712,4 +712,24 @@ public class TestUtils {
 		}
 		return null;
 	}
+	
+	/**
+	 * recursively search for the focused view within the view hierarchy.
+	 * @param v
+	 * @return focused view or null.
+	 */
+	public static View findFocusedView(View v) {
+		if (v.hasFocus()) {
+			return v;
+		} else if (v instanceof ViewGroup) {
+			ViewGroup vg = (ViewGroup) v;
+			for (int i = 0; i < vg.getChildCount(); i++) {
+				View vFocused = findFocusedView(vg.getChildAt(i));
+				if (vFocused != null) {
+					return vFocused;
+				}
+			}
+		}
+		return null;
+	}
 }

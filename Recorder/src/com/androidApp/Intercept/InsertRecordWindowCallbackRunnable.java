@@ -6,7 +6,6 @@ import android.view.Window;
 
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
-import com.androidApp.Listeners.RecordWindowCallback;
 import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 
@@ -38,11 +37,7 @@ public class InsertRecordWindowCallbackRunnable implements Runnable {
 	 */
 	public void run() {
 		try {
-			Window.Callback originalCallback = mWindow.getCallback();
-			if (!(originalCallback instanceof RecordWindowCallback)) {
-				RecordWindowCallback recordCallback = new RecordWindowCallback(mWindow, mActivity, mWindow.getContext(), mRecorder, mViewInterceptor, originalCallback);
-				mWindow.setCallback(recordCallback);
-			}
+			mViewInterceptor.getInterceptInterface().interceptWindow(mWindow, mActivity, mRecorder, mViewInterceptor);
 		} catch (Exception ex) {
 			mRecorder.writeException(mActivity.getClass().getName(), ex, "installing window callback recorder");
 		}

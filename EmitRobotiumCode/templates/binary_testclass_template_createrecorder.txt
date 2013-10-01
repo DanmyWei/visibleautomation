@@ -1,6 +1,6 @@
 package %CLASSPACKAGE%.test;
 import android.app.Activity;
-import com.androidApp.Test.RecordTestBinary;
+import %TEST_PACKAGE%.RecordTestBinary;
 
 public class %CLASSNAME%Recorder extends RecordTestBinary {
 

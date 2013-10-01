@@ -16,8 +16,10 @@ import com.androidApp.Utility.TestUtils;
 
 import android.inputmethodservice.Keyboard;
 import android.util.Log;
+import android.view.FocusFinder;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.ViewGroup;
 
 /**
  * listen for up/down messages from our custom IME.
@@ -54,7 +56,7 @@ public class IMEMessageListener implements Runnable {
 	protected ViewInterceptor		mViewInterceptor;				// maintains currently focused view.
 	protected EventRecorder			mEventRecorder;					// to record IME hide/show events.
 	protected static boolean		sfKeyboardConnected;			// the keyboard connected via TCP, else warn user
-
+	
 	public IMEMessageListener(ViewInterceptor 		viewInterceptor, 
 							  ActivityInterceptor 	activityInterceptor,
 							  EventRecorder 		eventRecorder) {
@@ -125,22 +127,34 @@ public class IMEMessageListener implements Runnable {
 						 */
 						if (!mfKeyboardVisible) {
 							View focusedView = mViewInterceptor.getFocusedView();
-							mEventRecorder.writeRecord(Constants.EventTags.SHOW_IME, TestUtils.getViewActivity(focusedView).toString(),
-													  focusedView, "IME displayed");
+							if (focusedView != null) {
+								mEventRecorder.writeRecord(Constants.EventTags.SHOW_IME, TestUtils.getViewActivity(focusedView).toString(),
+														  focusedView, "IME displayed");
+							} else {
+								Log.i(TAG, "IME was displayed, but there was no focused view");
+							}
 						}
 						mfKeyboardVisible = true;
 					} else if (msg.equals(HIDE_IME)) {
 						if (mfKeyboardVisible) {	// see comment above
 							View focusedView = mViewInterceptor.getFocusedView();
-							mEventRecorder.writeRecord(Constants.EventTags.HIDE_IME, TestUtils.getViewActivity(focusedView).toString(),
-													   focusedView, "IME hidden");
+							if (focusedView != null) {
+								mEventRecorder.writeRecord(Constants.EventTags.HIDE_IME, TestUtils.getViewActivity(focusedView).toString(),
+														   focusedView, "IME hidden");
+							} else {
+								Log.i(TAG, "IME was displayed, but there was no focused view");
+							}								
 						}
 						mfKeyboardVisible = false;
 					} else if (msg.equals(HIDE_IME_BACK_KEY)) {
 						if (mfKeyboardVisible) {
 							View focusedView = mViewInterceptor.getFocusedView();
-		                    mEventRecorder.writeRecord(Constants.EventTags.HIDE_IME_BACK_KEY, TestUtils.getViewActivity(focusedView).toString(),
-		                    						   focusedView, "IME hidden by back key pressed");
+							if (focusedView != null) {
+			                    mEventRecorder.writeRecord(Constants.EventTags.HIDE_IME_BACK_KEY, TestUtils.getViewActivity(focusedView).toString(),
+			                    						   focusedView, "IME hidden by back key pressed");
+							} else {
+								Log.i(TAG, "IME was displayed, but there was no focused view");
+							}
 		                    mViewInterceptor.setLastKeyAction(-1);
 						}
 						mfKeyboardVisible = false;
@@ -148,8 +162,15 @@ public class IMEMessageListener implements Runnable {
 						int ichColon = msg.indexOf(':');
 						int keyCode = Integer.parseInt(msg.substring(ichColon + 1));
 						if (!isNonKeycode(keyCode)) {
-							incrementOutstandingKeyCount();
-							
+							incrementOutstandingKeyCount();					
+						}
+						
+						mViewInterceptor.setDoneKeyEntered(keyCode == Keyboard.KEYCODE_DONE);
+						if (keyCode == Keyboard.KEYCODE_DONE) {
+							if (mViewInterceptor.getFocusedView() != null) {
+								View focusedView = mViewInterceptor.getFocusedView();
+								mViewInterceptor.setNextFocusedView(FocusFinder.getInstance().findNextFocus((ViewGroup) focusedView.getRootView(), focusedView, View.FOCUS_DOWN));
+							}
 						}
 						Log.i(TAG, "received send_key code = 0x" + Integer.toHexString(keyCode));
 						os.write(ACK.getBytes());

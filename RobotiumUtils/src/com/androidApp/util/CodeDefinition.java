@@ -1,14 +1,10 @@
 package com.androidApp.util;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Hashtable;
 import java.util.List;
 
 import android.app.Activity;
@@ -293,21 +289,31 @@ public class CodeDefinition {
 		}
 		return false;
 	}
-	
-	// retrieve the title from the dialog
+
+	/**
+	 * geting a dialog title is tricky, because they didn't provide an accessor function for it, AND
+	 * it's an internal view (which fortunately derives from a TextView)
+	 * @param dialog
+	 * @return TextView or null if not found
+	 */
 	public static TextView getDialogTitleView(Dialog dialog) {
 		try {
 			Class<? extends View> dialogTitleClass = (Class<? extends View>) Class.forName(Constants.Classes.DIALOG_TITLE);
 			Window window = dialog.getWindow();
 			View decorView = window.getDecorView();
 			TextView dialogTitle = (TextView) findChild(decorView, 0, dialogTitleClass);
-			return dialogTitle;
+			if (dialogTitle != null) {
+				return dialogTitle;
+			} else {
+				dialogTitle = (TextView) findChild(decorView, 0, TextView.class);
+				return dialogTitle;
+			}
 		} catch (ClassNotFoundException cnfex) {
 			Log.e(TAG, "failed to find dialog title");
 			return null;
 		}
 	}
-	
+
 	/**
 	 * get the content view of a dialog so we can intercept it with a MagicFrame
 	 * @param dialog

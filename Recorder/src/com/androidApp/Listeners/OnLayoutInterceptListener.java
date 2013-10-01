@@ -3,7 +3,6 @@ package com.androidApp.Listeners;
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.Test.ViewInterceptor;
 
-import android.app.ActionBar;
 import android.app.Activity;
 import android.view.Display;
 import android.view.View;
@@ -48,11 +47,7 @@ public class OnLayoutInterceptListener implements ViewTreeObserver.OnGlobalLayou
         }           
 
         // do the action bar, since it doesn't seem to get populated until after the activity was created/resumed
-
-        ActionBar actionBar = mActivity.getActionBar();
-        if (actionBar != null) {
-        	mViewInterceptor.intercept(mActivity,  mActivity.toString(), actionBar); 
-        }           
+        mViewInterceptor.getInterceptInterface().interceptActionBar(mActivity, mViewInterceptor, mEventRecorder);
     }  
     
     /**

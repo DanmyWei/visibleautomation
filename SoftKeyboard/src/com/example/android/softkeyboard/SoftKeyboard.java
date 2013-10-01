@@ -590,6 +590,7 @@ public class SoftKeyboard extends InputMethodService
         } else if (primaryCode == Keyboard.KEYCODE_SHIFT) {
             handleShift();
         } else if (primaryCode == Keyboard.KEYCODE_CANCEL) {
+        	Log.i(TAG, "keycode_cancel hit");
         	sfUserClosedKeyboard = true;
             handleClose();
             return;

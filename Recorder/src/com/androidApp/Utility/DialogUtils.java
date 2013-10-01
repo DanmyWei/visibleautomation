@@ -101,7 +101,12 @@ public class DialogUtils {
 			Window window = dialog.getWindow();
 			View decorView = window.getDecorView();
 			TextView dialogTitle = (TextView) TestUtils.findChild(decorView, 0, dialogTitleClass);
-			return dialogTitle;
+			if (dialogTitle != null) {
+				return dialogTitle;
+			} else {
+				dialogTitle = (TextView) TestUtils.findChild(decorView, 0, TextView.class);
+				return dialogTitle;
+			}
 		} catch (ClassNotFoundException cnfex) {
 			Log.e(TestUtils.TAG, "failed to find dialog title");
 			return null;
@@ -149,7 +154,6 @@ public class DialogUtils {
 	 */
 	public static Dialog findDialog(Activity activity) {
 		try {
-			Class phoneDecorViewClass = Class.forName(Constants.Classes.PHONE_DECOR_VIEW);
 			View[] views = ViewExtractor.getWindowDecorViews();
 			if (views != null) {
 				int numDecorViews = views.length;

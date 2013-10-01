@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringBufferInputStream;
+import java.util.List;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
@@ -46,12 +47,33 @@ public class CreateRobotiumRecorderBinary extends CreateRobotiumRecorder {
 	 * add the project under test to the template .classpath file (binary APK version)
 	 * @param testProject selected android project that we want to create a recording for
 	 * @param projectParser parser for .project file.
+	 * @param apkFilename .APK so we can run dexdump to find out which support libraries it uses.
+	 * @param supportLibraries android support libraries
 	 * @throws CoreException
 	 * @throws IOException
 	 */
 	@Override
-	public void createClasspath(IProject testProject, String projectName) throws CoreException, IOException {
-		String classpath = FileUtility.readTemplate(Constants.Templates.BINARY_CLASSPATH_CREATERECORDER);
+	public void createClasspath(IProject 		testProject, 
+								String 			projectName, 
+								int				targetSDK,
+								List<String>	supportLibraries) throws CoreException, IOException {
+		String classpath;
+		if (!supportLibraries.isEmpty()) {
+			classpath = FileUtility.readTemplate(Constants.Templates.BINARY_CLASSPATH_CREATERECORDER_SUPPORT);
+			// these are only needed for the compilation of the recorder, not runtime.
+			// String supportLibrariesClasspathEntries = EclipseUtility.createJarClasspathEntries(supportLibraries);
+			// classpath = classpath.replace(Constants.VariableNames.SUPPORT_LIBRARIES, supportLibrariesClasspathEntries);
+			classpath = classpath.replace(Constants.VariableNames.SUPPORT_LIBRARIES, "");
+			if (supportLibraries.contains(RecorderConstants.SupportLibraries.SUPPORT_V4)) {
+				classpath = classpath.replace(Constants.VariableNames.RECORDER_SUPPORT, Constants.Filenames.RECORDER_SUPPORT_V4_JAR);
+			} else if (supportLibraries.contains(RecorderConstants.SupportLibraries.SUPPORT_V13)) {
+				classpath = classpath.replace(Constants.VariableNames.RECORDER_SUPPORT, Constants.Filenames.RECORDER_SUPPORT_V13_JAR);
+			} 
+		} else {
+			classpath = FileUtility.readTemplate(Constants.Templates.BINARY_CLASSPATH_CREATERECORDER);
+			String recorderLibrary = getRecorderLibraryFromTargetSDK(targetSDK);
+			classpath = classpath.replace(Constants.VariableNames.RECORDER_LIBRARY, recorderLibrary);
+		}
 		classpath = classpath.replace(Constants.VariableNames.CLASSNAME, projectName);
 		IFile file = testProject.getFile(Constants.Filenames.CLASSPATH);
 		InputStream is = new StringBufferInputStream(classpath);
@@ -64,14 +86,17 @@ public class CreateRobotiumRecorderBinary extends CreateRobotiumRecorder {
 	 * @param javaProject java reference to the project so we can create packages and stuff
 	 * @param packageName package name from manifest
 	 * @param startActivity start activity from manifest
+	 * @param fUseSupportLibraries use the support or advanced libraries
 	 * @throws CoreException
 	 * @throws IOException
 	 */
+	
 	@Override
-	public void createTestClass(IProject 		testProject, 
-								IJavaProject 	javaProject, 
-								String			packageName,
-								String			startActivityClassPath) throws CoreException, IOException {
+	public void createRecorderTestClass(IProject 		testProject, 
+										IJavaProject 	javaProject, 
+										String			packageName,
+										String			startActivityClassPath,
+										boolean			fUseSupportLibrary) throws CoreException, IOException {
 		// strip the nasty dot they use in AndroidManifest.xml to prefix activities
 		int ichLastDot = startActivityClassPath.lastIndexOf('.');
 		String startActivityFileName = startActivityClassPath;
@@ -85,6 +110,11 @@ public class CreateRobotiumRecorderBinary extends CreateRobotiumRecorder {
 		testClass = testClass.replace(Constants.VariableNames.CLASSPACKAGE, packageName);
 		testClass = testClass.replace(Constants.VariableNames.CLASSPATH, startActivityClassPath);
 		testClass = testClass.replace(Constants.VariableNames.CLASSNAME, startActivityFileName);
+		if (fUseSupportLibrary) {
+			testClass = testClass.replace(Constants.VariableNames.TEST_PACKAGE, RecorderConstants.SUPPORT_PACKAGE);
+		} else {
+			testClass = testClass.replace(Constants.VariableNames.TEST_PACKAGE, RecorderConstants.ADVANCED_PACKAGE);		
+		}
 		// write to the fully qualified path
 		IFolder sourceFolder = testProject.getFolder(Constants.Dirs.SRC);
 		String packagePath = packageName + RecorderConstants.TEST_EXTENSION;

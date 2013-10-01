@@ -105,10 +105,12 @@ public class RobotiumUtils {
 
 		boolean foundView = solo.waitForView(android.widget.AbsListView.class, adapterViewIndex + 1, VIEW_TIMEOUT_MSEC);
 		if (!foundView) {
+			Log.e(TAG, "waitAndClickInAdapterByClassIndex solo.waitForView failed");
 			return false;
 		}
 		android.widget.AbsListView absListView = (android.widget.AbsListView) solo.getView(android.widget.AbsListView.class, adapterViewIndex);
 		if (waitForView(absListView, VIEW_TIMEOUT_MSEC)) {
+			Log.e(TAG, "waitAndClickInAdapterByClassIndex robotiumUtils.waitForView failed");
 			return waitAndClickInAdapter(solo, absListView, itemIndex);
 		} else {
 			return false;
@@ -466,6 +468,20 @@ public class RobotiumUtils {
 	public boolean clickOnViewAndScrollIfNeeded(Solo solo, View v) {
 		scrollToViewVisible(v);
 		solo.clickOnView(v, true);
+		// TEMPORARY
+		sleep(WAIT_INCREMENT_MSEC);
+		return true;
+	}
+	
+	/**
+	 * unfortunately, views are often scrolled off the screen, so we often need to scroll them back to 
+	 * click on them.
+	 * @param solo handle to robotium
+	 * @param v view to click on
+	 */
+	public boolean longClickOnViewAndScrollIfNeeded(Solo solo, View v) {
+		scrollToViewVisible(v);
+		solo.clickLongOnView(v);
 		// TEMPORARY
 		sleep(WAIT_INCREMENT_MSEC);
 		return true;

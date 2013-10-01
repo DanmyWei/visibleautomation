@@ -2,7 +2,7 @@ package %CLASSPACKAGE%.test;
 
 import java.io.IOException;
 
-import com.androidApp.Test.RecordTest;
+import %TEST_PACKAGE%.RecordTest;
 import %CLASSPACKAGE%.%CLASSNAME%;
 
 
@@ -24,6 +24,6 @@ public class %CLASSNAME%Recorder extends RecordTest<%CLASSNAME%> {
 
 	public void setUp() throws Exception { 
 		super.setUp();
-		initialize(ApiDemos.class);
+		initialize(%CLASSNAME%.class);
 	}
 }

@@ -32,7 +32,6 @@ import com.androidApp.Intercept.MagicFrame;
 import com.androidApp.Intercept.MagicFramePopup;
 import com.androidApp.Intercept.MagicOverlay;
 import com.androidApp.Intercept.MagicOverlayDialog;
-import com.androidApp.Listeners.RecordWindowCallback;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.DialogUtils;
 import com.androidApp.Utility.FieldUtils;
@@ -71,12 +70,14 @@ public class SetupListeners {
 	/** 
 	 * constructor: copy the instrumentation reference, the start activity, and the recorder
 	 * @param instrumentation instrumentation reference
+	 * @param interceptInterface (support library or new library interface)
 	 * @param activityClass start activity under test
 	 * @param recordTest test class
 	 * @param fBinary dictates how view references are resolved to public classes
 	 * @throws Exception
 	 */
 	public SetupListeners(Instrumentation 			instrumentation, 
+						  InterceptInterface		interceptInterface,
 						  String					activityName,
 						  IRecordTest				recordTest,
 						  boolean					fBinary) throws Exception {
@@ -84,31 +85,34 @@ public class SetupListeners {
 		mActivityName = activityName;
 		mRecordTest = recordTest;
 		mExpandedMenuViewClass = Class.forName(Constants.Classes.EXPANDED_MENU_VIEW);
-		setUp(fBinary);
+		setUp(interceptInterface, fBinary);
 	}
 	
 	/**
 	 * initialize the recorder
 	 * @param context so event recorder can send requests to the log service
+	 * @param interceptInterface (support library or new library interface)
 	 * @param fBinary dictates how view classes are resolved to public classes
 	 * @throws IOException can't open events.txt
 	 * @throws ReferenceException Reflection utilties exception
 	 * @throws ClassNotFoundException
 	 */
-	public void initRecorder(Context context, boolean fBinary) throws IOException, ReferenceException, ClassNotFoundException {
+	public void initRecorder(Context context, InterceptInterface interceptInterface, boolean fBinary) throws IOException, ReferenceException, ClassNotFoundException {
 		mContext = context;
 		mRecorder = new EventRecorder(mInstrumentation, mContext, Constants.Files.EVENTS, Constants.Files.VIEW_DIRECTIVES, fBinary);
-		mViewInterceptor = new ViewInterceptor(mRecorder, mRecordTest);
+		mViewInterceptor = new ViewInterceptor(mRecorder, mRecordTest, interceptInterface);
 	}
 	
 	/**
 	 * Initializes the global timer, activity interceptor, dialog listener, IME listener, and 
 	 * popup window listener, then launches the activity
+	 * @param fBinary binary/source switch
+	 * @param interceptInterface (support library or new library interface)
 	 * @throws IOException
 	 */
-	public void setUp(boolean fBinary) throws Exception {
+	public void setUp(InterceptInterface interceptInterface, boolean fBinary) throws Exception {
 
-		initRecorder(getInstrumentation().getContext(), fBinary);
+		initRecorder(getInstrumentation().getContext(), interceptInterface, fBinary);
 
 		sScanTimer = new Timer();
 		// TEMPORARY
@@ -369,7 +373,7 @@ public class SetupListeners {
 			// add magic overlay here
 			try {
 				MagicFrame magicFrame = new MagicFrame(contentView.getContext(), mActivity, contentView, 0, mRecorder, mViewInterceptor);
-				MagicOverlayDialog.addMagicOverlay(mActivity, mDialog, magicFrame, mRecorder);
+				MagicOverlayDialog.addMagicOverlay(mActivity, mDialog, magicFrame, mRecorder, mViewInterceptor);
 				// spinner dialogs have their own dismiss.
 				if (DialogUtils.isSpinnerDialog(contentView)) {
 					mViewInterceptor.interceptSpinnerDialog(mActivity.toString(), mDialog);

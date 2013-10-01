@@ -11,9 +11,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-
-import org.omg.CORBA_2_3.portable.OutputStream;
 
 import com.androidApp.emitter.EmitRobotiumCode;
 
@@ -345,6 +344,30 @@ public class FileUtility {
 		}
 	}
 	
+	// recursively search for a file from a directory
+	public static File findFileRegexp(File dir, String regexp) {
+		if (dir.getName().matches(regexp)) {
+			return dir;
+		} else {
+			if (dir.isDirectory()) {
+				String[] fileNames = dir.list();
+				for (String fileName : fileNames) {
+					if (fileName.matches(regexp)) {
+						return new File(dir, fileName);
+					}
+					File file = new File(dir, fileName);
+					if (file.isDirectory()) {
+						File result = findFileRegexp(new File(dir, fileName), regexp);
+						if (result != null) {
+							return result;
+						}
+					}
+				}
+			} 
+			return null;
+		}
+	}
+	
 	/**
 	 * filter files in a directory by extension.
 	 * @param dir
@@ -369,6 +392,63 @@ public class FileUtility {
 		public boolean accept(File dir, String filename) {
 			return filename.endsWith("." + mExtension);
 		}
-		
+	}
+	
+	/**
+	 * find dexump so we can find out what support libraries are in the APK
+	 * @param androidSDK
+	 * @return
+	 */
+	public static File findDexdump(String androidSDK) {
+		String buildToolsPath = androidSDK;
+		String os = System.getProperty("os.name");
+		File buildToolsDir = new File(buildToolsPath);
+		return FileUtility.findFile(buildToolsDir, Constants.Executables.DEXDUMP);			
+	}
+	
+	/**
+	 * run dexdump on the specified APK, then extract the support libraries that it uses by matching
+	 * the class tables
+	 * @param apkFilename
+	 * @return
+	 */
+	public static List<String> getSupportLibraries(String apkFilename) {
+		HashSet<String> supportLibrarySet = new HashSet<String>();
+		String androidSDK = System.getenv(Constants.Env.ANDROID_HOME);
+		File dexdump = FileUtility.findDexdump(androidSDK);
+		String dexdumpCommand = dexdump.getAbsolutePath() + " " + apkFilename;
+		String[] dexdumpOutput = Exec.getShellCommandOutput(dexdumpCommand);
+		boolean fV13References = false;
+		for (int i = 0; i < dexdumpOutput.length; i++) {
+			if (dexdumpOutput[i].contains(Constants.SupportClasses.SUPPORT_V4)) {	
+				supportLibrarySet.add(Constants.Filenames.SUPPORT_V4);
+			} else if (dexdumpOutput[i].contains(Constants.SupportClasses.SUPPORT_V13)) {
+				// the v13 library contains v4 references, so we have to remove the v4 library if v13 was found.
+				supportLibrarySet.add(Constants.Filenames.SUPPORT_V13);
+				fV13References = true;
+			} else if (dexdumpOutput[i].contains(Constants.SupportClasses.SUPPORT_V7_APPCOMPAT)) {
+				supportLibrarySet.add(Constants.Filenames.SUPPORT_V7_APPCOMPAT);
+			} else if (dexdumpOutput[i].contains(Constants.SupportClasses.SUPPORT_V7_GRIDLAYOUT)) {
+				supportLibrarySet.add(Constants.Filenames.SUPPORT_V7_GRIDLAYOUT);
+			} else if (dexdumpOutput[i].contains(Constants.SupportClasses.SUPPORT_V7_MEDIA)) {
+				supportLibrarySet.add(Constants.Filenames.SUPPORT_V7_MEDIA);
+			}
+		}
+		if (fV13References) {
+			supportLibrarySet.remove(Constants.Filenames.SUPPORT_V4);
+		}
+		List<String> supportLibraryList = new ArrayList<String>();
+		for (String supportLibrary : supportLibrarySet) {
+			supportLibraryList.add(supportLibrary);
+		}
+		return supportLibraryList;
+	}	
+
+	// write a binary template
+	public static void writeBinaryTemplate(File outputDir, String templateFile) throws IOException {
+		byte[] jarData = FileUtility.readBinaryTemplate(Constants.Filenames.UTILITY_JAR);
+		FileOutputStream fos = new FileOutputStream(new File(outputDir, Constants.Filenames.UTILITY_JAR));
+		fos.write(jarData, 0, jarData.length);
+		fos.close();		
 	}
 }

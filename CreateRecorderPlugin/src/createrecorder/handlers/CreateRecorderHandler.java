@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.List;
 
 import org.eclipse.core.commands.AbstractHandler;
 import org.eclipse.core.commands.ExecutionEvent;
@@ -27,6 +28,7 @@ import com.androidApp.emitter.EmitterException;
 import com.androidApp.util.Constants;
 import com.androidApp.util.Exec;
 
+import createproject.CreateRobotiumRecorder;
 import createproject.CreateRobotiumRecorderBinary;
 import createproject.ProjectInformation;
 import createrecorder.util.AAPTBadgingValues;
@@ -75,7 +77,7 @@ public class CreateRecorderHandler extends AbstractHandler {
 		if (packagePath != null) {	
 			try {
 				String os = Platform.getOS();
-				// TODO: TEST THIS
+				// TODO: TEST THIS for WIN32
 				if (os.equals(Platform.OS_WIN32)) {	
 					ResignAPK.resignWin32(shell, testClassDialog.mMatchingClass, apkFileName);
 				} else {
@@ -100,6 +102,14 @@ public class CreateRecorderHandler extends AbstractHandler {
 				AAPTBadgingValues aaptBadgingValues = new AAPTBadgingValues(aaptBadgingLines);
 				ProjectInformation projectInformation = new ProjectInformation();
 				if (projectInformation.init(shell, aaptBadgingValues, manifestInformation)) {
+					try {
+						projectInformation.getProjectInformation(apkFileName, Constants.Extensions.RECORDER);
+					} catch (Exception ex) {
+						MessageDialog.openInformation(shell, RecorderConstants.VISIBLE_AUTOMATION,	
+								  "There was an exception obtaining information about the project");
+						ex.printStackTrace();
+						
+					}
 					createProject(shell, projectInformation, apkFileName);
 				}
 			}
@@ -118,7 +128,7 @@ public class CreateRecorderHandler extends AbstractHandler {
 	public void createProject(Shell shell, ProjectInformation projectInformation, String apkFileName) {
 		try {
 			String projectName = projectInformation.getApplicationName();
-			String launchableActivity = null;
+			boolean fUseSupportLibraries = true;
 
 			// create the new project
 			String newProjectName = projectName + RecorderConstants.RECORDER_SUFFIX;
@@ -128,7 +138,6 @@ public class CreateRecorderHandler extends AbstractHandler {
 			// create the .classpath, AndroidManifest.xml, .project, and project.properties files
 			createRecorder.createProjectProperties(testProject, projectInformation.getSDKVersion());
 			createRecorder.createProject(testProject, projectInformation.getApplicationName());
-			createRecorder.createClasspath(testProject, projectInformation.getApplicationName());
 			createRecorder.createManifest(testProject,
 										  projectInformation.getPackageName(), 
 										  projectInformation.getMinSDKVersion(),
@@ -138,14 +147,19 @@ public class CreateRecorderHandler extends AbstractHandler {
 			// create the java project, the test class output, and the "AllTests" driver which
 			// iterates over all the test cases in the folder, so we can run with a single-click
 			IJavaProject javaProject = EclipseUtility.createJavaNature(testProject);
-			createRecorder.createFolders(testProject);
-			createRecorder.createEclipseSettings(testProject);
-			createRecorder.createTestClass(testProject, javaProject, projectInformation.getPackageName(), projectInformation.getStartActivity());
+			CreateRobotiumRecorder.createFolders(testProject);
+			CreateRobotiumRecorder.createEclipseSettings(testProject);
+			createRecorder.createRecorderTestClass(testProject, javaProject, projectInformation.getPackageName(), 
+												   projectInformation.getStartActivity(), fUseSupportLibraries);
 			createRecorder.createAllTests(testProject, javaProject, projectInformation.getPackageName());
-			createRecorder.addLibraries(testProject);
 			
 			// copy the .apk that we're testing against to the project directory, so we can install it if needed
 			EclipseUtility.copyFileToProjectDirectory(testProject, apkFileName, apkFileName);
+			// pass the support libraries, because we also need to copy them
+			String apkFilePath = testProject.getLocation().toString() + File.separator + apkFileName;
+			createRecorder.createClasspath(testProject, projectInformation.getApplicationName(), projectInformation.getMinSDKVersion(), 
+										   projectInformation.getSupportLibraries());
+			createRecorder.addLibraries(testProject, projectInformation.getSupportLibraries(),  projectInformation.getMinSDKVersion());
 			
 			// check to see if the keyboard and logservice are installed.
 			if (!InstallRecorderHandler.isPackageInstalled(RecorderConstants.KEYBOARD_PACKAGE)) {

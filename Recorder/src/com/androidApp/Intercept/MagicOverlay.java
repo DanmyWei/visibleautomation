@@ -7,12 +7,11 @@ import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.HierarchyRef;
 import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.Test.ActivityInterceptor;
+import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.FileUtils;
 import com.androidApp.Utility.TestUtils;
 
-import android.animation.Animator;
-import android.animation.Animator.AnimatorListener;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -79,7 +78,7 @@ public class MagicOverlay extends View implements OnGestureListener {
 	protected Rect									mOverlayViewRect;				// perf onDraw() to detect if in our overlay.
 	protected DirectiveDialogs						mDirectiveDialogs;				// context dialogs to issue directives.
 	protected Activity								mActivity;						// activity backreference
-
+	protected ViewInterceptor						mViewInterceptor;				// view interceptor contains interceptinterface
 	// dictates what happens when the user clicks on the overlay:  bring up the initial dialog or
 	// select a view
 	protected enum ClickMode {
@@ -93,16 +92,25 @@ public class MagicOverlay extends View implements OnGestureListener {
 	 * @param recorder
 	 * @throws IOException
 	 */
-	public static void addMagicOverlay(Activity activity, MagicFrame magicFrame, EventRecorder recorder) throws IOException, ClassNotFoundException {
+	public static void addMagicOverlay(Activity 		activity, 
+									   MagicFrame 		magicFrame, 
+									   EventRecorder 	recorder, 
+									   ViewInterceptor 	viewInterceptor) throws IOException, ClassNotFoundException {
 		View contentView = magicFrame.getChildAt(0);
 		try {
-			MagicOverlay createOverlay = new MagicOverlay(activity, magicFrame, recorder, contentView);
+			MagicOverlay createOverlay = new MagicOverlay(activity, magicFrame, recorder, viewInterceptor, contentView);
 			initOverlayAttributes(magicFrame, contentView, createOverlay);
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
 	}
 	
+	/**
+	 * initialize the attributes for this overlay.
+	 * @param magicFrame
+	 * @param contentView
+	 * @param createOverlay
+	 */
 	public static void initOverlayAttributes(MagicFrame magicFrame, View contentView, MagicOverlay createOverlay) {
 		
 		// we sort of have to fix our layout, since we're offscreen or onscreen depending on mfEnabled. This means, of course.
@@ -114,7 +122,6 @@ public class MagicOverlay extends View implements OnGestureListener {
 		createOverlay.setWillNotDraw(false);
 		createOverlay.bringToFront();
 		createOverlay.setFocusable(true);
-		createOverlay.setActivated(true);
 		createOverlay.setEnabled(true);
 		magicFrame.addView(createOverlay);
 		if (createOverlay.getButton() != null) {
@@ -141,11 +148,13 @@ public class MagicOverlay extends View implements OnGestureListener {
 	public MagicOverlay(Activity		activity,
 						MagicFrame 		magicFrame, 
 					    EventRecorder	eventRecorder,
+					    ViewInterceptor	viewInterceptor,
 					    View			contentView) throws IOException {
 		super(magicFrame.getContext());
 		mContentView = contentView;
 		mActivity = activity;
 		mRecorder = eventRecorder;
+		mViewInterceptor = viewInterceptor;
 		Context context = magicFrame.getContext();
 		mButton = createButton(context, contentView);
 		mButton.setOnClickListener(new SlideInClickListener());
@@ -236,8 +245,9 @@ public class MagicOverlay extends View implements OnGestureListener {
 		WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
 		Display display = wm.getDefaultDisplay();
 		Point size = new Point();
-		display.getSize(size);
-		int buttonSize = Math.min(size.x, size.y)/10;
+		int width = display.getWidth();
+		int height = display.getHeight();
+		int buttonSize = Math.min(width, height)/10;
 		@SuppressWarnings("deprecation")
 		BitmapDrawable drawable = new BitmapDrawable(buttonBmp);
 		button.setImageDrawable(drawable);
@@ -463,7 +473,7 @@ public class MagicOverlay extends View implements OnGestureListener {
 				String text = mCurrentView.getClass().getSimpleName();
 				try {
 					
-					if (FindListeners.findViewWithListener(mCurrentView) != null) {
+					if (FindListeners.findViewWithListener(mViewInterceptor, mCurrentView) != null) {
 						text += "(has listeners)";
 					}
 				} catch (Exception ex) {

@@ -15,6 +15,7 @@ import android.widget.Toast;
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.Intercept.DirectiveDialogs.OnBaseDialogSelectionListener;
 import com.androidApp.Intercept.MagicOverlay.ClickMode;
+import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.ResourceUtils;
 import com.androidApp.Utility.StringUtils;
@@ -29,22 +30,27 @@ public class MagicOverlayDialog extends MagicOverlay {
 	protected Dialog 	mTargetDialog;
 	
 	
-	public static void addMagicOverlay(Activity activity, Dialog targetDialog, MagicFrame magicFrame, EventRecorder recorder) throws IOException, ClassNotFoundException {
+	public static void addMagicOverlay(Activity 		activity, 
+									   Dialog 			targetDialog, 
+									   MagicFrame 		magicFrame, 
+									   EventRecorder 	recorder, 
+									   ViewInterceptor	viewInterceptor) throws IOException, ClassNotFoundException {
 		View contentView = magicFrame.getChildAt(0);
 		try {
-			MagicOverlayDialog createOverlay = new MagicOverlayDialog(activity, targetDialog, magicFrame, recorder, contentView);
+			MagicOverlayDialog createOverlay = new MagicOverlayDialog(activity, targetDialog, magicFrame, recorder, viewInterceptor, contentView);
 			initOverlayAttributes(magicFrame, contentView, createOverlay);
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
 	}
 	
-	public MagicOverlayDialog(Activity 		activity, 
-							  Dialog		targetDialog,
-							  MagicFrame 	magicFrame,
-							  EventRecorder eventRecorder, 
-							  View 			contentView) throws IOException {
-		super(activity, magicFrame, eventRecorder, contentView);
+	public MagicOverlayDialog(Activity 			activity, 
+							  Dialog			targetDialog,
+							  MagicFrame 		magicFrame,
+							  EventRecorder 	eventRecorder, 
+							  ViewInterceptor	viewInterceptor,
+							  View 				contentView) throws IOException {
+		super(activity, magicFrame, eventRecorder, viewInterceptor, contentView);
 		mTargetDialog = targetDialog;
 		mfViewSelectDialogContent = false;
 	}

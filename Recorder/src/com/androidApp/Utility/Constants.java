@@ -5,8 +5,6 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
-import android.app.ActionBar;
-import android.support.v4.view.ViewPager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
@@ -17,9 +15,6 @@ import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.CompoundButton;
 import android.widget.ExpandableListView;
-import android.widget.ListPopupWindow;
-import android.widget.NumberPicker;
-import android.widget.PopupMenu;
 import android.widget.PopupWindow;
 import android.widget.SeekBar;
 import android.widget.TabHost;
@@ -72,7 +67,6 @@ public class Constants {
 		public static final String DIALOG_TITLE_SIMPLE_NAME = "DialogTitle";
 		public static final String DIALOG_TITLE = "com.android.internal.widget.DialogTitle";
 		public static final String PHONE_WINDOW = "com.android.internal.policy.impl.PhoneWindow";
-		public static final String WINDOW_MANAGER = "android.view.WindowManagerImpl";
 		public static final String SPINNER_DIALOG_POPUP = "android.widget.Spinner$DialogPopup";
 		public static final String AUTOCOMPLETE_DIALOG_POPUP = "android.widget.PopupWindow$PopupViewContainer";
 		public static final String LIST_WINDOW_POPUP = "android.widget.ListPopupWindow";
@@ -88,6 +82,7 @@ public class Constants {
 		public static final String LOCAL_WINDOW_MANAGER = "android.view.Window$LocalWindowManager";
 		public static final String WINDOW_MANAGER_COMPAT_MODE = "android.view.WindowManagerImpl$CompatModeWrapper";
 		public static final String WINDOW_MANAGER_IMPL = "android.view.WindowManagerImpl";
+		public static final String WINDOW_MANAGER_GLOBAL = "android.view.WindowManagerGlobal";
 		public static final String ACTION_BAR_CONTAINER = "com.android.internal.widget.ActionBarContainer";
 		public static final String LIST_MENU_ITEM_VIEW = "com.android.internal.view.menu.ListMenuItemView";
 		public static final String MENU_BUILDER = "com.android.internal.view.menu.MenuBuilder";
@@ -122,110 +117,66 @@ public class Constants {
 	// we can scan fields by types, and reference fields by their type and index. Unfortunately for templatized types
 	// like list, we can only test against the type, not the contained element.
 	public enum Fields {
-		TEXT_WATCHER_LIST("mListeners", ArrayList.class),
-		TOUCH_LISTENER("mOnTouchListener", View.OnTouchListener.class),
-		CLICK_LISTENER("mOnClickListener", View.OnClickListener.class),
-		FOCUS_CHANGE_LISTENER("mOnFocusChangeListener", View.OnFocusChangeListener.class),
-		ONITEM_CLICK_LISTENER("mOnItemClickListener", AdapterView.OnItemClickListener.class),
-		ITEM_CLICK_LISTENER("mItemClickListener", AdapterView.OnItemClickListener.class), 	// from ListPopupWindow
-		KEY_LISTENER("mOnKeyListener", View.OnKeyListener.class),
-		LISTENER_INFO("mListenerInfo", Constants.Classes.LISTENER_INFO),
-		LONG_CLICK_LISTENER("mOnLongClickListener", OnLongClickListener.class),
-		SCROLL_LISTENER("mOnScrollListener", AbsListView.OnScrollListener.class ),
-		SEEKBAR_CHANGE_LISTENER("mOnSeekBarChangeListener", SeekBar.OnSeekBarChangeListener.class),
-		DIALOG_DISMISS_MESSAGE("mDismissMessage", android.os.Message.class, 1),
-		DIALOG_SHOW_MESSAGE("mShowMessage", android.os.Message.class, 2),
-		DIALOG_CANCEL_MESSAGE("mCancelMessage", android.os.Message.class, 0),
-		CALLBACK("mCallback", ActionBar.TabListener.class),
-		CHECKED_CHANGE_LISTENER("mOnCheckedChangeListener", CompoundButton.OnCheckedChangeListener.class),
-		SELECTED_ITEM_LISTENER("mOnItemSelectedListener", AdapterView.OnItemSelectedListener.class ),
-		POPUP("mPopup", ListPopupWindow.class),
-		TITLE("mTitle", TextView.class),
-		VIEWS("mViews", View[].class),
-		POPUP_WINDOW_ON_DISMISS_LISTENER("mOnDismissListener", PopupWindow.OnDismissListener.class),
-		WINDOW_MANAGER_FIELD("mWindowManager", String.class),
-		WINDOW_MANAGER_FIELD_STATIC("sWindowManager", String.class),
-		CONTENT_VIEW("mContentView", View.class ),
-		ACTION_VIEW("mActionView", Constants.Classes.ACTION_BAR_VIEW),
-		CONTAINER_VIEW("mContainerView", Constants.Classes.ACTION_BAR_IMPL),
-		CANCEL_AND_DISMISS_TAKEN("mCancelAndDismissTaken", String.class),	
-		PRESENTER_CALLBACK("mPresenterCallback", PopupMenu.class),
-		MENU_ITEM_CLICK_LISTENER("mMenuItemClickListener", PopupMenu.OnMenuItemClickListener.class),
+		TEXT_WATCHER_LIST("mListeners"),
+		TOUCH_LISTENER("mOnTouchListener"),
+		CLICK_LISTENER("mOnClickListener"),
+		FOCUS_CHANGE_LISTENER("mOnFocusChangeListener"),
+		ONITEM_CLICK_LISTENER("mOnItemClickListener"),
+		ITEM_CLICK_LISTENER("mItemClickListener"), 	// from ListPopupWindow
+		KEY_LISTENER("mOnKeyListener"),
+		LISTENER_INFO("mListenerInfo"),
+		LONG_CLICK_LISTENER("mOnLongClickListener"),
+		SCROLL_LISTENER("mOnScrollListener"),
+		SEEKBAR_CHANGE_LISTENER("mOnSeekBarChangeListener"),
+		DIALOG_DISMISS_MESSAGE("mDismissMessage"),
+		DIALOG_SHOW_MESSAGE("mShowMessage"),
+		DIALOG_CANCEL_MESSAGE("mCancelMessage"),
+		CALLBACK("mCallback"),
+		CHECKED_CHANGE_LISTENER("mOnCheckedChangeListener"),
+		SELECTED_ITEM_LISTENER("mOnItemSelectedListener"),
+		POPUP("mPopup"),
+		TITLE("mTitle"),
+		VIEWS("mViews"),
+		POPUP_WINDOW_ON_DISMISS_LISTENER("mOnDismissListener"),
+		WINDOW_MANAGER_FIELD("mWindowManager"),
+		WINDOW_MANAGER_FIELD_STATIC("sWindowManager"),
+		WINDOW_MANAGER_DEFAULT_FIELD_STATIC("sDefaultWindowManager"),
+		CONTENT_VIEW("mContentView"),
+		ACTION_VIEW("mActionView"),
+		CONTAINER_VIEW("mContainerView"),
+		CANCEL_AND_DISMISS_TAKEN("mCancelAndDismissTaken"),	
+		PRESENTER_CALLBACK("mPresenterCallback"),
+		MENU_ITEM_CLICK_LISTENER("mMenuItemClickListener"),
 		// NOTE: we may need multiple classes for this
-		MENU("mMenu", Menu.class),
+		MENU("mMenu"),
 		ENCLOSING_CLASS("this$0"),
-		POPUP_VIEW("mPopupView", View.class, 1),
-		ITEM_DATA("mItemData", Constants.Classes.LIST_MENU_ITEM_VIEW),
-		ANCHOR("mAnchor",WeakReference.class),
-		CALLBACK_PROXY("mCallbackProxy", Constants.Classes.WEBKIT_CALLBACK_PROXY),
-		WEBVIEW_CLIENT("mWebViewClient", WebViewClient.class),
-		ON_TAB_CHANGE_LISTENER("mOnTabChangeListener",TabHost.OnTabChangeListener.class ),
-		ONGROUP_CLICK_LISTENER("mOnGroupClickListener", ExpandableListView.OnGroupClickListener.class ),
-		ONCHILD_CLICK_LISTENER("mOnChildClickListener", ExpandableListView.OnGroupClickListener.class ),
-		HORIZONTALLY_SCROLLING("mHorizontallyScrolling", boolean.class),
-		ON_HIERARCHY_CHANGE_LISTENER("mOnHierarchyChangeListener", ViewGroup.OnHierarchyChangeListener.class),
-		POPUP_PRESENTER_CALLBACK("mPopupPresenterCallback",Constants.Classes.POPUP_PRESENTER_CALLBACK ),
-		MENU_CLICK_LISTENER("mClickListener", MenuItem.OnMenuItemClickListener.class),
-		ONCLICK_LISTENER("mOnClickListener", View.OnClickListener.class),
-		ITEMS("mItems",List.class),
-		VIEW("mView", View.class),
-		PARENT("mParent", View.class),
-		ON_VALUE_CHANGE_LISTENER("mOnValueChangeListener", NumberPicker.OnValueChangeListener.class),
-		STOPPED("mStopped", boolean.class ),
-		RESUMED("mResumed", boolean.class),
-		ON_PAGE_CHANGE_LISTENER("mOnPageChangeListener", Constants.Classes.ON_PAGE_CHANGE_LISTENER );
+		POPUP_VIEW("mPopupView"),
+		ITEM_DATA("mItemData"),
+		ANCHOR("mAnchor"),
+		CALLBACK_PROXY("mCallbackProxy"),
+		WEBVIEW_CLIENT("mWebViewClient"),
+		ON_TAB_CHANGE_LISTENER("mOnTabChangeListener"),
+		ONGROUP_CLICK_LISTENER("mOnGroupClickListener"),
+		ONCHILD_CLICK_LISTENER("mOnChildClickListener"),
+		HORIZONTALLY_SCROLLING("mHorizontallyScrolling"),
+		ON_HIERARCHY_CHANGE_LISTENER("mOnHierarchyChangeListener"),
+		POPUP_PRESENTER_CALLBACK("mPopupPresenterCallback"),
+		MENU_CLICK_LISTENER("mClickListener"),
+		ONCLICK_LISTENER("mOnClickListener"),
+		ITEMS("mItems"),
+		VIEW("mView"),
+		PARENT("mParent"),
+		ON_VALUE_CHANGE_LISTENER("mOnValueChangeListener"),
+		STOPPED("mStopped"),
+		RESUMED("mResumed"),
+		ON_PAGE_CHANGE_LISTENER("mOnPageChangeListener");
 
 		protected final static String TAG = "Fields";
 		public final String mName;						// name of the field
-		public Class mCls;								// expected class/type of field
-		public final int mClassIndex;					// index of field within superclass of fields of same type
-		public Field mField;							// generated field via reflection. (performance)
 		
-		private Fields(String name, Class cls) {
-		    mName = name;
-		    mCls = cls;
-		    mClassIndex  = 0;
-		    mField = null;
-		}
-
 		private Fields(String name) {
 		    mName = name;
-		    mCls = null;
-		    mClassIndex = 0;
-		    mField = null;
 		}
-		
-		private Fields(String name, String className) {
-		    mName = name;
-		    mClassIndex = 0;
-		    mField = null;
-		    try {	
-		    	mCls = Class.forName(className);
-		    } catch (ClassNotFoundException cnfex) {
-				Log.e(TAG, "failed to resolve class for " + className);
-				mCls = null;
-		    }
-		}
-
-		private Fields(String name, String className, int classIndex) {
-		    mName = name;
-		    mClassIndex = classIndex;
-		    mField = null;
-		    try {	
-		    	mCls = Class.forName(className);
-		    } catch (ClassNotFoundException cnfex) {
-				Log.e(TAG, "failed to resolve class for " + className);
-				mCls = null;
-		    }
-		}
-
-		private Fields(String name, Class cls, int classIndex) {
-		    mName = name;
-		    mCls = cls;
-		    mClassIndex = classIndex;
-		    mField = null;
-		}
-	
 	}
 	
 	// possible derive methods which listen for events.

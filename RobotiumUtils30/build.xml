@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Configuration of the Ant build system to generate a Jar file --> 
+<project name="RobotiumUtils" default="install">
+    <import file="../buildandroidjar.xml"/>
+    <property name="jarfile" value="robotiumutils30.jar" />
+
+    <path id="project.all.jars.path" >
+    </path>
+    <path id="project.obfuscate.jars.path" >
+        <pathelement path="robotiumutils30.jar" />
+    </path>
+</project>

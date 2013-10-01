@@ -8,6 +8,7 @@ import java.io.InputStream;
 import java.io.StringBufferInputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 
 import org.eclipse.core.resources.IContainer;
@@ -30,6 +31,8 @@ import org.eclipse.ui.console.IOConsoleOutputStream;
 import org.eclipse.ui.console.MessageConsole;
 import com.android.ide.eclipse.adt.AdtConstants;
 import com.androidApp.emitter.EmitRobotiumCode;
+import com.androidApp.util.AndroidUtil;
+import com.androidApp.util.Exec;
 import com.androidApp.util.FileUtility;
 import com.androidApp.util.StringUtils;
 
@@ -107,6 +110,25 @@ public class EclipseUtility {
 		}
 		return subfolder;
 	}
+	
+	/**
+	 * find a file which matches the specified regular expression
+	 * @param container container to search
+	 * @param regex regular expression to match
+	 * @return
+	 * @throws CoreException
+	 */
+	public static IFile findFile(IContainer container, String regex) throws CoreException {
+		IResource[] resources = container.members();
+		for (IResource resource : resources) {
+			if (resource.getType() == IResource.FILE) {
+				if (resource.getName().matches(regex)) {
+					return (IFile) resource;
+				}
+			}
+		}
+		return null;
+	}
 
 	//com.android.ide.eclipse.adt.AndroidNature
 	public static void addAndroidNature(IProject project) throws CoreException {
@@ -161,6 +183,13 @@ public class EclipseUtility {
 		is.close();
 	}
 	
+	public static void writeString(IFolder folder, String filename, String s) throws CoreException, IOException {
+		IFile file = folder.getFile(filename);
+		file.delete(false, null);
+		InputStream is = new StringBufferInputStream(s);
+		file.create(is, IFile.FORCE, null);
+		is.close();
+	}
 
 	public static void writeResource(IFolder folder, String resourceName) throws CoreException, IOException {
 		InputStream fis = EmitRobotiumCode.class.getResourceAsStream("/" + resourceName);
@@ -310,6 +339,23 @@ public class EclipseUtility {
 		}
 	}
 	
+	/**
+	 * same thing for dexdump
+	 * @param android SDK location
+	 * @return full path to ex.
+	 */
+	public static File findDexdump(String androidSDK) {
+		String buildToolsPath = androidSDK;
+		File buildToolsDir = new File(buildToolsPath);
+		String os = Platform.getOS();
+		if (os.equals(Platform.OS_WIN32)) {	
+			return FileUtility.findFile(buildToolsDir, RecorderConstants.DEXDUMP_WIN32);
+		} else {
+			return FileUtility.findFile(buildToolsDir, RecorderConstants.DEXDUMP);			
+		}
+	}
+	
+	
 	// change the.class.name to the/class/path
 	public static String classNameToPath(String className) {
 		return className.replace('.', File.separatorChar);
@@ -320,44 +366,78 @@ public class EclipseUtility {
 	}
 	
 	/**
-	 * get the android SDK levels by iterating over the android-sdk/platforms directory and extracting
-	 * the android levels
-	 * @return vector of integers of the available android levels.
-	 */
-	public static int[] getAndroidSDKLevels() {
-		IPreferencesService service = Platform.getPreferencesService();
-		String androidSDK = service.getString(RecorderConstants.ECLIPSE_ADT, RecorderConstants.ANDROID_SDK, null, null);
-		File platformsDir = new File(androidSDK + File.separator + RecorderConstants.PLATFORMS);
-		String[] platforms = platformsDir.list();
-		List<String> androidPlatforms = new ArrayList<String>();
-		for (String platform : platforms) {
-			if (platform.startsWith(RecorderConstants.ANDROID)) {
-				String level = platform.substring(RecorderConstants.ANDROID.length() + 1);
-				androidPlatforms.add(level);
-			}
-		}
-		int[] androidLevels = new int[androidPlatforms.size()];
-		for (int i = 0; i < androidPlatforms.size(); i++) {
-			androidLevels[i] = Integer.parseInt(androidPlatforms.get(i));
-			
-		}
-		return androidLevels;
-	}
-	
-	/**
 	 * get the same or next higher android SDK, or the SDK if it wasn't found.
 	 * @param level
 	 * @return
 	 */
 	public static int getBestAndroidSDKLevel(int level) {
-		int[] availableLevels = getAndroidSDKLevels();
-		Arrays.sort(availableLevels);
-		for (int availableLevel : availableLevels) {
-			if (availableLevel >= level) {
-				return availableLevel;
-			}
-		}
-		return level;
+		IPreferencesService service = Platform.getPreferencesService();
+		String androidSDK = service.getString(RecorderConstants.ECLIPSE_ADT, RecorderConstants.ANDROID_SDK, null, null);
+		return AndroidUtil.getBestAndroidSDKLevel(androidSDK, level);
 	}
 	
+	/**
+	 * is the specified APK installed on the device?
+	 * @param packageName package.name to search for
+	 * @return true if it's returned by pm list packages
+	 */
+	public static boolean isAPKInstalled(String packageName) {
+		String execStr = "shell pm list packages " + packageName;
+		String[] results = EclipseExec.getAdbCommandOutput(execStr);
+		// output is of the form package:package.name
+		for (int i = 0; i < results.length; i++) {
+			int ichColon = results[i].indexOf(':');
+			String candPackage = results[i].substring(ichColon + 1);
+			if (candPackage.equals(packageName)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	
+	/**
+	 * run dexdump on the specified APK, then search for references contained in the various support libraries
+	 * and map them to the appropriate jar files so we don't get undefined class references.
+	 * @param apkFilename name of the .APK file we copied to the recorder project
+	 * @return list of the names of the support libraries used in the project.
+	 */
+	public static List<String> getSupportLibraries(String apkFilename) {
+		HashSet<String> supportLibrarySet = new HashSet<String>();
+		IPreferencesService service = Platform.getPreferencesService();
+		String androidSDK = service.getString(RecorderConstants.ECLIPSE_ADT, RecorderConstants.ANDROID_SDK, null, null);
+		File dexdump = EclipseUtility.findDexdump(androidSDK);
+		String dexdumpCommand = dexdump.getAbsolutePath() + " " + apkFilename;
+		String[] dexdumpOutput = Exec.getShellCommandOutput(dexdumpCommand);
+		
+		boolean fV13References = false;
+		for (int i = 0; i < dexdumpOutput.length; i++) {
+			if (dexdumpOutput[i].contains(RecorderConstants.SupportClasses.SUPPORT_V4)) {	
+				supportLibrarySet.add(RecorderConstants.SupportLibraries.SUPPORT_V4);
+			} else if (dexdumpOutput[i].contains(RecorderConstants.SupportClasses.SUPPORT_V13)) {
+				// the v13 library contains v4 references, so we have to remove the v4 library if v13 was found.
+				supportLibrarySet.add(RecorderConstants.SupportLibraries.SUPPORT_V13);
+				fV13References = true;
+			} else if (dexdumpOutput[i].contains(RecorderConstants.SupportClasses.SUPPORT_V7_APPCOMPAT)) {
+				supportLibrarySet.add(RecorderConstants.SupportLibraries.SUPPORT_V7_APPCOMPAT);
+			} else if (dexdumpOutput[i].contains(RecorderConstants.SupportClasses.SUPPORT_V7_GRIDLAYOUT)) {
+				supportLibrarySet.add(RecorderConstants.SupportLibraries.SUPPORT_V7_GRIDLAYOUT);
+			} else if (dexdumpOutput[i].contains(RecorderConstants.SupportClasses.SUPPORT_V7_MEDIA)) {
+				supportLibrarySet.add(RecorderConstants.SupportLibraries.SUPPORT_V7_MEDIA);
+			}
+		}
+		// it seems that everyone uses v7-appcompat, so we add it explicitly if there are any other support libraries
+		if (!supportLibrarySet.isEmpty()) {
+			supportLibrarySet.add(RecorderConstants.SupportLibraries.SUPPORT_V7_APPCOMPAT);
+		}
+		// The V13 reference library contains the V4 reference, so we remove it here.
+		if (fV13References) {
+			supportLibrarySet.remove(RecorderConstants.SupportLibraries.SUPPORT_V4);
+		}
+		List<String> supportLibraryList = new ArrayList<String>();
+		for (String supportLibrary : supportLibrarySet) {
+			supportLibraryList.add(supportLibrary);
+		}
+		return supportLibraryList;
+	}	
 }

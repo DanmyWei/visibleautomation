@@ -40,6 +40,7 @@ import com.androidApp.util.FileUtility;
 import com.androidApp.util.Constants;
 import com.androidApp.util.StringUtils;
 
+import createrecorder.util.EclipseExec;
 import createrecorder.util.EclipseUtility;
 import createrecorder.util.RecorderConstants;
 
@@ -55,11 +56,32 @@ public class CreateRobotiumRecorder  {
 	 * add the project under test to the template .classpath file.
 	 * @param testProject selected android project that we want to create a recording for
 	 * @param projectParser parser for .project file.
+	 * @param targetSDK target SDK level
+	 * @param supportLibraries list of support libraries (if they're used by the app)
 	 * @throws CoreException
 	 * @throws IOException
 	 */
-	public void createClasspath(IProject testProject, String projectName) throws CoreException, IOException {
-		String classpath = FileUtility.readTemplate(RecorderConstants.CLASSPATH_TEMPLATE);
+	public void createClasspath(IProject 		testProject, 
+								String 			projectName,
+								int				targetSDK,
+								List<String> 	supportLibraries) throws CoreException, IOException {
+		String classpath;
+		if (!supportLibraries.isEmpty()) {
+			classpath = FileUtility.readTemplate(Constants.Templates.CLASSPATH_TEMPLATE_CREATERECORDER_SUPPORT);
+			// these are only needed for the compilation of the recorder, not runtime. (I hope)
+			// String supportLibrariesClasspathEntries = EclipseUtility.createJarClasspathEntries(supportLibraries);
+			// classpath = classpath.replace(Constants.VariableNames.SUPPORT_LIBRARIES, supportLibrariesClasspathEntries);
+			classpath = classpath.replace(Constants.VariableNames.SUPPORT_LIBRARIES, "");
+			if (supportLibraries.contains(RecorderConstants.SupportLibraries.SUPPORT_V4)) {
+				classpath = classpath.replace(Constants.VariableNames.RECORDER_SUPPORT, Constants.Filenames.RECORDER_SUPPORT_V4_JAR);
+			} else if (supportLibraries.contains(RecorderConstants.SupportLibraries.SUPPORT_V13)) {
+				classpath = classpath.replace(Constants.VariableNames.RECORDER_SUPPORT, Constants.Filenames.RECORDER_SUPPORT_V13_JAR);
+			}
+		} else {
+			classpath = FileUtility.readTemplate(Constants.Templates.CLASSPATH_TEMPLATE_CREATERECORDER);
+			String recorderLibrary = getRecorderLibraryFromTargetSDK(targetSDK);
+			classpath = classpath.replace(Constants.VariableNames.RECORDER_LIBRARY, recorderLibrary);
+		}
 		classpath = classpath.replace(Constants.VariableNames.CLASSNAME, projectName);
 		IFile file = testProject.getFile(Constants.Filenames.CLASSPATH);
 		InputStream is = new StringBufferInputStream(classpath);
@@ -168,7 +190,7 @@ public class CreateRobotiumRecorder  {
 	 * create the src, gen, and res folders
 	 * @param testProject
 	 */
-	public void createFolders(IProject testProject) {
+	public static void createFolders(IProject testProject) {
 		IFolder sourceFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.SRC);
 		IFolder resFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.RES);
 		IFolder assetsFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.ASSETS);
@@ -184,13 +206,19 @@ public class CreateRobotiumRecorder  {
 	 * @throws CoreException
 	 * @throws IOException
 	 */
-	public void createTestClass(IProject 		testProject, 
-							    IJavaProject 	javaProject, 
-							    String			packageName,
-							    String			startActivity) throws CoreException, IOException {
+	public void createRecorderTestClass(IProject 		testProject, 
+									    IJavaProject 	javaProject, 
+									    String			packageName,
+									    String			startActivity,
+									    boolean			fUseSupportLibrary) throws CoreException, IOException {
 		String testClass = FileUtility.readTemplate(RecorderConstants.TESTCLASS_TEMPLATE);
 		testClass = testClass.replace(Constants.VariableNames.CLASSPACKAGE, packageName);
 		testClass = testClass.replace(Constants.VariableNames.CLASSNAME, startActivity);
+		if (fUseSupportLibrary) {
+			testClass = testClass.replace(Constants.VariableNames.TEST_PACKAGE, RecorderConstants.SUPPORT_PACKAGE);
+		} else {
+			testClass = testClass.replace(Constants.VariableNames.TEST_PACKAGE, RecorderConstants.ADVANCED_PACKAGE);		
+		}
 		// write to the fully qualified path
 		IFolder sourceFolder = testProject.getFolder(Constants.Dirs.SRC);
 		String packagePath = packageName + RecorderConstants.TEST_EXTENSION;
@@ -201,18 +229,44 @@ public class CreateRobotiumRecorder  {
 	
 	/**
 	 * create the libs directory and put the recorder.jar file in it
-	 * @param testProject
+	 * @param testProject project to copy the library files into
+	 * @param supportLibraries list of support libraries (if they're used by the app)
+	 * @param sdkLevel application target SDK
 	 * @throws CoreException
 	 */
-	public void addLibraries(IProject testProject) throws CoreException, IOException {
+	public void addLibraries(IProject 		testProject, 
+							 List<String> 	supportLibraries, 
+							 int			sdkLevel) throws CoreException, IOException {
 		IFolder libFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.LIBS);
-		IFile file = libFolder.getFile(RecorderConstants.RECORDER_JAR);
-		InputStream fis = EmitRobotiumCode.class.getResourceAsStream("/" + RecorderConstants.RECORDER_JAR);
-		file.create(fis, IFile.FORCE, null);	
-		fis.close();
-		IFile file2 = libFolder.getFile(RecorderConstants.EVENTRECORDERINTERFACE_JAR);
-		InputStream fis2 = EmitRobotiumCode.class.getResourceAsStream("/" + RecorderConstants.EVENTRECORDERINTERFACE_JAR);
-		file2.create(fis2, IFile.FORCE, null);	
-		fis.close();
+		EclipseUtility.writeResource(libFolder, RecorderConstants.RECORDER_JAR);
+		EclipseUtility.writeResource(libFolder, RecorderConstants.EVENTRECORDERINTERFACE_JAR);
+		if (!supportLibraries.isEmpty()) {
+			if (supportLibraries.contains(RecorderConstants.SupportLibraries.SUPPORT_V4)) {
+				EclipseUtility.writeResource(libFolder, Constants.Filenames.RECORDER_SUPPORT_V4_JAR);
+			} else if (supportLibraries.contains(RecorderConstants.SupportLibraries.SUPPORT_V13)) {
+				EclipseUtility.writeResource(libFolder, Constants.Filenames.RECORDER_SUPPORT_V13_JAR);			
+			} 
+			for (String supportLibrary : supportLibraries) {
+				EclipseUtility.writeResource(libFolder, supportLibrary);
+			}
+		} else {
+			String recorderLibrary = getRecorderLibraryFromTargetSDK(sdkLevel);
+			EclipseUtility.writeResource(libFolder, recorderLibrary);
+		}
+	}
+	
+	/**
+	 * given the SDK level of the app, return the appropriate recorder library
+	 * @param sdkLevel
+	 * @return
+	 */
+	public static String getRecorderLibraryFromTargetSDK(int sdkLevel) {
+		if (sdkLevel >= 14) {
+			return Constants.Filenames.RECORDER_40_JAR;
+		} else if (sdkLevel >= 11) {
+			return Constants.Filenames.RECORDER_30_JAR;
+		} else {
+			return Constants.Filenames.RECORDER_23_JAR;
+		}
 	}
 }

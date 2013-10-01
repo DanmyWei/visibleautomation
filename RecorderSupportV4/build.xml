@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Configuration of the Ant build system to generate a Jar file --> 
+<project name="RecorderSupportV4" default="install">
+    <import file="../buildandroidjar.xml"/>
+    <property name="jarfile" value="recordersupportv4.jar" />
+
+    <path id="project.all.jars.path" >
+        <pathelement path="./libs/android-support-v4.jar" />
+        <pathelement path="./libs/android-support-v7-appcompat.jar" />
+        <pathelement path="../EventRecorderInterface/bin/eventrecorderinterface.jar" />
+        <pathelement path="../Recorder/recorder.jar" />
+    </path>
+    <path id="project.obfuscate.jars.path" >
+        <pathelement path="RecorderSupportv4.jar" />
+    </path>
+</project>

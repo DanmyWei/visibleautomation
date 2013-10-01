@@ -55,7 +55,7 @@ public class AAPTBadgingValues {
 				} else if (values[0].equals(APPLICATION_LABEL)) {
 					mApplicationLabel = StringUtils.stripFrontBack(values[1], "'", "'");
 				} else if (values[0].equals(LAUNCHABLE_ACTIVITY)) {
-					String pattern="name='[A-Za-z0-9\\.]*'";
+					String pattern="name='[A-Za-z0-9\\.\\$]*'";
 					String launchableActivity = StringUtils.extractMatch(values[1], pattern);
 					mLaunchableActivity = StringUtils.stripFrontBack(launchableActivity, "name='", "'");		
 				}

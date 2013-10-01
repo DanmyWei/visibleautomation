@@ -110,9 +110,9 @@ public class ReflectionUtils {
 	 * @throws IllegalAccessException I hope this never happens
 	 */
 	public static Object getFieldValue(Object o, Class c, Constants.Fields fieldName) throws NoSuchFieldException, IllegalAccessException {
-		fieldName.mField = c.getDeclaredField(fieldName.mName);
-		fieldName.mField.setAccessible(true);
-		return fieldName.mField.get(o);
+		Field field = c.getDeclaredField(fieldName.mName);
+		field.setAccessible(true);
+		return field.get(o);
 	}
 	
 	/**

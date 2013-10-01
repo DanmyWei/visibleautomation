@@ -9,7 +9,6 @@ import android.view.View;
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Intercept.DirectiveDialogs;
-import com.androidApp.Listeners.RecordOnAttachStateChangeListener;
 import com.androidApp.Utility.Constants;
 
 
@@ -37,15 +36,6 @@ public class OnCompoundButtonSelectionListener implements DialogInterface.OnClic
 			break;
 		case 3:
 			recorder.writeRecord(Constants.EventTags.UNCHECK, activity.toString(), currentView);
-			break;
-		case 4:
-			recorder.writeRecord(Constants.EventTags.INTERSTITIAL_VIEW, activity.toString(), currentView);
-			try {
-				String ref = recorder.getViewReference().getReference(currentView);
-				currentView.addOnAttachStateChangeListener(new RecordOnAttachStateChangeListener(activity.toString(), recorder, ref));
-			} catch (Exception ex) {
-				recorder.writeException(activity.toString(), ex, "while setting attach state change listener");				
-			}
 			break;
 		}
 	}

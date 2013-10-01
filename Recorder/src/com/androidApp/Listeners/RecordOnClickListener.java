@@ -3,6 +3,7 @@ package com.androidApp.Listeners;
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.EventRecorder.ViewDirective;
+import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.DialogUtils;
 
@@ -10,6 +11,7 @@ import android.app.Activity;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewParent;
+import android.widget.EditText;
 
 /**
  * recorder for view click events. This is probably called more than anything else in the world
@@ -20,9 +22,14 @@ import android.view.ViewParent;
  */
 public class RecordOnClickListener extends RecordListener implements View.OnClickListener, IOriginalListener  {
 	protected View.OnClickListener 	mOriginalOnClickListener;
+	protected ViewInterceptor		mViewInterceptor;
 	
-	public RecordOnClickListener(String activityName, EventRecorder eventRecorder, View v) {
+	public RecordOnClickListener(String 			activityName, 
+								 EventRecorder 		eventRecorder, 
+								 ViewInterceptor 	viewInterceptor, 
+								 View 				v) {
 		super(activityName, eventRecorder);
+		mViewInterceptor = viewInterceptor;
 		try {
 			mOriginalOnClickListener = ListenerIntercept.getClickListener(v);
 			v.setOnClickListener(this);
@@ -31,8 +38,12 @@ public class RecordOnClickListener extends RecordListener implements View.OnClic
 		}		
 	}
 	
-	public RecordOnClickListener(String activityName, EventRecorder eventRecorder, View.OnClickListener originalClicksListener) {
+	public RecordOnClickListener(String 				activityName, 
+								 EventRecorder 			eventRecorder, 
+								 ViewInterceptor		viewInterceptor,
+								 View.OnClickListener 	originalClicksListener) {
 		super(activityName, eventRecorder);
+		mViewInterceptor = viewInterceptor;
 		mOriginalOnClickListener = originalClicksListener;
 	}
 	
@@ -58,6 +69,7 @@ public class RecordOnClickListener extends RecordListener implements View.OnClic
 			boolean fIsInDialog = (DialogUtils.getDialog(rootView) != null);
 			boolean fWorkaroundDirective = mEventRecorder.matchViewDirective(v, ViewDirective.ViewOperation.CLICK_WORKAROUND, ViewDirective.When.ALWAYS);
 			try {
+				mViewInterceptor.setNextFocusedView(v);
 				if (fIsInDialog || fWorkaroundDirective) { 
 					mEventRecorder.writeRecord(Constants.EventTags.CLICK_WORKAROUND, mActivityName, v, getDescription(v));
 				} else {

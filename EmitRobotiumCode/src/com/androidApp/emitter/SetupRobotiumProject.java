@@ -13,6 +13,7 @@ import com.androidApp.util.Constants;
 import com.androidApp.util.Exec;
 import com.androidApp.util.FileUtility;
 import com.androidApp.util.StringUtils;
+
 /*
  * utilities to set up a robotium project in eclipse
  * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
@@ -117,8 +118,12 @@ public class SetupRobotiumProject {
 	 * @param name of the robotium-solo-X.XX.jar
 	 * @throws IOException if the file can't be written
 	 */
-	protected static void writeClasspath(String dirname, String projectName, String robotiumJar) throws IOException {
-		String classpath = createClasspath(projectName, robotiumJar);
+	protected static void writeClasspath(String 		dirname, 
+										 String 		projectName, 
+										 String 		robotiumJar,
+									     int			targetSDK,
+									     List<String> 	supportLibraries) throws IOException {
+		String classpath = createClasspath(projectName, robotiumJar, targetSDK, supportLibraries);
 		FileUtility.writeString(dirname + File.separator + Constants.Filenames.CLASSPATH, classpath);
 	}
 	/**
@@ -129,8 +134,11 @@ public class SetupRobotiumProject {
 	 * @param name of the robotium-solo-X.XX.jar
 	 * @throws IOException if the file can't be written
 	 */
-	protected static void writeClasspathBinary(String dirname, String robotiumJar) throws IOException {
-		String classpath = createClasspathBinary(robotiumJar);
+	protected static void writeClasspathBinary(String 		dirname, 
+											   String 		robotiumJar,
+											   int			targetSDK,
+										     List<String> 	supportLibraries) throws IOException {
+		String classpath = createClasspathBinary(robotiumJar, targetSDK, supportLibraries);
 		FileUtility.writeString(dirname + File.separator + Constants.Filenames.CLASSPATH, classpath);
 	}
 	
@@ -141,11 +149,73 @@ public class SetupRobotiumProject {
 	 * @return
 	 * @throws IOException
 	 */
-	public static String createClasspath(String projectName, String robotiumJar) throws IOException {
-		String classpath = FileUtility.readTemplate(Constants.Templates.CLASSPATH);
+	public static String createClasspath(String 		projectName, 
+										 String 		robotiumJar,
+									     int			targetSDK,
+									     List<String> 	supportLibraries) throws IOException {
+		String classpath;
+		if (!supportLibraries.isEmpty()) {
+			classpath = FileUtility.readTemplate(Constants.Templates.CLASSPATH_SUPPORT);
+			if (supportLibraries.contains(Constants.Filenames.SUPPORT_V4)) {
+				classpath = classpath.replace(Constants.VariableNames.ROBOTIUMUTILS, Constants.Filenames.ROBOTIUMUTILS_SUPPORTV4_JAR);
+			} else if (supportLibraries.contains(Constants.Filenames.SUPPORT_V13)) {
+				classpath = classpath.replace(Constants.VariableNames.ROBOTIUMUTILS, Constants.Filenames.ROBOTIUMUTILS_SUPPORTV13_JAR);
+			}
+			classpath = classpath.replace(Constants.VariableNames.SUPPORT_LIBRARIES, StringUtils.createJarClasspathEntries(supportLibraries, false));
+		} else {
+			classpath = FileUtility.readTemplate(Constants.Templates.CLASSPATH);
+			String robotiumUtilsJar = getRobotiumUtilsLibraryFromTargetSDK(targetSDK);
+			if (robotiumUtilsJar != null) {
+				String robotiumUtilsClasspathEntry = StringUtils.createClasspathLibraryEntry(robotiumUtilsJar, true);
+				classpath = classpath.replace(Constants.VariableNames.ROBOTIUMUTILS, robotiumUtilsClasspathEntry);
+			} else {
+				classpath = classpath.replace(Constants.VariableNames.ROBOTIUMUTILS, "");
+			}
+
+		}
 		classpath = classpath.replace(Constants.VariableNames.TARGET_PROJECT, projectName);
 		classpath = classpath.replace(Constants.VariableNames.ROBOTIUM_JAR, robotiumJar);
 		return classpath;
+	}
+	/**
+	 * given the SDK level of the app, return the appropriate robotiumUtils library
+	 * @param sdkLevel
+	 * @return
+	 */
+	public static String getRobotiumUtilsLibraryFromTargetSDK(int sdkLevel) {
+		if (sdkLevel >= 14) {
+			return Constants.Filenames.ROBOTIUMUTILS_40_JAR;
+		} else if (sdkLevel >= 11) {
+			return Constants.Filenames.ROBOTIUMUTILS_30_JAR;
+		} else {
+			return null;
+		}
+	}
+	
+	/**
+	 * return the robotiumutils package name appropriate for the SDK target and support libraries.
+	 * @param sdkLevel
+	 * @param supportLibraries
+	 * @return
+	 */
+	public static String getRobotiumUtilsPackage(int sdkLevel, List<String> supportLibraries) {
+		if (!supportLibraries.isEmpty()) {
+			if (supportLibraries.contains(Constants.Filenames.SUPPORT_V4)) {
+				return Constants.Packages.ROBOTIUMUTILS_SUPPORT_V4;
+			} else 	if (supportLibraries.contains(Constants.Filenames.SUPPORT_V13)) {
+				return Constants.Packages.ROBOTIUMUTILS_SUPPORT_V13;
+			} else {
+				return null;
+			}			
+		} else {
+			if (sdkLevel >= 14) {
+				return Constants.Packages.ROBOTIUMUTILS_40;
+			} else if (sdkLevel >= 11) {
+				return Constants.Packages.ROBOTIUMUTILS_30;
+			} else {
+				return Constants.Packages.ROBOTIUMUTILS;
+			}
+		}
 	}
 	
 	/**
@@ -154,10 +224,31 @@ public class SetupRobotiumProject {
 	 * @return
 	 * @throws IOException
 	 */
-	public static String createClasspathBinary(String robotiumJar) throws IOException {
-		String classpath = FileUtility.readTemplate(Constants.Templates.BINARY_CLASSPATH);
+	public static String createClasspathBinary(String 			robotiumJar,
+										       int				targetSDK,
+										       List<String> 	supportLibraries) throws IOException {		
+		String classpath;
+		if (!supportLibraries.isEmpty()) {
+			classpath = FileUtility.readTemplate(Constants.Templates.BINARY_CLASSPATH_SUPPORT);
+			if (supportLibraries.contains(Constants.Filenames.SUPPORT_V4)) {
+				classpath = classpath.replace(Constants.VariableNames.ROBOTIUMUTILS, Constants.Filenames.ROBOTIUMUTILS_SUPPORTV4_JAR);
+			} else if (supportLibraries.contains(Constants.Filenames.SUPPORT_V13)) {
+				classpath = classpath.replace(Constants.VariableNames.ROBOTIUMUTILS, Constants.Filenames.ROBOTIUMUTILS_SUPPORTV13_JAR);
+			}
+			classpath = classpath.replace(Constants.VariableNames.SUPPORT_LIBRARIES, StringUtils.createJarClasspathEntries(supportLibraries, false));
+		} else {
+			classpath = FileUtility.readTemplate(Constants.Templates.BINARY_CLASSPATH);
+			String robotiumUtilsJar = getRobotiumUtilsLibraryFromTargetSDK(targetSDK);
+			if (robotiumUtilsJar != null) {
+				String robotiumUtilsClasspathEntry = StringUtils.createClasspathLibraryEntry(robotiumUtilsJar, true);
+				classpath = classpath.replace(Constants.VariableNames.ROBOTIUMUTILS, robotiumUtilsClasspathEntry);
+			} else {
+				classpath = classpath.replace(Constants.VariableNames.ROBOTIUMUTILS, "");
+			}
+		}
 		classpath = classpath.replace(Constants.VariableNames.ROBOTIUM_JAR, robotiumJar);
 		return classpath;
+
 	}
 	
 	/** 
@@ -191,6 +282,7 @@ public class SetupRobotiumProject {
 										int		minSDKVersion,
 										String 	manifestTemplate) throws IOException {
 		String manifest = FileUtility.readTemplate(manifestTemplate); 
+		manifest = manifest.replace(Constants.VariableNames.CLASSPATH, targetPackage + ".test");
 		manifest = manifest.replace(Constants.VariableNames.TARGET_PACKAGE, targetPackage);
 		manifest = manifest.replace(Constants.VariableNames.MIN_SDK_VERSION, Integer.toString(minSDKVersion));
 		return manifest;
@@ -244,19 +336,30 @@ public class SetupRobotiumProject {
 	}
 	
 	/**
-	 * copy robotium jar and support library to the output directory
-	 * @param libraryDir libs directory
-	 * @throws IOException if the template can't be found
+	 * create the libs directory and put the recorder.jar file in it
+	 * @param targetSDK project to copy the library files into
+	 * @param supportLibraries list of support libraries (if they're used by the app)
+	 * @param sdkLevel application target SDK
+	 * @throws CoreException
 	 */
-	public static void copyLibraries(File libraryDir) throws IOException {
-		byte[] jarData = FileUtility.readBinaryTemplate(Constants.Filenames.UTILITY_JAR);
-		FileOutputStream fos = new FileOutputStream(libraryDir + File.separator + Constants.Filenames.UTILITY_JAR);
-		fos.write(jarData, 0, jarData.length);
-		fos.close();		
-		jarData = FileUtility.readBinaryTemplate(Constants.Filenames.ROBOTIUM_JAR);
-		fos = new FileOutputStream(libraryDir + File.separator + Constants.Filenames.ROBOTIUM_JAR);
-		fos.write(jarData, 0, jarData.length);
-		fos.close();		
+	public static void copyLibraries(File			libraryDir, 
+								     List<String> 	supportLibraries, 
+								     int			sdkLevel) throws IOException {
+		if (!supportLibraries.isEmpty()) {
+			if (supportLibraries.contains(Constants.Filenames.SUPPORT_V4)) {
+				FileUtility.writeBinaryTemplate(libraryDir, Constants.Filenames.ROBOTIUMUTILS_SUPPORTV4_JAR);
+				FileUtility.writeBinaryTemplate(libraryDir, Constants.Filenames.SUPPORT_V4);
+				FileUtility.writeBinaryTemplate(libraryDir, Constants.Filenames.SUPPORT_V7_APPCOMPAT);
+				
+			} else if (supportLibraries.contains(Constants.Filenames.SUPPORT_V13)) {
+				FileUtility.writeBinaryTemplate(libraryDir, Constants.Filenames.ROBOTIUMUTILS_SUPPORTV13_JAR);
+				FileUtility.writeBinaryTemplate(libraryDir, Constants.Filenames.SUPPORT_V13);
+				FileUtility.writeBinaryTemplate(libraryDir, Constants.Filenames.SUPPORT_V7_APPCOMPAT);
+			}
+		} else {
+			String robotiumUtilsJar = SetupRobotiumProject.getRobotiumUtilsLibraryFromTargetSDK(sdkLevel);
+			FileUtility.writeBinaryTemplate(libraryDir, robotiumUtilsJar);
+		}
 	}
 	
 	/**

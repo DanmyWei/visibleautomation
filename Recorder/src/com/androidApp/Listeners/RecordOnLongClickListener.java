@@ -53,8 +53,7 @@ public class RecordOnLongClickListener extends RecordListener implements OnLongC
 			mEventRecorder.setTouchedDown(true);
 			setEventBlock(true);
 			try {
-				String description = getDescription(v);
-				mEventRecorder.writeRecord(Constants.EventTags.LONG_CLICK, mActivityName, description);
+				mEventRecorder.writeRecord(Constants.EventTags.LONG_CLICK, mActivityName, v, getDescription(v));
 			} catch (Exception ex) {
 				mEventRecorder.writeException(ex, mActivityName, v, "long click");
 			}

@@ -6,13 +6,11 @@ import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
 
-import android.app.ActionBar;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Debug;
-import android.support.v4.view.ViewPager;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.Display;
@@ -33,8 +31,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ExpandableListView;
 import android.widget.LinearLayout;
-import android.widget.NumberPicker;
-import android.widget.PopupMenu;
 import android.widget.PopupWindow;
 import android.widget.SeekBar;
 import android.widget.Spinner;
@@ -49,7 +45,6 @@ import com.androidApp.EventRecorder.UserDefinedViewReference;
 import com.androidApp.EventRecorder.ViewDirective;
 import com.androidApp.EventRecorder.ViewDirective.ViewOperation;
 import com.androidApp.EventRecorder.ViewDirective.When;
-import com.androidApp.Intercept.InterceptActionBar;
 import com.androidApp.Intercept.MagicFrame;
 import com.androidApp.Intercept.MagicFramePopup;
 import com.androidApp.Listeners.FinishTextChangedListener;
@@ -69,22 +64,20 @@ import com.androidApp.Listeners.RecordOnItemClickListener;
 import com.androidApp.Listeners.RecordOnItemSelectedListener;
 import com.androidApp.Listeners.RecordOnLongClickListener;
 import com.androidApp.Listeners.RecordOnMenuItemClickListener;
-import com.androidApp.Listeners.RecordOnPageChangeListener;
 import com.androidApp.Listeners.RecordOnScrollListener;
 import com.androidApp.Listeners.RecordOnTabChangeListener;
 import com.androidApp.Listeners.RecordOnTouchListener;
-import com.androidApp.Listeners.RecordOnValueChangeListener;
-import com.androidApp.Listeners.RecordPopupMenuOnMenuItemClickListener;
+
 import com.androidApp.Listeners.RecordPopupWindowOnDismissListener;
 import com.androidApp.Listeners.RecordSeekBarChangeListener;
 import com.androidApp.Listeners.RecordSpinnerDialogOnDismissListener;
 import com.androidApp.Listeners.RecordSpinnerPopupWindowOnDismissListener;
 import com.androidApp.Listeners.RecordTextChangedListener;
-import com.androidApp.Listeners.RecordWebViewClient;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.DialogUtils;
 import com.androidApp.Utility.FileUtils;
 import com.androidApp.Utility.ReflectionUtils;
+import com.androidApp.Utility.TestUtils;
 import com.androidApp.Utility.ViewExtractor;
 import com.androidApp.Utility.ViewType;
 
@@ -105,11 +98,17 @@ public class ViewInterceptor {
 	private Object							mCurrentFloatingWindow = null;		// for windows that are not popup windows
 	private View							mCurrentOptionsMenuView = null;		// current action menu window
 	private List<UserDefinedViewReference>	mMotionEventViewRefs;				// references to views which receive motion events
-	private List<View>						mMotionEventViews;
+	protected InterceptInterface			mInterceptInterface;				// intercept interface for the support library
+	protected  boolean						mfDoneKeyEntered = false;			// user entered done key, triggering focus
+	protected View							mNextFocusedView;					// next focused view found by finder.
+
 	
-	public ViewInterceptor(EventRecorder eventRecorder, IRecordTest recordTest) throws IOException, ClassNotFoundException, ReferenceException {
+	public ViewInterceptor(EventRecorder 		eventRecorder, 
+						   IRecordTest 			recordTest,
+						   InterceptInterface	interceptInterface) throws IOException, ClassNotFoundException, ReferenceException {
 		mEventRecorder = eventRecorder;
 		mLastKeyAction = -1;
+		mInterceptInterface = interceptInterface;
 		try {
 			InputStream is = ViewInterceptor.class.getResourceAsStream("/raw/motion_event_views.txt");
 			mMotionEventViewRefs = UserDefinedViewReference.readViewReferences(is);
@@ -122,24 +121,48 @@ public class ViewInterceptor {
 		}
 	}
 	
-	/**
-	 * given an activity, recurse its views to find any that we should listen
-	 * @param a
-	 */
-	public void findMotionEventViews(Activity a) {
-		if (mMotionEventViewRefs != null) {
-			List<UserDefinedViewReference> activityReferences = UserDefinedViewReference.filterReferencesInActivity(a, mMotionEventViewRefs);
-			mMotionEventViews = UserDefinedViewReference.getMatchingViews(a, activityReferences);
-		}
+	public InterceptInterface getInterceptInterface() {
+		return mInterceptInterface;
 	}
 	
 	// accessors/mutator for focused view for IME display/remove event
 	public View getFocusedView() {
-		return mViewFocus;
+		if (mViewFocus != null) {
+			return mViewFocus;
+		} else {
+			View[] decorViews = ViewExtractor.getWindowDecorViews();
+			if (decorViews != null) {
+				for (int i = 0; i < decorViews.length; i++) {
+					View focusedView = TestUtils.findFocusedView(decorViews[i]);
+					if (focusedView != null) {
+						return focusedView;
+					}
+				}
+			} else {
+				Log.e(TAG, "failed to find any decor views");
+			}
+			return null;
+		}
 	}
 	
 	public void setFocusedView(View v) {
 		mViewFocus = v;
+	}
+	
+	public void setDoneKeyEntered(boolean f) {
+		mfDoneKeyEntered = f;
+	}
+	
+	public boolean getDoneKeyEntered() {
+		return mfDoneKeyEntered;
+	}
+	
+	public void setNextFocusedView(View v) {
+		mNextFocusedView = v;
+	}
+	
+	public View getNextFocusedView() {
+		return mNextFocusedView;
 	}
 	
 	/**
@@ -252,7 +275,7 @@ public class ViewInterceptor {
 				replaceHierarchyChangeListener(activity, vg);
 			}
 			if (v instanceof WebView) {
-				replaceWebViewListeners(mEventRecorder, v);
+				mInterceptInterface.replaceWebViewListeners(mEventRecorder, v);
 			} else {
 				if (!ViewType.shouldBeIgnored(v) && !ViewType.isInTabControl(v)) {
 					replaceViewListeners(activityName, v, viewDirectives);
@@ -268,23 +291,6 @@ public class ViewInterceptor {
 				TabHost tabHost = (TabHost) v;
 				replaceTabHostListeners(activityName, mEventRecorder, tabHost);
 			}
-			if (v instanceof NumberPicker) {
-				NumberPicker numberPicker = (NumberPicker) v;
-				replaceNumberPickerListener(activityName, mEventRecorder, numberPicker);
-			}
-			
-			// we don't log the exception to the test recorder here, because of issues with obfuscated apks
-			// and the android support library being obfuscated, so there's really not much we can do.
-			/*
-			try {
-				if (v instanceof ViewPager) {
-					ViewPager viewPager = (ViewPager) v;
-					replaceViewPackerPageChangeListener(mEventRecorder, viewPager);
-				}
-			} catch (Exception ex) {
-				ex.printStackTrace();
-			}
-			*/
 			
 			// adapter view cases
 			if (v instanceof AdapterView) {
@@ -361,11 +367,11 @@ public class ViewInterceptor {
 	 * @throws ClassNotFoundException
 	 * @throws NoSuchFieldException
 	 */
-	public static boolean replaceClickListener(String activityName, EventRecorder eventRecorder, View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
+	public boolean replaceClickListener(String activityName, EventRecorder eventRecorder, View v) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
 		View.OnClickListener originalClickListener = ListenerIntercept.getClickListener(v);
 		if (ViewType.listenClickEvents(v) || (originalClickListener != null)) {
 			if (!(originalClickListener instanceof RecordOnClickListener)) {
-				RecordOnClickListener recordClickListener = new RecordOnClickListener(activityName, eventRecorder, originalClickListener);
+				RecordOnClickListener recordClickListener = new RecordOnClickListener(activityName, eventRecorder, this, originalClickListener);
 				v.setOnClickListener(recordClickListener);
 				Log.i(TAG, "setting click listener for " + v + " " + RecordListener.getDescription(v));
 				return true;
@@ -428,22 +434,6 @@ public class ViewInterceptor {
 		Class spinnerAdapterClass = Class.forName(Constants.Classes.SPINNER_ADAPTER);
 		return ((adapter != null) && (adapter.getClass() == spinnerAdapterClass));
 	}
-
-	/**
-	 * replace the webView client with our recorder
-	 * @param v a webview, actually
-	 * @throws IllegalAccessException
-	 * @throws NoSuchFieldException
-	 * @throws ClassNotFoundException
-	 */
-	public static void replaceWebViewListeners(EventRecorder eventRecorder, View v) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
-		WebView webView = (WebView) v;
-		WebViewClient originalWebViewClient = ListenerIntercept.getWebViewClient(webView);
-		if (!(originalWebViewClient instanceof RecordWebViewClient)) {
-			RecordWebViewClient recordWebViewClient = new RecordWebViewClient(eventRecorder, originalWebViewClient);
-			webView.setWebViewClient(recordWebViewClient);
-		}
-	}
 	
 	/**
 	 * replace the listeners in an atomic view (like a button or a text view, and stuff like that)
@@ -463,21 +453,7 @@ public class ViewInterceptor {
 			replaceLongClickListener(activityName, mEventRecorder, v);
 		}
 	}
-	
-	/**
-	 * replace the listeners in a PopupMenu
-	 * @param v popup menu
-	 * @throws IllegalAccessException ReflectionUtils exception
-	 * @throws NoSuchFieldException
-	 * @throws ClassNotFoundException
-	 */
-	public static void replacePopupMenuListeners(String activityName, EventRecorder eventRecorder, View v)  throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
-		PopupMenu.OnMenuItemClickListener originalMenuItemClickListener = ListenerIntercept.getPopupMenuOnMenuItemClickListener(v);
-		if (!(originalMenuItemClickListener instanceof RecordPopupMenuOnMenuItemClickListener)) {
-			ListenerIntercept.setPopupMenuOnMenuItemClickListener(v, new RecordPopupMenuOnMenuItemClickListener(activityName, eventRecorder, v)); 
-		}
-	}
-	
+		
 	/**
 	 * same, but for overflow menu listeners
 	 * TODO: CAN WE REMOVE THIS?
@@ -538,31 +514,6 @@ public class ViewInterceptor {
 		}
 	}
 	
-	
-	/**
-	 * replace the value changed listener for a number picker
-	 * @param eventRecorder
-	 * @param numberPicker
-	 * @throws IllegalAccessException
-	 * @throws NoSuchFieldException
-	 */
-	public static void replaceNumberPickerListener(String activityName, EventRecorder eventRecorder, NumberPicker numberPicker) throws IllegalAccessException, NoSuchFieldException {
-		NumberPicker.OnValueChangeListener originalValueChangeListener = ListenerIntercept.getValueChangeListener(numberPicker);
-		if (!(originalValueChangeListener instanceof RecordOnValueChangeListener)) {
-			RecordOnValueChangeListener recordOnValueChangeListener = new RecordOnValueChangeListener(activityName, eventRecorder, originalValueChangeListener, numberPicker);
-			numberPicker.setOnValueChangedListener(recordOnValueChangeListener);
-		}
-	}
-	
-	
-	
-	public static void replaceViewPagerPageChangeListener(String activityName, EventRecorder eventRecorder, ViewPager viewPager) throws IllegalAccessException, NoSuchFieldException {
-		ViewPager.OnPageChangeListener originalPageChangeListener = ListenerIntercept.getPageChangeListener(viewPager);
-		if (!(originalPageChangeListener instanceof RecordOnPageChangeListener)) {
-			RecordOnPageChangeListener recordOnPageChangeListener = new RecordOnPageChangeListener(activityName, eventRecorder, originalPageChangeListener, viewPager);
-			viewPager.setOnPageChangeListener(recordOnPageChangeListener);
-		}
-	}
 	/**
 	 * on one of the Android handsets, rather than bringing up an extension to the options menu, they display a popup window with a RecycleListView which
 	 * displays the menu options and the AdapterView.OnItemClickListener() calls the menu item action.  
@@ -711,36 +662,7 @@ public class ViewInterceptor {
 			}
 		}
 	}
-	
-	/**
-	 * the action bar is not in the activity contentView, so it has to be handled separately
-	 * @param activity activity to intercept
-	 * @param actionBar actionBar
-	 */
-	public void intercept(Activity activity, String activityName, ActionBar actionBar) {
-        if (actionBar != null) {
-        	try {
-	        	View contentView = null;
-	        	try {
-	        		Class actionBarImplClass = Class.forName(Constants.Classes.ACTION_BAR_IMPL);
-	        		contentView = (View) ReflectionUtils.getFieldValue(actionBar, actionBarImplClass, Constants.Fields.CONTAINER_VIEW);
-	        	} catch (Exception ex) {
-	        		mEventRecorder.writeException(activityName, ex, "while intercepting the action bar for " + activity.getClass().getName());
-	        	}
-	        	if (contentView != null) {
-	            	intercept(activity, activityName, contentView);
-	            }
-	       		InterceptActionBar.interceptActionBarTabListeners(activityName, mEventRecorder, actionBar);
-		       	if (actionBar.getCustomView() != null) {
-		        	intercept(activity, activityName, actionBar.getCustomView());
-		        }
-		       	intercept(activity, activityName, InterceptActionBar.getActionBarView(actionBar));
-        	} catch (Exception ex) {
-        		mEventRecorder.writeException(activityName, ex, "while intercepting action bar");
-        	}
-	  	}		
-	}
-	
+		
 	/**
 	 * install recorders in the listeners for the views contained in an activity
 	 * @param a
@@ -751,26 +673,13 @@ public class ViewInterceptor {
 		Window w = a.getWindow();
         View v = w.getDecorView().findViewById(android.R.id.content);
         setFocusedView(null);
-        intercept(a, a.toString(), v);     
-        ActionBar actionBar = a.getActionBar();
-        if (actionBar != null) {
-        	
-        	// re-intercept on re-layout
-            try {
-                View actionBarView = InterceptActionBar.getActionBarView(actionBar);
-                ViewTreeObserver viewTreeObserverActionBar = actionBarView.getViewTreeObserver();
-                viewTreeObserverActionBar.addOnGlobalLayoutListener(new OnLayoutInterceptListener(a, this, mEventRecorder));
-                View customView = actionBar.getCustomView();
-                if (customView != null) {
-                    ViewTreeObserver viewTreeObserverActionBarCustomView = customView.getViewTreeObserver();
-                    viewTreeObserverActionBarCustomView.addOnGlobalLayoutListener(new OnLayoutInterceptListener(a, this, mEventRecorder));               
-                }
-            } catch (Exception ex) {
-                    Log.d(TAG, "failed to intercept action bar");
-            }
-            intercept(a, a.toString(), actionBar);
-        }  
- 	}
+        setDoneKeyEntered(false);
+        setNextFocusedView(null);
+        intercept(a, a.toString(), v); 
+        ViewTreeObserver viewTreeObserver = v.getViewTreeObserver();
+        viewTreeObserver.addOnGlobalLayoutListener(new OnLayoutInterceptListener(a, this, mEventRecorder));
+    	mInterceptInterface.interceptActionBar(a, this, mEventRecorder);
+	}
 
 	/**
 	 * intercept the contents of a popup window, which isn't in the view hierarchy of an activity.
@@ -789,9 +698,12 @@ public class ViewInterceptor {
 			if (contentView instanceof MagicFramePopup) {
 				contentView = ((MagicFramePopup) contentView).getChildAt(0);
 			}
-			if (ListenerIntercept.isPopupMenu(contentView)) {
-				replacePopupMenuListeners(activityName, eventRecorder, contentView);
+			if (mInterceptInterface.isPopupMenu(contentView)) {
+				mInterceptInterface.replacePopupMenuListeners(activityName, eventRecorder, contentView);
 			} else {
+		        setFocusedView(null);
+		        setDoneKeyEntered(false);
+		        setNextFocusedView(null);
 				intercept(activity, activityName, contentView);
 			}
 		} catch (Exception ex) {
@@ -864,6 +776,9 @@ public class ViewInterceptor {
 				}
 			}
 			Window window = dialog.getWindow();
+	        setFocusedView(null);
+	        setDoneKeyEntered(false);
+	        setNextFocusedView(null);
 			intercept(activity, activityName, window.getDecorView());
 		} catch (Exception ex) {
 			try {
@@ -940,6 +855,9 @@ public class ViewInterceptor {
 		
 		public void run() {
 			try {
+		        setFocusedView(null);
+		        setDoneKeyEntered(false);
+		        setNextFocusedView(null);
 				ViewInterceptor.this.intercept(mActivity, mActivityName, mView);
 			} catch (Exception ex) {
 				ViewInterceptor.this.mEventRecorder.writeException(mActivityName, ex, "while trying to intercept view");

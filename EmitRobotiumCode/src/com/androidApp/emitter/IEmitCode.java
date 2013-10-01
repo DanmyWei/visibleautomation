@@ -102,6 +102,8 @@ public interface IEmitCode {
 					 String 				testPackage, 
 					 String 				testClassName, 
 					 String 				className, 
+					 int					targetSDK,
+					 List<String>			supportLibraries,
 					 BufferedWriter 		bw) throws IOException;
 	void writeTrailer(BufferedWriter bw) throws IOException;
 	void writeClassTrailer(BufferedWriter bw) throws IOException;

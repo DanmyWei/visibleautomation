@@ -110,7 +110,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		List<List<String>> orderedTokenLines = orderByActivity.orderEventsByActivity(tokenLines);
 		scanTargetPackage(orderedTokenLines);
 		CodeOutput mainLines = emit(orderedTokenLines, 0, outputCode, motionEvents, OutputType.MAIN);
-		outputCode.put(new CodeDefinition(Constants.MAIN, null), mainLines.mLineAndTokens);
+		outputCode.put(new CodeDefinition(Constants.MAIN), mainLines.mLineAndTokens);
 	}
 
 	/**
@@ -293,17 +293,17 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 						scrollListRef = new ReferenceParser(tokens, 5);
 					} else if (Constants.UserEvent.CLICK.equals(action)) {
 						writeClick(tokens, lines);
+					} else if (Constants.UserEvent.LONG_CLICK.equals(action)) {
+						writeLongClick(tokens, lines);
 					} else if (Constants.UserEvent.CLICK_WORKAROUND.equals(action)) {
 						writeClickWorkaround(tokens, lines);
+					} else if (Constants.UserEvent.CANCEL_DIALOG.equals(action)) {
+						// TODO: cancel is ALWAYS followed by dismiss. We should assert that it is actually the case.
+						mLastEventWasWaitForDialog = true;
+						writeCancelDialog(tokens, lines);
 					} else if (Constants.SystemEvent.DISMISS_DIALOG.equals(action)) {
 						mLastEventWasWaitForDialog = true;
 						writeDismissDialog(tokens, lines);
-						if (outputType == OutputType.INTERSTITIAL_DIALOG) {
-							return new CodeOutput(lines, readIndex);
-						}
-					} else if (Constants.UserEvent.CANCEL_DIALOG.equals(action)) {
-						mLastEventWasWaitForDialog = true;
-						writeCancelDialog(tokens, lines);
 						if (outputType == OutputType.INTERSTITIAL_DIALOG) {
 							return new CodeOutput(lines, readIndex);
 						}
@@ -332,9 +332,14 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 						// case as well (revisit this)
 						TokenScanner.Predicate anyEventPredicate = tokenScanner.new OrPredicate(tokenScanner.new SystemEventPredicate(),
 																								tokenScanner.new UserEventPredicate());
-						if (TokenScanner.happensBefore(tokenLines, readIndex - 1,
-													   tokenScanner.new EventListPredicate(Constants.UserEvent.HIDE_IME.mEventName), anyEventPredicate)) {
+						if (TokenScanner.happenedBefore(tokenLines, readIndex - 1,
+													    tokenScanner.new EventListPredicate(Constants.UserEvent.HIDE_IME.mEventName), anyEventPredicate)) {
 							writeHideIMEBackKey(tokens, lines);					   
+						} else {
+							TokenScanner.Predicate activityBackPredicate = tokenScanner.new EventListPredicate(Constants.UserEvent.ACTIVITY_BACK_KEY.mEventName);
+							if (TokenScanner.happensBefore(tokenLines, readIndex, activityBackPredicate, anyEventPredicate)) {
+								writeGoBack(tokens, lines);
+							}
 						}
 					} else if (Constants.UserEvent.HIDE_IME_BACK_KEY.equals(action)) {
 						
@@ -429,7 +434,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		return new CodeOutput(lines, readIndex);
 	}
 
-	public void handleActivityForward(List<String>			tokens,
+	public int handleActivityForward(List<String>			tokens,
 									  List<List<String>>	tokenLines,
 									  int					readIndex,
 									  TokenScanner			tokenScanner,
@@ -482,6 +487,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 				}
 			}
 		}
+		return readIndex;
 	}
 
 	public CodeOutput handleInterstitialActivity(List<List<String>>								tokenLines,
@@ -514,27 +520,26 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		String newActivityName = tokens.get(2);
 		// We don't just want the previous line, we want the activity transition or user event prior to the 
 		// activity_forward that this interstitial activity was launched in, so we scan backwards to the first activity transition to a different activity
-		TokenScanner.Predicate causingPredicate = tokenScanner.new OrPredicate(tokenScanner.new PredicateParameter(tokenScanner.new ActivityTransitionPredicate(), 
-																												   2, newActivityName, false),
-																			   tokenScanner.new UserEventPredicate());
+		Predicate activityTransitionPredicate = tokenScanner.new PredicateParameter(tokenScanner.new ActivityTransitionPredicate(), 2, newActivityName, false);
+		TokenScanner.Predicate causingPredicate = tokenScanner.new OrPredicate(activityTransitionPredicate, tokenScanner.new UserEventPredicate());
 		int causingLineIndex = TokenScanner.findPrevious(tokenLines, currentReadIndex, causingPredicate);
+		CodeOutput activityOutput = emit(tokenLines, currentReadIndex + 1, outputCode, motionEvents, OutputType.INTERSTITIAL_ACTIVITY);
+		String functionName = addLinesAsFunction(tokens, newActivityName, activityOutput.mLineAndTokens, functionTemplateName, outputCode);
 		CodeDefinition codeDef;
 		if (causingLineIndex == -1) {
 			TokenScanner.Predicate previousActivityPredicate = tokenScanner.new ActivityTransitionPredicate();
 			int previousActivityIndex = TokenScanner.findPrevious(tokenLines, currentReadIndex, previousActivityPredicate);
 			if (previousActivityIndex != -1) {
 				List<String> precedingTokens = tokenLines.get(previousActivityIndex);
-				codeDef = new CodeDefinition(newActivityName, precedingTokens);
+				codeDef = new CodeDefinition(newActivityName, Constants.FUNCTION_CALL, functionName,  precedingTokens);
 			} else {
 				List<String> precedingTokens = tokenLines.get(0);
-				codeDef = new CodeDefinition(newActivityName, precedingTokens);
+				codeDef = new CodeDefinition(newActivityName, Constants.FUNCTION_CALL, functionName,  precedingTokens);
 			}		
 		} else {
 			List<String> precedingTokens = tokenLines.get(causingLineIndex);
-			codeDef = new CodeDefinition(newActivityName, precedingTokens);
+			codeDef = new CodeDefinition(newActivityName, Constants.FUNCTION_CALL, functionName,  precedingTokens);
 		}
-		CodeOutput activityOutput = emit(tokenLines, currentReadIndex + 1, outputCode, motionEvents, OutputType.INTERSTITIAL_ACTIVITY);
-		String functionName = addLinesAsFunction(tokens, newActivityName, activityOutput.mLineAndTokens, functionTemplateName, outputCode);
 		List<LineAndTokens> activityLines = new ArrayList<LineAndTokens>();
 		LineAndTokens conditionalCode = activityCondition(tokens, newActivityName, functionName);
 		activityLines.add(conditionalCode);
@@ -589,29 +594,29 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		
 		CodeDefinition codeDef = null;
 		String activityName = tokens.get(2);
+		CodeOutput codeOutput = emit(tokenLines, currentReadIndex + 1, outputCode, motionEvents, OutputType.INTERSTITIAL_DIALOG);
+		// we write the dialog lines at the end of the file, because of variable scoping issues
+		String functionName = addLinesAsFunction(tokens, activityName, codeOutput.mLineAndTokens, Constants.Templates.DIALOG_FUNCTION, outputCode);
 		if (Constants.UserEvent.INTERSTITIAL_DIALOG_CONTENTS_ID.equals(action)) {
 			// interstitial_dialog_contents_id:123627258,com.example.android.apis.app.AlertDialogSamples,com.example.foo.R.string.bar
 			String id = tokens.get(3);
-			codeDef = new CodeDefinition(activityName, id, CodeDefinition.DialogScanType.CONTENT,
+			codeDef = new CodeDefinition(activityName, Constants.FUNCTION_CALL, functionName, id, CodeDefinition.DialogScanType.CONTENT,
 				    					CodeDefinition.DialogTagType.ID, precedingTokens);
 		} else if (Constants.UserEvent.INTERSTITIAL_DIALOG_CONTENTS_TEXT.equals(action)) {
 			// interstitial_dialog_contents_text:123627258,com.example.android.apis.app.AlertDialogSamples,"Command two"
 			String unescapedTag = StringUtils.unescapeString(StringUtils.stripQuotes(tokens.get(3)), '\\');
-			codeDef = new CodeDefinition(activityName, unescapedTag, CodeDefinition.DialogScanType.CONTENT,
+			codeDef = new CodeDefinition(activityName, Constants.FUNCTION_CALL, functionName, unescapedTag, CodeDefinition.DialogScanType.CONTENT,
 										 CodeDefinition.DialogTagType.TEXT, precedingTokens);
 		} else if (Constants.UserEvent.INTERSTITIAL_DIALOG_TITLE_ID.equals(action)) {
 			String id = tokens.get(3);
-			codeDef = new CodeDefinition(activityName, id, CodeDefinition.DialogScanType.TITLE,
+			codeDef = new CodeDefinition(activityName, Constants.FUNCTION_CALL, functionName, id, CodeDefinition.DialogScanType.TITLE,
 										 CodeDefinition.DialogTagType.ID, precedingTokens);
 		} else if (Constants.UserEvent.INTERSTITIAL_DIALOG_TITLE_TEXT.equals(action)) {
 			// interstitial_dialog_title_text:123609633,com.example.android.apis.app.AlertDialogSamples,"Header title"
 			String unescapedTag = StringUtils.unescapeString(StringUtils.stripQuotes(tokens.get(3)), '\\');
-			codeDef = new CodeDefinition(activityName, unescapedTag, CodeDefinition.DialogScanType.TITLE,
+			codeDef = new CodeDefinition(activityName, Constants.FUNCTION_CALL, functionName, unescapedTag, CodeDefinition.DialogScanType.TITLE,
 				    					 CodeDefinition.DialogTagType.TEXT, precedingTokens);
 		}
-		CodeOutput codeOutput = emit(tokenLines, currentReadIndex + 1, outputCode, motionEvents, OutputType.INTERSTITIAL_DIALOG);
-		// we write the dialog lines at the end of the file, because of variable scoping issues
-		String functionName = addLinesAsFunction(tokens, activityName, codeOutput.mLineAndTokens, Constants.Templates.DIALOG_FUNCTION, outputCode);
 		List<LineAndTokens> dialogLines = new ArrayList<LineAndTokens>();
 		LineAndTokens conditionalCode = dialogCondition(tokens, codeDef, functionName);
 		dialogLines.add(conditionalCode);
@@ -672,13 +677,11 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		functionTemplate = functionTemplate.replace(Constants.VariableNames.FUNCTION_NAME, functionName);
 		copyLine.add(0, new LineAndTokens(tokens, functionTemplate));
 		copyLine.add(closeCondition(tokens));
-		CodeDefinition functionCodeDef = new CodeDefinition(Constants.FUNCTIONS, null);
+		CodeDefinition functionCodeDef = new CodeDefinition(activityName, Constants.FUNCTION_DEF, functionName, tokens);
 		List<LineAndTokens> functionCode = outputCode.get(functionCodeDef);
 		if (functionCode == null) {
 			outputCode.put(functionCodeDef, copyLine);
-		} else {
-			functionCode.addAll(copyLine);
-		}
+		} 
 		return functionName;
 	}
 	
@@ -1069,6 +1072,38 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 			lines.add(new LineAndTokens(tokens, clickInClassIndexTemplate));
 		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.INTERNAL_CLASS_INDEX) {
 			String clickInInternalClassIndexTemplate = writeViewInternalClassIndexCommand(Constants.Templates.CLICK_IN_VIEW_INTERNAL_CLASS_INDEX, ref, fullDescription);
+			lines.add(new LineAndTokens(tokens, clickInInternalClassIndexTemplate));
+		} else {
+			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
+		}
+	}
+	
+	/**
+	 * write out the click command:
+	 * long_click:195773901,id,com.example.android.apis.R$id.radio_button
+	 * @param tokens parsed from a line in events.txt
+	 * @param lines output list of java instructions
+	 * @throws IOException if the template file can't be read
+	 */
+	public void writeLongClick(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
+		ReferenceParser ref = new ReferenceParser(tokens, 2);
+		String description = getDescription(tokens);
+		String fullDescription = "click on " + description;
+		
+		// if the activity was switched, or a diaog was just dismissed, wait for the view before clicking on it
+		if (mLastEventWasWaitForActivity || mLastEventWasWaitForDialog) {
+			writeWaitForView(tokens, 2, lines);
+			mLastEventWasWaitForActivity = false;
+			mLastEventWasWaitForDialog = false;
+		} 
+		if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
+			String clickInViewTemplate =  writeViewIDCommand(Constants.Templates.LONG_CLICK_IN_VIEW_ID, ref, fullDescription);
+			lines.add(new LineAndTokens(tokens, clickInViewTemplate));
+		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
+			String clickInClassIndexTemplate = writeViewClassIndexCommand(Constants.Templates.LONG_CLICK_IN_VIEW_CLASS_INDEX, ref, fullDescription);
+			lines.add(new LineAndTokens(tokens, clickInClassIndexTemplate));
+		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.INTERNAL_CLASS_INDEX) {
+			String clickInInternalClassIndexTemplate = writeViewInternalClassIndexCommand(Constants.Templates.LONG_CLICK_IN_VIEW_INTERNAL_CLASS_INDEX, ref, fullDescription);
 			lines.add(new LineAndTokens(tokens, clickInInternalClassIndexTemplate));
 		} else {
 			throw new EmitterException("bad view reference while trying to parse " + StringUtils.concatStringList(tokens, " "));
@@ -1812,12 +1847,16 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	 * @param bw output BufferedWriter
 	 * @throws IOException
 	 */
-	public void writeHeader(String 					classPath, 
-						    String 					testPackage, 
-						    String 					testClassName,  
-						    String 					className, 
-						    BufferedWriter 			bw) throws IOException {
+	public void writeHeader(String 				classPath, 
+						    String 				testPackage, 
+						    String 				testClassName,  
+						    String 				className, 
+						    int					targetSDK,
+						    List<String>		supportLibraries,
+						    BufferedWriter 		bw) throws IOException {
 		String header = FileUtility.readTemplate(Constants.Templates.HEADER);
+		String robotiumUtilsPackage = SetupRobotiumProject.getRobotiumUtilsPackage(targetSDK, supportLibraries);
+		header = header.replace(Constants.VariableNames.ROBOTIUMTUILS_PACKAGE, 	robotiumUtilsPackage);
 		header = header.replace(Constants.VariableNames.TESTPACKAGE, testPackage);
 		header = header.replace(Constants.VariableNames.CLASSPATH, classPath);
 		header = header.replace(Constants.VariableNames.CLASSNAME, className);

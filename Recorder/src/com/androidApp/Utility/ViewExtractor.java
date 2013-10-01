@@ -5,8 +5,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import android.app.Activity;
+import android.content.Context;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.Adapter;
 import android.widget.AdapterView;
 
@@ -17,7 +19,9 @@ import android.widget.AdapterView;
  */
 public class ViewExtractor {
 	protected static String getWindowManagerString(){
-		if (android.os.Build.VERSION.SDK_INT >= 13) {
+		if (android.os.Build.VERSION.SDK_INT >= 17) {
+			return Constants.Fields.WINDOW_MANAGER_DEFAULT_FIELD_STATIC.mName;
+		} else if (android.os.Build.VERSION.SDK_INT >= 13) {
 			return Constants.Fields.WINDOW_MANAGER_FIELD_STATIC.mName;
 		} else {
 			return Constants.Fields.WINDOW_MANAGER_FIELD.mName;
@@ -30,8 +34,14 @@ public class ViewExtractor {
 
 	private static Class<?> sWindowManager;
 	static {
+		String windowManagerClassName;
 		try {
-			sWindowManager = Class.forName(Constants.Classes.WINDOW_MANAGER);
+            if (android.os.Build.VERSION.SDK_INT >= 17) {
+	                windowManagerClassName = Constants.Classes.WINDOW_MANAGER_GLOBAL;
+	        } else {
+	                windowManagerClassName = Constants.Classes.WINDOW_MANAGER_IMPL;
+	        }
+	 		sWindowManager = Class.forName(windowManagerClassName);
 		} catch (ClassNotFoundException e) {
 			throw new RuntimeException(e);
 		} catch (SecurityException e) {
@@ -39,6 +49,18 @@ public class ViewExtractor {
 		}
 	}
 	
+	
+	public static View[] getWindowDecorViews(Context context) {
+		WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+		try {
+			Field viewsField = sWindowManager.getDeclaredField(Constants.Fields.VIEWS.mName);
+			viewsField.setAccessible(true);
+			return (View[]) viewsField.get(wm);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
 	/**
 	 * return the views hosted by the window manager.  Hidden class WindowManagerImpl.mViews is the list of decor views.
 	 * NOTE: change this to use the reflection utilities
@@ -83,6 +105,7 @@ public class ViewExtractor {
 	 * @return list of views (flattened hierarchy)
 	 */
 	public List<View> getActivityViews(Activity activity) {
+		View[] decorViewsTest = getWindowDecorViews(activity);
 		View[] decorViews = getWindowDecorViews();
 		View currentDecorView = null;
 		List<View> viewList = new ArrayList<View>();

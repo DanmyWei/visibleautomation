@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
+import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
@@ -26,6 +27,7 @@ import com.androidApp.util.Constants;
 
 import createrecorder.util.EclipseExec;
 import createrecorder.util.EclipseUtility;
+import createrecorder.util.RecorderConstants;
 
 /**
  * when we record a session with the device, we save the files, database, and shared_prefs file into the eclipse
@@ -68,6 +70,7 @@ public class RecordTestAction  implements IObjectActionDelegate {
 		if (mSelection != null) {
 			try {
 				IProject project = (IProject) mSelection.getFirstElement();
+				IContainer projectContainer = project;
 				IPath projectPath = project.getLocation();
 				File projectDir = projectPath.toFile();
 				// parse AndroidManifest.xml .project and project.properties
@@ -82,17 +85,27 @@ public class RecordTestAction  implements IObjectActionDelegate {
 				} catch (Exception ex) {
 					ex.printStackTrace();
 				}
-				// TODO: a fun and nasty hack.  If the user selects the original package, we find
-				// the package with the .test extension, so it'll work whether he selects the recorder
-				// or the source code.  
+				// install the recording test package if it is not already present on the device
 				String testPackage = manifestParser.getPackage();
-				if (!testPackage.endsWith("test")) {
-					testPackage += ".test";
+				if (!EclipseUtility.isAPKInstalled(testPackage)) {
+					IFolder binFolder = project.getFolder(Constants.Dirs.BIN);
+					String installCommand = "install " + binFolder.getName() + File.separator + projectParser.getProjectName() + 
+											RecorderConstants.RECORDER_SUFFIX + "." + 
+											RecorderConstants.APK_SUFFIX;
+					String[] installResults = EclipseExec.getAdbCommandOutput(installCommand);
+					EclipseUtility.printConsole(installResults);
 				}
-				String uninstallCommand = "uninstall " + testPackage;
-				EclipseExec.execADBBackgroundConsoleOutput(uninstallCommand);
-				String installCommand = "install " + projectParser.getProjectName() + ".apk";
-				EclipseExec.execADBBackgroundConsoleOutput(installCommand);
+				
+				// find the apk file which we've saved in the home directory, and install it on the device if it's not 
+				// there.  Note that the .apk may be of the form app.package-1.apk, so we have to regex match it.
+				String targetPackage = manifestParser.getTargetPackage();
+				if (!EclipseUtility.isAPKInstalled(targetPackage)) {
+					String regexMatch = manifestParser.getTargetPackage() + ".*" + RecorderConstants.APK_SUFFIX;
+					IFile apkFile = EclipseUtility.findFile(projectContainer, regexMatch);
+					String installCommand = "install " + apkFile.getName();
+					String[] installResults = EclipseExec.getAdbCommandOutput(installCommand);
+					EclipseUtility.printConsole(installResults);
+				}
 				String adbCommand = "shell am instrument -w " + testPackage + "/android.test.InstrumentationTestRunner";
 				EclipseExec.execADBBackgroundConsoleOutput(adbCommand);
 			} catch (Exception ex) {

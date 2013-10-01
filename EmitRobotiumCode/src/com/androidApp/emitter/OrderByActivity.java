@@ -90,6 +90,13 @@ public class OrderByActivity {
 			String activity = eventLine.get(0);
 			String action = eventLine.get(1);
 			if (Constants.ActivityEvent.ACTIVITY_FORWARD.equals(action)) {
+				// write out the current events, and clear the list for this activity, but don't remove it from the stack
+				ActivityEvents currentActivityEvents = getFromActivityStack(currentActivity, activityStack);
+				if (currentActivityEvents != null) {
+					activityEventList.add(currentActivityEvents);
+					currentActivityEvents = new ActivityEvents(currentActivity);
+					replaceActivityEventsInStack(currentActivity, currentActivityEvents, activityStack);
+				}
 				//  push the activity onto the stack and add the forward event.
 				ActivityEvents activityEvents = new ActivityEvents(activity);
 				activityEvents.addEvent(eventLine);
@@ -150,7 +157,7 @@ public class OrderByActivity {
 		return false;
 	}
 	
-	protected ActivityEvents getFromActivityStack(String activity, Stack<ActivityEvents> activityStack) {
+	protected static ActivityEvents getFromActivityStack(String activity, Stack<ActivityEvents> activityStack) {
 		ActivityEvents activityEventMatch = null;
 		for (ActivityEvents activityEvents : activityStack) {
 			if (activityEvents.getActivityName().equals(activity)) {
@@ -159,6 +166,18 @@ public class OrderByActivity {
 		}
 		return activityEventMatch;
 	}
+	
+	protected static boolean replaceActivityEventsInStack(String activity, ActivityEvents replaceActivityEvents, Stack<ActivityEvents>  activityStack) {
+		for (int i = 0; i < activityStack.size(); i++) {
+			ActivityEvents activityEvents = activityStack.get(i);
+			if (activityEvents.getActivityName().equals(activity)) {
+				activityStack.set(i, replaceActivityEvents);
+				return true;
+			}
+		}
+		return false;
+	}
+
 
 	/**
 	 * remove an activity from the stack

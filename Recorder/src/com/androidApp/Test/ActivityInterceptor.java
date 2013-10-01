@@ -512,7 +512,6 @@ public class ActivityInterceptor {
 		}
 		
 		public void run() {
-			ActivityInterceptor.this.getViewInterceptor().findMotionEventViews(mActivity);
 			ActivityInterceptor.this.getViewInterceptor().intercept(mActivity);
 		}
 	}

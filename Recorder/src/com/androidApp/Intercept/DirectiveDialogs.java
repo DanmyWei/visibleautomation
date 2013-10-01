@@ -195,8 +195,7 @@ public class DirectiveDialogs {
 														Constants.DisplayStrings.MOTION_EVENTS,
 					    								Constants.DisplayStrings.COPY_TEXT,
 					    								Constants.DisplayStrings.PASTE_TEXT,
-					    								Constants.DisplayStrings.INSERT_BY_CHARACTER,
-					    								Constants.DisplayStrings.INTERSTITIAL_VIEW};
+					    								Constants.DisplayStrings.INSERT_BY_CHARACTER };
 				Dialog dialog = createSelectionDialog(context, editTextItems, new OnEditTextSelectionListener(DirectiveDialogs.this));
 				dialog.show();				
 			} else if (currentView instanceof TextView) {
@@ -205,32 +204,28 @@ public class DirectiveDialogs {
 														Constants.DisplayStrings.IGNORE_TEXT_EVENTS,
 													 	Constants.DisplayStrings.MOTION_EVENTS,
 													    Constants.DisplayStrings.COPY_TEXT,
-													    Constants.DisplayStrings.CLICK_WORKAROUND,
-					    								Constants.DisplayStrings.INTERSTITIAL_VIEW};
+													    Constants.DisplayStrings.CLICK_WORKAROUND };
 				Dialog dialog = createSelectionDialog(context, textViewItems, new OnTextViewSelectionListener(DirectiveDialogs.this));
 				dialog.show();
 			} else if (currentView instanceof AbsListView) {
 				String[] listViewItems = new String[] { Constants.DisplayStrings.IGNORE_EVENTS,
 														Constants.DisplayStrings.MOTION_EVENTS,
 														Constants.DisplayStrings.SELECT_BY_TEXT,
-														Constants.DisplayStrings.SELECT_ITEM_WORKAROUND,
-					    								Constants.DisplayStrings.INTERSTITIAL_VIEW};
+														Constants.DisplayStrings.SELECT_ITEM_WORKAROUND };
 				Dialog dialog = createSelectionDialog(context, listViewItems, new OnListSelectionListener(DirectiveDialogs.this));
 				dialog.show();	
 			} else if (currentView instanceof CompoundButton) {
 				String[] compoundButtonItems = new String[] { Constants.DisplayStrings.IGNORE_EVENTS,
 															  Constants.DisplayStrings.MOTION_EVENTS,
 															  Constants.DisplayStrings.CHECK,
-															  Constants.DisplayStrings.UNCHECK,
-															  Constants.DisplayStrings.INTERSTITIAL_VIEW };
+															  Constants.DisplayStrings.UNCHECK };
 				Dialog dialog = createSelectionDialog(context, compoundButtonItems, new OnCompoundButtonSelectionListener(DirectiveDialogs.this));
 				dialog.show();	
 			} else { 
 				String[] viewItems = new String[] { Constants.DisplayStrings.IGNORE_EVENTS,
 													Constants.DisplayStrings.IGNORE_CLICK_EVENTS,
 													Constants.DisplayStrings.IGNORE_LONG_CLICK_EVENTS,
-						  							Constants.DisplayStrings.MOTION_EVENTS,
-				    								Constants.DisplayStrings.INTERSTITIAL_VIEW };
+						  							Constants.DisplayStrings.MOTION_EVENTS };
 				Dialog dialog = createSelectionDialog(context, viewItems, new OnViewSelectionListener(DirectiveDialogs.this));
 				dialog.show();	
 			}
