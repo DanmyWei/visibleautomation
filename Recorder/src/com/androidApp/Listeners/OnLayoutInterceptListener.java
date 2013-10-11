@@ -38,6 +38,7 @@ public class OnLayoutInterceptListener implements ViewTreeObserver.OnGlobalLayou
             mCurrentRotation = newRotation;
         }           
 
+        /*
         // recursively generate the hashcode for this view hierarchy, and re-intercept if it's changed.
         int hashCode = viewTreeHashCode(mActivity.getWindow().getDecorView());
 
@@ -48,6 +49,7 @@ public class OnLayoutInterceptListener implements ViewTreeObserver.OnGlobalLayou
 
         // do the action bar, since it doesn't seem to get populated until after the activity was created/resumed
         mViewInterceptor.getInterceptInterface().interceptActionBar(mActivity, mViewInterceptor, mEventRecorder);
+        */
     }  
     
     /**

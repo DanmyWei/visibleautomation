@@ -46,7 +46,7 @@ public class RecordOnPageChangeListener extends RecordListener implements ViewPa
 	@Override
 	public void onPageScrollStateChanged(int state) {
 		boolean fReentryBlock = getReentryBlock();
-		if (!RecordListener.getEventBlock() && mEventRecorder.hasTouchedDown()) {
+		if (shouldRecordEvent(mViewPager)) {
 			mEventRecorder.setTouchedDown(true);
 			setEventBlock(true);
 			try {
@@ -66,7 +66,7 @@ public class RecordOnPageChangeListener extends RecordListener implements ViewPa
 	@Override
 	public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
 		boolean fReentryBlock = getReentryBlock();
-		if (!RecordListener.getEventBlock() && mEventRecorder.hasTouchedDown()) {
+		if (shouldRecordEvent(mViewPager)) {
 			mEventRecorder.setTouchedDown(true);
 			setEventBlock(true);
 			try {

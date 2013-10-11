@@ -311,12 +311,12 @@ public class CodeDefinition {
 	public void setPrecedingTokens(List<String> precedingTokens) {
 		mPrecedingTokens = precedingTokens;
 	}
-		
+
 	public String toString() {
 		if (mType == Type.ACTIVITY) {
-			return mType + "," + mActivityName;
+			return mType + "," + mActivityName + "," + mCodeType + "," + mFunctionName;
 		} else {
-			return mType + "," + mActivityName + "," + mDialogTag + "," + mDialogScanType.mName + "," + mDialogTagType.mName;
+			return mType + "," + mActivityName + "," + mCodeType + "," + mFunctionName + "," + mDialogTag + "," + mDialogScanType.mName + "," + mDialogTagType.mName;
 		}
 	}
 	

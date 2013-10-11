@@ -13,14 +13,15 @@ import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.ShowToastRunnable;
 import com.androidApp.Utility.TestUtils;
 import com.androidApp.Intercept.MagicFrame;
+import com.androidApp.Listeners.IOriginalListener;
+import com.androidApp.Listeners.RecordListener;
+import com.androidApp.Listeners.RecordOnMenuItemClickListener;
 
 import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Context;
 import android.graphics.Rect;
 import android.util.Log;
-import android.view.ActionMode;
-import android.view.ActionMode.Callback;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -98,16 +99,6 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 	}
 
 	/**
-	 * since we've wrapped the entire callback, we have to wrap all of its interface, otherwise, there will be trouble.
-	 */
-	@Override
-	public boolean dispatchKeyShortcutEvent(KeyEvent event) {
-		mEventRecorder.setEventRecorded(false);
-		Log.i(TAG, "dispatchKeyShortcutEvent action = " + event.getAction() + " keyCode = " + event.getKeyCode());
-		return mOriginalCallback.dispatchKeyShortcutEvent(event);
-	}
-
-	/**
 	 * sometimes, actually pretty often, views get created dynamically, and the global layout listener and on
 	 * hierarchy changed listeners don't handle the incoming event.  
 	 */
@@ -138,13 +129,6 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 		mEventRecorder.setEventRecorded(false);
 		Log.i(TAG, "dispatch trackballEvent action = " + event.getAction());
 		return mOriginalCallback.dispatchTrackballEvent(event);
-	}
-
-	@Override
-	public boolean dispatchGenericMotionEvent(MotionEvent event) {
-		mEventRecorder.setEventRecorded(false);
-		Log.i(TAG, "dispatch genericMotionEvent action = " + event.getAction());
-		return mOriginalCallback.dispatchGenericMotionEvent(event);
 	}
 
 	@Override
@@ -245,24 +229,6 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 	public boolean onSearchRequested() {
 		Log.i(TAG, "onSearchRequested");
 		return mOriginalCallback.onSearchRequested();
-	}
-
-	@Override
-	public ActionMode onWindowStartingActionMode(Callback callback) {
-		Log.i(TAG, "onWindowStartingActionMode");
-		return mOriginalCallback.onWindowStartingActionMode(callback);
-	}
-
-	@Override
-	public void onActionModeStarted(ActionMode mode) {
-		Log.i(TAG, "onActionModeStarted");
-		mOriginalCallback.onActionModeStarted(mode);
-	}
-
-	@Override
-	public void onActionModeFinished(ActionMode mode) {
-		Log.i(TAG, "onActionModeFinished");
-		mOriginalCallback.onActionModeFinished(mode);	
 	}
 	
 	public EventRecorder getEventRecorder() {

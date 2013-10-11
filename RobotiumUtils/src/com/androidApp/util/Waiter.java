@@ -71,6 +71,12 @@ public class Waiter {
 		return level;
 	}
 
+	/**
+	 * wait for a view to be unobscured.
+	 * @param v view to wait for 
+	 * @param timeoutMsec duration to wait.
+	 * @return
+	 */
 	public static boolean waitForView(View v, long timeoutMsec) {
 		while (isObscured(v) && (timeoutMsec > 0)) {
 			Log.i(TAG, v + " is obscured");
@@ -79,10 +85,11 @@ public class Waiter {
 		}
 		if (timeoutMsec > 0) {
 			Log.i(TAG, v + " is shown");
+			return true;
 		} else {
 			Log.i(TAG, v + " is obscured after timeout");
+			return false;
 		}
-		return timeoutMsec > 0;
 	}
 
 }

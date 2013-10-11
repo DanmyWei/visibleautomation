@@ -46,6 +46,7 @@ public class %TESTCLASSNAME% extends ActivityInstrumentationTestCase2 {
   	
 		robotiumUtils = new RobotiumUtils(this.getClass(), getInstrumentation());
 		solo = new Solo(getInstrumentation(), getActivity());
+		solo.setTimeout(Solo.Timeout.SMALL_TIMEOUT, VIEW_WAIT_MSEC); 
   	}
   
    	@Override

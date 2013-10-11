@@ -27,7 +27,8 @@ import com.androidApp.Utility.Constants.Packages;
 
 public class ViewType {
 	protected static final String TAG = "ViewType";
-
+	static Class sDecorViewClass = null;
+	
 	/**
 	 * is this view a child of the action bar?
 	 * @param v view to test
@@ -237,5 +238,22 @@ public class ViewType {
 		}
 		return false;
 	}
+	
+	/**
+	 * is this a descendant of a decor view (i.e. in the mail window?)
+	 * @param v view to test.
+	 * @return
+	 */
 
+	public static boolean isDecorViewDescendant(View v) {
+		View rootView = v.getRootView();
+		if (sDecorViewClass == null) {
+			try {
+				sDecorViewClass = Class.forName(Constants.Classes.PHONE_DECOR_VIEW);
+			} catch (ClassNotFoundException cnfex) {
+				return false;
+			}
+		}
+		return sDecorViewClass.isAssignableFrom(rootView.getClass());
+	}
 }

@@ -7,6 +7,7 @@ import com.androidApp.Utility.ReflectionUtils;
 import com.androidApp.Utility.StringUtils;
 import com.androidApp.Utility.TestUtils;
 import com.androidApp.Utility.ViewExtractor;
+import com.androidApp.Utility.ViewType;
 
 import android.app.Activity;
 import android.app.Dialog;
@@ -187,5 +188,10 @@ public class RecordListener {
 		View vRoot = v.getRootView();
 		int index = TestUtils.classIndex(vRoot, v, true);
 		return StringUtils.getOrdinal(index) + " " + v.getClass().getSimpleName();
+	}
+	
+	public boolean shouldRecordEvent(View v) {
+		return !RecordListener.getEventBlock() && (mEventRecorder.hasTouchedDown() || !ViewType.isDecorViewDescendant(v));
+
 	}
 }

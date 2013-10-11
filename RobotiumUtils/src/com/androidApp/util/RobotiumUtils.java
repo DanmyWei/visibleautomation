@@ -77,12 +77,18 @@ public class RobotiumUtils {
 		sActivityMonitorRunnable = new ActivityMonitorRunnable(instrumentation);
 		Thread activityMonitorThread = new Thread(sActivityMonitorRunnable);
 		activityMonitorThread.start();
-
 	}
 		
 	// get a list view item.  
 	public static View getAdapterViewItem(AdapterView av, int itemIndex) {
-		return av.getChildAt((itemIndex - 1) - av.getFirstVisiblePosition());
+		int firstPosition = av.getFirstVisiblePosition();
+		int visibleIndex = itemIndex - firstPosition;
+		View itemView = av.getChildAt(visibleIndex);
+		if (itemView == null) {
+			Log.i(TAG, "getAdapterViewItem failed itemIndex = " + itemIndex + 
+					   " first position = " + firstPosition + " childCount = " + av.getChildCount());
+		}
+		return itemView;
 	}
 	
 	// wrapper for sleep
@@ -110,9 +116,10 @@ public class RobotiumUtils {
 		}
 		android.widget.AbsListView absListView = (android.widget.AbsListView) solo.getView(android.widget.AbsListView.class, adapterViewIndex);
 		if (waitForView(absListView, VIEW_TIMEOUT_MSEC)) {
-			Log.e(TAG, "waitAndClickInAdapterByClassIndex robotiumUtils.waitForView failed");
+			Log.e(TAG, "waitAndClickInAdapterByClassIndex robotiumUtils.waitForView succeeded");
 			return waitAndClickInAdapter(solo, absListView, itemIndex);
 		} else {
+			Log.i(TAG, "failed to wait for adapter view index = " + adapterViewIndex);
 			return false;
 		}
 	}
@@ -139,6 +146,7 @@ public class RobotiumUtils {
 		if (waitForView(absListView, VIEW_TIMEOUT_MSEC)) {
 			return waitAndClickInAdapter(solo, absListView, itemIndex);
 		} else {
+			Log.i(TAG, "failed to wait for adapter id = " + adapterViewId);
 			return false;
 		}
 	}
@@ -151,13 +159,21 @@ public class RobotiumUtils {
 	protected boolean waitAndClickInAdapter(Solo solo, AbsListView absListView, int itemIndex) {
 		scrollToViewVisible(absListView);
 		android.view.View adapterViewItem = null; 
-		mInstrumentation.runOnMainSync(new ScrollListRunnable(absListView, itemIndex));
+		
+		// TODO: for some reason skype scrolls one past.  Need to check if this is consistent
+		// between applications
+		int scrollIndex = itemIndex;
+		if (scrollIndex > 0) {
+			scrollIndex--;
+		}
+		mInstrumentation.runOnMainSync(new ScrollListRunnable(absListView, scrollIndex));
 		if (waitForAdapterViewItem(solo, absListView, itemIndex, VIEW_TIMEOUT_MSEC)) {
-			int visibleIndex = itemIndex - absListView.getFirstVisiblePosition();
 			adapterViewItem = RobotiumUtils.getAdapterViewItem(absListView, itemIndex);
 			solo.clickOnView(adapterViewItem);
+			Log.i(TAG, "successfully clicked on list view item " + itemIndex);
 			return true;
 		} else {
+			Log.i(TAG, "failed to click list view item " + itemIndex);
 			return false;
 		}
 	}	
@@ -177,7 +193,8 @@ public class RobotiumUtils {
 		}
 		
 		public void run() {
-			mAbsListView.smoothScrollToPosition(mItemIndex);
+			//mAbsListView.smoothScrollToPosition(mItemIndex);
+			mAbsListView.setSelection(mItemIndex);
 		}
 	}
 	
@@ -1016,7 +1033,7 @@ public class RobotiumUtils {
 	public View getView(Class<? extends View> viewClass, int index) {
 		Activity activity = getCurrentActivity();
 		
-		// try dialogs first.
+		// try dialogs first. TODO: wait is wrong.
 		View[] viewList = ViewExtractor.getWindowDecorViews();
 		for (int iViewRoot = 0; iViewRoot < viewList.length; iViewRoot++) {
 			if (DialogListener.isDialogOrPopup(activity, viewList[iViewRoot])) {

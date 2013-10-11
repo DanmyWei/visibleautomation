@@ -101,6 +101,9 @@ public class CreateTestHandler extends AbstractHandler {
 						projectInformation.getProjectInformation(apkFileName, Constants.Extensions.TEST);
 					// and create the project from the badging information
 						createProject(shell, projectInformation, apkFileName);
+						if (projectInformation.isNewProject()) {
+							EclipseUtility.copyFileToProjectDirectory(projectInformation.getTestProject(), apkFileName, apkFileName);
+						}
 					} else {
 						MessageDialog.openInformation(shell, RecorderConstants.VISIBLE_AUTOMATION, "failed to initialize project information");
 					}

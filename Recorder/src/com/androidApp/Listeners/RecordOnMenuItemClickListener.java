@@ -42,8 +42,10 @@ public class RecordOnMenuItemClickListener extends RecordListener implements Men
 	@Override
 	public boolean onMenuItemClick(MenuItem item) {
 		boolean fReentryBlock = getReentryBlock();
+		
+		// menu item isn't a view, so we can't use shouldRecordEvent
 		if (!RecordListener.getEventBlock() && mEventRecorder.hasTouchedDown()) {
-			mEventRecorder.setTouchedDown(true);
+			mEventRecorder.setTouchedDown(false);
 			setEventBlock(true);
 			try {
 				int position = RecordOnMenuItemClickListener.getMenuItemIndex(item);

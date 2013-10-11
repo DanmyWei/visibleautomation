@@ -4,6 +4,7 @@ import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.ViewType;
 
 import android.app.Activity;
 import android.os.SystemClock;
@@ -36,7 +37,7 @@ public class RecordOnCheckChangedListener extends RecordListener implements Comp
 	
 	public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 		boolean fReentryBlock = getReentryBlock();
-		if (!RecordListener.getEventBlock() && mEventRecorder.hasTouchedDown()) {
+		if (shouldRecordEvent(buttonView)) {
 			setEventBlock(true);
 			mEventRecorder.setTouchedDown(false);
 			try {

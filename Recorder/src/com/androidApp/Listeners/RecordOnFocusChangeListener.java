@@ -4,6 +4,7 @@ import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.ViewType;
 
 import android.app.Activity;
 import android.app.Dialog;
@@ -49,16 +50,15 @@ public class RecordOnFocusChangeListener extends RecordListener implements View.
 	
 	/**
 	 * actual focus change record point.
+	 * 
 	 */
 	@Override
 	public void onFocusChange(View v, boolean hasFocus) {
-		// save the view for IME event detection whether or not events are blocked
-		if (hasFocus) {
-			mViewInterceptor.setFocusedView(v);
-		}
 		boolean fReentryBlock = getReentryBlock();
-		if (!RecordListener.getEventBlock()) {
+		if ((hasFocus && (v != null)) && shouldRecordEvent(v)) {
 			setEventBlock(true);
+			mEventRecorder.setTouchedDown(false);
+			mViewInterceptor.setFocusedView(v);
 			try {
 				if (hasFocus) {
 					if (v instanceof TextView) {

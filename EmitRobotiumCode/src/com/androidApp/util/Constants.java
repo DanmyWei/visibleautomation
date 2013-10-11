@@ -488,4 +488,9 @@ public class Constants {
 	public static class Prefixes {
 		public static final String ANDROID = "android";
 	}
+	
+	public static class AndroidVersions {
+		public static int GINGERBREAD_MR1 = 10;
+		public static int HONEYCOMB = 11;
+	}
 }

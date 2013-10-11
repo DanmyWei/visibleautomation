@@ -111,7 +111,10 @@ public class OrderByActivity {
 					activityEvents.addEvent(eventLine);
 					System.out.println("activity " + currentActivity + " adding " + activityEvents.getEventLines().size() + " events ");
 					ActivityEvents currentActivityEvents = getFromActivityStack(currentActivity, activityStack);
-					activityEventList.add(currentActivityEvents);
+					// activity may have been finished, before we receive the activity_back...this does happen
+					if (currentActivityEvents != null) {
+						activityEventList.add(currentActivityEvents);
+					}
 					removeFromActivityStack(currentActivity, activityStack);
 					currentActivity = activity;
 				}

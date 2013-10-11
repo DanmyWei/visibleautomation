@@ -27,6 +27,7 @@ import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.EventRecorder.ReferenceException;
 import com.androidApp.Intercept.DirectiveDialogs;
 import com.androidApp.Intercept.IMEMessageListener;
+import com.androidApp.Intercept.InsertRecordWindowCallbackRunnable;
 import com.androidApp.Intercept.InterceptKeyViewMenu;
 import com.androidApp.Intercept.MagicFrame;
 import com.androidApp.Intercept.MagicFramePopup;
@@ -166,6 +167,7 @@ public class SetupListeners {
 							View contentView = DialogUtils.getDialogContentView(dialog);
 							if ((contentView != null) && contentView.isShown()) {
 								instrumentation.runOnMainSync(new InterceptDialogRunnable(activity, dialog, recorder, viewInterceptor));
+								instrumentation.runOnMainSync(new InsertRecordWindowCallbackRunnable(dialog.getWindow(), activity, recorder, viewInterceptor));
 								viewInterceptor.setCurrentDialog(dialog);
 								Spinner spinner = DialogUtils.isSpinnerDialog(dialog, activity);
 								if (spinner != null) {
@@ -426,14 +428,14 @@ public class SetupListeners {
 		public void run() {
 			try {
 				SetupListeners.this.getViewInterceptor().intercept(mActivity, mActivity.toString(), mView);
-				Class viewRootImplClass = Class.forName(Constants.Classes.VIEW_ROOT_IMPL);
-				ViewParent viewParent = mView.getParent();
-				if (viewParent instanceof ViewGroup) {
+				if (mView instanceof ViewGroup) {
 					ViewGroup vg = (ViewGroup) mView;
 					// can't insert under ViewRootImpl
 					for (int i = 0; i < vg.getChildCount(); i++) {
 						View vChild = vg.getChildAt(i);
-						MagicFrame magicFrame = new MagicFrame(vChild.getContext(), mActivity, vChild, 0, SetupListeners.this.getRecorder(), SetupListeners.this.getViewInterceptor());
+						if (!(vChild instanceof MagicFrame)) {
+							MagicFrame magicFrame = new MagicFrame(vChild.getContext(), mActivity, vChild, 0, SetupListeners.this.getRecorder(), SetupListeners.this.getViewInterceptor());
+						}
 					}
 				} else {
 					// TODO: this obviously has to be fixed.

@@ -6,8 +6,10 @@ import com.androidApp.EventRecorder.ViewDirective;
 import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.DialogUtils;
+import com.androidApp.Utility.ViewType;
 
 import android.app.Activity;
+import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewParent;
@@ -21,6 +23,7 @@ import android.widget.EditText;
  *
  */
 public class RecordOnClickListener extends RecordListener implements View.OnClickListener, IOriginalListener  {
+	private static final String TAG = "RecordOnClickListener";
 	protected View.OnClickListener 	mOriginalOnClickListener;
 	protected ViewInterceptor		mViewInterceptor;
 	
@@ -58,8 +61,10 @@ public class RecordOnClickListener extends RecordListener implements View.OnClic
 	 */
 	public void onClick(View v) {
 		boolean fReentryBlock = getReentryBlock();
-		if (!RecordListener.getEventBlock() && mEventRecorder.hasTouchedDown()) {
-			mEventRecorder.setTouchedDown(true);
+		View rootViewTest = v.getRootView();
+		Log.i(TAG, "rootViewTest " + rootViewTest);
+		if (!RecordListener.getEventBlock() && (mEventRecorder.hasTouchedDown() || !ViewType.isDecorViewDescendant(v))) {
+			mEventRecorder.setTouchedDown(false);
 			setEventBlock(true);
 			
 			// see if we're in a dialog.  There's a problem with android instrumentation where if the IME

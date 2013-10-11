@@ -20,6 +20,7 @@ import com.androidApp.Utility.ReflectionUtils;
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.SupportIntercept.InterceptSupport;
 import com.androidApp.SupportIntercept.ListenerInterceptSupport;
+import com.androidApp.SupportListeners.RecordPopupMenuOnMenuItemClickListener;
 import com.androidApp.SupportListeners.RecordWebViewClient;
 import com.androidApp.SupportListeners.RecordWindowCallback;
 import com.androidApp.Listeners.OnLayoutInterceptListener;
@@ -34,7 +35,11 @@ public class InterceptSupport implements InterceptInterface {
 	public void replacePopupMenuListeners(String activityName, 
 										  EventRecorder eventRecorder, 
 										  View v)  throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
-	}
+        PopupMenu.OnMenuItemClickListener originalMenuItemClickListener = ListenerInterceptSupport.getPopupMenuOnMenuItemClickListener(v);
+        if (!(originalMenuItemClickListener instanceof RecordPopupMenuOnMenuItemClickListener)) {
+        	ListenerInterceptSupport.setPopupMenuOnMenuItemClickListener(v, new RecordPopupMenuOnMenuItemClickListener(activityName, eventRecorder, v));
+        }
+    }
 	
 	public void interceptActionBar(Activity activity, ViewInterceptor viewInterceptor, EventRecorder eventRecorder) {
         ActionBar actionBar = activity.getActionBar();

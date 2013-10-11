@@ -125,12 +125,15 @@ public class GenerateRobotiumTestCodeAction implements IObjectActionDelegate {
 				}
 				//public boolean init(Shell shell, ManifestParser manifestParser, ProjectPropertiesScan projectPropertiesScan) {
 
-				ProjectInformation projectInformation = new ProjectInformation();
+				ProjectInformation projectInformation = new ProjectInformation(project.getName());
 			    Shell shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
 				projectInformation.init(shell, manifestParser, projectPropertiesScan);
 				IFolder binFolder = project.getFolder(Constants.Dirs.BIN);
 				IFile apkFile = EclipseUtility.findFile(binFolder, project.getName() + ".*" + Constants.Extensions.APK);
-				projectInformation.getProjectInformation(apkFile.getName(), Constants.Extensions.RECORDER);
+				projectInformation.getProjectInformation(apkFile.getFullPath().toString(), Constants.Extensions.TEST);
+				if (projectInformation.isNewProject()) {
+					EclipseUtility.copyFileToProjectDirectory(binFolder, apkFile.getName(), projectInformation.getTestProject(), apkFile.getName());
+				}
 
 				// read the events file and generate the code into a hashtable, with code for the main test class
 				// and the activity handler classes.

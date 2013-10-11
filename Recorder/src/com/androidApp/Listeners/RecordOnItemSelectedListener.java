@@ -45,7 +45,7 @@ public class RecordOnItemSelectedListener extends RecordListener implements Adap
 	@Override
 	public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
 		boolean fReentryBlock = getReentryBlock();
-		if (!RecordListener.getEventBlock() && mEventRecorder.hasTouchedDown()) {
+		if (shouldRecordEvent(view)) {
 			setEventBlock(true);
 			mEventRecorder.setTouchedDown(false);
 			try {

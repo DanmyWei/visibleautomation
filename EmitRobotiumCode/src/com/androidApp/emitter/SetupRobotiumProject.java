@@ -163,14 +163,15 @@ public class SetupRobotiumProject {
 			}
 			classpath = classpath.replace(Constants.VariableNames.SUPPORT_LIBRARIES, StringUtils.createJarClasspathEntries(supportLibraries, false));
 		} else {
+			
+			// add the base and possibly the later versions of the robotium utilities
 			classpath = FileUtility.readTemplate(Constants.Templates.CLASSPATH);
 			String robotiumUtilsJar = getRobotiumUtilsLibraryFromTargetSDK(targetSDK);
+			String robotiumUtilsClasspathEntry = StringUtils.createClasspathLibraryEntry(Constants.Filenames.ROBOTIUMUTILS_JAR, true);
 			if (robotiumUtilsJar != null) {
-				String robotiumUtilsClasspathEntry = StringUtils.createClasspathLibraryEntry(robotiumUtilsJar, true);
-				classpath = classpath.replace(Constants.VariableNames.ROBOTIUMUTILS, robotiumUtilsClasspathEntry);
-			} else {
-				classpath = classpath.replace(Constants.VariableNames.ROBOTIUMUTILS, "");
-			}
+				robotiumUtilsClasspathEntry += "\n" + StringUtils.createClasspathLibraryEntry(robotiumUtilsJar, true);
+			} 
+			classpath = classpath.replace(Constants.VariableNames.ROBOTIUMUTILS, robotiumUtilsClasspathEntry);
 
 		}
 		classpath = classpath.replace(Constants.VariableNames.TARGET_PROJECT, projectName);

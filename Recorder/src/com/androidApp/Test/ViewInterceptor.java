@@ -128,6 +128,7 @@ public class ViewInterceptor {
 	// accessors/mutator for focused view for IME display/remove event
 	public View getFocusedView() {
 		if (mViewFocus != null) {
+			Log.i(TAG, "set focused view preset " + mViewFocus);
 			return mViewFocus;
 		} else {
 			View[] decorViews = ViewExtractor.getWindowDecorViews();
@@ -135,6 +136,7 @@ public class ViewInterceptor {
 				for (int i = 0; i < decorViews.length; i++) {
 					View focusedView = TestUtils.findFocusedView(decorViews[i]);
 					if (focusedView != null) {
+						Log.i(TAG, "set focused view found " + mViewFocus);
 						return focusedView;
 					}
 				}
@@ -146,6 +148,7 @@ public class ViewInterceptor {
 	}
 	
 	public void setFocusedView(View v) {
+		Log.i(TAG, "set focused view " + v);
 		mViewFocus = v;
 	}
 	
@@ -855,9 +858,6 @@ public class ViewInterceptor {
 		
 		public void run() {
 			try {
-		        setFocusedView(null);
-		        setDoneKeyEntered(false);
-		        setNextFocusedView(null);
 				ViewInterceptor.this.intercept(mActivity, mActivityName, mView);
 			} catch (Exception ex) {
 				ViewInterceptor.this.mEventRecorder.writeException(mActivityName, ex, "while trying to intercept view");

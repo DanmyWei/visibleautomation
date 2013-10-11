@@ -1670,7 +1670,9 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	 * @throws IOException if the template file can't be read
 	 */
 	public void writeItemClick(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException {
-		int itemIndex = Integer.parseInt(tokens.get(2)) + 1;
+		// TODO: why +1 ?
+		// int itemIndex = Integer.parseInt(tokens.get(2)) + 1;
+		int itemIndex = Integer.parseInt(tokens.get(2));
 		ReferenceParser ref = new ReferenceParser(tokens, 3);
 		String description = getDescription(tokens);
 		String fullDescription = "click item " + description;

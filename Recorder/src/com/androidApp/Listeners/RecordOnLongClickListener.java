@@ -49,8 +49,8 @@ public class RecordOnLongClickListener extends RecordListener implements OnLongC
 	public boolean onLongClick(View v) {
 		boolean fConsumeEvent = false;
 		boolean fReentryBlock = getReentryBlock();
-		if (!RecordListener.getEventBlock() && mEventRecorder.hasTouchedDown()) {
-			mEventRecorder.setTouchedDown(true);
+		if (shouldRecordEvent(v)) {
+			mEventRecorder.setTouchedDown(false);
 			setEventBlock(true);
 			try {
 				mEventRecorder.writeRecord(Constants.EventTags.LONG_CLICK, mActivityName, v, getDescription(v));

@@ -214,6 +214,16 @@ public class EclipseUtility {
 		file.create(fis, IFile.FORCE, null);	
 		fis.close();
 	}
+	
+	public static void copyFileToProjectDirectory(IFolder srcFolder, String srcFileName, IProject project, String dstFileName) throws CoreException, FileNotFoundException, IOException {
+		IFile srcFile = srcFolder.getFile(srcFileName);
+		InputStream is = srcFile.getContents();
+		IFile dstFile = project.getFile(dstFileName);
+		dstFile.delete(false, null);
+		dstFile.create(is, IFile.FORCE, null);
+		is.close();
+		
+	}
 
 	
 	/** 

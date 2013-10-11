@@ -3,6 +3,7 @@ import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.ViewType;
 
 import android.app.Activity;
 import android.os.SystemClock;
@@ -51,9 +52,9 @@ public class RecordOnChildClickListener extends RecordListener implements Expand
 
 	public boolean onChildClick(ExpandableListView parent, View view, int groupPosition, int childPosition, long id) {
 		boolean fReentryBlock = getReentryBlock();
-		if (!RecordListener.getEventBlock() && mEventRecorder.hasTouchedDown()) {
+		if (!RecordListener.getEventBlock() && (mEventRecorder.hasTouchedDown() || !ViewType.isDecorViewDescendant(view))) {
 			setEventBlock(true);
-			mEventRecorder.setTouchedDown(true);
+			mEventRecorder.setTouchedDown(false);
 			int flatListIndex = parent.getFlatListPosition(parent.getPackedPositionForChild(groupPosition, childPosition));
 			Log.i(TAG, "group position = " + groupPosition + " childPosition = " + childPosition + " list index = " + flatListIndex);
 			try {

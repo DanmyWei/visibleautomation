@@ -109,7 +109,6 @@ public class GenerateRobotiumTestCode {
 							  ProjectInformation	projectInformation)  throws CoreException, IOException {
 		// create the java project and required subfolders.
 		IProject testProject = projectInformation.getTestProject();
-		IJavaProject javaProject = EclipseUtility.createJavaNature(testProject);
 		createFolders(testProject);
 		IFolder srcFolder = testProject.getFolder(Constants.Dirs.SRC);
 		
@@ -122,10 +121,12 @@ public class GenerateRobotiumTestCode {
 		writeBuildXML(testProject, emitter.getApplicationClassPath());
 		writeManifest(testProject, emitter.getApplicationPackage(), projectInformation.getTargetSDK(), manifestTemplate);
 		writeResources(testProject);	
-		writeClasspath(testProject, projectInformation.getTestProjectName(), Constants.Filenames.ROBOTIUM_JAR, projectInformation.getTargetSDK(), projectInformation.getSupportLibraries());
+		writeClasspath(testProject, projectInformation.getSourceProjectName(), Constants.Filenames.ROBOTIUM_JAR, projectInformation.getTargetSDK(), projectInformation.getSupportLibraries());
+
 		addLibraries(testProject, projectInformation.getSupportLibraries(), projectInformation.getTargetSDK());
 
 		// create the package for the test code, then write the AllTests.java driver which executes all of the unit tests
+		IJavaProject javaProject = EclipseUtility.createJavaNature(testProject);
 		IPackageFragment packCode = javaProject.getPackageFragmentRoot(srcFolder).createPackageFragment(projectInformation.getTestPackagePath(), false, null);
 		packCode.open(null);
 		copyTestDriverFile(packCode, projectInformation.getTestPackagePath(), emitter.getApplicationClassPath());
@@ -149,7 +150,7 @@ public class GenerateRobotiumTestCode {
 		IFolder srcFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.SRC);
 		IFolder resFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.RES);
 		IFolder drawableFolder = EclipseUtility.createFolder(resFolder, Constants.Dirs.DRAWABLE);
-		IFolder genFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.GEN);
+		//IFolder genFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.GEN);
 		IFolder assetsFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.ASSETS);
 		IFolder handlersFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.HANDLERS);
 		IFolder settingsFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.SETTINGS);
@@ -266,11 +267,10 @@ public class GenerateRobotiumTestCode {
 			}
 		} else {
 			String robotiumUtilsJar = SetupRobotiumProject.getRobotiumUtilsLibraryFromTargetSDK(sdkLevel);
-			copyJarToLibs(testProject, robotiumUtilsJar);
+			if (robotiumUtilsJar != null) {
+				copyJarToLibs(testProject, robotiumUtilsJar);
+			}
 		}
-		// copy the base robotiumutils.jar file, which everyone needs (like a thneed)
-		copyJarToLibs(testProject, Constants.Filenames.ROBOTIUMUTILS_JAR);
-
 	}
 	/**
 	 * write out the AllTests.java to the output class directory src\foo\bar\path

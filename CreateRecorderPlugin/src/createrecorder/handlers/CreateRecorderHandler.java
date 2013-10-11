@@ -104,6 +104,9 @@ public class CreateRecorderHandler extends AbstractHandler {
 				if (projectInformation.init(shell, aaptBadgingValues, manifestInformation)) {
 					try {
 						projectInformation.getProjectInformation(apkFileName, Constants.Extensions.RECORDER);
+						if (projectInformation.isNewProject()) {
+							EclipseUtility.copyFileToProjectDirectory(projectInformation.getTestProject(), apkFileName, apkFileName);
+						}
 					} catch (Exception ex) {
 						MessageDialog.openInformation(shell, RecorderConstants.VISIBLE_AUTOMATION,	
 								  "There was an exception obtaining information about the project");

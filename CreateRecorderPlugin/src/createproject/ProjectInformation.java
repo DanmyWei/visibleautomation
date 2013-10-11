@@ -37,11 +37,30 @@ import createrecorder.util.RecorderConstants;
  *
  */
 public class ProjectInformation {
-	public String mLaunchableActivity;
-	public int	  mSDKVersion;
-	public String mPackageName;
-	public String mApplicationName;
+	public String 			mLaunchableActivity;
+	public int	  			mSDKVersion;
+	public String 			mPackageName;
+	public String 			mApplicationName;
+	public String 			mProjectName;					// name of the source project (may be null)
+	protected String 		mAndroidSDK;
+	protected String 		mNewProjectName;
+	protected String 		mTestClassPath;
+	protected String 		mTestClassName;
+	protected String 		mEventsFileName;
+	protected String 		mTestPackagePath;
+	protected int			mTargetSDKVersion;
+	protected boolean		mfNewProject;
+	protected List<String> 	mSupportLibraries;
+	protected IProject 		mTestProject;
 	
+	
+	public ProjectInformation() {
+		mProjectName = null;
+	}
+	
+	public ProjectInformation(String projectName) {
+		mProjectName = projectName;
+	}
 	/**
 	 * generate consistent project information for a binary application, from running aapt badging and
 	 * aapt xmltree AndroidManifest.xml
@@ -61,13 +80,14 @@ public class ProjectInformation {
 					  					  "Unable to extract the launch activity from the manifest or APK badging information");
 			return false;
 		}
-		// SDK version (default to version 8 (2.2))
+		// SDK version (default to version 10 (2.3)
 		if (aaptBadgingValues.getSDKVersion() != 0) {
 			mSDKVersion = aaptBadgingValues.getSDKVersion();
 		} else if (manifestInformation.getSDKVersion() != 0) {
 			mSDKVersion = manifestInformation.getSDKVersion();
-		} else {
-			mSDKVersion = 8;
+		} 
+		if (mSDKVersion < Constants.AndroidVersions.GINGERBREAD_MR1) {
+			mSDKVersion = Constants.AndroidVersions.GINGERBREAD_MR1;
 		}
 		// application name
 		if (aaptBadgingValues.getApplicationLabel() != null) {
@@ -114,7 +134,10 @@ public class ProjectInformation {
 		} else if (manifestParser.getMinSDKVersion() != 0) {
 			mSDKVersion = manifestParser.getMinSDKVersion();
 		} else {
-			mSDKVersion = 10;
+			mSDKVersion = Constants.AndroidVersions.GINGERBREAD_MR1;
+		}
+		if (mSDKVersion < Constants.AndroidVersions.GINGERBREAD_MR1) {
+			mSDKVersion = Constants.AndroidVersions.GINGERBREAD_MR1;
 		}
 		mApplicationName = manifestParser.getApplication();
 		mPackageName = manifestParser.getPackage();
@@ -151,17 +174,9 @@ public class ProjectInformation {
 		return mApplicationName;
 	}
 	
-	
-	protected String 		mAndroidSDK;
-	protected String 		mNewProjectName;
-	protected String 		mTestClassPath;
-	protected String 		mTestClassName;
-	protected String 		mEventsFileName;
-	protected String 		mTestPackagePath;
-	protected int			mTargetSDKVersion;
-	protected boolean		mfNewProject;
-	protected List<String> 	mSupportLibraries;
-	protected IProject 		mTestProject;
+	public String getSourceProjectName() {
+		return mProjectName;
+	}
 	
 	
 	public boolean isNewProject() {
@@ -240,9 +255,6 @@ public class ProjectInformation {
 			}
 			mfNewProject = false;
 		}  else {
-			
-			// copy the .apk that we're testing against to the project directory, so we can install it if needed
-			EclipseUtility.copyFileToProjectDirectory(mTestProject, apkFileName, apkFileName);
 			mfNewProject = true;
 		}
 		mSupportLibraries = EclipseUtility.getSupportLibraries(apkFileName);

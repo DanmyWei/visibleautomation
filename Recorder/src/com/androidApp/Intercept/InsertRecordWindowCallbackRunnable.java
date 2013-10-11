@@ -23,7 +23,7 @@ public class InsertRecordWindowCallbackRunnable implements Runnable {
 	protected ViewInterceptor 	mViewInterceptor;			// to intercept the views contained in the window
 	
 	public InsertRecordWindowCallbackRunnable(Window 			window, 
-											  Activity 			activity, 
+											  Activity			activity,
 											  EventRecorder 	recorder, 
 											  ViewInterceptor 	viewInterceptor) {
 		mWindow = window;
