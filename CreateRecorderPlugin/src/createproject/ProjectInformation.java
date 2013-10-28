@@ -14,7 +14,7 @@ import org.eclipse.core.runtime.preferences.IPreferencesService;
 import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.swt.widgets.Shell;
 
-import com.androidApp.emitter.CodeDefinition;
+import com.androidApp.codedefinition.CodeDefinition;
 import com.androidApp.emitter.EmitRobotiumCodeBinary;
 import com.androidApp.emitter.MotionEventList;
 import com.androidApp.emitter.IEmitCode.LineAndTokens;

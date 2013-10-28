@@ -427,7 +427,7 @@ public class SetupListeners {
 		
 		public void run() {
 			try {
-				SetupListeners.this.getViewInterceptor().intercept(mActivity, mActivity.toString(), mView);
+				SetupListeners.this.getViewInterceptor().intercept(mActivity, mActivity.toString(), mView, false);
 				if (mView instanceof ViewGroup) {
 					ViewGroup vg = (ViewGroup) mView;
 					// can't insert under ViewRootImpl

@@ -95,6 +95,34 @@ public class RecordOnTouchListener extends RecordListener implements OnTouchList
 		return fConsumeEvent;
 	}
 	
+	/**
+	 * does this view listen to touch events
+	 * @param v view to test
+	 * @return true if if the view listens to a touch event
+	 * @throws NoSuchFieldException
+	 * @throws IllegalAccessException
+	 * @throws ClassNotFoundException
+	 */
+	public static boolean hasListenenedToTouch(View v) throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
+		OnTouchListener onTouchListener = (OnTouchListener) ListenerIntercept.getTouchListener(v);
+		// the parent's original Touch listener was stored in the record listener.  if the Touch listener
+		// hasn't been interecepted, then it will be
+		if (onTouchListener != null) {
+			if (onTouchListener instanceof RecordOnTouchListener) {
+				if (((IOriginalListener) onTouchListener).getOriginalListener() != null) {
+					return true;
+				}
+			} else {
+				return true;
+			}
+		}
+		
+		// if the parent overrode onTouch(), then it will listen to the Touch events.
+		if (hasOverriddenOnTouchMethod(v)) {
+			return true;
+		}
+		return false;
+	}
 
 	/**
 	 * if an onTouchListener() is installed for a parent view, we should not install one for this view, since it
@@ -109,21 +137,7 @@ public class RecordOnTouchListener extends RecordListener implements OnTouchList
 		if (v.getParent() instanceof View) {
 			v = (View) v.getParent();
 			while (v != v.getRootView()) {
-				OnTouchListener onTouchListener = (OnTouchListener) ListenerIntercept.getTouchListener(v);
-				// the parent's original Touch listener was stored in the record listener.  if the Touch listener
-				// hasn't been interecepted, then it will be
-				if (onTouchListener != null) {
-					if (onTouchListener instanceof RecordOnTouchListener) {
-						if (((IOriginalListener) onTouchListener).getOriginalListener() != null) {
-							return true;
-						}
-					} else {
-						return true;
-					}
-				}
-				
-				// if the parent overrode onTouch(), then it will listen to the Touch events.
-				if (hasOverriddenOnTouchMethod(v)) {
+				if (hasListenenedToTouch(v)) {
 					return true;
 				}
 				ViewParent vp = v.getParent();

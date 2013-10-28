@@ -13,6 +13,7 @@ public class Constants {
 	public static final String ANDROID_VIEW = "android.view";
 	public static final String ANDROID_WIDGET = "android.widget";
 	public static final String CLASS_INDEX_ID = "class_id";
+	public static final String VIEW = "view";
 	// view/widget reference types
 	// TODO: create a class for this
 	public static final String ID = "id";
@@ -116,7 +117,8 @@ public class Constants {
 		ACTIVITY_FORWARD("activity_forward"),
 		ACTIVITY_BACK("activity_back"), 
 		INTERSTITIAL_ACTIVITY("interstitial_activity"),
-		ACTIVITY_FINISH("activity_finish");
+		ACTIVITY_FINISH("activity_finish"), 
+		INTERSTITIAL_VIEW("interstitial_view");
 		
 		public final String mEventName;		
 		private ActivityEvent(String s) {
@@ -292,6 +294,7 @@ public class Constants {
 		public static final String ACTIVITY_CONDITION_BINARY = "activity_condition_binary.txt";
 		public static final String DIALOG_FUNCTION = "dialog_function.txt";
 		public static final String ACTIVITY_FUNCTION = "activity_function.txt";
+		public static final String VIEW_FUNCTION = "view_function.txt";
 		public static final String CLICK_IN_LIST_INTERNAL_CLASS_INDEX = "click_in_list_internal_class_index.txt";
 		public static final String CLICK_IN_LIST_BY_TEXT = "click_in_list_by_text.txt";
 		public static final String CLICK_IN_LIST_BY_TEXT_INTERNAL_CLASS_INDEX = "click_in_list_by_text_internal_class_index.txt";
@@ -308,7 +311,10 @@ public class Constants {
 		public static final String PASTE_TEXT_ID = "copy_text_id.txt";
 		public static final String CLASSPATH_TEMPLATE_CREATERECORDER = "classpath_template_createrecorder.txt";
 		public static final String CLASSPATH_TEMPLATE_CREATERECORDER_SUPPORT = "classpath_template_createrecorder_support.txt";
-		
+		public static final String HIDE_IME = "hide_ime.txt";
+		public static final String VIEW_CONDITION_ID = "view_condition_id.txt";
+		public static final String VIEW_CONDITION_CLASS_INDEX = "view_condition_class_index.txt";
+		public static final String VIEW_CONDITION_INTERNAL_CLASS_INDEX = "view_condition_internal_class_index.txt";		
 	}
 	
 	// template %replace% variables
@@ -366,7 +372,7 @@ public class Constants {
 		public static final String RECORDER_LIBRARY = "%RECORDER_LIBRARY%";	
 		public static final String ROBOTIUMUTILS = "%ROBOTIUMUTILS%";
 		public static final String ROBOTIUMTUILS_PACKAGE = "%ROBOTIUMUTILS_PACKAGE%";
-		
+		public static final String LIBRARIES = "%LIBRARIES%";		
 	}
 	
 	// generic names

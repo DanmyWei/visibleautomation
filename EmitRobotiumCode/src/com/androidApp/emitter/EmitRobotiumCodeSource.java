@@ -19,11 +19,12 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Stack;
 
-import com.androidApp.emitter.CodeDefinition;
+import com.androidApp.codedefinition.ActivityCodeDefinition;
+import com.androidApp.codedefinition.CodeDefinition;
+import com.androidApp.codedefinition.DialogCodeDefinition;
+import com.androidApp.codedefinition.ViewCodeDefinition;
 import com.androidApp.emitter.IEmitCode.LineAndTokens;
 import com.androidApp.emitter.TokenScanner.Predicate;
-import com.androidApp.emitter.CodeDefinition.DialogScanType;
-import com.androidApp.emitter.CodeDefinition.DialogTagType;
 import com.androidApp.parser.ProjectPropertiesScan;
 import com.androidApp.util.Constants;
 import com.androidApp.util.FileUtility;
@@ -233,7 +234,12 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 				// then everything else is switched on the event name.
 				if (Constants.ActivityEvent.INTERSTITIAL_ACTIVITY.equals(action)) {
 					String newActivityName = tokens.get(2);
-					CodeOutput activityCode = handleInterstitialActivity(tokenLines, tokenScanner, readIndex, outputCode, motionEvents, tokens);
+					CodeOutput activityCode = handleInterstitialActivity(tokenLines, tokenScanner, readIndex, outputCode, motionEvents, tokens,  Constants.Templates.ACTIVITY_FUNCTION);			
+					lines.addAll(activityCode.mLineAndTokens);
+					readIndex = activityCode.mNextLineIndex; 	// loop increments this
+				} else if (Constants.ActivityEvent.INTERSTITIAL_VIEW.equals(action)) {
+					String newActivityName = tokens.get(2);
+					CodeOutput activityCode = handleInterstitialView(tokenLines, tokenScanner, readIndex, outputCode, motionEvents, tokens,  Constants.Templates.VIEW_FUNCTION);			
 					lines.addAll(activityCode.mLineAndTokens);
 					readIndex = activityCode.mNextLineIndex; 	// loop increments this
 				} else if (Constants.UserEvent.isInterstitialDialogEvent(action)) {
@@ -244,12 +250,12 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 					handleActivityForward(tokens, tokenLines, readIndex, tokenScanner, activityStack, lines);
 					
 					// if we're in an interstitial, that means that it's time to go
-					if ((outputType == OutputType.INTERSTITIAL_ACTIVITY) || (outputType == OutputType.INTERSTITIAL_DIALOG)) {
+					if (outputType.isInterstitial()) {
 						return new CodeOutput(lines, readIndex);
 					}
 				} else if (Constants.ActivityEvent.ACTIVITY_FINISH.equals(action)) {
 					// if we're in an interstitial, that means that it's time to go
-					if ((outputType == OutputType.INTERSTITIAL_ACTIVITY) || (outputType == OutputType.INTERSTITIAL_DIALOG)) {
+					if (outputType.isInterstitial()) {
 						return new CodeOutput(lines, readIndex);
 					}
 				} else if (Constants.ActivityEvent.ACTIVITY_BACK.equals(action) || Constants.UserEvent.ACTIVITY_BACK_KEY.equals(action)) {
@@ -268,7 +274,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 						mLastEventWasWaitForActivity = true;
 						
 						// the handler is responsible for managing the activity transition, so the back event is part of it
-						if ((outputType == OutputType.INTERSTITIAL_ACTIVITY) || (outputType == OutputType.INTERSTITIAL_DIALOG)) {
+						if (outputType.isInterstitial()) {
 							return new CodeOutput(lines, readIndex);
 						}
 					}
@@ -489,24 +495,59 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		}
 		return readIndex;
 	}
-
-	public CodeOutput handleInterstitialActivity(List<List<String>>								tokenLines,
-												 TokenScanner									tokenScanner,
-												 int											currentReadIndex,
-												 Hashtable<CodeDefinition, List<LineAndTokens>> outputCode,
-												 List<MotionEventList> 							motionEvents,
-												 List<String> 									tokens) throws EmitterException, IOException {
-		return handleInterstitialActivity(tokenLines, tokenScanner, currentReadIndex, outputCode, motionEvents, tokens, Constants.Templates.ACTIVITY_FUNCTION);
+	/**
+	 * write out the if (waitForView()) { interstitial_code } in the main code, and the handler function in the
+	 * handler set
+	 * interstitial_view:5142652,com.skype.android.app.main.WelcomeTourActivity, <view_reference>
+	 * @param tokenLines input events, split into tokens
+	 * @param currentReadIndex current index into tokenLines
+	 * @param outputCode generated output code until next activity or activity_back
+	 * @param motionEvents list of motion event output
+	 * @param tokens current line
+	 * @param functionTemplateName template for condition
+	 * @return output code for interstitial activity
+	 * @throws EmitterException
+	 * @throws IOException
+	 */
+	
+	public CodeOutput handleInterstitialView(List<List<String>>								tokenLines,
+											 TokenScanner									tokenScanner,
+											 int											currentReadIndex,
+											 Hashtable<CodeDefinition, List<LineAndTokens>> outputCode,
+											 List<MotionEventList> 							motionEvents,
+											 List<String> 									tokens,
+											 String											functionTemplateName) throws EmitterException, IOException {
+		String activityName = tokens.get(2);
+		ReferenceParser ref = new ReferenceParser(tokens, 3);
+		// find the activity that was transitioned to, or the user event that precedes this view being shown
+		TokenScanner.Predicate causingPredicate = tokenScanner.new OrPredicate(tokenScanner.new ActivityTransitionPredicate(), 
+																			   tokenScanner.new UserEventPredicate());
+		int causingLineIndex = TokenScanner.findPrevious(tokenLines, currentReadIndex, causingPredicate);
+		CodeOutput viewOutput = emit(tokenLines, currentReadIndex + 1, outputCode, motionEvents, OutputType.INTERSTITIAL_VIEW);
+		
+		// output the function under the generic name "view"
+		String functionName = addLinesAsFunction(tokens, Constants.VIEW, viewOutput.mLineAndTokens, functionTemplateName, outputCode);
+		List<String> precedingTokens = tokenLines.get(causingLineIndex);
+		ViewCodeDefinition codeDef = new ViewCodeDefinition(activityName, Constants.FUNCTION_CALL, functionName, precedingTokens, ref);
+		List<LineAndTokens> viewLines = new ArrayList<LineAndTokens>();
+		LineAndTokens conditionalCode = viewCondition(tokens, ref, functionName);
+		viewLines.add(conditionalCode);
+		outputCode.put(codeDef, viewLines);
+		viewOutput.mLineAndTokens = viewLines;
+		return viewOutput;
 	}
+
 	/**
 	 * write out the if (waitForActivity()) { interstitial_code } in the main code, and the handler function in the
 	 * handler set
-	 * @param tokenLines
-	 * @param currentReadIndex
-	 * @param outputCode
-	 * @param motionEvents
-	 * @param tokens
-	 * @return
+	 * interstitial_activity:5142652,com.skype.android.app.main.WelcomeTourActivity
+	 * @param tokenLines input events, split into tokens
+	 * @param currentReadIndex current index into tokenLines
+	 * @param outputCode geneerated output code until next activity or activity_back
+	 * @param motionEvents list of motion event output
+	 * @param tokens current line
+	 * @param functionTemplateName template for condition
+	 * @return output code for interstitial activity
 	 * @throws EmitterException
 	 * @throws IOException
 	 */
@@ -525,20 +566,23 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		int causingLineIndex = TokenScanner.findPrevious(tokenLines, currentReadIndex, causingPredicate);
 		CodeOutput activityOutput = emit(tokenLines, currentReadIndex + 1, outputCode, motionEvents, OutputType.INTERSTITIAL_ACTIVITY);
 		String functionName = addLinesAsFunction(tokens, newActivityName, activityOutput.mLineAndTokens, functionTemplateName, outputCode);
-		CodeDefinition codeDef;
+		
+		// if there was a previous activity transition or user event, then use that as the condition, otherwise, the
+		// interstitial is "marked" as the start of the program.
+		ActivityCodeDefinition codeDef;
 		if (causingLineIndex == -1) {
 			TokenScanner.Predicate previousActivityPredicate = tokenScanner.new ActivityTransitionPredicate();
 			int previousActivityIndex = TokenScanner.findPrevious(tokenLines, currentReadIndex, previousActivityPredicate);
 			if (previousActivityIndex != -1) {
 				List<String> precedingTokens = tokenLines.get(previousActivityIndex);
-				codeDef = new CodeDefinition(newActivityName, Constants.FUNCTION_CALL, functionName,  precedingTokens);
+				codeDef = new ActivityCodeDefinition(newActivityName, Constants.FUNCTION_CALL, functionName,  precedingTokens);
 			} else {
 				List<String> precedingTokens = tokenLines.get(0);
-				codeDef = new CodeDefinition(newActivityName, Constants.FUNCTION_CALL, functionName,  precedingTokens);
+				codeDef = new ActivityCodeDefinition(newActivityName, Constants.FUNCTION_CALL, functionName,  precedingTokens);
 			}		
 		} else {
 			List<String> precedingTokens = tokenLines.get(causingLineIndex);
-			codeDef = new CodeDefinition(newActivityName, Constants.FUNCTION_CALL, functionName,  precedingTokens);
+			codeDef = new ActivityCodeDefinition(newActivityName, Constants.FUNCTION_CALL, functionName,  precedingTokens);
 		}
 		List<LineAndTokens> activityLines = new ArrayList<LineAndTokens>();
 		LineAndTokens conditionalCode = activityCondition(tokens, newActivityName, functionName);
@@ -565,9 +609,25 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		activityConditionTemplate = activityConditionTemplate.replace(Constants.VariableNames.FUNCTION_NAME, functionName);
 		return new LineAndTokens(tokens, activityConditionTemplate);
 	}
+	
+	public LineAndTokens viewCondition(List<String> tokens, ReferenceParser ref, String functionName) throws IOException {
+		String viewConditionTemplate = null;
+		
+		String description = "wait to see if view " + ref + " has appeared";
+		if (ref.getReferenceType() == ReferenceParser.ReferenceType.ID) {
+			viewConditionTemplate = writeViewIDCommand(Constants.Templates.VIEW_CONDITION_ID, ref, description);
+		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.CLASS_INDEX) {
+			viewConditionTemplate = writeViewClassIndexCommand(Constants.Templates.VIEW_CONDITION_CLASS_INDEX, ref, description);
+		} else if (ref.getReferenceType() == ReferenceParser.ReferenceType.INTERNAL_CLASS_INDEX) {
+			viewConditionTemplate = writeViewInternalClassIndexCommand(Constants.Templates.VIEW_CONDITION_INTERNAL_CLASS_INDEX, ref, description);
+		}
+		viewConditionTemplate = viewConditionTemplate.replace(Constants.VariableNames.DESCRIPTION, description);
+		viewConditionTemplate = viewConditionTemplate.replace(Constants.VariableNames.VARIABLE_INDEX, Integer.toString(mActivityVariableIndex));
+		viewConditionTemplate = viewConditionTemplate.replace(Constants.VariableNames.FUNCTION_NAME, functionName);
+		return new LineAndTokens(tokens, viewConditionTemplate);
+	}
 
    /**
-    * TODO: for some reason, this code output is getting doubled.
 	 * consolidated code to handle interstitial dialogs
 	 * @param br for reading /sdcard/events.txt into tokens
 	 * @param previousLine we write this into the file to test against for when we insert the conditional code again
@@ -592,31 +652,35 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 		int causingLineIndex = tokenScanner.findPrevious(tokenLines, currentReadIndex, causingPredicate);
 		List<String> precedingTokens = tokenLines.get(causingLineIndex);
 		
-		CodeDefinition codeDef = null;
 		String activityName = tokens.get(2);
 		CodeOutput codeOutput = emit(tokenLines, currentReadIndex + 1, outputCode, motionEvents, OutputType.INTERSTITIAL_DIALOG);
 		// we write the dialog lines at the end of the file, because of variable scoping issues
 		String functionName = addLinesAsFunction(tokens, activityName, codeOutput.mLineAndTokens, Constants.Templates.DIALOG_FUNCTION, outputCode);
+		String match = null;
+		DialogCodeDefinition.DialogTagType tagType = DialogCodeDefinition.DialogTagType.ID;
+		DialogCodeDefinition.DialogScanType scanType = DialogCodeDefinition.DialogScanType.CONTENT;
 		if (Constants.UserEvent.INTERSTITIAL_DIALOG_CONTENTS_ID.equals(action)) {
 			// interstitial_dialog_contents_id:123627258,com.example.android.apis.app.AlertDialogSamples,com.example.foo.R.string.bar
-			String id = tokens.get(3);
-			codeDef = new CodeDefinition(activityName, Constants.FUNCTION_CALL, functionName, id, CodeDefinition.DialogScanType.CONTENT,
-				    					CodeDefinition.DialogTagType.ID, precedingTokens);
+			match = tokens.get(3);
+			tagType = DialogCodeDefinition.DialogTagType.ID;
+			scanType = DialogCodeDefinition.DialogScanType.CONTENT;
 		} else if (Constants.UserEvent.INTERSTITIAL_DIALOG_CONTENTS_TEXT.equals(action)) {
 			// interstitial_dialog_contents_text:123627258,com.example.android.apis.app.AlertDialogSamples,"Command two"
-			String unescapedTag = StringUtils.unescapeString(StringUtils.stripQuotes(tokens.get(3)), '\\');
-			codeDef = new CodeDefinition(activityName, Constants.FUNCTION_CALL, functionName, unescapedTag, CodeDefinition.DialogScanType.CONTENT,
-										 CodeDefinition.DialogTagType.TEXT, precedingTokens);
+			match = StringUtils.unescapeString(StringUtils.stripQuotes(tokens.get(3)), '\\');
+			tagType = DialogCodeDefinition.DialogTagType.TEXT;
+			scanType = DialogCodeDefinition.DialogScanType.CONTENT;
 		} else if (Constants.UserEvent.INTERSTITIAL_DIALOG_TITLE_ID.equals(action)) {
-			String id = tokens.get(3);
-			codeDef = new CodeDefinition(activityName, Constants.FUNCTION_CALL, functionName, id, CodeDefinition.DialogScanType.TITLE,
-										 CodeDefinition.DialogTagType.ID, precedingTokens);
+			match = tokens.get(3);
+			tagType = DialogCodeDefinition.DialogTagType.ID;
+			scanType = DialogCodeDefinition.DialogScanType.TITLE;
 		} else if (Constants.UserEvent.INTERSTITIAL_DIALOG_TITLE_TEXT.equals(action)) {
 			// interstitial_dialog_title_text:123609633,com.example.android.apis.app.AlertDialogSamples,"Header title"
-			String unescapedTag = StringUtils.unescapeString(StringUtils.stripQuotes(tokens.get(3)), '\\');
-			codeDef = new CodeDefinition(activityName, Constants.FUNCTION_CALL, functionName, unescapedTag, CodeDefinition.DialogScanType.TITLE,
-				    					 CodeDefinition.DialogTagType.TEXT, precedingTokens);
+			match = StringUtils.unescapeString(StringUtils.stripQuotes(tokens.get(3)), '\\');
+			tagType = DialogCodeDefinition.DialogTagType.TEXT;
+			scanType = DialogCodeDefinition.DialogScanType.TITLE;
 		}
+		DialogCodeDefinition codeDef = new DialogCodeDefinition(activityName, Constants.FUNCTION_CALL, functionName, 
+																match, scanType, tagType, precedingTokens);
 		List<LineAndTokens> dialogLines = new ArrayList<LineAndTokens>();
 		LineAndTokens conditionalCode = dialogCondition(tokens, codeDef, functionName);
 		dialogLines.add(conditionalCode);
@@ -654,20 +718,22 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	
 
 	/**
-	 * 
-	 * @param tokens
-	 * @param activityName
-	 * @param lines
-	 * @param functionTemplateName
-	 * @param outputCode
+	 * THe Code Definition hashtable contains output code for the main function, and functions which are called
+	 * conditionally.  This add some output code (LineAndTokens) under the function name which is generated from
+	 * the activity name, and a function index, so you'll get functions like SplashScreen0
+	 * @param tokens used for "preceding lines" 
+	 * @param activityName activity name to use for function
+	 * @param lines lines of code and associated tokens
+	 * @param functionTemplateName name of template file to use for function
+	 * @param outputCode output code hashtable tagged by function name
 	 * @return the name of the function
 	 * @throws IOException
 	 */
 	public String addLinesAsFunction(List<String> 									tokens, 
-								   String 											activityName, 
-								   List<LineAndTokens> 								lines, 
-								   String											functionTemplateName,
-								   Hashtable<CodeDefinition, List<LineAndTokens>> 	outputCode) throws IOException {
+								     String 										activityName, 
+								     List<LineAndTokens> 							lines, 
+								     String											functionTemplateName,
+								     Hashtable<CodeDefinition, List<LineAndTokens>> outputCode) throws IOException {
 		ArrayList<LineAndTokens> copyLine = new ArrayList<LineAndTokens>(lines);
 		String functionTemplate = FileUtility.readTemplate(functionTemplateName);
 		
@@ -692,7 +758,7 @@ public class EmitRobotiumCodeSource implements IEmitCode {
 	 * @return
 	 * @throws IOException
 	 */
-	public LineAndTokens dialogCondition(List<String> tokens, CodeDefinition codeDef, String functionName) throws IOException {
+	public LineAndTokens dialogCondition(List<String> tokens, DialogCodeDefinition codeDef, String functionName) throws IOException {
 		String dialogConditionTemplate = FileUtility.readTemplate(Constants.Templates.DIALOG_CONDITION);
 		String description = "wait to see if a dialog with string " + codeDef.getDialogTag() + " has appeared";
 		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.DESCRIPTION, description);

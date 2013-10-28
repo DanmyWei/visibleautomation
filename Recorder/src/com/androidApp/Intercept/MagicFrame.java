@@ -219,8 +219,9 @@ public class MagicFrame extends FrameLayout {
 			//focusedView.requestFocus();
 		}
 	}
-	
+	/*
 	public void onDetachedFromWindow() {
 		this.removeAllViews();
 	}
+	*/
 }

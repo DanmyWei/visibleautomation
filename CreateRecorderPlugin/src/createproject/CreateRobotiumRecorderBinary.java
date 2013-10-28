@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringBufferInputStream;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.core.resources.IFile;
@@ -58,22 +59,28 @@ public class CreateRobotiumRecorderBinary extends CreateRobotiumRecorder {
 								int				targetSDK,
 								List<String>	supportLibraries) throws CoreException, IOException {
 		String classpath;
-		if (!supportLibraries.isEmpty()) {
-			classpath = FileUtility.readTemplate(Constants.Templates.BINARY_CLASSPATH_CREATERECORDER_SUPPORT);
-			// these are only needed for the compilation of the recorder, not runtime.
-			// String supportLibrariesClasspathEntries = EclipseUtility.createJarClasspathEntries(supportLibraries);
-			// classpath = classpath.replace(Constants.VariableNames.SUPPORT_LIBRARIES, supportLibrariesClasspathEntries);
-			classpath = classpath.replace(Constants.VariableNames.SUPPORT_LIBRARIES, "");
-			if (supportLibraries.contains(RecorderConstants.SupportLibraries.SUPPORT_V4)) {
-				classpath = classpath.replace(Constants.VariableNames.RECORDER_SUPPORT, Constants.Filenames.RECORDER_SUPPORT_V4_JAR);
-			} else if (supportLibraries.contains(RecorderConstants.SupportLibraries.SUPPORT_V13)) {
-				classpath = classpath.replace(Constants.VariableNames.RECORDER_SUPPORT, Constants.Filenames.RECORDER_SUPPORT_V13_JAR);
-			} 
-		} else {
-			classpath = FileUtility.readTemplate(Constants.Templates.BINARY_CLASSPATH_CREATERECORDER);
+		String classpathEntries = "";
+		List<String> jarFiles = new ArrayList<String>();
+		if (supportLibraries.isEmpty()) {
 			String recorderLibrary = getRecorderLibraryFromTargetSDK(targetSDK);
-			classpath = classpath.replace(Constants.VariableNames.RECORDER_LIBRARY, recorderLibrary);
-		}
+			jarFiles.add(recorderLibrary);
+			classpath = FileUtility.readTemplate(Constants.Templates.BINARY_CLASSPATH_CREATERECORDER);
+		} else {
+			if (supportLibraries.contains(RecorderConstants.SupportLibraries.SUPPORT_V4)) {
+				jarFiles.add(Constants.Filenames.RECORDER_SUPPORT_V4_JAR);
+				jarFiles.add(RecorderConstants.SupportLibraries.SUPPORT_V4);
+			}
+			if (supportLibraries.contains(RecorderConstants.SupportLibraries.SUPPORT_V13)) {
+				jarFiles.add(Constants.Filenames.RECORDER_SUPPORT_V13_JAR);
+				jarFiles.add(RecorderConstants.SupportLibraries.SUPPORT_V13);
+			}
+			if (supportLibraries.contains(RecorderConstants.SupportLibraries.SUPPORT_V7_APPCOMPAT)) {
+				jarFiles.add(RecorderConstants.SupportLibraries.SUPPORT_V7_APPCOMPAT);
+			}
+			classpath = FileUtility.readTemplate(Constants.Templates.BINARY_CLASSPATH_CREATERECORDER_SUPPORT);
+		}		
+		classpathEntries = EclipseUtility.createJarClasspathEntries(jarFiles);
+		classpath = classpath.replace(Constants.VariableNames.LIBRARIES, classpathEntries);
 		classpath = classpath.replace(Constants.VariableNames.CLASSNAME, projectName);
 		IFile file = testProject.getFile(Constants.Filenames.CLASSPATH);
 		InputStream is = new StringBufferInputStream(classpath);

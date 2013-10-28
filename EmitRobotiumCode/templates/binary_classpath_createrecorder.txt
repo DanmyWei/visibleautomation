@@ -6,6 +6,6 @@
 	<classpathentry kind="con" path="com.android.ide.eclipse.adt.LIBRARIES"/>
     <classpathentry exported="true" kind="lib" path="libs/recorder.jar"/>
     <classpathentry exported="true" kind="lib" path="libs/eventrecorderinterface.jar"/>
-    <classpathentry exported="true" kind="lib" path="libs/%RECORDER_LIBRARY%"/>
 	<classpathentry kind="output" path="bin/classes"/>
+	%LIBRARIES%
 </classpath>

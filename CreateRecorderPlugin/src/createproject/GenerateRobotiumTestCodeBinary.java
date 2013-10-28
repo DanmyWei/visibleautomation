@@ -17,7 +17,7 @@ import org.eclipse.core.resources.IProject;
 
 import org.eclipse.core.runtime.CoreException;
 
-import com.androidApp.emitter.CodeDefinition;
+import com.androidApp.codedefinition.CodeDefinition;
 import com.androidApp.emitter.EmitRobotiumCodeBinary;
 import com.androidApp.emitter.EmitRobotiumCodeSource;
 import com.androidApp.emitter.IEmitCode;

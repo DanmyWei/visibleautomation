@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Stack;
 
+import com.androidApp.codedefinition.CodeDefinition;
 import com.androidApp.emitter.IEmitCode.LineAndTokens;
 import com.androidApp.parser.ManifestParser;
 import com.androidApp.parser.ProjectPropertiesScan;
@@ -241,8 +242,8 @@ public class EmitRobotiumCode {
 		callLineAndTokensList.add(callLineAndTokens);
 		outputCode.put(codeDefCall, callLineAndTokensList);
 		
-		CodeDefinition codeDefDefinition = new CodeDefinition(codeDefCall);
-		codeDefDefinition.mCodeType = Constants.FUNCTION_DEF;
+		CodeDefinition codeDefDefinition = codeDefCall.makeCopy();
+		codeDefDefinition.setCodeType(Constants.FUNCTION_DEF);
 		StringBuffer definitionCode = new StringBuffer();
 		line = br.readLine();
 		while (line != null) {

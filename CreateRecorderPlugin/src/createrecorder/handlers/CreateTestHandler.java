@@ -32,7 +32,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.handlers.HandlerUtil;
 
-import com.androidApp.emitter.CodeDefinition;
+import com.androidApp.codedefinition.CodeDefinition;
 import com.androidApp.emitter.EmitRobotiumCode;
 import com.androidApp.emitter.EmitterException;
 import com.androidApp.emitter.IEmitCode;

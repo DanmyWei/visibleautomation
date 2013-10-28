@@ -2,7 +2,7 @@
 <feature
       id="VisibleAutomationFeature"
       label="VisibleAutomationFeature"
-      version="1.0.0.visibleautomation"
+      version="1.0.16.visibleautomation"
       provider-name="Visible Automation">
 
    <description url="http://www.example.com/description">
@@ -101,8 +101,8 @@ IN WITNESS WHEREOF, Developer and Licensee have executed this Software License A
 
    <plugin
          id="CreateRecorderPlugin"
-         download-size="1200"
-         install-size="1200"
+         download-size="0"
+         install-size="0"
          version="0.0.0"
          unpack="false"/>
 

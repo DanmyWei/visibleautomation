@@ -1,0 +1,2 @@
+		// %DESCRIPTION%
+		robotiumUtils.hideIME(view%VARIABLE_INDEX%);

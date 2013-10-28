@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?eclipse version="3.4"?>
 <plugin name="Visible Automation Plugin"
-	    version="1.0.13">
+	    version="1.0.16">
    <runtime>
 		<library name="libs/emitrobotiumcode.jar"/>
    </runtime>
@@ -76,15 +76,7 @@
             commandId="CreateRecorderPlugin.createrecorder.commands.installRecorderCommand"
             class="createrecorder.handlers.InstallRecorderHandler">
       </handler>
-      <handler
-            commandId="CreateRecorderPlugin.createrecorder.commands.recordTestCommand"
-            class="createrecorder.handlers.RecordTestHandler">
-      </handler>
-      <handler
-            commandId="CreateRecorderPlugin.createrecorder.commands.playTestCommand"
-            class="createrecorder.handlers.PlayTestHandler">
-      </handler>
-  </extension>
+   </extension>
    
    <!-- extensions specified for the top-level menu -->
    <extension
@@ -110,7 +102,7 @@
       </command>
    </extension>
    
-   <!-- extensions for the package explorer context menu. -->
+     <!-- contributions for the top level menu -->
    <extension
          point="org.eclipse.ui.menus">
       <menuContribution
@@ -137,7 +129,7 @@
          </menu>
       </menuContribution>
       
-      <!-- contributions for the top level menu -->
+  		<!-- extensions for the package explorer context menu. -->
       <menuContribution
             locationURI="toolbar:org.eclipse.ui.main.toolbar?after=additions">
          <toolbar
@@ -216,7 +208,7 @@
             </command>
            <command
                   commandId="CreateRecorderPlugin.createrecorder.commands.playTestCommand"
-                  tooltip="Record Android Test"
+                  tooltip="Play Android Test"
                   id="CreateRecorderPlugin.createrecorder.toolbars.playTestCommand">
                   <visibleWhen checkEnabled="false">
 			      	<iterate ifEmpty="false" operator="and">
@@ -232,7 +224,7 @@
 			     	</iterate>
 			  	</visibleWhen>
             </command>
-         </toolbar>
+          </toolbar>
       </menuContribution>
    </extension>
 

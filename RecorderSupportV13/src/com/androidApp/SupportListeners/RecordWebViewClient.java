@@ -1,14 +1,18 @@
 package com.androidApp.SupportListeners;
 
+import java.io.IOException;
 import java.net.URLDecoder;
 
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.Listeners.IOriginalListener;
 import com.androidApp.Listeners.RecordListener;
+import com.androidApp.Listeners.RecordWebView;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.FileUtils;
 import com.androidApp.Utility.StringUtils;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.net.http.SslError;
 import android.os.Message;
@@ -29,10 +33,12 @@ public class RecordWebViewClient extends WebViewClient implements IOriginalListe
 	protected WebViewClient 	mOriginalWebViewClient;
 	protected EventRecorder 	mEventRecorder;				// handle to the recorder 
 	protected String			mActivityName;				// to record events and exceptions filtered by activity
+	protected Context			mContext;
 
 	public RecordWebViewClient(String activityName, EventRecorder eventRecorder, WebView webView) {
 		mEventRecorder = eventRecorder;
 		mActivityName = activityName;
+		mContext = webView.getContext();
 		try {
 			mOriginalWebViewClient = ListenerIntercept.getWebViewClient(webView);
 			webView.setWebViewClient(this);
@@ -46,6 +52,52 @@ public class RecordWebViewClient extends WebViewClient implements IOriginalListe
 		mEventRecorder = eventRecorder;
 		mOriginalWebViewClient = originalWebViewClient;
 	}
+	
+	// given a webview, inject the traverse.js code which intercepts the click listeners to show the 
+    // fully qualified paths of the clicked HTML elements.
+	
+	public void traverse(Context context, WebView wv) throws IOException {
+		String javascriptCode = FileUtils.readJarResourceString(RecordWebView.class, Constants.Asset.TRAVERSE_JS);
+		String inject = "javascript:var script = document.createElement(\"script\"); script.innerHTML = \"" + javascriptCode + "\";document.head.appendChild(script);overrideclicks();";
+		wv.loadUrl(inject);
+	}
+	
+	
+	@Override
+	public void onPageFinished(WebView view, String url){
+		if (mOriginalWebViewClient != null) {
+			mOriginalWebViewClient.onPageFinished(view, url);
+		}
+		// robotium indexes by shown views.
+		if (view.isShown()) {
+			try {
+				String happyUrl = StringUtils.escapeString(url, "\"\'", '\\');
+				String message = RecordListener.getDescription(view) + ",\"" + happyUrl + "\"";
+				mEventRecorder.writeRecord(Constants.EventTags.ON_PAGE_FINISHED, mActivityName, view, message);
+				RecordWebViewClient.this.traverse(mContext, view);
+			} catch (Exception ex) {
+				mEventRecorder.writeException(ex, mActivityName, view, " on pageStarted");
+			}	
+		}
+		
+	}
+	
+	@Override
+	public void onPageStarted(WebView view, String url, Bitmap favicon){
+		if (mOriginalWebViewClient != null) {
+			mOriginalWebViewClient.onPageStarted(view, url, favicon);
+		}
+		// robotium indexes by shown views.
+		if (view.isShown()) {
+			try {
+				String happyUrl = StringUtils.escapeString(url, "\"\'", '\\');
+				String message = RecordListener.getDescription(view) + "," + happyUrl;
+				mEventRecorder.writeRecord(Constants.EventTags.ON_PAGE_STARTED, mActivityName, view, message);
+			} catch (Exception ex) {
+				mEventRecorder.writeException(ex, mActivityName, view, "on pageStarted");
+			}	
+		}
+	}	
 
 	
 	public Object getOriginalListener() {
@@ -73,41 +125,6 @@ public class RecordWebViewClient extends WebViewClient implements IOriginalListe
 			mOriginalWebViewClient.onLoadResource(view, url);
 		}
 		
-	}
-	
-	@Override
-	public void onPageFinished(WebView view, String url){
-		if (mOriginalWebViewClient != null) {
-			mOriginalWebViewClient.onPageFinished(view, url);
-		}
-		// robotium indexes by shown views.
-		if (view.isShown()) {
-			try {
-				String happyUrl = StringUtils.escapeString(url, "\"\'", '\\');
-				String message = RecordListener.getDescription(view) + ",\"" + happyUrl + "\"";
-				mEventRecorder.writeRecord(Constants.EventTags.ON_PAGE_FINISHED, mActivityName, view, message);
-			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, mActivityName, view, " on pageStarted");
-			}	
-		}
-		
-	}
-	
-	@Override
-	public void onPageStarted(WebView view, String url, Bitmap favicon){
-		if (mOriginalWebViewClient != null) {
-			mOriginalWebViewClient.onPageStarted(view, url, favicon);
-		}
-		// robotium indexes by shown views.
-		if (view.isShown()) {
-			try {
-				String happyUrl = StringUtils.escapeString(url, "\"\'", '\\');
-				String message = RecordListener.getDescription(view) + "," + happyUrl;
-				mEventRecorder.writeRecord(Constants.EventTags.ON_PAGE_STARTED, mActivityName, view, message);
-			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, mActivityName, view, "on pageStarted");
-			}	
-		}
 	}
 	
 	@Override

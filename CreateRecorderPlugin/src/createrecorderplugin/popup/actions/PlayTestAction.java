@@ -25,6 +25,7 @@ import com.androidApp.parser.ProjectParser;
 import com.androidApp.parser.ProjectPropertiesScan;
 import com.androidApp.util.Constants;
 import com.androidApp.util.FileUtility;
+import com.androidApp.util.StringUtils;
 
 import createrecorder.handlers.InstallRecorderHandler;
 import createrecorder.util.EclipseExec;
@@ -71,6 +72,10 @@ public class PlayTestAction  implements IObjectActionDelegate {
 	public void run(IAction action) {
 		if (mSelection != null) {
 			try {
+				if (!EclipseExec.isDeviceAttached()) {
+					MessageDialog.openInformation(mShell, RecorderConstants.VISIBLE_AUTOMATION, "No device attached");
+					return;
+				}
 				IProject project = (IProject) mSelection.getFirstElement();
 				IPath projectPath = project.getLocation();
 				File projectDir = projectPath.toFile();
@@ -98,10 +103,16 @@ public class PlayTestAction  implements IObjectActionDelegate {
 				// uninstall and re-install the test driver
 				// NOTE: we need to re-install the .APK if it's not installed on the device.
 				String uninstallCommand = "uninstall " + testPackage;
-				EclipseExec.execADBBackgroundConsoleOutput(uninstallCommand);
-				String installCommand = "install " + projectPath + File.separator + Constants.Dirs.BIN + File.separator + 
-										projectParser.getProjectName() + "." + Constants.Extensions.APK;
-				EclipseExec.execADBBackgroundConsoleOutput(installCommand);
+				String[] uninstallResults = EclipseExec.getAdbCommandOutput(uninstallCommand);
+				String testAPKPath = projectPath + File.separator + Constants.Dirs.BIN + File.separator + 
+						projectParser.getProjectName() + "." + Constants.Extensions.APK;
+				String installCommand = "install " + testAPKPath;
+				String[] installResults = EclipseExec.getAdbCommandOutput(installCommand);
+			    if (!StringUtils.containedInStringArray(Constants.SUCCESS, installResults)) {
+			    	MessageDialog.openInformation(mShell, RecorderConstants.VISIBLE_AUTOMATION, "Failed to install test instrumentation from " + testAPKPath);
+			    	return;
+			    }
+
 				// NOTE: need to get the apkFileName from the root directory of the project.
 				if (!InstallRecorderHandler.isPackageInstalled(manifestParser.getTargetPackage())) {
 					if (MessageDialog.openConfirm(mShell, RecorderConstants.VISIBLE_AUTOMATION,
@@ -111,8 +122,8 @@ public class PlayTestAction  implements IObjectActionDelegate {
 							 String apkFileName = apkFiles[0].getName();
 							 InstallRecorderHandler.installAPKFromFile(mShell, apkFileName);
 						 } else {
-								MessageDialog.openInformation(mShell, RecorderConstants.VISIBLE_AUTOMATION,	
-										  "There is no APK in the project to install");
+							MessageDialog.openInformation(mShell, RecorderConstants.VISIBLE_AUTOMATION,	 "There is no APK in the project to install");
+							return;
 							 
 						 }
 					}		

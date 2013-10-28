@@ -11,6 +11,8 @@ import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
 
+import com.androidApp.codedefinition.CodeDefinition;
+import com.androidApp.codedefinition.DialogCodeDefinition;
 import com.androidApp.util.SuperTokenizer;
 
 
@@ -47,14 +49,19 @@ public interface IEmitCode {
 	}
 	
 	/**
-	 * output type from the emitter: determines when it terminates (end of code, activity transtion, dialog)
+	 * output type from the emitter: determines when it terminates (end of code, activity transtion, dialog, view)
 	 * @author matt2
 	 *
 	 */
 	public enum OutputType {
 		MAIN,
 		INTERSTITIAL_ACTIVITY,
-		INTERSTITIAL_DIALOG
+		INTERSTITIAL_DIALOG, 
+		INTERSTITIAL_VIEW;
+		
+		public boolean isInterstitial() {
+			return this.equals(INTERSTITIAL_ACTIVITY) || this.equals(INTERSTITIAL_DIALOG) ||  this.equals(INTERSTITIAL_VIEW);
+		}
 	}
 		
 	String getApplicationClassPath();
@@ -114,7 +121,7 @@ public interface IEmitCode {
 	String readApplicationPackage(String eventsFileName) throws IOException ;
 	boolean scanTargetPackage(List<List<String>> lines);
 	LineAndTokens activityCondition(List<String> tokens, String activityName, String functionName) throws IOException;
-	LineAndTokens dialogCondition(List<String> tokens, CodeDefinition codeDef, String functionName) throws IOException;
+	LineAndTokens dialogCondition(List<String> tokens, DialogCodeDefinition codeDef, String functionName) throws IOException;
 
 
 }

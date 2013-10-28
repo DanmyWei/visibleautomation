@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
 
+import com.androidApp.codedefinition.CodeDefinition;
+import com.androidApp.codedefinition.DialogCodeDefinition;
 import com.androidApp.emitter.IEmitCode.CodeOutput;
 import com.androidApp.emitter.IEmitCode.LineAndTokens;
 import com.androidApp.emitter.IEmitCode.OutputType;
@@ -218,7 +220,7 @@ public class EmitRobotiumCodeBinary extends EmitRobotiumCodeSource {
 	 * @throws IOException
 	 */
 	@Override
-	public LineAndTokens dialogCondition(List<String> tokens, CodeDefinition codeDef, String functionName) throws IOException {
+	public LineAndTokens dialogCondition(List<String> tokens, DialogCodeDefinition codeDef, String functionName) throws IOException {
 		String dialogConditionTemplate = FileUtility.readTemplate(Constants.Templates.DIALOG_CONDITION_BINARY);
 		String description = "wait to see if a dialog with string " + codeDef.getDialogTag() + " has appeared";
 		dialogConditionTemplate = dialogConditionTemplate.replace(Constants.VariableNames.DESCRIPTION, description);

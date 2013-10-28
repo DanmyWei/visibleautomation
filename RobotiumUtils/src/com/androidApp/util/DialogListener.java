@@ -14,13 +14,18 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.TimerTask;
 
+import com.androidApp.codedefinition.CodeDefinition;
+import com.androidApp.codedefinition.DialogCodeDefinition;
+
 /**
  * Listen for dialogs to appear, and if a codeDefinition matches the handler, then execute it.
- * @author matt2
+ * TODO: I think this class can be removed
+ * @author mattrey
+ * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class DialogListener {
 	
-	public static boolean waitForDialog(Activity activity, CodeDefinition codeDef, long timeoutMsec) {
+	public static boolean waitForDialog(Activity activity, DialogCodeDefinition codeDef, long timeoutMsec) {
 		while (timeoutMsec > 0) {
 			Dialog dialog = findDialog(activity);
 			if (dialog != null) {

@@ -31,7 +31,7 @@ import org.eclipse.jdt.core.IPackageFragmentRoot;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
 
-import com.androidApp.emitter.CodeDefinition;
+import com.androidApp.codedefinition.CodeDefinition;
 import com.androidApp.emitter.EmitRobotiumCode;
 import com.androidApp.emitter.EmitRobotiumCodeSource;
 import com.androidApp.emitter.IEmitCode;

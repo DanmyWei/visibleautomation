@@ -42,7 +42,7 @@ import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.handlers.HandlerUtil;
 import org.eclipse.ui.preferences.ScopedPreferenceStore;
 
-import com.androidApp.emitter.CodeDefinition;
+import com.androidApp.codedefinition.CodeDefinition;
 import com.androidApp.emitter.IEmitCode;
 import com.androidApp.emitter.IEmitCode.LineAndTokens;
 import com.androidApp.emitter.EmitRobotiumCodeBinary;
@@ -150,7 +150,7 @@ public class GenerateRobotiumTestCodeAction implements IObjectActionDelegate {
 				}
 				codeGenerator.writeTheCode(emitter, outputCode, motionEvents, projectInformation, Constants.Templates.TEST_FUNCTION);
 				CreateTestHandler.writeHandlers(projectInformation.getTestProject(), outputCode);
-				GenerateRobotiumTestCode.copyViewDirectives(projectPath.toString());
+				GenerateRobotiumTestCode.copyViewDirectives(project.getName());
 			} catch (Exception ex) {
 				MessageDialog.openInformation(
 						mShell,

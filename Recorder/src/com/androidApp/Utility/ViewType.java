@@ -28,6 +28,8 @@ import com.androidApp.Utility.Constants.Packages;
 public class ViewType {
 	protected static final String TAG = "ViewType";
 	static Class sDecorViewClass = null;
+	static Class<? extends View> sHorizontalScrollViewClass = null;
+	static boolean sfHorizontalScrollViewClass = false;
 	
 	/**
 	 * is this view a child of the action bar?
@@ -106,9 +108,14 @@ public class ViewType {
 		// HorizontalScrolView may not be defined in earlier android APIs, so we have to extract it via
 		// reflection.
 		try {
-			Class<? extends View> cls = (Class<? extends View>) Class.forName(Constants.Classes.HORIZONTAL_SCROLL_VIEW);
-			if (cls.isAssignableFrom(v.getClass())) {
-				return true;
+			if (!sfHorizontalScrollViewClass) {
+				sHorizontalScrollViewClass = (Class<? extends View>) Class.forName(Constants.Classes.HORIZONTAL_SCROLL_VIEW);
+				sfHorizontalScrollViewClass = true;
+			}
+			if (sHorizontalScrollViewClass != null) {
+				if (sHorizontalScrollViewClass.isAssignableFrom(v.getClass())) {
+					return true;
+				}
 			}
 		} catch (Exception ex) {		
 		}

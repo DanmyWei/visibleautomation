@@ -37,6 +37,9 @@ public class OnCompoundButtonSelectionListener implements DialogInterface.OnClic
 		case 3:
 			recorder.writeRecord(Constants.EventTags.UNCHECK, activity.toString(), currentView);
 			break;
+		case 4:
+			recorder.writeRecordWithActivity(Constants.EventTags.INTERSTITIAL_VIEW, activity.toString(), currentView);
+			break;
 		}
 	}
 }

@@ -323,6 +323,8 @@ public class Constants {
 		public static final String INTERSTITIAL_ACTIVITIES = "interstitial_activities.txt";
 		public static final String VIEW_DIRECTIVES = "view_directives.txt";
 		public static final String INTERSTITIAL_ACTIVITY_LIST = "interstitial_activities.txt";
+		public static final String TRAVERSE_JS = "traverse.js";
+
 	}
 	
 	public static class Methods {

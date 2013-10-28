@@ -405,7 +405,18 @@ public class EclipseUtility {
 		return false;
 	}
 	
-	
+
+    /**
+     * given the list of jarfiles, create the .classpath file entries.
+     */
+    public static String createJarClasspathEntries(List<String> jarfiles) {
+        StringBuffer sb = new StringBuffer();
+        for (String jarfile : jarfiles) {
+            sb.append("\t<classpathentry exported=\"true\" kind=\"lib\" path=\"libs/" + jarfile + "\"/>\n");
+        }
+        return sb.toString();
+    }
+
 	/**
 	 * run dexdump on the specified APK, then search for references contained in the various support libraries
 	 * and map them to the appropriate jar files so we don't get undefined class references.

@@ -41,6 +41,7 @@ public class InterceptSupport implements InterceptInterface {
         if (actionBar != null) {
         	
         	// re-intercept on re-layout
+        	/*
             try {
                 View actionBarView = InterceptActionBar.getActionBarView(actionBar);
                 ViewTreeObserver viewTreeObserverActionBar = actionBarView.getViewTreeObserver();
@@ -53,6 +54,7 @@ public class InterceptSupport implements InterceptInterface {
             } catch (Exception ex) {
                     Log.d(TAG, "failed to intercept action bar");
             }
+            */
             intercept(activity, viewInterceptor, activity.toString(), actionBar, eventRecorder);
         }
 	
@@ -79,13 +81,13 @@ public class InterceptSupport implements InterceptInterface {
 	        		eventRecorder.writeException(activityName, ex, "while intercepting the action bar for " + activity.getClass().getName());
 	        	}
 	        	if (contentView != null) {
-	        		viewInterceptor.intercept(activity,  activityName, contentView);
+	        		viewInterceptor.intercept(activity,  activityName, contentView, false);
 	            }
 	       		InterceptActionBar.interceptActionBarTabListeners(activityName, eventRecorder, actionBar);
 		       	if (actionBar.getCustomView() != null) {
-		       		viewInterceptor.intercept(activity, activityName, actionBar.getCustomView());
+		       		viewInterceptor.intercept(activity, activityName, actionBar.getCustomView(), false);
 		        }
-		       	viewInterceptor.intercept(activity, activityName, InterceptActionBar.getActionBarView(actionBar));
+		       	viewInterceptor.intercept(activity, activityName, InterceptActionBar.getActionBarView(actionBar), false);
         	} catch (Exception ex) {
         		eventRecorder.writeException(activityName, ex, "while intercepting action bar");
         	}

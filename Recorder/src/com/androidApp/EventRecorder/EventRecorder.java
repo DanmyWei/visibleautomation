@@ -174,6 +174,18 @@ public class EventRecorder extends EventRecorderInterface {
 		}
 	}
 	
+	// yet another wrapper with just a view to be described.
+	public void writeRecordWithActivity(String event, String activityName, View v) {
+		try {
+			if (!matchViewDirective(v, ViewDirective.ViewOperation.IGNORE_EVENTS, ViewDirective.When.ALWAYS)) {
+				writeRecord(activityName, event, activityName + "," + getViewReference().getReference(v));
+			}
+			mEventWasRecorded = true;
+		} catch (Exception ex) {
+			writeException(activityName, ex,  "while getting reference for view in event " + event);
+		}
+	}
+	
 	/**
 	 * to enforce consistent exception logging
 	 * @param ex the offending exception

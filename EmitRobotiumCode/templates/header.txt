@@ -2,7 +2,9 @@ package %TESTPACKAGE%;
 
 import %CLASSPATH%;
 import com.androidApp.util.RobotiumUtils;
-import com.androidApp.util.CodeDefinition;
+import com.androidApp.codedefinition.CodeDefinition;
+import com.androidApp.codedefinition.ActivityCodeDefinition;
+import com.androidApp.codedefinition.DialogCodeDefinition;
 import com.androidApp.util.IDialogHandler;
 import com.androidApp.util.IActivityHandler;
 import com.androidApp.util.DialogListener;

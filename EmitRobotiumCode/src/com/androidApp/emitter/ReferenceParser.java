@@ -10,6 +10,7 @@ import com.androidApp.util.StringUtils;
  * parse a reference to an android view, either by unique id, which can be a hexadecimal, or a resource id, 
  * the class of the view, and its index relative to the root view, or a parent with a unique id, or for
  * text views, a string, and the unique id of its ancestor.
+ * TODO: turn this into a class hierarchy based on the reference type.
  * @author Matthew
  * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */

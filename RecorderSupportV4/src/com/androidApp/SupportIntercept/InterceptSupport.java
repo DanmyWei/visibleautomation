@@ -3,6 +3,7 @@ package com.androidApp.SupportIntercept;
 import android.app.Activity;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.ActionBar;
+import android.support.v7.app.ActionBarActivity;
 import android.support.v7.widget.PopupMenu;
 import android.util.Log;
 import android.view.View;
@@ -19,6 +20,7 @@ import com.androidApp.Utility.FieldUtils;
 import com.androidApp.Utility.ReflectionUtils;
 
 import com.androidApp.EventRecorder.EventRecorder;
+import com.androidApp.Listeners.OnLayoutInterceptListener;
 import com.androidApp.SupportIntercept.InterceptSupport;
 import com.androidApp.SupportIntercept.ListenerInterceptSupport;
 import com.androidApp.SupportListeners.RecordActionBarTabListener;
@@ -146,10 +148,63 @@ public class InterceptSupport implements InterceptInterface {
 
 
 	@Override
-	public void interceptActionBar(Activity activity,
-			ViewInterceptor viewInterceptor, EventRecorder eventRecorder) {
-		// TODO Auto-generated method stub
-		
+	public void interceptActionBar(Activity activity, ViewInterceptor viewInterceptor, EventRecorder eventRecorder) {
+		if (activity instanceof ActionBarActivity) {
+			ActionBarActivity actionBarActivity = (ActionBarActivity) activity;
+	        ActionBar actionBar = actionBarActivity.getSupportActionBar();
+	        if (actionBar != null) {
+	        	
+	        	// re-intercept on re-layout
+	        	/*
+	            try {
+	                View actionBarView = InterceptActionBar.getActionBarView(actionBar);
+	                ViewTreeObserver viewTreeObserverActionBar = actionBarView.getViewTreeObserver();
+	                viewTreeObserverActionBar.addOnGlobalLayoutListener(new OnLayoutInterceptListener(activity, viewInterceptor, eventRecorder));
+	                View customView = actionBar.getCustomView();
+	                if (customView != null) {
+	                    ViewTreeObserver viewTreeObserverActionBarCustomView = customView.getViewTreeObserver();
+	                    viewTreeObserverActionBarCustomView.addOnGlobalLayoutListener(new OnLayoutInterceptListener(activity, viewInterceptor, eventRecorder));               
+	                }
+	            } catch (Exception ex) {
+	                    Log.d(TAG, "failed to intercept action bar");
+	            }
+	            */
+	            intercept(activity, viewInterceptor, activity.toString(), actionBar, eventRecorder);
+	        }		
+		}
+	}
+	
+	/**
+	 * the action bar is not in the activity contentView, so it has to be handled separately
+	 * @param activity activity to intercept
+	 * @param actionBar actionBar
+	 */
+	public void intercept(Activity 			activity, 
+						  ViewInterceptor 	viewInterceptor,
+						  String 			activityName, 
+						  ActionBar 		actionBar, 
+						  EventRecorder 	eventRecorder) {
+        if (actionBar != null) {
+        	try {
+	        	View contentView = null;
+	        	try {
+	        		Class actionBarImplClass = Class.forName(Constants.Classes.ACTION_BAR_IMPL);
+	        		contentView = (View) ReflectionUtils.getFieldValue(actionBar, actionBarImplClass, Constants.Fields.CONTAINER_VIEW);
+	        	} catch (Exception ex) {
+	        		eventRecorder.writeException(activityName, ex, "while intercepting the action bar for " + activity.getClass().getName());
+	        	}
+	        	if (contentView != null) {
+	        		viewInterceptor.intercept(activity,  activityName, contentView, false);
+	            }
+	       		InterceptActionBar.interceptActionBarTabListeners(activityName, eventRecorder, actionBar);
+		       	if (actionBar.getCustomView() != null) {
+		       		viewInterceptor.intercept(activity, activityName, actionBar.getCustomView(), false);
+		        }
+		       	viewInterceptor.intercept(activity, activityName, InterceptActionBar.getActionBarView(actionBar), false);
+        	} catch (Exception ex) {
+        		eventRecorder.writeException(activityName, ex, "while intercepting action bar");
+        	}
+	  	}		
 	}
 
 }

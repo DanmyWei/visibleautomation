@@ -97,6 +97,10 @@ public class OnEditTextSelectionListener implements DialogInterface.OnClickListe
 					recorder.addViewDirective(keyDirective);
 				} 
 				break;
+				case 8:
+					recorder.writeRecordWithActivity(Constants.EventTags.INTERSTITIAL_VIEW, activity.toString(), currentView);
+					break;
+
 			}
 		} catch (IOException ioex) {
 			DirectiveDialogs.setErrorLabel(alertDialog, Constants.DisplayStrings.VIEW_REFERENCE_FAILED);

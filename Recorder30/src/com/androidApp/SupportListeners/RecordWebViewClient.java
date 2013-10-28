@@ -1,14 +1,18 @@
 package com.androidApp.SupportListeners;
 
+import java.io.IOException;
 import java.net.URLDecoder;
 
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.Listeners.IOriginalListener;
 import com.androidApp.Listeners.RecordListener;
+import com.androidApp.Listeners.RecordWebView;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.FileUtils;
 import com.androidApp.Utility.StringUtils;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.net.http.SslError;
 import android.os.Message;
@@ -29,10 +33,12 @@ public class RecordWebViewClient extends WebViewClient implements IOriginalListe
 	protected WebViewClient 	mOriginalWebViewClient;
 	protected EventRecorder 	mEventRecorder;				// handle to the recorder 
 	protected String			mActivityName;				// to record events and exceptions filtered by activity
-
+	protected Context			mContext;
+	
 	public RecordWebViewClient(String activityName, EventRecorder eventRecorder, WebView webView) {
 		mEventRecorder = eventRecorder;
 		mActivityName = activityName;
+		mContext = webView.getContext();
 		try {
 			mOriginalWebViewClient = ListenerIntercept.getWebViewClient(webView);
 			webView.setWebViewClient(this);
@@ -41,38 +47,13 @@ public class RecordWebViewClient extends WebViewClient implements IOriginalListe
 		}		
 	}
 	
+	// given a webview, inject the traverse.js code which intercepts the click listeners to show the 
+    // fully qualified paths of the clicked HTML elements.
 	
-	public RecordWebViewClient(EventRecorder eventRecorder, WebViewClient originalWebViewClient) {
-		mEventRecorder = eventRecorder;
-		mOriginalWebViewClient = originalWebViewClient;
-	}
-
-	
-	public Object getOriginalListener() {
-		return mOriginalWebViewClient;
-	}
-	
-	@Override
-	public void doUpdateVisitedHistory(WebView view, String url, boolean isReload) {
-		if (mOriginalWebViewClient != null) {
-			mOriginalWebViewClient.doUpdateVisitedHistory(view, url, isReload);
-		}
-	}
-	
-	@Override
-	public void onFormResubmission(WebView view, Message dontResend, Message resend) {
-		if (mOriginalWebViewClient != null) {
-			mOriginalWebViewClient.onFormResubmission(view, dontResend, resend);
-		}
-		
-	}
-	
-	@Override
-	public void onLoadResource(WebView view, String url){
-		if (mOriginalWebViewClient != null) {
-			mOriginalWebViewClient.onLoadResource(view, url);
-		}
-		
+	public void traverse(Context context, WebView wv) throws IOException {
+		String javascriptCode = FileUtils.readJarResourceString(RecordWebView.class, Constants.Asset.TRAVERSE_JS);
+		String inject = "javascript:var script = document.createElement(\"script\"); script.innerHTML = \"" + javascriptCode + "\";document.head.appendChild(script);overrideclicks();";
+		wv.loadUrl(inject);
 	}
 	
 	@Override
@@ -108,6 +89,39 @@ public class RecordWebViewClient extends WebViewClient implements IOriginalListe
 				mEventRecorder.writeException(ex, mActivityName, view, "on pageStarted");
 			}	
 		}
+	}	
+	
+	public RecordWebViewClient(EventRecorder eventRecorder, WebViewClient originalWebViewClient) {
+		mEventRecorder = eventRecorder;
+		mOriginalWebViewClient = originalWebViewClient;
+	}
+
+	
+	public Object getOriginalListener() {
+		return mOriginalWebViewClient;
+	}
+	
+	@Override
+	public void doUpdateVisitedHistory(WebView view, String url, boolean isReload) {
+		if (mOriginalWebViewClient != null) {
+			mOriginalWebViewClient.doUpdateVisitedHistory(view, url, isReload);
+		}
+	}
+	
+	@Override
+	public void onFormResubmission(WebView view, Message dontResend, Message resend) {
+		if (mOriginalWebViewClient != null) {
+			mOriginalWebViewClient.onFormResubmission(view, dontResend, resend);
+		}
+		
+	}
+	
+	@Override
+	public void onLoadResource(WebView view, String url){
+		if (mOriginalWebViewClient != null) {
+			mOriginalWebViewClient.onLoadResource(view, url);
+		}
+		
 	}
 	
 	@Override
