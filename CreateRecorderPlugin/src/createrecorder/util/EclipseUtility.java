@@ -32,6 +32,7 @@ import org.eclipse.ui.console.MessageConsole;
 import com.android.ide.eclipse.adt.AdtConstants;
 import com.androidApp.emitter.EmitRobotiumCode;
 import com.androidApp.util.AndroidUtil;
+import com.androidApp.util.Constants;
 import com.androidApp.util.Exec;
 import com.androidApp.util.FileUtility;
 import com.androidApp.util.StringUtils;
@@ -384,6 +385,16 @@ public class EclipseUtility {
 		IPreferencesService service = Platform.getPreferencesService();
 		String androidSDK = service.getString(RecorderConstants.ECLIPSE_ADT, RecorderConstants.ANDROID_SDK, null, null);
 		return AndroidUtil.getBestAndroidSDKLevel(androidSDK, level);
+	}
+	
+	/**
+	 * recorder needs 4.0 or better.
+	 * @return
+	 */
+	public static int getRecorderAndroidSDKLevel() {
+		IPreferencesService service = Platform.getPreferencesService();
+		String androidSDK = service.getString(RecorderConstants.ECLIPSE_ADT, RecorderConstants.ANDROID_SDK, null, null);
+		return AndroidUtil.getBestAndroidSDKLevel(androidSDK, Constants.ANDROID_40);
 	}
 	
 	/**

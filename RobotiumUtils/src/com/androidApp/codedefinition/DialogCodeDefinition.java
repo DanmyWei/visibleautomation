@@ -92,6 +92,17 @@ public class DialogCodeDefinition extends CodeDefinition {
 		mDialogScanType = scanType;
 		mDialogTagType = tagType;
 	}
+	
+	public DialogCodeDefinition(String 			activityName, 
+							    String 			dialogTag, 
+							    DialogScanType 	scanType, 
+							    DialogTagType 	tagType) {
+		super(activityName);
+		mDialogTag = dialogTag;
+		mType = Type.DIALOG;
+		mDialogScanType = scanType;
+		mDialogTagType = tagType;
+	}
 			
 	public String getDialogTag() {
 		return mDialogTag;

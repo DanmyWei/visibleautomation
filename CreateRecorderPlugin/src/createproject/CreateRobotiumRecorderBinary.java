@@ -61,24 +61,9 @@ public class CreateRobotiumRecorderBinary extends CreateRobotiumRecorder {
 		String classpath;
 		String classpathEntries = "";
 		List<String> jarFiles = new ArrayList<String>();
-		if (supportLibraries.isEmpty()) {
-			String recorderLibrary = getRecorderLibraryFromTargetSDK(targetSDK);
-			jarFiles.add(recorderLibrary);
-			classpath = FileUtility.readTemplate(Constants.Templates.BINARY_CLASSPATH_CREATERECORDER);
-		} else {
-			if (supportLibraries.contains(RecorderConstants.SupportLibraries.SUPPORT_V4)) {
-				jarFiles.add(Constants.Filenames.RECORDER_SUPPORT_V4_JAR);
-				jarFiles.add(RecorderConstants.SupportLibraries.SUPPORT_V4);
-			}
-			if (supportLibraries.contains(RecorderConstants.SupportLibraries.SUPPORT_V13)) {
-				jarFiles.add(Constants.Filenames.RECORDER_SUPPORT_V13_JAR);
-				jarFiles.add(RecorderConstants.SupportLibraries.SUPPORT_V13);
-			}
-			if (supportLibraries.contains(RecorderConstants.SupportLibraries.SUPPORT_V7_APPCOMPAT)) {
-				jarFiles.add(RecorderConstants.SupportLibraries.SUPPORT_V7_APPCOMPAT);
-			}
-			classpath = FileUtility.readTemplate(Constants.Templates.BINARY_CLASSPATH_CREATERECORDER_SUPPORT);
-		}		
+		String recorderLibrary = getRecorderLibraryFromTargetSDK(targetSDK);
+		jarFiles.add(recorderLibrary);
+		classpath = FileUtility.readTemplate(Constants.Templates.BINARY_CLASSPATH_CREATERECORDER);	
 		classpathEntries = EclipseUtility.createJarClasspathEntries(jarFiles);
 		classpath = classpath.replace(Constants.VariableNames.LIBRARIES, classpathEntries);
 		classpath = classpath.replace(Constants.VariableNames.CLASSNAME, projectName);

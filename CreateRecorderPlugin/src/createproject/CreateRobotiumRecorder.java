@@ -143,7 +143,7 @@ public class CreateRobotiumRecorder  {
 	public void createProjectProperties(IProject testProject, int SDKVersion) throws CoreException, IOException {
 		String target= null;
 		
-		int bestAvailableSDKLevel = EclipseUtility.getBestAndroidSDKLevel(SDKVersion);
+		int bestAvailableSDKLevel = EclipseUtility.getRecorderAndroidSDKLevel();
 		EclipseUtility.printConsole("best available SDK level = " + bestAvailableSDKLevel);
 		target = "target=android-" + bestAvailableSDKLevel;
 		String projectProperties = FileUtility.readTemplate(RecorderConstants.PROJECT_PROPERTIES_TEMPLATE);
@@ -240,19 +240,8 @@ public class CreateRobotiumRecorder  {
 		IFolder libFolder = EclipseUtility.createFolder(testProject, Constants.Dirs.LIBS);
 		EclipseUtility.writeResource(libFolder, RecorderConstants.RECORDER_JAR);
 		EclipseUtility.writeResource(libFolder, RecorderConstants.EVENTRECORDERINTERFACE_JAR);
-		if (!supportLibraries.isEmpty()) {
-			if (supportLibraries.contains(RecorderConstants.SupportLibraries.SUPPORT_V4)) {
-				EclipseUtility.writeResource(libFolder, Constants.Filenames.RECORDER_SUPPORT_V4_JAR);
-			} else if (supportLibraries.contains(RecorderConstants.SupportLibraries.SUPPORT_V13)) {
-				EclipseUtility.writeResource(libFolder, Constants.Filenames.RECORDER_SUPPORT_V13_JAR);			
-			} 
-			for (String supportLibrary : supportLibraries) {
-				EclipseUtility.writeResource(libFolder, supportLibrary);
-			}
-		} else {
-			String recorderLibrary = getRecorderLibraryFromTargetSDK(sdkLevel);
-			EclipseUtility.writeResource(libFolder, recorderLibrary);
-		}
+		String recorderLibrary = getRecorderLibraryFromTargetSDK(sdkLevel);
+		EclipseUtility.writeResource(libFolder, recorderLibrary);
 	}
 	
 	/**
@@ -261,6 +250,8 @@ public class CreateRobotiumRecorder  {
 	 * @return
 	 */
 	public static String getRecorderLibraryFromTargetSDK(int sdkLevel) {
+		return Constants.Filenames.RECORDER_40_JAR;
+		/*
 		if (sdkLevel >= 14) {
 			return Constants.Filenames.RECORDER_40_JAR;
 		} else if (sdkLevel >= 11) {
@@ -268,5 +259,6 @@ public class CreateRobotiumRecorder  {
 		} else {
 			return Constants.Filenames.RECORDER_23_JAR;
 		}
+		*/
 	}
 }

@@ -36,8 +36,8 @@ public class DialogCodeDefinition extends CodeDefinition {
 	
 	// for a dialog, we can scan either by title or type.
 	public enum DialogScanType {
-		TITLE("title", "CodeDefinition.DialogScanType.TITLE"),
-		CONTENT("content", "CodeDefinition.DialogScanType.CONTENT");
+		TITLE("title", "DialogCodeDefinition.DialogScanType.TITLE"),
+		CONTENT("content", "DialogCodeDefinition.DialogScanType.CONTENT");
 		
 		public String mName;
 		public String mCodeName;
@@ -59,8 +59,8 @@ public class DialogCodeDefinition extends CodeDefinition {
 	
 	// and for the tag, we can scan for view id, or contained text.
 	public enum DialogTagType {
-		ID("id", "CodeDefinition.DialogTagType.ID"),
-		TEXT("text", "CodeDefinition.DialogTagType.TEXT");
+		ID("id", "DialogCodeDefinition.DialogTagType.ID"),
+		TEXT("text", "DialogCodeDefinition.DialogTagType.TEXT");
 		
 		public String mName;
 		public String mCodeName;

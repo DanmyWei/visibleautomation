@@ -1,6 +1,6 @@
 	// %DESCRIPTION%
 	if (robotiumUtils.waitForView(solo.getView(%CLASSPATH%.class, %VIEW_INDEX%), VIEW_WAIT_MSEC) {
-		viewHandlerHandler%FUNCTION_NAME%(solo, robotiumUtils);
+		viewHandler%FUNCTION_NAME%(solo, robotiumUtils);
 		
 	}
 	

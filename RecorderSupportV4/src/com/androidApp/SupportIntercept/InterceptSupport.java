@@ -1,5 +1,8 @@
 package com.androidApp.SupportIntercept;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+
 import android.app.Activity;
 import android.support.v4.view.ViewPager;
 import android.support.v7.app.ActionBar;
@@ -30,7 +33,41 @@ import com.androidApp.SupportListeners.RecordWindowCallback;
 
 public class InterceptSupport implements InterceptInterface {
 	protected static String TAG = "InterceptSupport";
+	protected Class sactionBarClass;
+	protected Class sactionBarImplClass;
+	protected Class sactionBarActivityClass;
+	protected Method sgetActionBarMethod;
+	protected Method sgetTabAtMethod;
 
+	
+	public InterceptSupport() {
+		try {
+			sactionBarClass = Class.forName("android.support.v7.app.ActionBar");
+			sactionBarImplClass = Class.forName("android.support.v7.app.ActionBarImplBase");
+			sactionBarActivityClass = Class.forName("android.support.v7.app.ActionBarActivity");
+			sgetActionBarMethod = sactionBarActivityClass.getMethod("getSupportActionBars"); 
+			sgetTabAtMethod = sactionBarImplClass.getMethod("getTabAt");
+		} catch (ClassNotFoundException cnfex) {
+			sactionBarClass = null;
+		} catch (NoSuchMethodException nsmex) {
+			sgetActionBarMethod = null;
+		}
+		if (sactionBarClass == null) {
+			try {
+				sactionBarClass = Class.forName("android.app.ActionBar");
+				sactionBarImplClass = Class.forName(Constants.Classes.ACTION_BAR_IMPL);
+				sactionBarActivityClass = Class.forName("android.app.Activity");
+				sgetActionBarMethod = Activity.class.getMethod("getActionBar"); 
+				sgetTabAtMethod = sactionBarImplClass.getMethod("getTabAt");
+			} catch (ClassNotFoundException cnfex) {
+				sactionBarClass = null;
+				sactionBarActivityClass = null;
+			} catch (NoSuchMethodException nsmex) {
+				sgetActionBarMethod = null;
+			}
+		}		
+	}
+	
 	public void replaceListeners(Activity	activity,
 								  String	activityName,
 								  View 		v) {
@@ -149,26 +186,16 @@ public class InterceptSupport implements InterceptInterface {
 
 	@Override
 	public void interceptActionBar(Activity activity, ViewInterceptor viewInterceptor, EventRecorder eventRecorder) {
-		if (activity instanceof ActionBarActivity) {
-			ActionBarActivity actionBarActivity = (ActionBarActivity) activity;
-	        ActionBar actionBar = actionBarActivity.getSupportActionBar();
+		if ((sactionBarActivityClass != null) && sactionBarActivityClass.isAssignableFrom(activity.getClass())) {
+			Object actionBar = null;
+			try {
+				actionBar = sgetActionBarMethod.invoke(activity);
+			} catch (InvocationTargetException itex) {
+				
+			} catch (IllegalAccessException iaex) {
+				
+			}
 	        if (actionBar != null) {
-	        	
-	        	// re-intercept on re-layout
-	        	/*
-	            try {
-	                View actionBarView = InterceptActionBar.getActionBarView(actionBar);
-	                ViewTreeObserver viewTreeObserverActionBar = actionBarView.getViewTreeObserver();
-	                viewTreeObserverActionBar.addOnGlobalLayoutListener(new OnLayoutInterceptListener(activity, viewInterceptor, eventRecorder));
-	                View customView = actionBar.getCustomView();
-	                if (customView != null) {
-	                    ViewTreeObserver viewTreeObserverActionBarCustomView = customView.getViewTreeObserver();
-	                    viewTreeObserverActionBarCustomView.addOnGlobalLayoutListener(new OnLayoutInterceptListener(activity, viewInterceptor, eventRecorder));               
-	                }
-	            } catch (Exception ex) {
-	                    Log.d(TAG, "failed to intercept action bar");
-	            }
-	            */
 	            intercept(activity, viewInterceptor, activity.toString(), actionBar, eventRecorder);
 	        }		
 		}
@@ -182,29 +209,29 @@ public class InterceptSupport implements InterceptInterface {
 	public void intercept(Activity 			activity, 
 						  ViewInterceptor 	viewInterceptor,
 						  String 			activityName, 
-						  ActionBar 		actionBar, 
+						  Object			actionBar,
 						  EventRecorder 	eventRecorder) {
         if (actionBar != null) {
         	try {
 	        	View contentView = null;
 	        	try {
-	        		Class actionBarImplClass = Class.forName(Constants.Classes.ACTION_BAR_IMPL);
-	        		contentView = (View) ReflectionUtils.getFieldValue(actionBar, actionBarImplClass, Constants.Fields.CONTAINER_VIEW);
+	        		contentView = (View) ReflectionUtils.getFieldValue(actionBar, sactionBarImplClass, Constants.Fields.CONTAINER_VIEW);
 	        	} catch (Exception ex) {
 	        		eventRecorder.writeException(activityName, ex, "while intercepting the action bar for " + activity.getClass().getName());
 	        	}
 	        	if (contentView != null) {
 	        		viewInterceptor.intercept(activity,  activityName, contentView, false);
 	            }
+	        	/*
 	       		InterceptActionBar.interceptActionBarTabListeners(activityName, eventRecorder, actionBar);
 		       	if (actionBar.getCustomView() != null) {
 		       		viewInterceptor.intercept(activity, activityName, actionBar.getCustomView(), false);
 		        }
 		       	viewInterceptor.intercept(activity, activityName, InterceptActionBar.getActionBarView(actionBar), false);
+		       	*/
         	} catch (Exception ex) {
         		eventRecorder.writeException(activityName, ex, "while intercepting action bar");
         	}
 	  	}		
 	}
-
 }

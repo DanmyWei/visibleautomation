@@ -162,7 +162,7 @@ public class CreateRecorderHandler extends AbstractHandler {
 			String apkFilePath = testProject.getLocation().toString() + File.separator + apkFileName;
 			createRecorder.createClasspath(testProject, projectInformation.getApplicationName(), projectInformation.getMinSDKVersion(), 
 										   projectInformation.getSupportLibraries());
-			createRecorder.addLibraries(testProject, projectInformation.getSupportLibraries(),  projectInformation.getMinSDKVersion());
+			createRecorder.addLibraries(testProject, projectInformation.getSupportLibraries(),  Constants.ANDROID_40);
 			
 			// check to see if the keyboard and logservice are installed.
 			if (!InstallRecorderHandler.isPackageInstalled(RecorderConstants.KEYBOARD_PACKAGE)) {

@@ -118,7 +118,11 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 				contentView = ((ViewGroup) contentView).getChildAt(0);
 			}
 			List<View> hitViews = getHitViews((int) event.getX(), (int) event.getY(), contentView);
-			mViewInterceptor.interceptList(mActivity, mActivity.toString(), hitViews);
+			try {
+				mViewInterceptor.interceptList(mActivity, mActivity.toString(), hitViews);
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
 		}
 		Log.i(TAG, "dispatch touchEvent action = " + event.getAction());
 		return mOriginalCallback.dispatchTouchEvent(event);

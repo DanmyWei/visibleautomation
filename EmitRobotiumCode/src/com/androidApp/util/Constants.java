@@ -28,6 +28,8 @@ public class Constants {
 	public static final String INTERSTITIAL_ACTIVITY_HANDLER = "InterstitialActivityHandler";
 	public static final String DIALOG_HANDLER = "DialogHandler";	
 	public static final String SUCCESS = "Success";
+	public static final int ANDROID_40 = 14;
+	
 	
 	// environment variables
 	public static class Env {
