@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Configuration of the Ant build system to generate a Jar file --> 
+<project name="AndroidWhitelist" default="install">
+  <target name="jar" description="Create Jar file">
+        <jar jarfile="androidwhitelist.jar" basedir="./bin" >
+       	 	<fileset dir="./bin" includes="*.class"/>
+       	</jar>
+  </target>
+</project>
