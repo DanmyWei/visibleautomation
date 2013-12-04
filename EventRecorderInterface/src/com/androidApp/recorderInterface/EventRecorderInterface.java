@@ -32,6 +32,9 @@ public class EventRecorderInterface {
         Intent i = new Intent(LOGSERVICE_INITIALIZE);
         i.putExtra(LOGSERVICE_FILENAME, mRecordFileName);
         mContext.startService(i);
+        Intent i2 = new Intent(LOGSERVICE_INITIALIZE);
+        i2.putExtra(LOGSERVICE_FILENAME, mDirectiveFileName);
+        mContext.startService(i2);
 	}	
 	
 	/**
@@ -50,25 +53,4 @@ public class EventRecorderInterface {
         	Log.e(TAG, "writeLog: context must be initialized");
         }
     }
-
-	
-	// write a record to the output
-	public synchronized void writeRecord(String s)  {
-		writeLog(mRecordFileName, s);
-	}
-		
-	/**
-	 * write an event with time in milliseconds <event>:<time>
-	 * @param event event to write out (from Constants.EventTags)
-	 */
-	public void writeRecordTime(String event) {
-		long time = SystemClock.uptimeMillis();
-		writeRecord(event + ":" + time);
-	}
-	
-	// wrapper to write a record with an event, time and message to the system	
-	public void writeRecord(String event, String message) {
-		long time = SystemClock.uptimeMillis();
-		writeRecord(event + ":" + time + "," + message);
-	}
 }

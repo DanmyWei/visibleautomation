@@ -1,2 +1,4 @@
 		// %DESCRIPTION%
-		solo.pressSpinnerItem(%SPINNER_INDEX%, %ITEM_INDEX%);
+		android.widget.Spinner spinner%VARIABLE_INDEX% = (android.widget.Spinner) robotiumUtils.getView(android.widget.Spinner.class, %REAL_INDEX%);
+		robotiumUtils.scrollToViewVisible(spinner%VARIABLE_INDEX%);
+		robotiumUtils.pressSpinnerItem(solo, %SPINNER_INDEX%, %ITEM_INDEX%);

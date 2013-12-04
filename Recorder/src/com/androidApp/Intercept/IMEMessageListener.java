@@ -9,11 +9,17 @@ import java.net.Socket;
 import java.net.SocketAddress;
 
 import com.androidApp.EventRecorder.EventRecorder;
+import com.androidApp.Test.ActivityInterceptor;
 import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.TestUtils;
 
+import android.inputmethodservice.Keyboard;
 import android.util.Log;
+import android.view.FocusFinder;
 import android.view.KeyEvent;
+import android.view.View;
+import android.view.ViewGroup;
 
 /**
  * listen for up/down messages from our custom IME.
@@ -33,27 +39,32 @@ import android.view.KeyEvent;
  * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class IMEMessageListener implements Runnable {
-	public static final String 	TAG = "IMEMessageListener";
-	public static final int 	IME_BROADCAST_PORT = 49152;
-	public static final int 	CONNECT_TIMEOUT = 10000;
-	public static final int 	READ_TIMEOUT = 1000;
-	public static final int 	MAXMSG = 1024;
-	public static final String 	HIDE_IME = "hide_ime";							// messages sent from the custom soft keyboard
-	public static final String 	SHOW_IME = "show_ime";
-	public static final String 	SEND_KEY = "send_key";
-	public static final String 	ACK = "ack";
-	public static final String  HIDE_IME_BACK_KEY = "hide_ime_back_key";
-	public static int			sfOutstandingKeyCount;			// number of keys which have been read, but not processed.
-	protected static boolean 	sfTerminate;					// terminate loop flag.
-	protected boolean 			mfKeyboardVisible = false;		// flag for IME visibility to others may ask
-	protected ViewInterceptor	mViewInterceptor;				// maintains currently focused view.
-	protected EventRecorder		mEventRecorder;					// to record IME hide/show events.
+	public static final String 		TAG = "IMEMessageListener";
+	public static final int 		IME_BROADCAST_PORT = 49152;
+	public static final int 		CONNECT_TIMEOUT = 10000;
+	public static final int 		READ_TIMEOUT = 1000;
+	public static final int 		MAXMSG = 1024;
+	public static final String 		HIDE_IME = "hide_ime";							// messages sent from the custom soft keyboard
+	public static final String 		SHOW_IME = "show_ime";
+	public static final String 		SEND_KEY = "send_key";
+	public static final String 		ACK = "ack";
+	public static final String  	HIDE_IME_BACK_KEY = "hide_ime_back_key";
+	public static int				sfOutstandingKeyCount;			// number of keys which have been read, but not processed.
+	protected static boolean 		sfTerminate;					// terminate loop flag.
+	protected boolean 				mfKeyboardVisible = false;		// flag for IME visibility to others may ask
+	protected ActivityInterceptor	mActivityInterceptor;
+	protected ViewInterceptor		mViewInterceptor;				// maintains currently focused view.
+	protected EventRecorder			mEventRecorder;					// to record IME hide/show events.
+	protected static boolean		sfKeyboardConnected;			// the keyboard connected via TCP, else warn user
 	
-	public IMEMessageListener(ViewInterceptor viewInterceptor, EventRecorder eventRecorder) {
+	public IMEMessageListener(ViewInterceptor 		viewInterceptor, 
+							  ActivityInterceptor 	activityInterceptor,
+							  EventRecorder 		eventRecorder) {
 		sfTerminate = false;
 		mfKeyboardVisible = false;
 		mViewInterceptor = viewInterceptor;
 		mEventRecorder = eventRecorder;
+		mActivityInterceptor = activityInterceptor;
 		sfOutstandingKeyCount = 0;
 	}
 	
@@ -80,6 +91,10 @@ public class IMEMessageListener implements Runnable {
 		sfOutstandingKeyCount--;
 	}
 	
+	public static boolean isKeyboardConnected() {
+		return sfKeyboardConnected;
+	}
+	
 	/**
 	 * background thread to read the socket and see if the IME transmitted show or hide IME messages. 
 	 */
@@ -91,6 +106,7 @@ public class IMEMessageListener implements Runnable {
 			socket.setSoTimeout(READ_TIMEOUT);
 			InputStream is = socket.getInputStream();
 			OutputStream os = socket.getOutputStream();
+			sfKeyboardConnected = true;
 			while (!sfTerminate) {
 				boolean fSuccessfulRead = true;
 				int numBytes = 0;
@@ -110,23 +126,53 @@ public class IMEMessageListener implements Runnable {
 						 * is up or down.
 						 */
 						if (!mfKeyboardVisible) {
-							mEventRecorder.writeRecord(Constants.EventTags.SHOW_IME, mViewInterceptor.getFocusedView(), "IME displayed");
+							View focusedView = mViewInterceptor.getFocusedView();
+							if (focusedView != null) {
+								mEventRecorder.writeRecord(Constants.EventTags.SHOW_IME, TestUtils.getViewActivity(focusedView).toString(),
+														  focusedView, "IME displayed");
+							} else {
+								Log.i(TAG, "IME was displayed, but there was no focused view");
+							}
 						}
 						mfKeyboardVisible = true;
 					} else if (msg.equals(HIDE_IME)) {
 						if (mfKeyboardVisible) {	// see comment above
-							mEventRecorder.writeRecord(Constants.EventTags.HIDE_IME, mViewInterceptor.getFocusedView(), "IME hidden");
+							View focusedView = mViewInterceptor.getFocusedView();
+							if (focusedView != null) {
+								mEventRecorder.writeRecord(Constants.EventTags.HIDE_IME, TestUtils.getViewActivity(focusedView).toString(),
+														   focusedView, "IME hidden");
+							} else {
+								Log.i(TAG, "IME was displayed, but there was no focused view");
+							}								
 						}
 						mfKeyboardVisible = false;
 					} else if (msg.equals(HIDE_IME_BACK_KEY)) {
 						if (mfKeyboardVisible) {
-		                    mEventRecorder.writeRecord(Constants.EventTags.HIDE_IME_BACK_KEY, mViewInterceptor.getFocusedView(), "IME hidden by back key pressed");
+							View focusedView = mViewInterceptor.getFocusedView();
+							if (focusedView != null) {
+			                    mEventRecorder.writeRecord(Constants.EventTags.HIDE_IME_BACK_KEY, TestUtils.getViewActivity(focusedView).toString(),
+			                    						   focusedView, "IME hidden by back key pressed");
+							} else {
+								Log.i(TAG, "IME was displayed, but there was no focused view");
+							}
 		                    mViewInterceptor.setLastKeyAction(-1);
 						}
 						mfKeyboardVisible = false;
-					} else if (msg.equals(SEND_KEY)) {
-						incrementOutstandingKeyCount();
-						Log.i(TAG, "received send_key");
+					} else if (msg.startsWith(SEND_KEY)) {
+						int ichColon = msg.indexOf(':');
+						int keyCode = Integer.parseInt(msg.substring(ichColon + 1));
+						if (!isNonKeycode(keyCode)) {
+							incrementOutstandingKeyCount();					
+						}
+						
+						mViewInterceptor.setDoneKeyEntered(keyCode == Keyboard.KEYCODE_DONE);
+						if (keyCode == Keyboard.KEYCODE_DONE) {
+							if (mViewInterceptor.getFocusedView() != null) {
+								View focusedView = mViewInterceptor.getFocusedView();
+								mViewInterceptor.setNextFocusedView(FocusFinder.getInstance().findNextFocus((ViewGroup) focusedView.getRootView(), focusedView, View.FOCUS_DOWN));
+							}
+						}
+						Log.i(TAG, "received send_key code = 0x" + Integer.toHexString(keyCode));
 						os.write(ACK.getBytes());
 						// we need to send an acknowledgement to force a a round trip before android sends the key event
 						// in order to prevent a race condition.
@@ -139,4 +185,12 @@ public class IMEMessageListener implements Runnable {
 		}
 	}
 
+	// these keys are not actually send to the edit text.
+	private static boolean isNonKeycode(int keyCode) {
+		return (keyCode == Keyboard.KEYCODE_CANCEL) ||
+				(keyCode == Keyboard.KEYCODE_SHIFT) ||
+				(keyCode == Keyboard.KEYCODE_MODE_CHANGE) ||
+				(keyCode == Keyboard.KEYCODE_ALT) ||
+				(keyCode == Keyboard.KEYCODE_DONE);
+	}
 }

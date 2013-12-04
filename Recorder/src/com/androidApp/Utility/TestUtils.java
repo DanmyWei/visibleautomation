@@ -1,42 +1,25 @@
 package com.androidApp.Utility;
 
-import java.io.IOException;
-import java.lang.ref.WeakReference;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import com.androidApp.Intercept.MagicFramePopup;
-import com.androidApp.Test.R;
+import com.androidApp.EventRecorder.ClassCount;
 
 import android.app.Activity;
-import android.app.Dialog;
 import android.content.Context;
-import android.content.res.Resources;
-import android.os.Build;
+import android.content.ContextWrapper;
+import android.graphics.Rect;
 import android.util.Log;
 import android.view.ContextThemeWrapper;
 import android.view.View;
-import android.widget.ImageView;
+import android.webkit.WebView;
 import android.view.ViewGroup;
 import android.view.ViewParent;
-import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Adapter;
 import android.widget.AdapterView;
-import android.widget.AutoCompleteTextView;
-import android.widget.Button;
-import android.widget.PopupWindow;
-import android.widget.Spinner;
-import android.widget.TabHost;
 import android.widget.TextView;
-import android.widget.ScrollView;
-import android.widget.Gallery;
-
-import com.androidApp.Intercept.DirectiveDialogs;
-import com.androidApp.Intercept.MagicOverlay;
-import com.androidApp.Intercept.MagicFrame;
 
 /**
  * grab-bag of utilities to extract views from the android view tree.
@@ -44,7 +27,7 @@ import com.androidApp.Intercept.MagicFrame;
  * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class TestUtils {
-	private static final String TAG = "TestUtils";
+	static final String TAG = "TestUtils";
 	
 	/**
 	 * given a view group, find the indexthed child of class cls
@@ -120,24 +103,6 @@ public class TestUtils {
 		return null;
 	}
 	
-	/**
-	 * return the nearest child with a matching id. Keep iterating up parents until we find a matching child of that parent
-	 * NOTE: this only matches on id, we may write another function which also matches on class
-	 * @param v view to search from (iterate from here)
-	 * @param id resource id of view to search for
-	 * @return View or null if not found.
-	 */
-	public static View findNearest(View v, int id) {
-		ViewParent vp = v.getParent();
-		while (vp != null) {
-			View vFound = TestUtils.findDescendantById((View) vp, id);
-			if (vFound != null) {
-				return vFound;
-			}
-			vp = vp.getParent();
-		}
-		return null;
-	}
 	
 	/**
 	 * find the first descendant with a matching id.
@@ -158,24 +123,6 @@ public class TestUtils {
 					return vFound;
 				}
 			}
-		}
-		return null;
-	}
-	/**
-	 * return the nearest child with a matching class. Keep iterating up parents until we find a matching child of that parent
-	 * NOTE: this only matches on id, we may write another function which also matches on class
-	 * @param v view to search from (iterate from here)
-	 * @param cls class to match
-	 * @return View or null if not found.
-	 */
-	public static View findNearest(View v, Class<?extends View> cls) {
-		ViewParent vp = v.getParent();
-		while (vp != null) {
-			View vFound = TestUtils.findDescendantByClass((View) vp, v, cls);
-			if (vFound != null) {
-				return vFound;
-			}
-			vp = vp.getParent();
 		}
 		return null;
 	}
@@ -200,24 +147,6 @@ public class TestUtils {
 					return vFound;
 				}
 			}
-		}
-		return null;
-	}
-	/**
-	 * return the nearest child with a matching text. Keep iterating up parents until we find a matching child of that parent
-	 * NOTE: this only matches on id, we may write another function which also matches on class
-	 * @param v view to search from (iterate from here)
-	 * @param text text to match
-	 * @return View or null if not found.
-	 */
-	public static View findNearest(View v, String text) {
-		ViewParent vp = v.getParent();
-		while (vp != null) {
-			View vFound = TestUtils.findDescendantByText((View) vp, v, text);
-			if (vFound != null) {
-				return vFound;
-			}
-			vp = vp.getParent();
 		}
 		return null;
 	}
@@ -411,14 +340,17 @@ public class TestUtils {
 	 * find the index of v filtered by class in the set of subchildren of vRoot, by preorder traversal
 	 * @param vRoot root to traverse from
 	 * @param v view to find (indexed by class)
+	 * @param fOnlySufficientlyShown robotium only counts by widgets that are visible on the screen,
+	 * which is fine for those losers that count on their fingers, but not what I'd call reliable. Thanks, renas.
 	 * @return index of v by class, or -1 if not found
 	 */
-	public static int classIndex(View vRoot, View v) {
+	public static int classIndex(View vRoot, View v, boolean fOnlySufficientlyShown) {
 		TestUtils testUtils = new TestUtils();
 		IndexTarget target = testUtils.new IndexTarget();
-		if (classIndex(vRoot, v.getClass(), v, target)) {
+		if (classIndex(vRoot, v.getClass(), v, target, fOnlySufficientlyShown)) {
 			return target.mCountSoFar;
 		} else {
+			Log.e(TAG, "class index " + v + " not found in its own tree!");
 			return -1;
 		}
 	}
@@ -432,29 +364,41 @@ public class TestUtils {
 	 * @param v view to match
 	 * @return preorder index of the view, filtered by views which match cls
 	 */
-	public static int classIndex(View vRoot, Class<? extends View> cls, View v) {
+	public static int classIndex(View vRoot, Class<? extends View> cls, View v, boolean fOnlySufficientlyShown) {
 		TestUtils testUtils = new TestUtils();
 		IndexTarget target = testUtils.new IndexTarget();
-		if (classIndex(vRoot, cls, v, target)) {
+		if (classIndex(vRoot, cls, v, target, fOnlySufficientlyShown)) {
 			return target.mCountSoFar;
 		} else {
+			Log.e(TAG, "class index " + v + " not found in its own tree!");
 			return -1;
 		}
 	}
 	
+
 	// recursive subfunction which actually does the work to find the index of the view's class.
-	private static boolean classIndex(View vRoot, Class<? extends View> cls, View v, IndexTarget target) {
+	private static boolean classIndex(View 					vRoot, 
+									  Class<? extends View> cls, 
+									  View 					v, 
+									  IndexTarget 			target, 
+									  boolean 				fOnlySufficientlyShown) {
 		if (vRoot == v) {
 			return true;
 		}
-		if (cls.isAssignableFrom(vRoot.getClass()) && vRoot.isShown()) {
-			target.mCountSoFar++;
+		if (fOnlySufficientlyShown) {
+			if (cls.isAssignableFrom(vRoot.getClass()) && vRoot.isShown() && isViewSufficientlyShown(vRoot)) {
+				target.mCountSoFar++;
+			}
+		} else {
+			if (cls.isAssignableFrom(vRoot.getClass())) {
+				target.mCountSoFar++;
+			}	
 		}
 		if (vRoot instanceof ViewGroup) {
 			ViewGroup vg = (ViewGroup) vRoot;
 			for (int iChild = 0; iChild < vg.getChildCount(); iChild++) {
 				View vChild = vg.getChildAt(iChild);
-				if (classIndex(vChild, cls, v, target)) {
+				if (classIndex(vChild, cls, v, target, fOnlySufficientlyShown)) {
 					return true;
 				}
 			}
@@ -463,31 +407,70 @@ public class TestUtils {
 	}
 	
 	/**
-	 * is this view a child of the action bar?
-	 * @param v view to test
-	 * @return true if its ancestor is an action bar
-	 * @throws ClassNotFoundException
+	 * Returns the scroll or list parent view
+	 * This is copied from robotium, so we generate indices for shown objects in the same manner that they used then
+	 *
+	 * @param view the view who's parent should be returned
+	 * @return the parent scroll view, list view or null
 	 */
-	public static boolean isActionBarDescendant(View v) throws ClassNotFoundException {
-   		Class<? extends View> actionBarImplClass = (Class<? extends View>) Class.forName(Constants.Classes.ACTION_BAR_CONTAINER);
-		return isDescendentOfClass(v, v.getRootView(), actionBarImplClass);
+
+	public static View getScrollOrListParent(View view) {
+	    if (!(view instanceof android.widget.AbsListView) && !(view instanceof android.widget.ScrollView) && !(view instanceof WebView)) {
+	        try{
+	            return getScrollOrListParent((View) view.getParent());
+	        }catch(Exception e){
+	            return null;
+	        }
+	    } else {
+	        return view;
+	    }
 	}
-	
-	// is this control a child of a tab control? There's the old TabHost, and the new action bar tab
-	// control to take into consideration
-	public static boolean isInTabControl(View v) throws ClassNotFoundException {
-		if (isDescendentOfClass(v, v.getRootView(), TabHost.class)) {
-			return true;
+
+	public static float getScrollListWindowHeight(View view) {
+		final int[] xyParent = new int[2];
+		View parent = getScrollOrListParent(view);
+		final float windowHeight;
+		if (parent == null) {
+			WindowManager wm = (WindowManager) view.getContext().getSystemService(Context.WINDOW_SERVICE);
+			windowHeight = wm.getDefaultDisplay().getHeight();
+		} else{
+			parent.getLocationOnScreen(xyParent);
+			windowHeight = xyParent[1] + parent.getHeight();
 		}
-		Class<? extends View> tabImplClass = (Class<? extends View>) Class.forName(Constants.Classes.ACTION_BAR_IMPL_TAB_IMPL);
-		if (isDescendentOfClass(v, v.getRootView(), tabImplClass)) {
-			return true;
+		parent = null;
+		return windowHeight;
+	}
+
+	/**
+	 * Returns true if the view is sufficiently shown
+	 *
+	 * @param view the view to check
+	 * @return true if the view is sufficiently shown
+	 */
+
+	public static boolean isViewSufficientlyShown(View view){
+
+		if (view == null) {
+			return false;
 		}
-		Class<? extends View> scrollingTabContainerClass = (Class<? extends View>) Class.forName(Constants.Classes.SCROLLING_TAB_CONTAINER_VIEW);
-		if (isDescendentOfClass(v, v.getRootView(), scrollingTabContainerClass)) {
-			return true;
+		final int[] xyView = new int[2];
+		final int[] xyParent = new int[2];
+		final float viewHeight = view.getHeight();
+		final View parent = getScrollOrListParent(view);
+		view.getLocationOnScreen(xyView);
+
+		if (parent == null) {
+			xyParent[1] = 0;
+		} else {
+			parent.getLocationOnScreen(xyParent);
 		}
-		return false;
+
+		if (xyView[1] + (viewHeight/2.0f) > getScrollListWindowHeight(view)) {
+			return false;
+		} else if(xyView[1] + (viewHeight/2.0f) < xyParent[1]) {
+			return false;
+		}
+		return true;
 	}
 	
 	/**
@@ -549,123 +532,6 @@ public class TestUtils {
 	}	
 	
 	/**
-	 * does this list view have any listeners?
-	 * @param av
-	 * @return
-	 */
-	public static boolean adapterHasListeners(AdapterView av) {
-		return (av.getOnItemClickListener() != null) || (av.getOnItemSelectedListener() != null);
-	}
-	
-	/**
-	 * low-level events to this object should be ignored
-	 * @param v view to check
-	 * @return true if the view sends higher-level events that we listen to
-	 */
-	public static boolean shouldBeIgnored(View v) {
-		String className = v.getClass().getName();
-		return className.equals(Constants.Classes.OVERFLOW_MENU_BUTTON) ||
-			   className.equals(Constants.Classes.SCROLLING_TAG_CONTAINER_TAB_VIEW);
-	}
-	
-	/**
-	 * don't intercept it if it's one of ours.
-	 * @param v
-	 * @return true if it's one of ours.
-	 */
-	public static boolean isVisibleAutomationView(View v) {
-		return ((v instanceof MagicFrame) || 
-				(v instanceof MagicOverlay) || 
-				((v instanceof ImageView) && (v.getId() == MagicOverlay.MAGIC_BUTTON_ID)));
-	}
-	
-	public static boolean isScrollingTextView(TextView tv) throws IllegalAccessException, NoSuchFieldException {
-		return ReflectionUtils.getFieldBoolean(tv, TextView.class, Constants.Fields.HORIZONTALLY_SCROLLING);
-	}
-	
-	/**
-	 * detecting whether something can scroll is difficult, except that there is the "isScrollingContainer" function
-	 * unfortunately, it's only available in API level 16
-	 * @param v
-	 * @return
-	 * @throws InvocationTargetException
-	 * @throws IllegalAccessException
-	 * @throws NoSuchMethodException
-	 */
-	public static boolean invokeIsScrollingContainer(View v) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException {
-		if (android.os.Build.VERSION.SDK_INT > 16) {
-			return ReflectionUtils.execMethodBoolean(v, View.class, Constants.Methods.IS_SCROLLING_CONTAINER, null);
-		}
-		return false;
-	}
-	
-	/**
-	 * is it an instrinsic scrolling view
-	 * @param v
-	 * @return
-	 */
-	public static boolean isScrollView(View v) {
-		if (v instanceof ScrollView) {
-			return true;
-		}
-		if (v instanceof Gallery) {
-			return true;
-		}
-		// HorizontalScrolView may not be defined in earlier android APIs
-		
-		try {
-			Class<? extends View> cls = (Class<? extends View>) Class.forName(Constants.Classes.HORIZONTAL_SCROLL_VIEW);
-			if (cls.isAssignableFrom(v.getClass())) {
-				return true;
-			}
-		} catch (Exception ex) {		
-		}
-		return false;
-	}
-
-	/**
-	 * unfortunately, galleries don't have scroll listeners that we can hook to, and instead implement
-	 * methods for onScroll(), etc.  We have to listen for motion events, then play them back.
-	 * Later, we'll allow the user to set listen to motion events for custom controls and stuff like that.
-	 * @param v
-	 * @return true if we should listen to motion events
-	 */
-	public static boolean listenMotionEvents(List<View> motionEventViewList, View v) throws IllegalAccessException, NoSuchFieldException{
-		
-		// I really dislike this hardcoded bullshit that is certain to break in later versions.  We need to have a 
-		// "blacklist" as well as a "whitelist" for motion events. Or Something Better Than This Implementation
-		// which sucks Giant Donkey Dicks
-		if (!(v instanceof AdapterView)) {
-			if (isScrollView(v)) {
-				return true;
-			}
-			if (v.isHorizontalScrollBarEnabled() || v.isVerticalScrollBarEnabled()) {
-				return true;
-			}
-			if (v instanceof TextView) {
-				TextView tv = (TextView) v;
-				if (!isScrollingTextView(tv)) {
-					return false;
-				}
-			}
-		}
-		if (motionEventViewList != null) {
-			return motionEventViewList.contains(v);
-		}
-		return false;
-	}
-	
-	/**
-	 * we put a wrapper function in here, because the developer may want to specify custom
-	 * controls which don't derive from button, but do take click events.
-	 * TODO: this needs 
-	 * @param v
-	 * @return
-	 */
-	public static boolean listenClickEvents(View v) {
-		return (v instanceof Button);
-	}
-	/**
 	 * given a view inside of an adapter view, find the index of its containing item in the adapter view.
 	 * @param av adapterView ancestor of v
 	 * @param v view to search for
@@ -682,83 +548,6 @@ public class TestUtils {
 			}
 		}
 		return -1;
-	}
-	
-	/**
-	 * given a string (probably yanked from a TextView), return the matching R.string references (there may be more than one)
-	 * @param res - application resources
-	 * @param rdotstring - R.string class
-	 * @param s string to compare against
-	 * @return List<String> list of matching strings.
-	 * @throws IllegalAccessException
-	 */
-	public static List<String> getIdForString(Resources res, Object rdotstring, String s) throws IllegalAccessException {
-		List<String> resultList = new ArrayList<String>();
-		Class cls = rdotstring.getClass();
-		Field[] fieldList = cls.getDeclaredFields();
-		for (Field field : fieldList) {
-			int fieldValue = field.getInt(rdotstring);
-			String candString = res.getString(fieldValue);
-			if (s.equals(candString)) {
-				String reference = cls.getName() + "." + field.getName();
-				resultList.add(reference);
-			}
-		}
-		return resultList;
-	}
-	
-	/**
-	 * same thing, except iterate over the list of R.string classes.
-	 * @param res
-	 * @param rdotstringlist
-	 * @param s
-	 * @return
-	 * @throws IllegalAccessException
-	 */
-	public static List<String> getIdForString(Resources res, List<Object> rdotstringlist, String s) throws IllegalAccessException {
-		List<String> resultList = new ArrayList<String>();
-		for (Object rdotstring : rdotstringlist) {
-			List<String> someResults = getIdForString(res, rdotstring, s);
-			resultList.addAll(someResults);
-		}
-		return resultList;
-	}
-
-	
-	/**
-	 * Given a R.id class which is generated from the XML files for Android, and a value for an id from a view, return the fully qualified
-	 * field name and class name, for example: com.example.R.id.cancel_button
-	 * @param r R.id class to search
-	 * @param idValue value to search for in fields
-	 * @return R.id.foo or null if not found.
-	 */
-	public static String getIdForValue(Object rdotid, int idValue) throws IllegalAccessException {
-		Class cls = rdotid.getClass();
-		Field[] fieldList = cls.getDeclaredFields();
-		for (Field field : fieldList) {
-			int fieldValue = field.getInt(rdotid);
-			if (fieldValue == idValue) {
-				return cls.getName() + "." + field.getName();
-			}
-		}
-		return null;
-	}
-	
-	/**
-	 * iterate over the list of Android-generated "R.id" classes, see if idValue occurs in any of them
-	 * @param rdotidlist list of com.myexample.R classes
-	 * @param idValue id to search for
-	 * @return class/field reference for id, or null.
-	 * @throws IllegalAccessException
-	 */
-	public static String getIdForValue(List<Object> rdotidlist, int idValue) throws IllegalAccessException {
-		for (Object rdotid : rdotidlist) {
-			String id = TestUtils.getIdForValue(rdotid, idValue);
-			if (id != null) {
-				return id;
-			}
-		}
-		return "0x" + Integer.toHexString(idValue);
 	}
 	
 	/**
@@ -784,348 +573,8 @@ public class TestUtils {
 		}
 		
 	}
-
-	/**
-	 * is this view in the same context as the activity, but has a different window? Then it is contained in a popup window
-	 * and may or may not be a dialog.
-	 * @param a the activity
-	 * @param v a PhoneWindow$DecorView or PopupContainerView or something like that
-	 * @return true, or maybe false.  probably true, though
-	 */
-	public static boolean isDialogOrPopup(Activity a, View v) {
-		if (v != null) {
-			Context viewContext = v.getContext();
-			// dialogs use a context theme wrapper, not a context, so we have to extract he context from the theme wrapper's
-			// base context
-			if (viewContext instanceof ContextThemeWrapper) {
-				ContextThemeWrapper ctw = (ContextThemeWrapper) viewContext;
-				viewContext = ctw.getBaseContext();
-			}
-			Context activityContext = a;
-			Context activityBaseContext = a.getBaseContext();
-			return (activityContext.equals(viewContext) || activityBaseContext.equals(viewContext)) && (v != a.getWindow().getDecorView());
-		} else {
-			return false;
-		}
-	}
 	
-	/**
-	 * v is actually a PhoneDecorView.  We're looking for its child, which is com.android.internal.view.menu.ExpandedMenuView
-	 * @param v
-	 * @return
-	 */
-	public static boolean isOptionsMenu(View v) throws ClassNotFoundException {
-		if (v instanceof ViewGroup) {
-			View vChild = ((ViewGroup) v).getChildAt(0);
-			Class<? extends View> menuViewClass = (Class<? extends View>) Class.forName(Constants.Classes.EXPANDED_MENU_VIEW);
-			return vChild.getClass() == menuViewClass; 	
-		} else {
-			return false;
-		}
-	}
 	
-	/**
-	 * find the view associated with the options menu for this activity
-	 * @param activity
-	 * @return
-	 */
-	public static View findOptionsMenu(Activity activity) {
-		try {
-			View[] views = ViewExtractor.getWindowDecorViews();
-			if (views != null) {
-				int numDecorViews = views.length;
-				
-				// iterate through the set of decor windows.  The dialog may already have been presented.
-				for (int iView = 0; iView < numDecorViews; iView++) {
-					View v = views[iView];
-					if (TestUtils.isDialogOrPopup(activity, v)) {	
-						if (TestUtils.isOptionsMenu(v)) {
-							return v;
-						}
-					}
-				}
-			}
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
-		return null;
-	}
-	
-	/**
-	 * given a PhoneWindow$DecorView, see if it has a WindowCallback which derives from Dialog.  If so, then return that
-	 * dialog, otherwise return null.
-	 * @param phoneWindowDecorView PhoneWindow$DecorView
-	 * @return Dialog or null;
-	 */
-	public static Dialog getDialog(View phoneWindowDecorView) {
-		try {
-			Class<? extends View> phoneDecorViewClass = (Class<? extends View>) Class.forName(Constants.Classes.PHONE_DECOR_VIEW);
-			if (phoneWindowDecorView.getClass() == phoneDecorViewClass) {
-				Window phoneWindow = (Window) ReflectionUtils.getFieldValue(phoneWindowDecorView, phoneDecorViewClass, Constants.Classes.THIS);
-				Window.Callback callback = phoneWindow.getCallback();
-				if (callback instanceof Dialog) {
-					Dialog dialog = (Dialog) callback;
-					return dialog;
-				}
-			}
-		} catch (Exception ex) {
-		}
-		return null;
-	}
-	/**
-	 * see if this activity has popped up a dialog.
-	 * @param activity activity to test
-	 * @return Dialog or null
-	 */
-	public static Dialog findDialog(Activity activity) {
-		try {
-			Class phoneDecorViewClass = Class.forName(Constants.Classes.PHONE_DECOR_VIEW);
-			View[] views = ViewExtractor.getWindowDecorViews();
-			if (views != null) {
-				int numDecorViews = views.length;
-				
-				// iterate through the set of decor windows.  The dialog may already have been presented.
-				for (int iView = 0; iView < numDecorViews; iView++) {
-					View v = views[iView];
-					if (TestUtils.isDialogOrPopup(activity, v)) {	
-						Dialog dialog = getDialog(v);
-						if (dialog != null) {
-							return dialog;
-						}
-					}
-				}
-			}
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
-		return null;		
-	}
-	
-	/**
-	 * popup windows are slightly different than dialogs, so we have a separate path which polls for them
-	 * to set up in RecordTest
-	 * @param activity
-	 * @return Object: because it can be a window or a popup window, and they don't inherit from each other
-	 */
-	public static WindowAndView findPopupWindow(Activity activity) {
-		try {
-			View[] views = ViewExtractor.getWindowDecorViews();
-			if (views != null) {
-				int numDecorViews = views.length;
-				
-				// iterate through the set of decor windows.  The dialog may already have been presented.
-				for (int iView = 0; iView < numDecorViews; iView++) {
-					View v = views[iView];
-					if (TestUtils.isDialogOrPopup(activity, v)) {
-						// dialogs are handled in the other case.
-						Dialog dialog = getDialog(v);
-						if (dialog == null) {
-							Object window = ReflectionUtils.getFieldValue(v, v.getClass(), Constants.Classes.THIS);
-							WindowAndView windowAndView = new WindowAndView(window, v);
-							return windowAndView;
-						}
-					}
-				}
-			}
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
-		return null;		
-	}
-	
-	/**
-	 * find a view associated with a popup window
-	 * @param activity
-	 * @param popupWindow
-	 * @return
-	 */
-	public static View findViewForPopup(Activity activity, PopupWindow popupWindow) {
-		try {
-			Class popupViewContainerClass = Class.forName(Constants.Classes.POPUP_VIEW_CONTAINER);
-			View[] views = ViewExtractor.getWindowDecorViews();
-			if (views != null) {
-				int numDecorViews = views.length;
-				
-				// iterate through the set of decor windows.  The dialog may already have been presented.
-				for (int iView = 0; iView < numDecorViews; iView++) {
-					View v = views[iView];
-					if (TestUtils.isDialogOrPopup(activity, v)) {	
-						if (v.getClass() == popupViewContainerClass) {
-							PopupWindow candPopupWindow = (PopupWindow) ReflectionUtils.getFieldValue(v, popupViewContainerClass, Constants.Classes.THIS);
-							if (candPopupWindow == popupWindow) {
-								return v;
-							}
-						}
-					}
-				}
-			}
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
-		return null;
-	}
-
-	/** 
-	 * since we're in a polling loop for popup windows, we can interrogate the window before it's actually populated, 
-	 * and we need to check the menu items for callbacks to determine if it's the options menu, if the window is empty, we blow it off
-	 * @param popupWindow
-	 * @return
-	 */
-	public static boolean isPopupWindowEmpty(PopupWindow popupWindow) {
-		View contentView = popupWindow.getContentView();
-		ViewGroup contentViewGroup = (ViewGroup) contentView;
-		return contentViewGroup.getChildCount() == 0;
-	}
-	
-	/**
-	 * same, except for "window", not PopupWindow
-	 * @param window
-	 * @return
-	 */
-	public static boolean isWindowEmpty(Window window) {
-		ViewGroup decorView = (ViewGroup) window.getDecorView();
-		ViewGroup contentView = (ViewGroup) decorView.getChildAt(0);		
-		ViewGroup contentViewGroup = (ViewGroup) contentView;
-		return contentViewGroup.getChildCount() == 0;
-	}
-	
-	/**
-	 * from the popup window, get the content view, then iterate over its children.  Each child contains mItemData, which contains mMenu, which
-	 *  has a callback field. If that callback field is PhoneWindow, then it's an options menu, otherwise it's a popup.
-	 *  the classes are all internal, so we need to do Class.formName to extract fields.
-	 *  popupWindow.mContentView.mChildren[*].mItemData.mMenu.mCallback
-	 *  types: android.widget.PopupWindow
-	 *  android.widget.ListPopupWindow$DropDownListView
-	 *  com.android.internal.view.menu.ListMenuItemView
-	 *  com.android.internal.view.menu.MenuItemImpl
-	 *  com.android.internal.view.menu.MenuBuilder
-	 *  returns Object[] where android.widget.PopupMenu for Popup and PhoneWindow for activity option menu
-	 */
-	
-	public static List<Object> getPopupWindowCallbackList(PopupWindow popupWindow) throws ClassNotFoundException, IllegalAccessException, NoSuchFieldException {
-		List<Object> callbackList = new ArrayList<Object>();
-		View contentView = popupWindow.getContentView();
-		ViewGroup contentViewGroup = (ViewGroup) contentView;
-		Class listMenuItemViewClass = Class.forName(Constants.Classes.LIST_MENU_ITEM_VIEW);
-		Class menuItemImplClass = Class.forName(Constants.Classes.MENU_ITEM_IMPL);
-		Class menuBuilderClass = Class.forName(Constants.Classes.MENU_BUILDER);
-		if (contentViewGroup.getChildCount() == 0) {
-			Log.i(TAG, "interesting");
-		}
-		for (int i = 0; i < contentViewGroup.getChildCount(); i++) {
-			View menuItemCandView = contentViewGroup.getChildAt(i);
-			if (menuItemCandView.getClass() == listMenuItemViewClass) {
-				Object itemData = ReflectionUtils.getFieldValue(menuItemCandView, listMenuItemViewClass, Constants.Fields.ITEM_DATA);
-				if (itemData.getClass() == menuItemImplClass) {
-					Object menu = ReflectionUtils.getFieldValue(itemData, menuItemImplClass, Constants.Fields.MENU);
-					if (menu.getClass() == menuBuilderClass) {
-						Object callback = ReflectionUtils.getFieldValue(menu, menuBuilderClass, Constants.Fields.CALLBACK);
-						callbackList.add(callback);
-					}
-				}
-			}
-		}
-		return callbackList;		
-	}
-	
-	/**
-	 * is this the popup for the options menu for the activity? see getPopupWindowCallbackList() for details
-	 * @param popupWindow popup window to test
-	 * @return true if the callbacks for the menu item point back to the phone window.
-	 * 
-	 * @throws ClassNotFoundException
-	 * @throws IllegalAccessException
-	 * @throws NoSuchFieldException
-	 */
-	public static boolean isOptionsMenu(PopupWindow popupWindow) throws ClassNotFoundException, IllegalAccessException, NoSuchFieldException {
-		List<Object> callbackList = getPopupWindowCallbackList(popupWindow);
-		Class phoneWindowClass = Class.forName(Constants.Classes.PHONE_WINDOW);
-		if (callbackList.isEmpty()) {
-			return false;
-		} else {
-			for (Object callback : callbackList) {
-				if (callback.getClass() != phoneWindowClass) {
-					return false;
-				}
-			}
-		}
-		return true;
-	}
-	/**
-	 * some popup windows have anchors, like the overflow menu button in the action bar, or the button in a spinner
-	 * @param popupWindow the potentially anchored popup window
-	 * @return anchor view or null.
-	 * @throws IllegalAccessException
-	 * @throws NoSuchFieldException
-	 */
-	public static View getPopupWindowAnchor(PopupWindow popupWindow) throws IllegalAccessException, NoSuchFieldException {
-		WeakReference<View> anchorRef = (WeakReference<View>) ReflectionUtils.getFieldValue(popupWindow, PopupWindow.class, Constants.Fields.ANCHOR);
-		if (anchorRef != null) {
-			return anchorRef.get();
-		}
-		return null;
-	}
-
-	/**
-	 * is this popup window the dropdown to an AutoCompleteTextView?
-	 * @param popupWindow
-	 * @return true if the anchor is AutoCompleteTextView
-	 * @throws ClassNotFoundException
-	 * @throws IllegalAccessException
-	 * @throws NoSuchFieldException
-	 */
-	public static boolean isAutoCompleteWindow(PopupWindow popupWindow) throws ClassNotFoundException, IllegalAccessException, NoSuchFieldException {
-		View anchorView = getPopupWindowAnchor(popupWindow);
-		if (anchorView != null) {
-			if (anchorView instanceof AutoCompleteTextView) {
-				return true;
-			}
-		}
-		return false;
-	}
-	
-	/**
-	 * spinners can have popups (which are actually dropdowns), or dialog windows depending on the mode: MODE_DIALOG or mode: MODE_POPUP
-	 * @param popupWindow
-	 * @return
-	 */
-	public static boolean isSpinnerPopup(PopupWindow popupWindow) throws NoSuchFieldException, IllegalAccessException {
-		View anchorView = TestUtils.getPopupWindowAnchor(popupWindow);
-		return (anchorView instanceof Spinner);
-	}
-	
-	public static Spinner isSpinnerDialog(Dialog dialog, Activity activity)  throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
-		List<Spinner> spinnerList = ViewExtractor.getActivityViews(activity, Spinner.class);
-		for (Spinner spinner : spinnerList) {
-			if (TestUtils.isPopupDialogForSpinner(dialog, spinner)) {
-				return spinner;
-			}
-		}
-		return null;
-	}
-	
-	/**
-	 * for a given spinner, see if this dialog is the spinner's popup dialog
-	 * @param dialog dialog
-	 * @param spinner candidate spinner
-	 * @return true if it belongs, false if it does not
-	 * @throws NoSuchFieldException
-	 * @throws IllegalAccessException
-	 * @throws ClassNotFoundException
-	 */
-	public static boolean isPopupDialogForSpinner(Dialog dialog, Spinner spinner) throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
-		Object spinnerPopup = ReflectionUtils.getFieldValue(spinner, Spinner.class, Constants.Fields.POPUP);
-		if (spinnerPopup != null) {
-			Class spinnerDialogPopupClass = Class.forName(Constants.Classes.SPINNER_DIALOG_POPUP);
-			if (spinnerDialogPopupClass.equals(spinnerPopup.getClass())) {
-				Object spinnerPopupPopup = ReflectionUtils.getFieldValue(spinnerPopup, spinnerDialogPopupClass, Constants.Fields.POPUP);
-				return spinnerPopupPopup == dialog;
-			}
-		}
-		return false;
-	}
-
-
 	/**
 	 * sometimes they put '$'s in the classname, sometimes they don't
 	 * @param a
@@ -1186,55 +635,6 @@ public class TestUtils {
 	}	
 	
 	/**
-	 * spinner dialogs have to be handled differently.  We search for an adapter of the spinner dropdown type.
-	 * @param contentView
-	 * @return
-	 */
-	public static boolean isSpinnerDialog(View contentView)  throws ClassNotFoundException {
-		List<View> listList = TestUtils.getChildrenByClass(contentView, AdapterView.class);
-		Class spinnerAdapterClass = Class.forName(Constants.Classes.SPINNER_ADAPTER);
-		for (View v : listList) {
-			AdapterView adapterView = (AdapterView) v;
-			Adapter adapter = adapterView.getAdapter();
-			if (adapter.getClass() == spinnerAdapterClass) {
-				return true;
-			}
-		}
-		return false;		
-	}
-	
-	/**
-	 * geting a dialog title is tricky, because they didn't provide an accessor function for it, AND
-	 * it's an internal view (which fortunately derives from a TextView)
-	 * @param dialog
-	 * @return TextView or null if not found
-	 */
-	public static TextView getDialogTitleView(Dialog dialog) {
-		try {
-			Class<? extends View> dialogTitleClass = (Class<? extends View>) Class.forName(Constants.Classes.DIALOG_TITLE);
-			Window window = dialog.getWindow();
-			View decorView = window.getDecorView();
-			TextView dialogTitle = (TextView) TestUtils.findChild(decorView, 0, dialogTitleClass);
-			return dialogTitle;
-		} catch (ClassNotFoundException cnfex) {
-			Log.e(TAG, "failed to find dialog title");
-			return null;
-		}
-	}
-	
-	/**
-	 * get the content view of a dialog so we can intercept it with a MagicFrame
-	 * @param dialog
-	 * @return
-	 */
-	public static View getDialogContentView(Dialog dialog) {
-		Window window = dialog.getWindow();
-		View decorView = window.getDecorView();
-		View contentView = ((ViewGroup) decorView).getChildAt(0);
-		return contentView;
-	}
-	
-	/**
 	 * find the focused view in the hierarchy
 	 * @param v parent view.
 	 * @return focused view or null
@@ -1250,6 +650,83 @@ public class TestUtils {
 				View vFocus = getFocusedView(vChild);
 				if (vFocus != null) {
 					return vFocus;
+				}
+			}
+		}
+		return null;
+	}
+	
+	
+	/**
+	 * find the view containing event x,y with the greatest "depth" in the tree.
+	 * @param v view (current in recursion)
+	 * @param x coordinates of hit.
+	 * @param y
+	 * @return lowest-level view containing event.
+	 */
+	
+	public static View findViewByXY(View v, float x, float y) {
+		ClassCount depth = new ClassCount(0);
+		Rect hitRect = new Rect();
+		return findViewByXY(v, x, y, depth, hitRect, 0);
+	}
+
+	public static View findViewByXY(View v, float x, float y, ClassCount foundDepth, Rect hitRect, int depth) {
+		if (v.isShown()) {
+			v.getGlobalVisibleRect(hitRect);
+			if (hitRect.contains((int) x, (int) y)) {
+				if (v instanceof ViewGroup) {
+					ViewGroup vg = (ViewGroup) v;
+					for (int i = 0; i < vg.getChildCount(); i++) {
+						View vChild = vg.getChildAt(i);
+						View vCand = findViewByXY(vChild, x, y, foundDepth, hitRect, depth + 1);
+						if (vCand != null) {
+							return vCand;
+						}
+					}
+					
+				} else {
+					if (depth > foundDepth.mCount) {
+						foundDepth.mCount = depth;
+						return v;
+					}
+					return null;
+				}
+			}
+		}
+		return null;	
+	}
+	
+	/**
+	 * get the activity for a view.  A view may be of a child of a dialog, in which case, getContext()
+	 * returns a contextWrapper with the activity as contextWraper.getBaseContext()
+	 * @param v
+	 * @return
+	 */
+	public static Activity getViewActivity(View v) {
+		Context context = v.getContext();
+		if (context instanceof Activity) {
+			return (Activity) context;
+		} else if (context instanceof ContextWrapper) {
+			return (Activity) ((ContextWrapper) context).getBaseContext();
+		}
+		return null;
+	}
+	
+	/**
+	 * recursively search for the focused view within the view hierarchy.
+	 * @param v
+	 * @return focused view or null.
+	 */
+	public static View findFocusedView(View v) {
+		if (v.hasFocus()) {
+			return v;
+		} else if (v instanceof ViewGroup) {
+			ViewGroup vg = (ViewGroup) v;
+			for (int i = 0; i < vg.getChildCount(); i++) {
+				View vFocused = findFocusedView(vg.getChildAt(i));
+				if (vFocused != null) {
+					return vFocused;
 				}
 			}
 		}

@@ -75,6 +75,22 @@ public class FileUtils {
 		is.close();
 		return lines;
 	}
+	/**
+	 * function to read an asset file into an array of strings
+	 * @param context context to access the asset
+	 * @param asset assetname
+	 * @return array of strings
+	 * @throws IOException
+	 */
+	public static String readRawResourceString(Context context, int resourceId) throws IOException {
+		InputStream is = context.getResources().openRawResource(resourceId);
+		int nLines = FileUtils.numLines(is);
+		is.close();
+		is = context.getResources().openRawResource(resourceId);
+		String data = FileUtils.readString(is);
+		is.close();
+		return data;
+	}
 		
 	/**
 	 * because we have to include the recorder as a jar file, we can't use assets and resources
@@ -89,6 +105,23 @@ public class FileUtils {
 		is.close();
 		is = cls.getResourceAsStream(resourceName);
 		String[] lines = FileUtils.readLines(is, nLines);
+		is.close();
+		return lines;
+	}
+	
+	/**
+	 * because we have to include the recorder as a jar file, we can't use assets and resources
+	 * @param cls class to get resource names
+	 * @param resourceName resource name
+	 * @return Array of Strings
+	 * @throws IOException
+	 */
+	public static String readJarResourceString(Class cls, String resourceName) throws IOException {
+		InputStream is = cls.getResourceAsStream(resourceName);
+		int nLines = FileUtils.numLines(is);
+		is.close();
+		is = cls.getResourceAsStream(resourceName);
+		String lines = FileUtils.readString(is);
 		is.close();
 		return lines;
 	}
@@ -165,4 +198,22 @@ public class FileUtils {
 		}
 
 	}
+
+	/**
+     * read a string from an input stream 
+     * @param is InputStream to read from
+     * @return contents of stream read until BufferedReader returns null
+     * @throws IOException
+     */
+    public static String readString(InputStream is) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(is));
+        StringBuffer sb = new StringBuffer();
+        String line = br.readLine();
+        while (line != null) {
+            sb.append(line);
+            line = br.readLine();
+        }
+        return sb.toString();
+    }
+
 }

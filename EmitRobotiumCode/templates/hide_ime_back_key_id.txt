@@ -1,0 +1,3 @@
+		// %DESCRIPTION%
+		%CLASSPATH% view%VARIABLE_INDEX% = (%CLASSPATH%) solo.getView(%ID%);
+		robotiumUtils.hideIMEWithBackKey(view%VARIABLE_INDEX%);

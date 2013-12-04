@@ -21,10 +21,11 @@ import android.content.res.Resources;
 import android.content.res.XmlResourceParser;
 import android.graphics.drawable.Drawable;
 import android.inputmethodservice.Keyboard;
+import android.util.Log;
 import android.view.inputmethod.EditorInfo;
 
 public class LatinKeyboard extends Keyboard {
-
+	private static String TAG = "LatinKeyboard";
     private Key mEnterKey;
     private Key mSpaceKey;
     
@@ -94,7 +95,8 @@ public class LatinKeyboard extends Keyboard {
     static class LatinKey extends Keyboard.Key {
         
         public LatinKey(Resources res, Keyboard.Row parent, int x, int y, XmlResourceParser parser) {
-            super(res, parent, x, y, parser);
+        	super(res, parent, x, y, parser);
+        	Log.i(TAG, "text = " + this.text + " codes = " + this.codes);
         }
         
         /**

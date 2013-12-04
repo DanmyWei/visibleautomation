@@ -27,14 +27,16 @@ import android.webkit.WebViewClient;
 public class RecordWebViewClient extends WebViewClient implements IOriginalListener {
 	protected WebViewClient 	mOriginalWebViewClient;
 	protected EventRecorder 	mEventRecorder;				// handle to the recorder 
+	protected String			mActivityName;				// to record events and exceptions filtered by activity
 
-	public RecordWebViewClient(EventRecorder eventRecorder, WebView webView) {
+	public RecordWebViewClient(String activityName, EventRecorder eventRecorder, WebView webView) {
 		mEventRecorder = eventRecorder;
+		mActivityName = activityName;
 		try {
 			mOriginalWebViewClient = ListenerIntercept.getWebViewClient(webView);
 			webView.setWebViewClient(this);
 		} catch (Exception ex) {
-			mEventRecorder.writeException(ex, webView, "create on pageStarted listener");
+			mEventRecorder.writeException(ex, activityName, webView, "create on pageStarted listener");
 		}		
 	}
 	
@@ -75,9 +77,9 @@ public class RecordWebViewClient extends WebViewClient implements IOriginalListe
 			try {
 				String happyUrl = StringUtils.escapeString(url, "\"\'", '\\');
 				String message = RecordListener.getDescription(view) + ",\"" + happyUrl + "\"";
-				mEventRecorder.writeRecord(Constants.EventTags.ON_PAGE_FINISHED, view, message);
+				mEventRecorder.writeRecord(Constants.EventTags.ON_PAGE_FINISHED, mActivityName, view, message);
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, view, " on pageStarted");
+				mEventRecorder.writeException(ex, mActivityName, view, " on pageStarted");
 			}	
 		}
 		
@@ -91,9 +93,9 @@ public class RecordWebViewClient extends WebViewClient implements IOriginalListe
 			try {
 				String happyUrl = StringUtils.escapeString(url, "\"\'", '\\');
 				String message = RecordListener.getDescription(view) + "," + happyUrl;
-				mEventRecorder.writeRecord(Constants.EventTags.ON_PAGE_STARTED, view, message);
+				mEventRecorder.writeRecord(Constants.EventTags.ON_PAGE_STARTED, mActivityName, view, message);
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, view, "on pageStarted");
+				mEventRecorder.writeException(ex, mActivityName, view, "on pageStarted");
 			}	
 		}
 	}
@@ -105,9 +107,9 @@ public class RecordWebViewClient extends WebViewClient implements IOriginalListe
 		// robotium indexes by shown views.
 		if (view.isShown()) {
 			try {
-				mEventRecorder.writeRecord(Constants.EventTags.ON_RECEIVED_ERROR, view, RecordListener.getDescription(view));
+				mEventRecorder.writeRecord(Constants.EventTags.ON_RECEIVED_ERROR, mActivityName, view, RecordListener.getDescription(view));
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, view, "on onReceivedError");
+				mEventRecorder.writeException(ex, mActivityName, view, "on onReceivedError");
 			}
 		}
 	}
@@ -141,9 +143,9 @@ public class RecordWebViewClient extends WebViewClient implements IOriginalListe
 			try {
 				String scales = Float.toString(oldScale) + "," + Float.toString(newScale);
 				String message = RecordListener.getDescription(view) + "," + scales;
-				mEventRecorder.writeRecord(Constants.EventTags.ON_SCALE_CHANGED, view, message);
+				mEventRecorder.writeRecord(Constants.EventTags.ON_SCALE_CHANGED, mActivityName, view, message);
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, view, "on onReceivedError");
+				mEventRecorder.writeException(ex, mActivityName, view, "on onReceivedError");
 			}
 		}
 	}

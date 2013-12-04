@@ -1,0 +1,4 @@
+		// %DESCRIPTION%
+		android.widget.TextView textView%VARIABLE_INDEX% = (android.widget.TextView) robotiumUtils.getView((Class<? extends View>) Class.forName("%INTERNAL_CLASS%"), %REAL_INDEX%);
+		String text%VARIABLE_NAME% = textView%VARIABLE_INDEX%.getText().toString();
+		

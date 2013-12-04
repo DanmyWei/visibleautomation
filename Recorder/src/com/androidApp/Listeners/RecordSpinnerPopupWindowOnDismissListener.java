@@ -7,6 +7,7 @@ import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.TestUtils;
 
 import android.widget.PopupWindow;
+import android.app.Activity;
 import android.view.KeyEvent;
 import android.view.View;
 
@@ -28,12 +29,13 @@ public class RecordSpinnerPopupWindowOnDismissListener extends RecordListener im
 	public RecordSpinnerPopupWindowOnDismissListener() {
 	}
 	
-	public RecordSpinnerPopupWindowOnDismissListener(EventRecorder 					eventRecorder, 
+	public RecordSpinnerPopupWindowOnDismissListener(String							activityName,
+													 EventRecorder 					eventRecorder, 
 												     ViewInterceptor				viewInterceptor,
 												     View							anchorView,
 												     PopupWindow					popupWindow, 
 												     PopupWindow.OnDismissListener 	originalDismissListener) {
-		super(eventRecorder);
+		super(activityName, eventRecorder);
 		mViewInterceptor = viewInterceptor;
 		mOriginalOnDismissListener = originalDismissListener;
 		mAnchorView = anchorView;
@@ -54,13 +56,13 @@ public class RecordSpinnerPopupWindowOnDismissListener extends RecordListener im
 				
 				// check to see if the user hit the back key to dismiss this popup
 				if (mViewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_BACK){
-					mEventRecorder.writeRecord(Constants.EventTags.DISMISS_SPINNER_POPUP_WINDOW_BACK_KEY, mAnchorView, "dismiss spinner popup window");					
+					mEventRecorder.writeRecord(Constants.EventTags.DISMISS_SPINNER_POPUP_WINDOW_BACK_KEY, mActivityName, mAnchorView, "dismiss spinner popup window");					
 				} else {
-					mEventRecorder.writeRecord(Constants.EventTags.DISMISS_SPINNER_POPUP_WINDOW, mAnchorView, "dismiss spinner popup window");
+					mEventRecorder.writeRecord(Constants.EventTags.DISMISS_SPINNER_POPUP_WINDOW, mActivityName, mAnchorView, "dismiss spinner popup window");
 				}
 				mViewInterceptor.setLastKeyAction(-1);
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, Constants.EventTags.DISMISS_POPUP_WINDOW);
+				mEventRecorder.writeException(mActivityName, ex, Constants.EventTags.DISMISS_POPUP_WINDOW);
 			}
 		}
 		if (!fReentryBlock) {

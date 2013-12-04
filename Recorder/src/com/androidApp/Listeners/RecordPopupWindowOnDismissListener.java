@@ -6,6 +6,7 @@ import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 
 import android.widget.PopupWindow;
+import android.app.Activity;
 import android.view.KeyEvent;
 import android.view.View;
 
@@ -27,12 +28,13 @@ public class RecordPopupWindowOnDismissListener extends RecordListener implement
 	public RecordPopupWindowOnDismissListener() {
 	}
 	
-	public RecordPopupWindowOnDismissListener(EventRecorder 				eventRecorder, 
+	public RecordPopupWindowOnDismissListener(String						activityName,
+											  EventRecorder 				eventRecorder, 
 											  ViewInterceptor				viewInterceptor,
 											  View							anchorView,
 											  PopupWindow					popupWindow, 
 											  PopupWindow.OnDismissListener originalDismissListener) {
-		super(eventRecorder);
+		super(activityName, eventRecorder);
 		mViewInterceptor = viewInterceptor;
 		mOriginalOnDismissListener = originalDismissListener;
 		mAnchorView = anchorView;
@@ -54,20 +56,20 @@ public class RecordPopupWindowOnDismissListener extends RecordListener implement
 				// back key (recorded by MagicFrame)
 				if (mAnchorView == null) {
 					if (mViewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_BACK){
-						mEventRecorder.writeRecord(Constants.EventTags.DISMISS_POPUP_WINDOW_BACK_KEY, "dismiss popup window");					
+						mEventRecorder.writeRecord(mActivityName, Constants.EventTags.DISMISS_POPUP_WINDOW_BACK_KEY, "dismiss popup window");					
 					} else {
-						mEventRecorder.writeRecord(Constants.EventTags.DISMISS_POPUP_WINDOW, "dismiss popup window");
+						mEventRecorder.writeRecord(mActivityName, Constants.EventTags.DISMISS_POPUP_WINDOW, "dismiss popup window");
 					}
 				} else {
 					if (mViewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_BACK){
-						mEventRecorder.writeRecord(Constants.EventTags.DISMISS_POPUP_WINDOW_BACK_KEY, mAnchorView, "dismiss popup window");					
+						mEventRecorder.writeRecord(Constants.EventTags.DISMISS_POPUP_WINDOW_BACK_KEY, mActivityName, mAnchorView, "dismiss popup window");					
 					} else {
-						mEventRecorder.writeRecord(Constants.EventTags.DISMISS_POPUP_WINDOW, mAnchorView, "dismiss popup window");	
+						mEventRecorder.writeRecord(Constants.EventTags.DISMISS_POPUP_WINDOW, mActivityName, mAnchorView, "dismiss popup window");	
 					}
 				}
 				mViewInterceptor.setLastKeyAction(-1);
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, Constants.EventTags.DISMISS_POPUP_WINDOW);
+				mEventRecorder.writeException(mActivityName, ex, Constants.EventTags.DISMISS_POPUP_WINDOW);
 			}
 		}
 		if (!fReentryBlock) {

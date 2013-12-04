@@ -36,14 +36,14 @@ public class InterceptOnHierarchyChangeListener extends RecordListener implement
 	 * @param vg actually an AdapterView, but we're trying to be general here
 	 */
 	public InterceptOnHierarchyChangeListener(Activity activity, EventRecorder eventRecorder, ViewInterceptor viewInterceptor, ViewGroup vg) {
-		super(eventRecorder);
+		super(activity.getClass().getName(), eventRecorder);
 		mViewInterceptor = viewInterceptor;
 		mActivity = activity;
 		try {
 			mOriginalOnHierarchyChangeListener = ListenerIntercept.getOnHierarchyChangeListener(vg);
 			vg.setOnHierarchyChangeListener(this);
 		} catch (Exception ex) {
-			mEventRecorder.writeException(ex, (View) vg, "create on click listener");
+			mEventRecorder.writeException(ex, mActivity.toString(), (View) vg, "create on hierarchy changed listener");
 		}		
 	}
 	
@@ -57,7 +57,7 @@ public class InterceptOnHierarchyChangeListener extends RecordListener implement
 											  EventRecorder 				eventRecorder, 
 										   	  ViewInterceptor 				viewInterceptor, 
 										   	  OnHierarchyChangeListener 	orginalOnHierarchyChangeListener) {
-		super(eventRecorder);
+		super(activity.getClass().getName(), eventRecorder);
 		mActivity = activity;
 		mViewInterceptor  = viewInterceptor;
 		mOriginalOnHierarchyChangeListener = orginalOnHierarchyChangeListener;
@@ -72,12 +72,12 @@ public class InterceptOnHierarchyChangeListener extends RecordListener implement
 	 * when a child is added, intercept its views, but not immediately, since this is probably called from
 	 * adapter.getView(), and the view's handlers might not be installed yet, so we force a go-round
 	 * with the UI.
+	 * TODO: The problem with this is that the hashtable for the view indices gets re-initialized.
+	 * We need to retain the view index hashtable with the activity in the view interceptor
 	 */
 	@Override
 	public void onChildViewAdded(View parent, View child) {
-		if (!mViewInterceptor.runDeferred(parent, mViewInterceptor.new InterceptViewRunnable(mActivity, child))) {
-			mViewInterceptor.callIntercept(mActivity, child);
-		}
+		mViewInterceptor.runDeferred(mActivity, mViewInterceptor.new InterceptViewRunnable(mActivity, mActivity.toString(), child));
 		if (mOriginalOnHierarchyChangeListener != null) {
 			mOriginalOnHierarchyChangeListener.onChildViewAdded(parent, child);
 		}

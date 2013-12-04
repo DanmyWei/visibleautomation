@@ -7,7 +7,9 @@ import com.androidApp.Utility.ReflectionUtils;
 import com.androidApp.Utility.StringUtils;
 import com.androidApp.Utility.TestUtils;
 import com.androidApp.Utility.ViewExtractor;
+import com.androidApp.Utility.ViewType;
 
+import android.app.Activity;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.view.MenuItem;
@@ -38,13 +40,17 @@ public class RecordListener {
 	
 	// latch to indicate that an event has been fired since the latch was reset.
 	protected static boolean	sfEventLatch;
-
+	
+	// retain the activity name so we can record it to associate events with the activity.
+	protected String			mActivityName;
+	
 	public RecordListener() {
 		mEventRecorder = null;
 	}
 	
-	public RecordListener(EventRecorder eventRecorder) {
+	public RecordListener(String activityName, EventRecorder eventRecorder) {
 		mEventRecorder = eventRecorder;
+		mActivityName = activityName;
 	}
 	
 	/**
@@ -156,15 +162,17 @@ public class RecordListener {
 	public static String getDescription(DialogInterface dialogInterface) throws ClassNotFoundException, IllegalAccessException, NoSuchFieldException  {
 		Dialog dialog = (Dialog) dialogInterface;
 		Window window = dialog.getWindow();
+		
+		// TODO: THIS IS WRONG: The title is a text view
 		Class phoneWindowClass = Class.forName(Constants.Classes.PHONE_WINDOW);
 		String titleString = (String) ReflectionUtils.getFieldValue(window, phoneWindowClass, Constants.Fields.TITLE);
 		if (titleString != null) {
 			return StringUtils.massageString(titleString);
 		} else {
 			View dialogView = window.getDecorView();
-			View dialogTitle = TestUtils.getChildByClassName(dialogView, Constants.Classes.DIALOG_TITLE_SIMPLE_NAME);
+			TextView dialogTitle = (TextView) TestUtils.getChildByClassName(dialogView, Constants.Classes.DIALOG_TITLE_SIMPLE_NAME);
 			if (dialogTitle != null) {
-				titleString = (String) ReflectionUtils.getFieldValue(dialogTitle, TextView.class, Constants.Fields.TEXT);
+				titleString = dialogTitle.getText().toString();
 				if (!StringUtils.isEmpty(titleString)) {
 					return StringUtils.massageString(titleString);
 				} 
@@ -178,7 +186,12 @@ public class RecordListener {
 	
 	public static String getDescriptionByClassIndex(View v) {
 		View vRoot = v.getRootView();
-		int index = TestUtils.classIndex(vRoot, v);
+		int index = TestUtils.classIndex(vRoot, v, true);
 		return StringUtils.getOrdinal(index) + " " + v.getClass().getSimpleName();
+	}
+	
+	public boolean shouldRecordEvent(View v) {
+		return !RecordListener.getEventBlock() && (mEventRecorder.hasTouchedDown() || !ViewType.isDecorViewDescendant(v));
+
 	}
 }

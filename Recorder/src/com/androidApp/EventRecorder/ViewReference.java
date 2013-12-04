@@ -17,6 +17,7 @@ import android.widget.TextView;
 
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.FieldUtils;
+import com.androidApp.Utility.ResourceUtils;
 import com.androidApp.Utility.StringUtils;
 import com.androidApp.Utility.TestUtils;
 
@@ -97,13 +98,15 @@ public class ViewReference {
 
 	/** 
 	 * for Robotium functions like clickInList(), the list is referenced by its index in the # of lists displayed on the screen
+	 * and by its class index in the total hierarchy
 	 * @param v
 	 * @return
 	 */
 	public static String getClassIndexReference(View v) {
 		View rootView = v.getRootView();
-		int classIndex = TestUtils.classIndex(rootView, v);
-		return Constants.Reference.CLASS_INDEX + "," + v.getClass().getName() + "," + classIndex;	
+		int classIndexShown = TestUtils.classIndex(rootView, v, true);
+		int classIndexReal = TestUtils.classIndex(rootView, v, false);
+		return Constants.Reference.CLASS_INDEX + "," + v.getClass().getName() + "," + classIndexShown + "," + classIndexReal;	
 	}
 	
 	/**
@@ -184,7 +187,8 @@ public class ViewReference {
 		Class viewClass = v.getClass();
 		while (viewClass != View.class) {
 			try {
-				Class c = Class.forName(viewClass.getCanonicalName());
+				//Class c = Class.forName(viewClass.getCanonicalName());
+				Class c = Class.forName(viewClass.getName());
 				break;
 			} catch (ClassNotFoundException cnfex) {
 				viewClass = viewClass.getSuperclass();
@@ -219,7 +223,9 @@ public class ViewReference {
 	public String getReference(View v) throws IllegalAccessException, IOException {
 		Class<? extends View> allocatableClass = getAllocatableClass(v);
 		Class<? extends View> usableClass = getUsableClass(mInstrumentation.getContext(), v, mfBinary);
-		boolean fInternalClass = (usableClass != allocatableClass);
+		
+		// it's internal if the allocatable class or the original class is different than the usable class
+		boolean fInternalClass = (usableClass != allocatableClass) && (usableClass != v.getClass());
 	
 		// first, try the id, and verify that it is unique.
 		int id = v.getId();
@@ -227,7 +233,7 @@ public class ViewReference {
 		if (id != 0) {
 			int idCount = TestUtils.idCount(rootView, id);
 			if (idCount == 1) {
-				return Constants.Reference.ID + "," + TestUtils.getIdForValue(mRIDList, id) + "," + usableClass.getCanonicalName();
+				return Constants.Reference.ID + "," + ResourceUtils.getIdForValue(mRIDList, id) + "," + usableClass.getCanonicalName();
 			}
 		}
 		
@@ -241,7 +247,7 @@ public class ViewReference {
 				if (parentIdCount == 1) {
 					int textCount = TestUtils.textCount(viewParentWithId, s);
 					if (textCount == 1) {
-						return Constants.Reference.TEXT_ID + "," + TestUtils.getIdForValue(mRIDList, viewParentWithId.getId()) + "," + 
+						return Constants.Reference.TEXT_ID + "," + ResourceUtils.getIdForValue(mRIDList, viewParentWithId.getId()) + "," + 
 							    "\"" + StringUtils.escapeString(s, "\"", '\\').replace("\n", "\\n") + "\"";
 					}
 				}
@@ -253,15 +259,19 @@ public class ViewReference {
 		if (viewParentWithId != null) {
 			int parentIdCount = TestUtils.idCount(rootView, viewParentWithId.getId());
 			if (parentIdCount == 1) {
-				int classIndex = TestUtils.classIndex(viewParentWithId, v);
-				return Constants.Reference.CLASS_ID + "," +  TestUtils.getIdForValue(mRIDList, viewParentWithId.getId()) + "," + usableClass.getCanonicalName() + "," + classIndex;
+				int classIndex = TestUtils.classIndex(viewParentWithId, v, true);
+				return Constants.Reference.CLASS_ID + "," +  ResourceUtils.getIdForValue(mRIDList, viewParentWithId.getId()) + "," + usableClass.getCanonicalName() + "," + classIndex;
 			} else {
 				if (fInternalClass) {
-					int classIndex = TestUtils.classIndex(rootView, v);
-					return Constants.Reference.INTERNAL_CLASS_INDEX + "," + allocatableClass.getCanonicalName() + "," + usableClass.getCanonicalName() + "," + classIndex;
+					int classIndexShown = TestUtils.classIndex(rootView, v, true);
+					int classIndexReal = TestUtils.classIndex(rootView, v, false);
+					return Constants.Reference.INTERNAL_CLASS_INDEX + "," + allocatableClass.getName() + "," + usableClass.getCanonicalName() + "," + 
+						 	classIndexShown + "," + classIndexReal;
 				} else {
-					int classIndex = TestUtils.classIndex(rootView, v);
-					return Constants.Reference.CLASS_INDEX + "," + usableClass.getCanonicalName() + "," + classIndex;
+					int classIndexShown = TestUtils.classIndex(rootView, v, true);
+					int classIndexReal = TestUtils.classIndex(rootView, v, false);
+					return Constants.Reference.CLASS_INDEX + "," + usableClass.getCanonicalName() + "," + 
+							classIndexShown + "," + classIndexReal;
 				}
 			}
 		}

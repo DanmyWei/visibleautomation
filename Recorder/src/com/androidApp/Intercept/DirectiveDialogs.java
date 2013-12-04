@@ -35,8 +35,9 @@ import com.androidApp.Intercept.directivedialogs.OnViewSelectionListener;
 import com.androidApp.Test.ActivityInterceptor;
 import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.DialogUtils;
+import com.androidApp.Utility.ResourceUtils;
 import com.androidApp.Utility.StringUtils;
-import com.androidApp.Utility.TestUtils;
 
 /**
  * dialogs which are displayed from the magic overlay to enter information for view directives,
@@ -107,8 +108,9 @@ public class DirectiveDialogs {
 			if (which == 0) {
 				// prevent 'doubling'
 				if (!DirectiveDialogs.this.getEventRecorder().isInterstitialActivity(DirectiveDialogs.this.getActivity())) {
-					String logMsg =  DirectiveDialogs.this.getActivity().getClass().getName();
-					DirectiveDialogs.this.getEventRecorder().writeRecord(Constants.EventTags.INTERSTITIAL_ACTIVITY, logMsg);
+					Activity activity = DirectiveDialogs.this.getActivity();
+					String logMsg =  activity.getClass().getName();
+					DirectiveDialogs.this.getEventRecorder().writeRecord(activity.toString(), Constants.EventTags.INTERSTITIAL_ACTIVITY, logMsg);
 					DirectiveDialogs.this.getEventRecorder().addInterstitialActivity(DirectiveDialogs.this.getActivity());
 				}
 			} else if (which == 1) {
@@ -136,21 +138,23 @@ public class DirectiveDialogs {
 		public void onClick(DialogInterface dialog, int which) {
 			if (which == 0) {
 				try {
-					TextView dialogTitle = TestUtils.getDialogTitleView(mMagicOverlayDialog.getTargetDialog());
+					TextView dialogTitle = DialogUtils.getDialogTitleView(mMagicOverlayDialog.getTargetDialog());
 					if (dialogTitle != null) {
 						String title = dialogTitle.getText().toString();
 						if (title != null) {
 							Resources res = mMagicOverlayDialog.getActivity().getResources();
 							EventRecorder eventRecorder = DirectiveDialogs.this.getEventRecorder();
 							List<Object> resourceIds =  eventRecorder.getViewReference().getStringList();		
-							List<String> resIds = TestUtils.getIdForString(res, resourceIds, title);
+							List<String> resIds = ResourceUtils.getIdForString(res, resourceIds, title);
 							if (resIds.size() == 1) {
-								String msg = mMagicOverlayDialog.getActivity().getClass().getName() + "," + resIds.get(0);
-								eventRecorder.writeRecord(Constants.EventTags.INTERSTITIAL_DIALOG_TITLE_ID, msg);
+								Activity activity = mMagicOverlayDialog.getActivity();
+								String msg = activity.getClass().getName() + "," + resIds.get(0);
+								eventRecorder.writeRecord(activity.toString(), Constants.EventTags.INTERSTITIAL_DIALOG_TITLE_ID, msg);
 							} else {
 								String escapedTitle = StringUtils.escapeString(title, "\"", '\\').replace("\n", "\\n");
-								String msg = mMagicOverlayDialog.getActivity().getClass().getName() + "," + "\"" + escapedTitle + "\"";
-								eventRecorder.writeRecord(Constants.EventTags.INTERSTITIAL_DIALOG_TITLE_TEXT, msg);
+								Activity activity = mMagicOverlayDialog.getActivity();
+								String msg = activity.getClass().getName() + "," + "\"" + escapedTitle + "\"";
+								eventRecorder.writeRecord(activity.toString(), Constants.EventTags.INTERSTITIAL_DIALOG_TITLE_TEXT, msg);
 							}
 						} else {
 							Toast.makeText(mMagicOverlayDialog.getActivity(), Constants.DisplayStrings.NO_DIALOG_TITLE, Toast.LENGTH_SHORT).show();
@@ -191,7 +195,8 @@ public class DirectiveDialogs {
 														Constants.DisplayStrings.MOTION_EVENTS,
 					    								Constants.DisplayStrings.COPY_TEXT,
 					    								Constants.DisplayStrings.PASTE_TEXT,
-					    								Constants.DisplayStrings.INSERT_BY_CHARACTER};
+					    								Constants.DisplayStrings.INSERT_BY_CHARACTER,
+					    								Constants.DisplayStrings.INTERSTITIAL_VIEW };
 				Dialog dialog = createSelectionDialog(context, editTextItems, new OnEditTextSelectionListener(DirectiveDialogs.this));
 				dialog.show();				
 			} else if (currentView instanceof TextView) {
@@ -200,28 +205,32 @@ public class DirectiveDialogs {
 														Constants.DisplayStrings.IGNORE_TEXT_EVENTS,
 													 	Constants.DisplayStrings.MOTION_EVENTS,
 													    Constants.DisplayStrings.COPY_TEXT,
-													    Constants.DisplayStrings.CLICK_WORKAROUND};
+													    Constants.DisplayStrings.CLICK_WORKAROUND,
+													    Constants.DisplayStrings.INTERSTITIAL_VIEW };
 				Dialog dialog = createSelectionDialog(context, textViewItems, new OnTextViewSelectionListener(DirectiveDialogs.this));
 				dialog.show();
 			} else if (currentView instanceof AbsListView) {
 				String[] listViewItems = new String[] { Constants.DisplayStrings.IGNORE_EVENTS,
 														Constants.DisplayStrings.MOTION_EVENTS,
 														Constants.DisplayStrings.SELECT_BY_TEXT,
-														Constants.DisplayStrings.SELECT_ITEM_WORKAROUND};
+														Constants.DisplayStrings.SELECT_ITEM_WORKAROUND,
+														Constants.DisplayStrings.INTERSTITIAL_VIEW };
 				Dialog dialog = createSelectionDialog(context, listViewItems, new OnListSelectionListener(DirectiveDialogs.this));
 				dialog.show();	
 			} else if (currentView instanceof CompoundButton) {
 				String[] compoundButtonItems = new String[] { Constants.DisplayStrings.IGNORE_EVENTS,
 															  Constants.DisplayStrings.MOTION_EVENTS,
 															  Constants.DisplayStrings.CHECK,
-															  Constants.DisplayStrings.UNCHECK };
+															  Constants.DisplayStrings.UNCHECK,
+															  Constants.DisplayStrings.INTERSTITIAL_VIEW};
 				Dialog dialog = createSelectionDialog(context, compoundButtonItems, new OnCompoundButtonSelectionListener(DirectiveDialogs.this));
 				dialog.show();	
 			} else { 
 				String[] viewItems = new String[] { Constants.DisplayStrings.IGNORE_EVENTS,
 													Constants.DisplayStrings.IGNORE_CLICK_EVENTS,
 													Constants.DisplayStrings.IGNORE_LONG_CLICK_EVENTS,
-						  							Constants.DisplayStrings.MOTION_EVENTS };
+						  							Constants.DisplayStrings.MOTION_EVENTS,
+						  							Constants.DisplayStrings.INTERSTITIAL_VIEW};
 				Dialog dialog = createSelectionDialog(context, viewItems, new OnViewSelectionListener(DirectiveDialogs.this));
 				dialog.show();	
 			}

@@ -4,6 +4,7 @@ import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
 
+import android.app.Activity;
 import android.os.SystemClock;
 import android.util.Log;
 import android.view.View;
@@ -23,13 +24,13 @@ public class RecordOnScrollListener extends RecordListener implements AbsListVie
 	protected AbsListView.OnScrollListener 	mOriginalOnScrollListener;
 	protected int							mScrollState = AbsListView.OnScrollListener.SCROLL_STATE_IDLE;
 	
-	public RecordOnScrollListener(EventRecorder eventRecorder, AbsListView.OnScrollListener originalOnScrollListener) {
-		super(eventRecorder);
+	public RecordOnScrollListener(String activityName, EventRecorder eventRecorder, AbsListView.OnScrollListener originalOnScrollListener) {
+		super(activityName, eventRecorder);
 		mOriginalOnScrollListener = originalOnScrollListener;
 	}
 	
-	public RecordOnScrollListener(EventRecorder eventRecorder, AbsListView listView) {
-		super(eventRecorder);
+	public RecordOnScrollListener(String activityName, EventRecorder eventRecorder, AbsListView listView) {
+		super(activityName, eventRecorder);
 		try {
 			mOriginalOnScrollListener = ListenerIntercept.getScrollListener(listView);
 			listView.setOnScrollListener(this);
@@ -49,6 +50,10 @@ public class RecordOnScrollListener extends RecordListener implements AbsListVie
 	 * @param firstVisibleItem first visible item
 	 * @param visibleItemCount number of visible items
 	 * @param totalItemCount total # of items in the list view.
+	 * TODO: for other event handlers, we check for touch_down before actually recording the event,
+	 * but in the scroll case, the down event precedes a series of scroll events, followed by a 
+	 * touch_up or touch_cancel, and it's a bit tricky to pick up the down event, so for now, 
+	 * I'm going to blow it off, even though self-scrolling is a very common event.
 	 */
 	public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
 		boolean fReentryBlock = getReentryBlock();
@@ -61,10 +66,10 @@ public class RecordOnScrollListener extends RecordListener implements AbsListVie
 					String description = getDescriptionByClassIndex(view);
 					String logString = firstVisibleItem + "," + visibleItemCount + "," + 
 					   					totalItemCount + "," + ViewReference.getClassIndexReference(view) + "," + description;
-					mEventRecorder.writeRecord(Constants.EventTags.SCROLL, logString);
+					mEventRecorder.writeRecord(mActivityName, Constants.EventTags.SCROLL, logString);
 				}
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, view, " on scroll");
+				mEventRecorder.writeException(ex, mActivityName, view, " on scroll");
 			}
 		}
 		if (!fReentryBlock) {

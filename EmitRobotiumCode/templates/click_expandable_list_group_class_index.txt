@@ -1,4 +1,4 @@
 		// %DESCRIPTION%
-		%CLASSPATH% view%VARIABLE_INDEX% = (%CLASSPATH%) solo.getView(%CLASSPATH%.class, %VIEW_INDEX%);
-		ExpandableListView expandableListView%VARIABLE_INDEX% = (ExpandableListView) solo.getView(ExpandableListView.class, %VIEW_INDEX%);
+		ExpandableListView expandableListView%VARIABLE_INDEX% = (ExpandableListView) RobotiumUtils.getView(ExpandableListView.class, %REAL_INDEX%);
+		scrollToViewVisible(expandableListView%VARIABLE_INDEX%);
 		robotiumUtils.clickGroup(expandableListView%VARIABLE_INDEX%, %ITEM_INDEX%);

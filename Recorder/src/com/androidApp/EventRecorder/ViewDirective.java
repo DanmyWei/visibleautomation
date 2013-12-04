@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
+import android.util.Log;
 import android.view.View;
 
 import com.androidApp.Utility.Constants;
@@ -18,6 +19,7 @@ import com.androidApp.Utility.Constants;
  *
  */
 public class ViewDirective {
+	protected static final String TAG = "ViewDirective";
 	public enum ViewOperation {
 		COPY_TEXT("copy_text"),									// <view_reference>,copy_text,<when>,variable_name
 		PASTE_TEXT("paste_text"),								// <view_reference>,paste_text,<when>,variable_name
@@ -32,10 +34,11 @@ public class ViewDirective {
 		IGNORE_CLICK_EVENTS("ignore_click_events"),
 		IGNORE_LONG_CLICK_EVENTS("ignore_long_click_events"),
 		IGNORE_SCROLL_EVENTS("ignore_scroll_events"),
-		IGNORE_ITEM_SELECT_EVENTS("ignore_item_select_events"),
+		IGNORE_ITEM_SELECT_EVENTS("ignore_item_select_events"),	
 		IGNORE_TEXT_EVENTS("ignore_text_events"), 
 		CLICK_WORKAROUND("click_workaround"), 
-		SELECT_ITEM_WORKAROUND("select_item_workaround");
+		SELECT_ITEM_WORKAROUND("select_item_workaround"),
+		INTERSTITIAL_VIEW("interstitial_view");
 		
 		public String mName;
 		
@@ -52,6 +55,9 @@ public class ViewDirective {
 			return null;
 		}
 	}
+	
+	// This needs to be extended to reflect the previous operation.
+	// NOTE: use proper enums with strings
 	public enum When {
 		ON_ACTIVITY_START,		// perform the operation when the activity starts
 		ON_VALUE_CHANGE,		// perform the operation when the view value is changed
@@ -87,6 +93,10 @@ public class ViewDirective {
 	
 	public When getWhen() {
 		return mWhen;
+	}
+	
+	public String getVariable() {
+		return mVariable;
 	}
 	
 	/**
@@ -127,14 +137,14 @@ public class ViewDirective {
 
 	/**
 	 * does this view match the view reference, requested operation, and when?
-	 * @param v
-	 * @param viewIndex
-	 * @param op
-	 * @param when
-	 * @return
+	 * @param v view to test against
+	 * @param viewIndex index of view by preorder search filter by view type
+	 * @param op operation to filter by
+	 * @param when activity_start, etc.
+	 * @return true if it's a match
 	 */
-	public boolean match(View v, int viewIndex, ViewOperation op, When when) {
-		return mViewReference.matchView(v, viewIndex) && (mOperation == op) && (mWhen.match(when));
+	public boolean match(View v, ViewOperation op, When when) {
+		return mViewReference.matchView(v) && (mOperation == op) && (mWhen.match(when));
 	}
 	
 	/**
@@ -146,9 +156,10 @@ public class ViewDirective {
 	 * @param viewDirectiveList
 	 * @return
 	 */
-	public static boolean match(View v, int viewIndex, ViewOperation op, When when, List<ViewDirective> viewDirectiveList) {
+	public static boolean match(View v, ViewOperation op, When when, List<ViewDirective> viewDirectiveList) {
 		for (ViewDirective viewDirective : viewDirectiveList) {
-			if (viewDirective.match(v, viewIndex, op, when)) {
+			if (viewDirective.match(v, op, when)) {
+				Log.i(TAG, "v matched view directive " + viewDirective + " op = " + op + " when = " + when);
 				return true;
 			}
 		}

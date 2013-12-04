@@ -11,6 +11,8 @@ import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
 
+import com.androidApp.codedefinition.CodeDefinition;
+import com.androidApp.codedefinition.DialogCodeDefinition;
 import com.androidApp.util.SuperTokenizer;
 
 
@@ -47,14 +49,19 @@ public interface IEmitCode {
 	}
 	
 	/**
-	 * output type from the emitter: determines when it terminates (end of code, activity transtion, dialog)
+	 * output type from the emitter: determines when it terminates (end of code, activity transtion, dialog, view)
 	 * @author matt2
 	 *
 	 */
 	public enum OutputType {
 		MAIN,
 		INTERSTITIAL_ACTIVITY,
-		INTERSTITIAL_DIALOG
+		INTERSTITIAL_DIALOG, 
+		INTERSTITIAL_VIEW;
+		
+		public boolean isInterstitial() {
+			return this.equals(INTERSTITIAL_ACTIVITY) || this.equals(INTERSTITIAL_DIALOG) ||  this.equals(INTERSTITIAL_VIEW);
+		}
 	}
 		
 	String getApplicationClassPath();
@@ -89,19 +96,21 @@ public interface IEmitCode {
 	void writeRotation(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
 	void writeShowIME(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
 	void writeHideIME(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
-	void writeScroll(int scrollListIndex, int scrollFirstVisibleItem, List<String> tokens, List<LineAndTokens> outputLines) throws IOException;
+	void writeScroll(ReferenceParser scrollListRef, int scrollFirstVisibleItem, List<String> tokens, List<LineAndTokens> outputLines) throws IOException;
 	void writeEnterText(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
 	void writeWaitForListClassIndex(List<String> tokens, int itemIndex, List<LineAndTokens> lines) throws IOException;
 	void writeWaitForListIdItem(List<String> tokens, int itemIndex, List<LineAndTokens> lines) throws IOException;
 	void writeItemClick(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
 	void writePopupMenuItemClick(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
-	void writeItemSelected(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
+	void writeSpinnerItemSelected(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
 	void writeChildClick(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
 	void writeGroupClick(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
 	void writeHeader(String 				classPath, 
 					 String 				testPackage, 
 					 String 				testClassName, 
 					 String 				className, 
+					 int					targetSDK,
+					 List<String>			supportLibraries,
 					 BufferedWriter 		bw) throws IOException;
 	void writeTrailer(BufferedWriter bw) throws IOException;
 	void writeClassTrailer(BufferedWriter bw) throws IOException;
@@ -110,8 +119,9 @@ public interface IEmitCode {
 	String writeViewClassIndexCommand(String templateFile, ReferenceParser ref, String fullDescription) throws IOException;
 	void waitForPageToLoad(List<String> tokens, List<LineAndTokens> lines) throws IOException, EmitterException;
 	String readApplicationPackage(String eventsFileName) throws IOException ;
+	boolean scanTargetPackage(List<List<String>> lines);
 	LineAndTokens activityCondition(List<String> tokens, String activityName, String functionName) throws IOException;
-	LineAndTokens dialogCondition(List<String> tokens, CodeDefinition codeDef, String functionName) throws IOException;
+	LineAndTokens dialogCondition(List<String> tokens, DialogCodeDefinition codeDef, String functionName) throws IOException;
 
 
 }

@@ -1,0 +1,5 @@
+	// %DESCRIPTION%
+	if (robotiumUtils.waitForView(solo.getView(%ID%), VIEW_WAIT_MSEC)) {
+		viewHandler%FUNCTION_NAME%(solo, robotiumUtils);
+	}
+	

@@ -4,6 +4,7 @@ import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.Utility.Constants;
 
+import android.app.Activity;
 import android.widget.TabHost;
 
 /**
@@ -16,8 +17,8 @@ public class RecordOnTabChangeListener extends RecordListener implements TabHost
 	protected int 							mTabIndex;
 	protected TabHost						mTabHost;
 	
-	public RecordOnTabChangeListener(EventRecorder eventRecorder, TabHost tabHost) {
-		super(eventRecorder);
+	public RecordOnTabChangeListener(String activityName, EventRecorder eventRecorder, TabHost tabHost) {
+		super(activityName, eventRecorder);
 		try {
 			mTabHost = tabHost;
 			mOriginalTabListener = ListenerIntercept.getTabChangeListener(tabHost);
@@ -27,8 +28,8 @@ public class RecordOnTabChangeListener extends RecordListener implements TabHost
 		}		
 	}
 	
-	public RecordOnTabChangeListener(EventRecorder eventRecorder, TabHost.OnTabChangeListener originalTabListener, TabHost tabHost) {
-		super(eventRecorder);
+	public RecordOnTabChangeListener(String activityName, EventRecorder eventRecorder, TabHost.OnTabChangeListener originalTabListener, TabHost tabHost) {
+		super(activityName, eventRecorder);
 		try {
 			mTabHost = tabHost;
 			mOriginalTabListener = originalTabListener;
@@ -38,11 +39,21 @@ public class RecordOnTabChangeListener extends RecordListener implements TabHost
 		}	
 	}
 	
+	// this is for old-style tab events, where it passes the tab id in the onTabChanged()
 	@Override
 	public void onTabChanged(String tabId) {
-		mEventRecorder.writeRecord(Constants.EventTags.SELECT_TAB, mTabHost, tabId);
-		if (mOriginalTabListener != null) {
-			mOriginalTabListener.onTabChanged(tabId);
+		boolean fReentryBlock = getReentryBlock();
+		// can't use shouldRecordEvent(), no view.
+		if (!RecordListener.getEventBlock() && mEventRecorder.hasTouchedDown()) {
+			mEventRecorder.setTouchedDown(false);
+			setEventBlock(true);
+			mEventRecorder.writeRecord(Constants.EventTags.SELECT_TAB, mActivityName, mTabHost, tabId);
 		}
+		if (!fReentryBlock) {
+			if (mOriginalTabListener != null) {
+				mOriginalTabListener.onTabChanged(tabId);
+			}
+		}
+		setEventBlock(false);
 	}	
 }

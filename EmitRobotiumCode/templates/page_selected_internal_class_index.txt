@@ -1,0 +1,3 @@
+		// %DESCRIPTION%
+		%CLASSPATH% viewPager%VARIABLE_INDEX% = (%CLASSPATH%) robotiumUtils.getView((Class<? extends View>) Class.forName("%INTERNAL_CLASS%"), %REAL_INDEX%);
+		robotiumUtils.selectPage(viewPager%VARIABLE_INDEX%, "%PAGE_ID%");

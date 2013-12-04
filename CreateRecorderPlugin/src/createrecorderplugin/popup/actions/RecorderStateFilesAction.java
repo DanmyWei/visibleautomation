@@ -19,6 +19,7 @@ import org.eclipse.ui.IWorkbenchPart;
 import com.androidApp.util.Constants;
 
 import createrecorder.util.EclipseExec;
+import createrecorder.util.RecorderConstants;
 
 /**
  * when we record a session with the device, we save the files, database, and shared_prefs file into the eclipse
@@ -60,6 +61,10 @@ public class RecorderStateFilesAction  implements IObjectActionDelegate {
 	public void run(IAction action) {
 		if (mSelection != null) {
 			try {
+				if (!EclipseExec.isDeviceAttached()) {
+					MessageDialog.openInformation(mShell, RecorderConstants.VISIBLE_AUTOMATION, "No device attached");
+					return;
+				}
 				IProject project = (IProject) mSelection.getFirstElement();
 				IPath projectPath = project.getLocation();
 				File projectDir = projectPath.toFile();
@@ -89,7 +94,7 @@ public class RecorderStateFilesAction  implements IObjectActionDelegate {
 	 * @param extDir hopefully /sdcard
 	 * @throws CoreException
 	 */
-	public void restoreStateFiles(IFolder testFolder, String testFolderName, String extDir) throws CoreException {
+	public static void restoreStateFiles(IFolder testFolder, String testFolderName, String extDir) throws CoreException {
 		IFolder filesFolder = testFolder.getFolder(Constants.Dirs.FILES);
 		String filesDestPath = testFolderName + File.separator + Constants.Dirs.FILES;
 		copyFilesToDevice(filesFolder, filesDestPath, extDir);
@@ -108,7 +113,7 @@ public class RecorderStateFilesAction  implements IObjectActionDelegate {
 	 * @param extDir hopefully /sdcard
 	 * @throws CoreException
 	 */
-	public void copyFilesToDevice(IFolder folder, String destDir, String extDir) throws CoreException {
+	public static void copyFilesToDevice(IFolder folder, String destDir, String extDir) throws CoreException {
 		IResource[] resources = folder.members();
 		EclipseExec.executeAdbCommand("shell mkdir -p " + extDir + File.separator + destDir);
 		for (IResource resource : resources) {

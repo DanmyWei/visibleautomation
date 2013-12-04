@@ -1,0 +1,4 @@
+		// %DESCRIPTION%
+		android.widget.EditText editText%VARIABLE_INDEX% = (android.widget.EditText) robotiumUtils.getView(android.widget.EditText.class, %REAL_INDEX%);
+		robotiumUtils.scrollToViewVisible(editText%VARIABLE_INDEX%);
+		editText.setText(text%VARIABLE_NAME%);

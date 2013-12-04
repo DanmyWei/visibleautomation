@@ -1,0 +1,6 @@
+	// %DESCRIPTION%
+	if (robotiumUtils.waitForView(solo.getView((Class<? extends View>) Class.forName("%INTERNAL_CLASS%"), %VIEW_INDEX%), VIEW_WAIT_MSEC) {
+		viewHandler%FUNCTION_NAME%(solo, robotiumUtils);
+		
+	}
+	

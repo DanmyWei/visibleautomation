@@ -3,7 +3,9 @@ import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.ViewType;
 
+import android.app.Activity;
 import android.os.SystemClock;
 import android.util.Log;
 import android.view.View;
@@ -20,18 +22,18 @@ public class RecordOnGroupClickListener extends RecordListener implements Expand
 	protected ExpandableListView.OnGroupClickListener	mOriginalGroupClickListener;
 	protected final String TAG = "RecordOnGroupClickListener";
 	
-	public RecordOnGroupClickListener(EventRecorder eventRecorder, ExpandableListView expandableListView) {
-		super(eventRecorder);
+	public RecordOnGroupClickListener(String activityName, EventRecorder eventRecorder, ExpandableListView expandableListView) {
+		super(activityName, eventRecorder);
 		try {
 			mOriginalGroupClickListener = ListenerIntercept.getOnGroupClickListener(expandableListView);
 			expandableListView.setOnGroupClickListener(this);
 		} catch (Exception ex) {
-			mEventRecorder.writeException(ex, expandableListView, "create on group click listener");
+			mEventRecorder.writeException(ex, activityName, expandableListView, "create on group click listener");
 		}		
 	}
 	
-	public RecordOnGroupClickListener(EventRecorder eventRecorder, ExpandableListView.OnGroupClickListener originalListener) {
-		super(eventRecorder);
+	public RecordOnGroupClickListener(String activityName, EventRecorder eventRecorder, ExpandableListView.OnGroupClickListener originalListener) {
+		super(activityName, eventRecorder);
 		mOriginalGroupClickListener = originalListener;
 	}
 		
@@ -51,15 +53,16 @@ public class RecordOnGroupClickListener extends RecordListener implements Expand
 
 	public boolean onGroupClick(ExpandableListView parent, View view, int groupPosition, long id) {
 		boolean fReentryBlock = getReentryBlock();
-		if (!RecordListener.getEventBlock()) {
+		if (shouldRecordEvent(view)) {
+			mEventRecorder.setTouchedDown(false);
 			setEventBlock(true);
 			int flatListIndex = parent.getFlatListPosition(parent.getPackedPositionForGroup(groupPosition));
 			Log.i(TAG, "group position = " + groupPosition + " list index = " + flatListIndex);
 
 			try {
-				mEventRecorder.writeRecord(Constants.EventTags.GROUP_CLICK, groupPosition + "," + flatListIndex + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
+				mEventRecorder.writeRecord(mActivityName, Constants.EventTags.GROUP_CLICK, groupPosition + "," + flatListIndex + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, view, "item click");
+				mEventRecorder.writeException(ex, mActivityName, view, "item click");
 			}	
 		}
 		if (!fReentryBlock) {

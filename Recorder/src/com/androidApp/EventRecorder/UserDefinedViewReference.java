@@ -30,10 +30,9 @@ public class UserDefinedViewReference {
 	public enum ReferenceEnum {
 		VIEW_BY_CLASS(Constants.Reference.VIEW_BY_CLASS, 0x1),
 		VIEW_BY_ACTIVITY_CLASS(Constants.Reference.VIEW_BY_ACTIVITY_CLASS, 0x2),
-		VIEW_BY_ACTIVITY_CLASS_INDEX(Constants.Reference.VIEW_BY_ACTIVITY_CLASS_INDEX, 0x3),
 		VIEW_BY_ACTIVITY_INTERNAL_CLASS(Constants.Reference.VIEW_BY_ACTIVITY_INTERNAL_CLASS, 0x4),
-		VIEW_BY_ACTIVITY_INTERNAL_CLASS_INDEX(Constants.Reference.VIEW_BY_ACTIVITY_INTERNAL_CLASS_INDEX, 0x5),
-		VIEW_BY_ACTIVITY_ID(Constants.Reference.VIEW_BY_ACTIVITY_ID, 0x6);
+		VIEW_BY_ACTIVITY_ID(Constants.Reference.VIEW_BY_ACTIVITY_ID, 0x6),
+		VIEW_BY_HIERARCHICAL_REFERENCE(Constants.Reference.VIEW_BY_HIERARCHICAL_REFERENCE, 0x7);
 		
 		public String mName;
 		public int mValue;
@@ -51,10 +50,9 @@ public class UserDefinedViewReference {
 	protected Class<? extends View>		mViewInternalClass;			// internal view class
 	protected String					mActivityName;				// activity.class.name
 	protected Class<? extends Activity> mActivityClass;				// activity class
-	protected int						mClassIndex;				// index in view hierarchy filtered by class
 	protected int						mID;						// android resource ID
 	protected int						mTokenCount;				// # of tokens consumed in parsing
-	
+	protected HierarchyRef[]			mHierarchyReference;		// array of parent-child index references
 	/**
 	 * parse a UserDefinedViewReference from a string
 	 * view_by_class: classname
@@ -89,29 +87,17 @@ public class UserDefinedViewReference {
 			mViewInternalClassName = tokens[3].trim();
 			mViewInternalClass = (Class<? extends View>) Class.forName(mViewInternalClassName);
 			mTokenCount = 3;
-		} else if (type.equals(ReferenceEnum.VIEW_BY_ACTIVITY_CLASS_INDEX.mName)) {
-			mReferenceType = ReferenceEnum.VIEW_BY_ACTIVITY_CLASS_INDEX;
-			mActivityName = tokens[1].trim();
-			mActivityClass = (Class<? extends Activity>) Class.forName(mActivityName);
-			mViewClassName = tokens[2].trim();
-			mViewClass = (Class<? extends View>) Class.forName(mViewClassName);
-			mClassIndex = Integer.parseInt(tokens[3].trim());
-			mTokenCount = 4;
-		} else if (type.equals(ReferenceEnum.VIEW_BY_ACTIVITY_INTERNAL_CLASS_INDEX.mName)) {
-			mReferenceType = ReferenceEnum.VIEW_BY_ACTIVITY_INTERNAL_CLASS_INDEX;
-			mActivityName = tokens[1].trim();
-			mActivityClass = (Class<? extends Activity>) Class.forName(mActivityName);
-			mViewClassName = tokens[2].trim();
-			mViewClass = (Class<? extends View>) Class.forName(mViewClassName);
-			mClassIndex = Integer.parseInt(tokens[3].trim());
-			mViewInternalClassName = tokens[4].trim();
-			mViewInternalClass = (Class<? extends View>) Class.forName(mViewInternalClassName);
-			mTokenCount = 5;
 		} else if (type.equals(ReferenceEnum.VIEW_BY_ACTIVITY_ID.mName)) {
 			mReferenceType = ReferenceEnum.VIEW_BY_ACTIVITY_ID;
 			mActivityName = tokens[1].trim();
 			mActivityClass = (Class<? extends Activity>) Class.forName(mActivityName);
 			mID = Integer.parseInt(tokens[2].trim());
+			mTokenCount = 3;
+		} else if (type.equals(ReferenceEnum.VIEW_BY_HIERARCHICAL_REFERENCE.mName)) {
+			mReferenceType = ReferenceEnum.VIEW_BY_HIERARCHICAL_REFERENCE;
+			mActivityName = tokens[1].trim();
+			mActivityClass = (Class<? extends Activity>) Class.forName(mActivityName);
+			mHierarchyReference = HierarchyRef.hierarchyReference(tokens[2]);
 			mTokenCount = 3;
 		}
 	}
@@ -138,20 +124,8 @@ public class UserDefinedViewReference {
 				return;
 			}
 		} 
-		// not-to-special case for everyone else.
-		if (fInternalClass) {
-			mReferenceType = ReferenceEnum.VIEW_BY_ACTIVITY_INTERNAL_CLASS_INDEX;
-			mViewClassName = usableClass.getName();
-			mViewClass = usableClass;
-			mViewInternalClassName = v.getClass().getName();
-			mViewInternalClass = v.getClass();
-			mClassIndex = TestUtils.classIndex(v.getRootView(), v);
-		} else {
-			mReferenceType = ReferenceEnum.VIEW_BY_ACTIVITY_CLASS_INDEX;
-			mViewClassName = usableClass.getName();
-			mViewClass = usableClass;
-		}
-
+		mReferenceType = ReferenceEnum.VIEW_BY_HIERARCHICAL_REFERENCE;
+		mHierarchyReference = HierarchyRef.hierarchyReference(v);
 	}
 
 	public UserDefinedViewReference(View v, Activity activity) {
@@ -167,10 +141,6 @@ public class UserDefinedViewReference {
 	
 	public Class<? extends Activity> getActivityClass() {
 		return mActivityClass;
-	}
-	
-	public int getClassIndex() {
-		return mClassIndex;
 	}
 	
 	public int getID() {
@@ -205,14 +175,12 @@ public class UserDefinedViewReference {
 			return ReferenceEnum.VIEW_BY_CLASS.mName + ":" + mViewClassName;
 		case VIEW_BY_ACTIVITY_CLASS:
 			return ReferenceEnum.VIEW_BY_ACTIVITY_CLASS.mName + ":" + mActivityName + "," + mViewClassName;
-		case VIEW_BY_ACTIVITY_CLASS_INDEX:
-			return ReferenceEnum.VIEW_BY_ACTIVITY_CLASS.mName + ":" + mActivityName + "," + mViewClassName + "," + Integer.toString(mClassIndex);
-		case VIEW_BY_ACTIVITY_INTERNAL_CLASS_INDEX:
-			return ReferenceEnum.VIEW_BY_ACTIVITY_INTERNAL_CLASS_INDEX.mName + ":" + mActivityName + "," + mViewClassName + "," + Integer.toString(mClassIndex) + "," + mViewInternalClassName;
 		case VIEW_BY_ACTIVITY_INTERNAL_CLASS:
 			return ReferenceEnum.VIEW_BY_ACTIVITY_INTERNAL_CLASS.mName + ":" + mActivityName + "," + mViewClassName + "," + mViewInternalClassName;
 		case VIEW_BY_ACTIVITY_ID:
 			return ReferenceEnum.VIEW_BY_ACTIVITY_ID.mName + ":" + mActivityName + "," + Integer.toString(mID);	
+		case VIEW_BY_HIERARCHICAL_REFERENCE:
+			return ReferenceEnum.VIEW_BY_HIERARCHICAL_REFERENCE.mName + ":" + mActivityName + "," + HierarchyRef.referenceToString(mHierarchyReference);
 		default:
 			return "bogus reference"; 		// TODO: throw exception
 		}
@@ -282,8 +250,7 @@ public class UserDefinedViewReference {
 	 */
 	public static List<View> getMatchingViews(Activity activity, View v, List<UserDefinedViewReference> references) {
 		List<View> matchingViews = new ArrayList<View>();
-		Hashtable<Class,ClassCount> classTable = new Hashtable<Class, ClassCount>();
-		getMatchingViews(activity, v, references, classTable, matchingViews);
+		getMatchingViews(activity, v, references, matchingViews);
 		return matchingViews;
 	}
 	
@@ -299,10 +266,9 @@ public class UserDefinedViewReference {
 	/**
 	 * does this view match this user defined view reference
 	 * @param v view to match
-	 * @param viewClassIndex index of class through a pre-order traversal of the view hierarchy
 	 * @return true on match, false otherwise
 	 */
-	public boolean matchView(View v, int viewClassIndex) {
+	public boolean matchView(View v) {
 		Class<? extends View> viewClass = v.getClass();
 		Class<? extends View> refViewClass = this.getViewClass();
 		Class<? extends View> internalRefViewClass = null;
@@ -313,14 +279,11 @@ public class UserDefinedViewReference {
 				return refViewClass.isAssignableFrom(viewClass);
 			case VIEW_BY_ACTIVITY_INTERNAL_CLASS:
 				internalRefViewClass = this.getInternalViewClass();
-				return internalRefViewClass.isAssignableFrom(viewClass);		
-			case VIEW_BY_ACTIVITY_CLASS_INDEX:
-				return refViewClass.isAssignableFrom(viewClass) && (viewClassIndex == this.getClassIndex());
-			case VIEW_BY_ACTIVITY_INTERNAL_CLASS_INDEX:
-				internalRefViewClass = this.getInternalViewClass();
-				return internalRefViewClass.isAssignableFrom(viewClass) && (viewClassIndex == this.getClassIndex());
+				return internalRefViewClass.isAssignableFrom(viewClass);
 			case VIEW_BY_ACTIVITY_ID:
 				return this.getID() == v.getId();
+			case VIEW_BY_HIERARCHICAL_REFERENCE:
+				return HierarchyRef.getView(v, mHierarchyReference) == v;
 			default:
 				return false;
 		}
@@ -334,32 +297,22 @@ public class UserDefinedViewReference {
 	 * @param classTable hashtable of classes and classcounts for fast reference
 	 * @param matchingViews (recursive) populate this list of views
 	 */
-	protected static void getMatchingViews(Activity activity,
-										   View v, 
-										   List<UserDefinedViewReference> references, 
-										   Hashtable<Class,ClassCount> classTable, 
-										   List<View> matchingViews) {
+	protected static void getMatchingViews(Activity 						activity,
+										   View 							v, 
+										   List<UserDefinedViewReference> 	references, 
+										   List<View> 						matchingViews) {
 		for (UserDefinedViewReference reference : references) {
-			ClassCount classCount = classTable.get(v.getClass());
-			int viewClassIndex = (classCount != null) ? classCount.mCount : 0;
 			if (reference.matchActivity(activity)) {
-				if (reference.matchView(v, viewClassIndex)) {
+				if (reference.matchView(v)) {
 					matchingViews.add(v);
 				}
 			}
-		}
-		ClassCount classCount = classTable.get(v.getClass());
-		if (classCount == null) {
-			classCount = new ClassCount(1);
-			classTable.put(v.getClass(), classCount);
-		} else {
-			classCount.mCount++;
 		}
 		if (v instanceof ViewGroup) {
 			ViewGroup vg = (ViewGroup) v;
 			for (int i = 0; i < vg.getChildCount(); i++) {
 				View vChild = vg.getChildAt(i);
-				getMatchingViews(activity, vChild, references, classTable, matchingViews);
+				getMatchingViews(activity, vChild, references, matchingViews);
 			}
 		}	
 	}

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <feature url="features/VisibleAutomationFeature_1.0.18.visibleautomation.jar" id="VisibleAutomationFeature" version="1.0.18.visibleautomation"/>
+   <category-def name="visible_automation_recorder" label="Visible Automation Recorder">
+      <description>
+         Visible automation recorder to record and play back android applications.
+      </description>
+   </category-def>
+</site>

@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Configuration of the Ant build system to generate a Jar file --> 
+<project name="RecorderSupport" default="install">
+    <!-- version-tag: custom -->
+    <property file="local.properties" />
+    <property file="ant.properties" />
+    <property environment="env" />
+    <condition property="sdk.dir" value="${env.ANDROID_HOME}">
+        <isset property="env.ANDROID_HOME" />
+    </condition>
+    <loadproperties srcFile="project.properties" />
+    <!-- quick check on sdk.dir -->
+    <fail
+            message="sdk.dir is missing. Make sure to generate local.properties using 'android update project' or to inject it through the ANDROID_HOME environment variable."
+            unless="sdk.dir" />
+
+    <import file="custom_rules.xml" optional="true" />
+    <import file="${sdk.dir}/tools/ant/build.xml" />
+
+
+    <!-- compilation options -->
+    <property name="java.encoding" value="UTF-8" />
+    <property name="java.target" value="1.5" />
+    <property name="java.source" value="1.5" />
+    <property name="java.compilerargs" value="" />
+    <property name="java.compiler.classpath" value="" />
+    <property name="jarfile" value="bin/recorder23.jar" />
+
+    <!-- jar file from where the tasks are loaded -->
+    <path id="android.antlibs">
+        <pathelement path="${sdk.dir}/tools/lib/ant-tasks.jar" />
+    </path>
+    <path id="project.all.jars.path" >
+	<pathelement path="../EventRecorderInterface/bin/eventrecorderinterface.jar" />
+	<pathelement path="../Recorder/recorder.jar" />
+    </path>
+    <path id="project.obfuscate.jars.path" >
+	<pathelement path="recorder23.jar" />
+    </path>
+
+    <!-- Custom tasks -->
+    <taskdef resource="anttasks.properties" classpathref="android.antlibs" />
+
+    <!-- Input directories -->
+    <property name="source.dir" value="src" />
+    <property name="source.absolute.dir" location="${source.dir}" />
+    <property name="gen.absolute.dir" location="gen" />
+    <property name="resource.absolute.dir" location="res" />
+    <property name="asset.dir" value="assets" />
+    <property name="asset.absolute.dir" location="${asset.dir}" />
+    <property name="jar.libs.dir" value="libs" />
+    <property name="jar.libs.absolute.dir" location="${jar.libs.dir}" />
+    <property name="native.libs.absolute.dir" location="libs" />
+
+    <property name="manifest.file" value="AndroidManifest.xml" />
+    <property name="manifest.abs.file" location="${manifest.file}" />
+
+    <!-- Output directories -->
+    <property name="out.dir" value="bin" />
+    <property name="out.absolute.dir" location="${out.dir}" />
+    <property name="out.classes.absolute.dir" location="${out.dir}/classes" />
+    <property name="out.res.absolute.dir" location="${out.dir}/res" />
+    <property name="out.aidl.absolute.dir" location="${out.dir}/aidl" />
+    <property name="out.dexed.absolute.dir" location="${out.dir}/dexedLibs" />
+    <property name="out.manifest.abs.file" location="${out.dir}/AndroidManifest.xml" />
+
+    <!-- tools location -->
+    <property name="android.tools.dir" location="${sdk.dir}/tools" />
+    <property name="android.platform.tools.dir" location="${sdk.dir}/platform-tools" />
+    <condition property="exe" value=".exe" else=""><os family="windows" /></condition>
+    <condition property="bat" value=".bat" else=""><os family="windows" /></condition>
+    <property name="adb" location="${android.platform.tools.dir}/adb${exe}" />
+    <property name="zipalign" location="${android.tools.dir}/zipalign${exe}" />
+    <property name="lint" location="${android.tools.dir}/lint${bat}" />
+
+    <!-- Intermediate files -->
+    <property name="dex.file.name" value="classes.dex" />
+    <property name="intermediate.dex.file" location="${out.absolute.dir}/${dex.file.name}" />
+    <property name="resource.package.file.name" value="${ant.project.name}.ap_" />
+
+    <!-- Build property file -->
+    <property name="out.build.prop.file" location="${out.absolute.dir}/build.prop" />
+
+    <!-- whether we need to fork javac.
+         This is only needed on Windows when running Java < 7 -->
+    <condition else="false" property="need.javac.fork">
+        <and>
+            <matches pattern="1\.[56]" string="${java.specification.version}"/>
+            <not>
+                <os family="unix"/>
+            </not>
+        </and>
+    </condition>
+
+    <!-- clean target -->
+    <target name="clean" description="Removes output files created by other targets.">
+        <delete dir="${out.absolute.dir}" verbose="${verbose}" />
+        <delete dir="${gen.absolute.dir}" verbose="${verbose}" />
+    </target>
+
+    <!-- Pre build setup -->
+    <target name="build-setup">
+        <!-- find location of build tools -->
+        <getbuildtools name="android.build.tools.dir" />
+        <property name="aidl" location="${android.build.tools.dir}/aidl${exe}" />
+        <property name="aapt" location="${android.build.tools.dir}/aapt${exe}" />
+        <property name="dx" location="${android.build.tools.dir}/dx${bat}" />
+
+        <!-- read the previous build mode -->
+        <property file="${out.build.prop.file}" />
+        <!-- if empty the props won't be set, meaning it's a new build.
+             To force a build, set the prop to empty values. -->
+        <property name="build.last.target" value="" />
+        <property name="build.last.is.instrumented" value="" />
+        <property name="build.last.is.packaging.debug" value="" />
+        <property name="build.last.is.signing.debug" value="" />
+
+        <echo level="info">Resolving Build Target for ${ant.project.name}...</echo>
+        <!-- Value of the hasCode attribute (Application node) extracted from manifest file -->
+       <gettarget
+                androidJarFileOut="project.target.android.jar"
+                androidAidlFileOut="project.target.framework.aidl"
+                bootClassPathOut="project.target.class.path"
+                targetApiOut="project.target.apilevel"
+                minSdkVersionOut="project.minSdkVersion" />
+
+
+        <echo level="info">----------</echo>
+        <echo level="info">Creating output directories if needed...</echo>
+        <mkdir dir="${resource.absolute.dir}" />
+        <mkdir dir="${jar.libs.absolute.dir}" />
+        <mkdir dir="${out.absolute.dir}" />
+        <mkdir dir="${out.res.absolute.dir}" />
+        <mkdir dir="${gen.absolute.dir}" />
+        <mkdir dir="${out.classes.absolute.dir}" />
+        <mkdir dir="${out.dexed.absolute.dir}" />
+    </target>
+
+    <!-- Compiles this project's .java files into .class files. -->
+    <target name="compile" depends="clean,build-setup">
+	<!-- merge the project's own classpath and the tested project's classpath -->
+	<path id="project.javac.classpath">
+	    <path refid="project.all.jars.path" />
+	    <path path="${java.compiler.classpath}" />
+	</path>
+	<javac encoding="${java.encoding}"
+		source="${java.source}" target="${java.target}"
+		debug="true" extdirs="" includeantruntime="false"
+		destdir="${out.classes.absolute.dir}"
+		bootclasspathref="project.target.class.path"
+		verbose="${verbose}"
+		classpathref="project.javac.classpath"
+		fork="${need.javac.fork}">
+	    <src path="${source.absolute.dir}" />
+	    <src path="${gen.absolute.dir}" />
+	    <compilerarg line="${java.compilerargs}" />
+	</javac>
+    </target>
+
+    <target name="jar" depends="compile" description="Create Jar file">
+        <jar jarfile="./bin/recorder23.jar" basedir="./bin/classes" update="true">
+       	 	<fileset dir="./bin/classes" includes="*.class"/>
+       	</jar>
+    </target>
+
+    <target name="install" description="install library"> 
+        <copy file="./bin/recorder23.jar" todir="../EmitRobotiumCode/templates" />
+    </target>
+
+    <!-- we will need to run this on both jars. This is just a placeholder -->
+    <target name="obfuscate" depends="jar">
+	<property name="obfuscate.absolute.dir" location="${out.absolute.dir}/proguard" />
+	<property name="preobfuscate.jar.file" value="${jarfile}" />
+	<property name="obfuscated.jar.file" value="${obfuscate.absolute.dir}/obfuscated.jar" />
+	<!-- input for dex will be proguard's output -->
+	<property name="out.dex.input.absolute.dir" value="${obfuscated.jar.file}" />
+
+	<!-- Add Proguard Tasks -->
+	<property name="proguard.jar" location="${android.tools.dir}/proguard/lib/proguard.jar" />
+	<taskdef name="proguard" classname="proguard.ant.ProGuardTask" classpath="${proguard.jar}" />
+
+	<!-- Set the android classpath Path object into a single property. It'll be
+	     all the jar files separated by a platform path-separator.
+	     Each path must be quoted if it contains spaces.
+	-->
+	<pathconvert property="project.target.classpath.value" refid="project.target.class.path">
+	    <firstmatchmapper>
+		<regexpmapper from='^([^ ]*)( .*)$$' to='"\1\2"'/>
+		<identitymapper/>
+	    </firstmatchmapper>
+	</pathconvert>
+
+	<!-- Build a path object with all the jar files that must be obfuscated.
+	     This include the project compiled source code and any 3rd party jar
+	     files. -->
+	<path id="project.all.classes.path">
+	    <pathelement location="${preobfuscate.jar.file}" />
+	    <path refid="project.obfuscate.jars.path" />
+	</path>
+	<pathconvert property="project.all.classes.value" refid="project.all.classes.path">
+	    <firstmatchmapper>
+		<regexpmapper from='^([^ ]*)( .*)$$' to='"\1\2"'/>
+		<identitymapper/>
+	    </firstmatchmapper>
+	</pathconvert>
+
+	<path id="proguard.configpath">
+	    <pathelement path="${proguard.config}"/>
+	</path>
+	<pathconvert pathsep='" -include "' property="proguard.configcmd" refid="proguard.configpath"/>
+
+	<mkdir dir="${obfuscate.absolute.dir}" />
+	<delete file="${obfuscated.jar.file}"/>
+	<proguard>
+	    -include      "${proguard.configcmd}"
+	    -injars       ${project.all.classes.value}
+	    -outjars      "${obfuscated.jar.file}"
+	    -libraryjars  ${project.target.classpath.value}
+	    -dump         "${obfuscate.absolute.dir}/dump.txt"
+	    -printseeds   "${obfuscate.absolute.dir}/seeds.txt"
+	    -printusage   "${obfuscate.absolute.dir}/usage.txt"
+	    -printmapping "${obfuscate.absolute.dir}/mapping.txt"
+	</proguard>
+    </target>
+</project>

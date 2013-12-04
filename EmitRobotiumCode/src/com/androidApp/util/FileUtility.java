@@ -6,13 +6,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-
-import org.omg.CORBA_2_3.portable.OutputStream;
 
 import com.androidApp.emitter.EmitRobotiumCode;
 
@@ -82,6 +82,20 @@ public class FileUtility {
 	}
 	
 	/**
+	 * get the asset stream for a template asset
+	 * @param templateName
+	 * @return
+	 * @throws IOException
+	 */
+	public static InputStream getTemplateStream(String templateName) throws IOException {
+		InputStream is = EmitRobotiumCode.class.getResourceAsStream("/" + templateName);
+		if (is == null) {
+			throw new IOException("failed to open resource " + templateName);
+		}
+		return is;
+	}
+
+	/**
 	 * read a template file into a string
 	 * @param templateName template file from templates directory
 	 * @return file read to string
@@ -126,13 +140,16 @@ public class FileUtility {
 		InputStream fis = EmitRobotiumCode.class.getResourceAsStream("/" + resourceName);
 		int size = fis.available();
 		byte[] data = new byte[size];
-		int nbytesRead = fis.read(data);
-		if (nbytesRead != size) {
-			throw new IOException("size not equal " + size + " !=" + nbytesRead);
+		int readIndex = 0;
+		
+		// loop over, 'cause read doesn't really fucking read.
+		while (readIndex < size) {
+			int nbytesRead = fis.read(data, readIndex, size - readIndex);
+			readIndex += nbytesRead;
 		}
 		fis.close();
 		FileOutputStream fos = new FileOutputStream(targetDirectory + File.separator + resourceName);
-		fos.write(data, 0,nbytesRead);
+		fos.write(data, 0, size);
 		fos.close();
 	}
 
@@ -145,13 +162,14 @@ public class FileUtility {
 		InputStream fis = EmitRobotiumCode.class.getResourceAsStream("/" + resourceName);
 		int size = fis.available();
 		byte[] data = new byte[size];
-		int nbytesRead = fis.read(data);
-		if (nbytesRead != size) {
-			throw new IOException("size not equal " + size + " !=" + nbytesRead);
+		int readIndex = 0;
+		while (readIndex != size) {
+			int nbytesRead = fis.read(data, readIndex, size - readIndex);
+			readIndex += nbytesRead;
 		}
 		fis.close();
 		FileOutputStream fos = new FileOutputStream(resourceName);
-		fos.write(data, 0,nbytesRead);
+		fos.write(data, 0, size);
 		fos.close();
 	}
 
@@ -292,11 +310,145 @@ public class FileUtility {
 		bw.close();
 	}
 	
+	// blow away all the files in a directory
 	public static void deleteAllFilesFromDirectory(File dir) {
 		String[] filenames = dir.list();
 		for (String filename : filenames) {
 			File file = new File(dir, filename);
 			file.delete();
 		}
+	}
+	
+	
+	// recursively search for a file from a directory
+	public static File findFile(File dir, String target) {
+		if (dir.getName().equals(target)) {
+			return dir;
+		} else {
+			if (dir.isDirectory()) {
+				String[] fileNames = dir.list();
+				for (String fileName : fileNames) {
+					if (fileName.equals(target)) {
+						return new File(dir, fileName);
+					}
+					File file = new File(dir, fileName);
+					if (file.isDirectory()) {
+						File result = findFile(new File(dir, fileName), target);
+						if (result != null) {
+							return result;
+						}
+					}
+				}
+			} 
+			return null;
+		}
+	}
+	
+	// recursively search for a file from a directory
+	public static File findFileRegexp(File dir, String regexp) {
+		if (dir.getName().matches(regexp)) {
+			return dir;
+		} else {
+			if (dir.isDirectory()) {
+				String[] fileNames = dir.list();
+				for (String fileName : fileNames) {
+					if (fileName.matches(regexp)) {
+						return new File(dir, fileName);
+					}
+					File file = new File(dir, fileName);
+					if (file.isDirectory()) {
+						File result = findFileRegexp(new File(dir, fileName), regexp);
+						if (result != null) {
+							return result;
+						}
+					}
+				}
+			} 
+			return null;
+		}
+	}
+	
+	/**
+	 * filter files in a directory by extension.
+	 * @param dir
+	 * @param extension
+	 * @return
+	 */
+	public static File[] getFilesByExtension(File dir, String extension) {
+		FileUtility fileUtility = new FileUtility();
+		return dir.listFiles(fileUtility.new ExtensionFilter(extension));
+	}
+
+
+	// extension filter.
+	protected class ExtensionFilter implements FilenameFilter {
+		String mExtension;
+		
+		public ExtensionFilter(String extension) {
+			mExtension = extension;
+		}
+
+		@Override
+		public boolean accept(File dir, String filename) {
+			return filename.endsWith("." + mExtension);
+		}
+	}
+	
+	/**
+	 * find dexump so we can find out what support libraries are in the APK
+	 * @param androidSDK
+	 * @return
+	 */
+	public static File findDexdump(String androidSDK) {
+		String buildToolsPath = androidSDK;
+		String os = System.getProperty("os.name");
+		File buildToolsDir = new File(buildToolsPath);
+		return FileUtility.findFile(buildToolsDir, Constants.Executables.DEXDUMP);			
+	}
+	
+	/**
+	 * run dexdump on the specified APK, then extract the support libraries that it uses by matching
+	 * the class tables
+	 * @param apkFilename
+	 * @return
+	 */
+	public static List<String> getSupportLibraries(String apkFilename) {
+		HashSet<String> supportLibrarySet = new HashSet<String>();
+		String androidSDK = System.getenv(Constants.Env.ANDROID_HOME);
+		File dexdump = FileUtility.findDexdump(androidSDK);
+		String dexdumpCommand = dexdump.getAbsolutePath() + " " + apkFilename;
+		String[] dexdumpOutput = Exec.getShellCommandOutput(dexdumpCommand);
+		boolean fV13References = false;
+		for (int i = 0; i < dexdumpOutput.length; i++) {
+			if (dexdumpOutput[i].contains(Constants.SupportClasses.SUPPORT_V4)) {	
+				supportLibrarySet.add(Constants.Filenames.SUPPORT_V4);
+			} else if (dexdumpOutput[i].contains(Constants.SupportClasses.SUPPORT_V13)) {
+				// the v13 library contains v4 references, so we have to remove the v4 library if v13 was found.
+				supportLibrarySet.add(Constants.Filenames.SUPPORT_V13);
+				fV13References = true;
+			} else if (dexdumpOutput[i].contains(Constants.SupportClasses.SUPPORT_V7_APPCOMPAT)) {
+				supportLibrarySet.add(Constants.Filenames.SUPPORT_V7_APPCOMPAT);
+			} else if (dexdumpOutput[i].contains(Constants.SupportClasses.SUPPORT_V7_GRIDLAYOUT)) {
+				supportLibrarySet.add(Constants.Filenames.SUPPORT_V7_GRIDLAYOUT);
+			} else if (dexdumpOutput[i].contains(Constants.SupportClasses.SUPPORT_V7_MEDIA)) {
+				supportLibrarySet.add(Constants.Filenames.SUPPORT_V7_MEDIA);
+			}
+		}
+		if (fV13References) {
+			supportLibrarySet.remove(Constants.Filenames.SUPPORT_V4);
+		}
+		List<String> supportLibraryList = new ArrayList<String>();
+		for (String supportLibrary : supportLibrarySet) {
+			supportLibraryList.add(supportLibrary);
+		}
+		return supportLibraryList;
+	}	
+
+	// write a binary template
+	public static void writeBinaryTemplate(File outputDir, String templateFile) throws IOException {
+		byte[] jarData = FileUtility.readBinaryTemplate(Constants.Filenames.UTILITY_JAR);
+		FileOutputStream fos = new FileOutputStream(new File(outputDir, Constants.Filenames.UTILITY_JAR));
+		fos.write(jarData, 0, jarData.length);
+		fos.close();		
 	}
 }

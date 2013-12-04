@@ -5,9 +5,8 @@ import java.util.List;
 
 import com.androidApp.Intercept.MagicFrame;
 import com.androidApp.Test.ActivityInterceptor;
-import com.androidApp.Test.R;
 import com.androidApp.Utility.Constants;
-import com.androidApp.Utility.TestUtils;
+import com.androidApp.Utility.DialogUtils;
 import com.androidApp.Utility.ViewExtractor;
 
 import junit.framework.Assert;
@@ -56,7 +55,7 @@ public class RandTest {
 	public RandTest(Instrumentation instrumentation, ActivityInterceptor activityInterceptor) throws IOException {
 		mInstrumentation = instrumentation;
 		mActivityInterceptor = activityInterceptor;
-		mDictionary = new RandomDictionary(mInstrumentation.getContext(), R.raw.dictionary);
+		//mDictionary = new RandomDictionary(mInstrumentation.getContext(), R.raw.dictionary);
 	}
 	
 	/**
@@ -307,7 +306,7 @@ public class RandTest {
 	public boolean clickRandomMenuItem() throws ClassNotFoundException {
 		mInstrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_MENU);
 		Activity activity = mActivityInterceptor.getCurrentActivity();
-		View menuView = TestUtils.findOptionsMenu(activity);
+		View menuView = DialogUtils.findOptionsMenu(activity);
 		if (menuView != null) {
 			List<View> textViews = TestUtility.getViewList(menuView, TextView.class);
 			int itemIndex = (int) (Math.random()*textViews.size());

@@ -40,37 +40,41 @@ public class OnListSelectionListener implements DialogInterface.OnClickListener 
 			switch (which) {
 				case 0:
 				{
-					recorder.writeRecord(Constants.EventTags.IGNORE_EVENTS, currentView);
+					recorder.writeRecord(Constants.EventTags.IGNORE_EVENTS, activity.toString(), currentView);
 					ViewDirective ignoreDirective = new ViewDirective(ref, ViewOperation.IGNORE_EVENTS, When.ON_ACTIVITY_START, null);
 					recorder.addViewDirective(ignoreDirective);
 				} 
 				break;
 				case 1:
 				{
-					recorder.writeRecord(Constants.EventTags.MOTION_EVENTS, currentView);
+					recorder.writeRecord(Constants.EventTags.MOTION_EVENTS, activity.toString(), currentView);
 					ViewDirective motionDirective = new ViewDirective(ref, ViewOperation.MOTION_EVENTS, When.ON_ACTIVITY_START, null);
 					try {
-						ViewInterceptor.replaceTouchListener(recorder, currentView);
+						ViewInterceptor.replaceTouchListener(activity.toString(), recorder, currentView);
 					} catch (Exception ex) {
-						recorder.writeException(ex, "replace touch listener in directive dialog");
+						recorder.writeException(activity.toString(), ex, "replace touch listener in directive dialog");
 					}
 					recorder.addViewDirective(motionDirective);
 				}
 				break;
 				case 2:
 				{
-					recorder.writeRecord(Constants.EventTags.SELECT_BY_TEXT, currentView);
+					recorder.writeRecord(Constants.EventTags.SELECT_BY_TEXT, activity.toString(), currentView);
 					ViewDirective selectDirective = new ViewDirective(ref, ViewOperation.SELECT_BY_TEXT, When.ON_ACTIVITY_START, null);
 					recorder.addViewDirective(selectDirective);
 				}
 				break;
 				case 3:
 				{
-					recorder.writeRecord(Constants.EventTags.SELECT_ITEM_WORKAROUND, currentView);
+					recorder.writeRecord(Constants.EventTags.SELECT_ITEM_WORKAROUND, activity.toString(), currentView);
 					ViewDirective selectDirective = new ViewDirective(ref, ViewOperation.SELECT_ITEM_WORKAROUND, When.ON_ACTIVITY_START, null);
 					recorder.addViewDirective(selectDirective);
 				}
 				break;
+				case 4:
+					recorder.writeRecordWithActivity(Constants.EventTags.INTERSTITIAL_VIEW, activity.toString(), currentView);
+					break;
+
 			}
 		} catch (IOException ioex) {
 			DirectiveDialogs.setErrorLabel(alertDialog, Constants.DisplayStrings.VIEW_REFERENCE_FAILED);

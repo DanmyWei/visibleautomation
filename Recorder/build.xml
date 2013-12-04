@@ -2,16 +2,19 @@
 
 <!-- Configuration of the Ant build system to generate a Jar file --> 
 <project name="Recorder" default="install">
-  <target name="jar" description="Create Jar file">
-        <jar jarfile="recorder.jar" basedir="./res">
-       	 	<fileset dir="./res" includes="*.txt"/>
-       	</jar>
-        <jar jarfile="recorder.jar" basedir="./bin/classes" update="true">
-       	 	<fileset dir="./bin/classes" includes="*.class"/>
-       	</jar>
-  </target>
-  <target name="install" description="install library" depends="jar">
-      <copy file="recorder.jar" todir="../EmitRobotiumCode/templates" />
-      <copy file="recorder.jar" todir="../ApiDemosRecorder/libs" />
-      </target>
+    <import file="../buildandroidjar.xml"/>
+    <property name="jarfile" value="recorder.jar" />
+
+    <path id="project.all.jars.path" >
+	<pathelement path="../EventRecorderInterface/bin/eventrecorderinterface.jar" />
+    </path>
+    <path id="project.obfuscate.jars.path" >
+	<pathelement path="../EventRecorderInterface/bin/eventrecorderinterface.jar" />
+    </path>
+
+    <target name="install" description="install library" depends="jar">
+        <copy file="bin/recorder.jar" todir="../EmitRobotiumCode/templates" />
+        <copy file="bin/recorder.jar" todir="../ApiDemosRecorder/libs" />
+        <copy file="bin/recorder.jar" todir="../RecorderSupport/libs" />
+    </target>
 </project>

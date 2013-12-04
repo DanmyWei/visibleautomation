@@ -4,6 +4,7 @@ import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 
+import android.app.Activity;
 import android.content.Context;
 import android.view.KeyEvent;
 import android.view.View;
@@ -18,16 +19,19 @@ import android.widget.Toast;
  * Copyright (c) 2013 Visible Automation LLC.  All Rights Reserved.
  */
 public class InterceptKeyViewMenu extends EditText {
-	EventRecorder mRecorder;
-	ViewInterceptor mViewInterceptor;
+	protected EventRecorder mRecorder;
+	protected ViewInterceptor mViewInterceptor;
+	protected Activity mActivity;
 	
+	// required constructor: NEVER CALL THIS because it doesn't assign mActivity
 	public InterceptKeyViewMenu(Context context) {
 		super(context);
 		init();
 	}
 	
-	public InterceptKeyViewMenu(Context context, EventRecorder recorder, ViewInterceptor viewInterceptor) {
+	public InterceptKeyViewMenu(Activity activity, Context context, EventRecorder recorder, ViewInterceptor viewInterceptor) {
 		super(context);
+		mActivity = activity;
 		mRecorder = recorder;
 		mViewInterceptor = viewInterceptor;
 		init();
@@ -44,15 +48,15 @@ public class InterceptKeyViewMenu extends EditText {
 			switch (event.getKeyCode()) {
 			case KeyEvent.KEYCODE_BACK:
 				mViewInterceptor.setLastKeyAction(KeyEvent.KEYCODE_BACK);
-				mRecorder.writeRecordTime(Constants.EventTags.MENU_BACK_KEY);
+				mRecorder.writeRecordTime(mActivity.toString(), Constants.EventTags.MENU_BACK_KEY);
 				break;
 			case KeyEvent.KEYCODE_MENU:
 				mViewInterceptor.setLastKeyAction(KeyEvent.KEYCODE_MENU);
-				mRecorder.writeRecordTime(Constants.EventTags.MENU_MENU_KEY);
+				mRecorder.writeRecordTime(mActivity.toString(), Constants.EventTags.MENU_MENU_KEY);
 				break;
 			case KeyEvent.KEYCODE_HOME:
 				mViewInterceptor.setLastKeyAction(KeyEvent.KEYCODE_HOME);
-				mRecorder.writeRecordTime(Constants.EventTags.MENU_MENU_KEY);
+				mRecorder.writeRecordTime(mActivity.toString(), Constants.EventTags.MENU_MENU_KEY);
 				break;
 			} 
 		}

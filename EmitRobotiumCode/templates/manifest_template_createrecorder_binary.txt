@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="%TARGET_PACKAGE%.test"
+    android:versionCode="1"
+    android:versionName="1.0" >
+
+    <uses-sdk android:minSdkVersion="%MIN_SDK_VERSION%" />
+
+    <instrumentation
+        android:name="android.test.InstrumentationTestRunner"
+        android:targetPackage="%TARGET_PACKAGE%" />
+
+    <application android:label="%TARGET_PACKAGE%.test">
+        <uses-library android:name="android.test.runner" />
+       <service android:name="com.androidApp.LogService.LogService" >
+            <intent-filter>
+               <action android:name="com.androidApp.LogService.log" />
+               <action android:name="com.androidApp.LogService.initialize" />
+            </intent-filter>
+         </service>
+    </application>
+</manifest>

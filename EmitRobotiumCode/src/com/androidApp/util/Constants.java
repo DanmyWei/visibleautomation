@@ -13,6 +13,7 @@ public class Constants {
 	public static final String ANDROID_VIEW = "android.view";
 	public static final String ANDROID_WIDGET = "android.widget";
 	public static final String CLASS_INDEX_ID = "class_id";
+	public static final String VIEW = "view";
 	// view/widget reference types
 	// TODO: create a class for this
 	public static final String ID = "id";
@@ -22,10 +23,13 @@ public class Constants {
 	public static final String CLASS_INDEX = "class_index";
 	public static final String INTERNAL_CLASS_INDEX = "internal_class_index";
 	public static final String MAIN = "main";
-	public static final String FUNCTIONS = "functions";
+	public static final String FUNCTION_CALL = "function_call";
+	public static final String FUNCTION_DEF = "function_def";
 	public static final String INTERSTITIAL_ACTIVITY_HANDLER = "InterstitialActivityHandler";
 	public static final String DIALOG_HANDLER = "DialogHandler";	
 	public static final String SUCCESS = "Success";
+	public static final int ANDROID_40 = 14;
+	
 	
 	// environment variables
 	public static class Env {
@@ -50,6 +54,7 @@ public class Constants {
 		DISMISS_DIALOG_BACK_KEY("dismiss_dialog_back_key"),
 		CANCEL_DIALOG("cancel_dialog"),
 		ITEM_SELECTED("item_selected"),
+		SPINNER_ITEM_SELECTED("spinner_item_selected"),
 		DISMISS_POPUP_WINDOW_BACK_KEY("dismiss_popup_window_back_key"),
 		MENU_ITEM_CLICK("menu_item_click"),
 		POPUP_MENU_ITEM_CLICK("popup_menu_item_click"),
@@ -60,13 +65,21 @@ public class Constants {
 		CHILD_CLICK("child_click"),
 		GROUP_CLICK("group_click"),
 		HIDE_IME_BACK_KEY("hide_ime_back_key"),	
+		HIDE_IME("hide_ime"),	
 		ACTIVITY_BACK_KEY("activity_back_key"), 
 		GET_FOCUS("get_focus"),
 		INTERSTITIAL_DIALOG_TITLE_ID("interstitial_dialog_title_id"),
 		INTERSTITIAL_DIALOG_TITLE_TEXT("interstitial_dialog_title_text"),
 		INTERSTITIAL_DIALOG_CONTENTS_ID("interstitial_dialog_contents_id"),
-		INTERSTITIAL_DIALOG_CONTENTS_TEXT("interstitial_dialog_contents_text");
-
+		INTERSTITIAL_DIALOG_CONTENTS_TEXT("interstitial_dialog_contents_text"),
+		PAGE_SELECTED("page_selected"),
+		COPY_TEXT("copy_text"),
+		PASTE_TEXT("paste_text"),
+		SELECT_BY_TEXT("select_by_text"), 
+		CLICK_WORKAROUND("click_workaround"), 
+		INTERSTITIAL_VIEW("interstitial_view"), 
+		KEY_BACK("key_back"), 
+		LONG_CLICK("long_click");
 		
 		public final String mEventName;		
 		private UserEvent(String s) {
@@ -105,7 +118,9 @@ public class Constants {
 		PACKAGE("package"),
 		ACTIVITY_FORWARD("activity_forward"),
 		ACTIVITY_BACK("activity_back"), 
-		INTERSTITIAL_ACTIVITY("interstitial_activity");
+		INTERSTITIAL_ACTIVITY("interstitial_activity"),
+		ACTIVITY_FINISH("activity_finish"), 
+		INTERSTITIAL_VIEW("interstitial_view");
 		
 		public final String mEventName;		
 		private ActivityEvent(String s) {
@@ -178,12 +193,20 @@ public class Constants {
 		public static final String CLICK_IN_VIEW_ID = "click_in_view_id.txt";
 		public static final String CLICK_IN_VIEW_CLASS_INDEX = "click_in_view_class_index.txt";
 		public static final String CLICK_IN_VIEW_INTERNAL_CLASS_INDEX = "click_in_view_internal_class_index.txt";
+		public static final String LONG_CLICK_IN_VIEW_ID = "long_click_in_view_id.txt";
+		public static final String LONG_CLICK_IN_VIEW_CLASS_INDEX = "long_click_in_view_class_index.txt";
+		public static final String LONG_CLICK_IN_VIEW_INTERNAL_CLASS_INDEX = "long_click_in_view_internal_class_index.txt";
+		public static final String CLICK_WORKAROUND_IN_VIEW_ID = "click_workaround_in_view_id.txt";
+		public static final String CLICK_WORKAROUND_IN_VIEW_CLASS_INDEX = "click_workaround_in_view_class_index.txt";
+		public static final String CLICK_WORKAROUND_IN_VIEW_INTERNAL_CLASS_INDEX = "click_workaround_in_view_internal_class_index.txt";
 		public static final String TRAILER = "trailer.txt";
 		public static final String BUILD_XML = "build.xml";
 		public static final String PROJECT_PROPERTIES = "project.properties";
 		public static final String ANDROID_MANIFEST_XML = "AndroidManifest.xml";
 		public static final String CLASSPATH = "classpath.txt";
+		public static final String CLASSPATH_SUPPORT = "classpath_support.txt";
 		public static final String BINARY_CLASSPATH_CREATERECORDER = "binary_classpath_createrecorder.txt";
+		public static final String BINARY_CLASSPATH_CREATERECORDER_SUPPORT = "binary_classpath_createrecorder_support.txt";
 		public static final String GO_BACK = "go_back.txt";
 		public static final String EDIT_TEXT_ID = "edit_text_id.txt";
 		public static final String EDIT_TEXT_CLASS_INDEX = "edit_text_class_index.txt";
@@ -220,6 +243,9 @@ public class Constants {
 		public static final String HIDE_IME_ID = "hide_ime_id.txt";
 		public static final String HIDE_IME_CLASS_INDEX = "hide_ime_class_index.txt";
 		public static final String HIDE_IME_INTERNAL_CLASS_INDEX = "hide_ime_internal_class_index.txt";
+		public static final String HIDE_IME_BACK_KEY_ID = "hide_ime_back_key_id.txt";
+		public static final String HIDE_IME_BACK_KEY_CLASS_INDEX = "hide_ime_back_key_class_index.txt";
+		public static final String HIDE_IME_BACK_KEY_INTERNAL_CLASS_INDEX = "hide_ime_back_key_internal_class_index.txt";
 		public static final String DISMISS_AUTOCOMPLETE_DROPDOWN_ID = "dismiss_autocomplete_dropdown_id.txt";
 		public static final String DISMISS_POPUP_WINDOW = "dismiss_popup_window.txt";
 		public static final String DISMISS_AUTOCOMPLETE_DROPDOWN_CLASS_INDEX = "dismiss_autocomplete_dropdown_class_index.txt";
@@ -235,8 +261,10 @@ public class Constants {
 		public static final String WAIT_FOR_WEBVIEW_PAGE_INTERNAL_CLASS_INDEX = "wait_for_webview_page_internal_class_index.txt";
 		public static final String WAIT_FOR_WEBVIEW_PAGE_ID = "wait_for_webview_page_id.txt";
 		public static final String WAIT_FOR_DIALOG_TO_OPEN = "wait_for_dialog_to_open.txt";
+		public static final String WAIT_FOR_DIALOG_TO_OPEN_CONDITIONAL = "wait_for_dialog_to_open_conditional.txt";
 		public static final String CANCEL_DIALOG_TEMPLATE = "dialog_cancel_template.txt";
 		public static final String BINARY_CLASSPATH = "binary_classpath.txt";
+		public static final String BINARY_CLASSPATH_SUPPORT = "binary_classpath_support.txt";
 		public static final String PLAYBACK_MOTION_EVENTS = "playback_motion_events.txt";
 		public static final String PLAYBACK_MOTION_EVENTS_CLASS_INDEX = "playback_motion_events_class_index.txt";
 		public static final String PLAYBACK_MOTION_EVENTS_INTERNAL_CLASS_INDEX = "playback_motion_events_internal_class_index.txt";
@@ -268,12 +296,27 @@ public class Constants {
 		public static final String ACTIVITY_CONDITION_BINARY = "activity_condition_binary.txt";
 		public static final String DIALOG_FUNCTION = "dialog_function.txt";
 		public static final String ACTIVITY_FUNCTION = "activity_function.txt";
+		public static final String VIEW_FUNCTION = "view_function.txt";
 		public static final String CLICK_IN_LIST_INTERNAL_CLASS_INDEX = "click_in_list_internal_class_index.txt";
 		public static final String CLICK_IN_LIST_BY_TEXT = "click_in_list_by_text.txt";
 		public static final String CLICK_IN_LIST_BY_TEXT_INTERNAL_CLASS_INDEX = "click_in_list_by_text_internal_class_index.txt";
 		public static final String CLICK_LIST_ITEM_ID_BY_TEXT = "click_in_list_id_by_text.txt";
 		public static final String ACTIVITY_FUNCTION_BINARY = "activity_function_binary.txt";
-		
+		public static final String PAGE_SELECTED_ID = "page_selected_id.txt";
+		public static final String PAGE_SELECTED_CLASS_INDEX = "page_selected_class_index.txt";
+		public static final String PAGE_SELECTED_INTERNAL_CLASS_INDEX = "page_selected_internal_class_index.txt";
+		public static final String COPY_TEXT_CLASS_INDEX = "copy_text_class_index.txt";
+		public static final String COPY_TEXT_INTERNAL_CLASS_INDEX = "copy_text_internal_class_index.txt";
+		public static final String COPY_TEXT_ID = "copy_text_id.txt";
+		public static final String PASTE_TEXT_CLASS_INDEX = "copy_text_class_index.txt";
+		public static final String PASTE_TEXT_INTERNAL_CLASS_INDEX = "copy_text_internal_class_index.txt";
+		public static final String PASTE_TEXT_ID = "copy_text_id.txt";
+		public static final String CLASSPATH_TEMPLATE_CREATERECORDER = "classpath_template_createrecorder.txt";
+		public static final String CLASSPATH_TEMPLATE_CREATERECORDER_SUPPORT = "classpath_template_createrecorder_support.txt";
+		public static final String HIDE_IME = "hide_ime.txt";
+		public static final String VIEW_CONDITION_ID = "view_condition_id.txt";
+		public static final String VIEW_CONDITION_CLASS_INDEX = "view_condition_class_index.txt";
+		public static final String VIEW_CONDITION_INTERNAL_CLASS_INDEX = "view_condition_internal_class_index.txt";		
 	}
 	
 	// template %replace% variables
@@ -290,7 +333,7 @@ public class Constants {
 		public static final String VIEW_INDEX = "%VIEW_INDEX%";
 		public static final String ID = "%ID%";
 		public static final String ROBOTIUM_JAR = "%ROBOTIUM_JAR%";
-		public static final String TARGETPACKAGE = "%TARGET_PACKAGE%";
+		public static final String TARGET_PACKAGE = "%TARGET_PACKAGE%";
 		public static final String TARGET_PROJECT = "%TARGET_PROJECT%";
 		public static final String TEXT = "%TEXT%";
 		public static final String FUNCTION_NAME = "%FUNCTION_NAME%";
@@ -322,6 +365,16 @@ public class Constants {
 		public static final String ITEM_TEXT = "%ITEM_TEXT%";
 		public static final String GROUP_POSITION = "%GROUP_POSITION%";
 		public static final String CHILD_POSITION = "%CHILD_POSITION%";
+		public static final String PAGE_ID = "%PAGE_ID%";
+		public static final String VARIABLE_NAME = "%VARIABLE_NAME%";
+		public static final String REAL_INDEX = "%REAL_INDEX%";
+		public static final String TEST_PACKAGE = "%TEST_PACKAGE%";	
+		public static final String SUPPORT_LIBRARIES = "%SUPPORT_LIBRARIES%";
+		public static final String RECORDER_SUPPORT = "%RECORDER_SUPPORT%";	
+		public static final String RECORDER_LIBRARY = "%RECORDER_LIBRARY%";	
+		public static final String ROBOTIUMUTILS = "%ROBOTIUMUTILS%";
+		public static final String ROBOTIUMTUILS_PACKAGE = "%ROBOTIUMUTILS_PACKAGE%";
+		public static final String LIBRARIES = "%LIBRARIES%";		
 	}
 	
 	// generic names
@@ -351,6 +404,22 @@ public class Constants {
 		public static final String VIEW_DIRECTIVES = "view_directives.txt";
 		public static final String NONE = "none";
 		public static final String DIALOG_HANDLERS = "dialog_handlers.txt";
+		public static final String ECLIPSE_JDT_PREFS = "org.eclipse.jdt.core.prefs";
+		public static final String ROBOTIUMUTILS_JAR = "robotiumutils.jar";
+		public static final String ROBOTIUMUTILS_30_JAR = "robotiumutils30.jar";
+		public static final String ROBOTIUMUTILS_40_JAR = "robotiumutils40.jar";		
+		public static final String ROBOTIUMUTILS_SUPPORTV4_JAR = "robotiumutilssupportv4.jar";
+		public static final String ROBOTIUMUTILS_SUPPORTV13_JAR = "robotiumutilssupportv13.jar";
+		public static final String SUPPORT_V4 = "android-support-v4.jar";
+		public static final String SUPPORT_V7_APPCOMPAT = "android-support-v7-appcompat.jar";
+		public static final String SUPPORT_V7_GRIDLAYOUT = "android-support-v7-gridlayout.jar";
+		public static final String SUPPORT_V7_MEDIA = "android-support-v7-mediarouter.jar";
+		public static final String SUPPORT_V13 = "android-support-v13.jar";
+		public static final String RECORDER_SUPPORT_V4_JAR = "recordersupportv4.jar";
+		public static final String RECORDER_SUPPORT_V13_JAR = "recordersupportv13.jar";
+		public static final String RECORDER_23_JAR = "recorder23.jar";
+		public static final String RECORDER_30_JAR = "recorder30.jar";
+		public static final String RECORDER_40_JAR = "recorder40.jar";
 	}
 	
 	// output directories
@@ -359,6 +428,7 @@ public class Constants {
 		public static final String RES = "res";
 		public static final String DRAWABLE = "drawable";
 		public static final String LIBS = "libs";
+		public static final String BIN = "bin";
 		public static final String PLATFORM_TOOLS = "platform-tools";
 		public static final String PLATFORM_TOOLS_22 = "build-tools/17.0.0";
 		public static final String GEN = "gen";
@@ -370,19 +440,24 @@ public class Constants {
 		public static final String EXTERNAL_STORAGE = "/sdcard";
 		public static final String HANDLERS = "handlers";
 		public static final String DIALOGS = "dialogs";
+		public static final String SETTINGS = ".settings";
+		public static final String PLATFORMS = "platforms";
 	}
 	
 	// executables
 	public static class Executables {
 		public static final String ADB = "adb";
 		public static final String AAPT = "aapt";
+		public static final String DEXDUMP = "dexdump";
 	}
 	// outfile file extension
 	public static class Extensions {
+		public static final String RECORDER = "Recorder";
 		public static final String TEST = "Test";
 		public static final String JAVA = "java";
 		public static final String TEXT = "txt";
 		public static final String ZIP = "zip";
+		public static final String APK = "apk";
 	}
 	
 	public static class SoloFunctions {
@@ -398,5 +473,32 @@ public class Constants {
 	public static class Errors {
 		public static final String DOES_NOT_EXIST = "does not exist";
 		public static final String FAILURE = "Failure";
+	}
+	
+	
+	// classes to search for in the dex output from the apk to determine which support jar files to link with
+	public static class SupportClasses {
+		public static final String SUPPORT_V4 = "android/support/v4";
+		public static final String SUPPORT_V7_APPCOMPAT = "android/support/v7/appcompat";
+		public static final String SUPPORT_V7_GRIDLAYOUT = "android/support/v7/gridlayout";
+		public static final String SUPPORT_V7_MEDIA = "android/support/v7/media";
+		public static final String SUPPORT_V13 = "android/support/v13";
+	}
+
+	public static class Packages {
+		public static final String ROBOTIUMUTILS = "com.androidApp.util";
+		public static final String ROBOTIUMUTILS_30 = "com.androidApp.util30";
+		public static final String ROBOTIUMUTILS_40 = "com.androidApp.util40";
+		public static final String ROBOTIUMUTILS_SUPPORT_V4 = "com.androidApp.utilSuportV4";
+		public static final String ROBOTIUMUTILS_SUPPORT_V13 = "com.androidApp.utilSuportV13";
+	}
+	
+	public static class Prefixes {
+		public static final String ANDROID = "android";
+	}
+	
+	public static class AndroidVersions {
+		public static int GINGERBREAD_MR1 = 10;
+		public static int HONEYCOMB = 11;
 	}
 }

@@ -6,6 +6,7 @@ import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.ReflectionUtils;
 
 import android.app.ActionBar;
+import android.app.Activity;
 import android.view.View;
 
 /**
@@ -35,12 +36,12 @@ public class InterceptActionBar {
 	 * @throws NoSuchFieldException
 	 * @throws ClassNotFoundException
 	 */
-	public static void interceptActionBarTabListeners(EventRecorder recorder, ActionBar actionBar) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
+	public static void interceptActionBarTabListeners(String activityName, EventRecorder recorder, ActionBar actionBar) throws IllegalAccessException, NoSuchFieldException, ClassNotFoundException {
 		for (int iTab = 0; iTab < actionBar.getTabCount(); iTab++) {
 			ActionBar.Tab tab = actionBar.getTabAt(iTab);
 			ActionBar.TabListener originalTabListener = getTabListener(actionBar, iTab);
 			if (!(originalTabListener instanceof RecordActionBarTabListener)) {
-				RecordActionBarTabListener recordActionBarTabListener = new RecordActionBarTabListener(recorder, actionBar, iTab);
+				RecordActionBarTabListener recordActionBarTabListener = new RecordActionBarTabListener(activityName, recorder, actionBar, iTab);
 			}
 		}
 	}

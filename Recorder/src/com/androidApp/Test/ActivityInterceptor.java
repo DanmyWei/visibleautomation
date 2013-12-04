@@ -6,9 +6,9 @@ import java.util.List;
 import java.util.Stack;
 
 import com.androidApp.EventRecorder.EventRecorder;
+import com.androidApp.Intercept.CopyTextRunnable;
 import com.androidApp.Intercept.InsertRecordWindowCallbackRunnable;
 import com.androidApp.Intercept.MagicOverlay;
-import com.androidApp.Intercept.ViewInsertRecordWindowCallbackRunnable;
 import com.androidApp.Intercept.MagicFrame;
 import com.androidApp.Listeners.RecordListener;
 import com.androidApp.Utility.Constants;
@@ -24,6 +24,7 @@ import android.content.pm.ActivityInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.os.Debug;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -173,7 +174,7 @@ public class ActivityInterceptor {
 							handleStartActivity(activity);
 							fStart = false;
 						} else if (fFinishing) {
-							
+							copyTextValues(activity);
 							// finishing..remove from the stack.  if it's the last activity, then write that
 							removeActivityFromStack(activity);
 							if (isActivityStackEmpty()) {
@@ -182,7 +183,11 @@ public class ActivityInterceptor {
 						} else {
 								// if the activity is in the stack, and we're resuming it, then we write "goBack()" to the activity
 							if (inActivityStack(activity)  && fResumed) {	
-								handleActivityBack(activity);
+								
+								// sometimes we get 2 starts, so if it's already on the activty stack, we ignore it.
+								if (!isOnTopOfActivityStack(activity)) {
+									handleActivityBack(activity);
+								}
 							} else if (isManualRotation(activity, currentRotation)) {
 								
 								// manual rotation can fire 2 or 3 events: one for the destruction, and 1 or 2 for the creation
@@ -215,22 +220,32 @@ public class ActivityInterceptor {
 	
 	public void handleNewActivity(Activity activity) {
 		String logMsg =  activity.getClass().getName() + "," + activity.toString();
-		mEventRecorder.writeRecord(Constants.EventTags.ACTIVITY_FORWARD, logMsg);
+		mEventRecorder.writeRecord(activity.toString(), Constants.EventTags.ACTIVITY_FORWARD, logMsg);
 		pushActivityOnStack(activity);
 		if (!MagicFrame.isAlreadyInserted(activity)) {
 			MagicFrame.insertMagicFrame(mInstrumentation, peekActivityOnStack().getActivity(), mEventRecorder, mViewInterceptor);			
+			// NOTE: we install the listeners here, as well as on click, because even though it slows down
+			// the activity startup, it will speed up the key dispatch, which is essential, because the window 
+			// callback has a key dispatch timeout, and the activity startup doesn't
 			mInstrumentation.runOnMainSync(new InterceptActivityRunnable(activity));
-			mInstrumentation.runOnMainSync(new InsertRecordWindowCallbackRunnable(activity.getWindow(), mEventRecorder, mViewInterceptor));
+			mInstrumentation.runOnMainSync(new InsertRecordWindowCallbackRunnable(activity.getWindow(), activity, mEventRecorder, mViewInterceptor));
+			mInstrumentation.runOnMainSync(new CopyTextRunnable(mEventRecorder, activity));
 		}
 	}
 	
+	/**
+	 * in the default android rotation case, it finishes the last activity, then starts the new activity
+	 * with the elements repopulated.
+	 * @param activity
+	 * @param newRotation
+	 */
 	public void handleManualRotation(Activity activity, int newRotation) {
 		mEventRecorder.writeRotation(activity, newRotation);
 		replaceLastActivity(activity);
 		if (!MagicFrame.isAlreadyInserted(activity)) {
 			MagicFrame.insertMagicFrame(mInstrumentation, peekActivityOnStack().getActivity(), mEventRecorder, mViewInterceptor);			
 			mInstrumentation.runOnMainSync(new InterceptActivityRunnable(activity));
-			mInstrumentation.runOnMainSync(new InsertRecordWindowCallbackRunnable(activity.getWindow(), mEventRecorder, mViewInterceptor));
+			mInstrumentation.runOnMainSync(new InsertRecordWindowCallbackRunnable(activity.getWindow(), activity, mEventRecorder, mViewInterceptor));
 		}
 	}
 	
@@ -248,9 +263,9 @@ public class ActivityInterceptor {
 		try {
 			mEventRecorder.getViewReference().initializeWithActivity(activity, mInstrumentation);
 			String packageName = getPackageName(activity);
-			mEventRecorder.writeRecord(Constants.EventTags.PACKAGE, packageName);
+			mEventRecorder.writeRecord(activity.toString(), Constants.EventTags.PACKAGE, packageName);
 		} catch (Exception ex) {
-			mEventRecorder.writeException(ex, "getting package name");
+			mEventRecorder.writeException(activity.toString(), ex, "getting package name");
 		}
 	}
 	
@@ -258,10 +273,10 @@ public class ActivityInterceptor {
 		if (mViewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_BACK) {
 			mViewInterceptor.setLastKeyAction(-1);
 			String logMsg = activity.getClass().getName() + "," + activity;
-			mEventRecorder.writeRecord(Constants.EventTags.ACTIVITY_BACK_KEY, logMsg);
+			mEventRecorder.writeRecord(activity.toString(), Constants.EventTags.ACTIVITY_BACK_KEY, logMsg);
 		} else {
 			String logMsg = activity.getClass().getName() + "," + activity;
-			mEventRecorder.writeRecord(Constants.EventTags.ACTIVITY_BACK, logMsg);
+			mEventRecorder.writeRecord(activity.toString(), Constants.EventTags.ACTIVITY_BACK, logMsg);
 		}
 	}
 	
@@ -270,10 +285,11 @@ public class ActivityInterceptor {
         long time = SystemClock.uptimeMillis();
 		if (mViewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_BACK) {
 			mViewInterceptor.setLastKeyAction(-1);
- 			mEventRecorder.writeRecord(Constants.EventTags.ACTIVITY_BACK_KEY + ":" + time);
+			String logMsg = activity.getClass().getName() + "," + "no previous activity";
+			mEventRecorder.writeRecord(activity.toString(), Constants.EventTags.ACTIVITY_BACK_KEY, logMsg);
 		} else {
 			String logMsg = activity.getClass().getName() + "," + "no previous activity";
-			mEventRecorder.writeRecord(Constants.EventTags.ACTIVITY_BACK + ":" + time);
+			mEventRecorder.writeRecord(activity.toString(), Constants.EventTags.ACTIVITY_BACK, logMsg);
 		}
 	}
 	
@@ -407,6 +423,8 @@ public class ActivityInterceptor {
 		for (ActivityState cand : mActivityStack) {
 			if ((cand.getActivity() == null) || (cand.getActivity().isFinishing())) {
 				removeList.add(cand);
+				String logMsg = "finishing activity " + cand.getActivity().toString();
+				mEventRecorder.writeRecord(cand.getActivity().toString(), Constants.EventTags.ACTIVITY_FINISH, logMsg);
 				Log.i(TAG, "removing activity " + cand.getActivityUniqueName() + " at position " + iPos);
 			}
 			iPos--;
@@ -494,9 +512,16 @@ public class ActivityInterceptor {
 		}
 		
 		public void run() {
-			ActivityInterceptor.this.getViewInterceptor().findMotionEventViews(mActivity);
 			ActivityInterceptor.this.getViewInterceptor().intercept(mActivity);
 		}
+	}
+	
+	/**
+	 * copy text values on activity finish
+	 * @param activity
+	 */
+	public void copyTextValues(Activity activity) {
+		mInstrumentation.runOnMainSync(new CopyTextRunnable(mEventRecorder, activity));
 	}
 }
 

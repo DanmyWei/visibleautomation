@@ -15,9 +15,10 @@ import android.widget.Toast;
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.Intercept.DirectiveDialogs.OnBaseDialogSelectionListener;
 import com.androidApp.Intercept.MagicOverlay.ClickMode;
+import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.ResourceUtils;
 import com.androidApp.Utility.StringUtils;
-import com.androidApp.Utility.TestUtils;
 
 /**
  * variant of magic overlays which takes a dialog parameter
@@ -29,22 +30,27 @@ public class MagicOverlayDialog extends MagicOverlay {
 	protected Dialog 	mTargetDialog;
 	
 	
-	public static void addMagicOverlay(Activity activity, Dialog targetDialog, MagicFrame magicFrame, EventRecorder recorder) throws IOException, ClassNotFoundException {
+	public static void addMagicOverlay(Activity 		activity, 
+									   Dialog 			targetDialog, 
+									   MagicFrame 		magicFrame, 
+									   EventRecorder 	recorder, 
+									   ViewInterceptor	viewInterceptor) throws IOException, ClassNotFoundException {
 		View contentView = magicFrame.getChildAt(0);
 		try {
-			MagicOverlayDialog createOverlay = new MagicOverlayDialog(activity, targetDialog, magicFrame, recorder, contentView);
+			MagicOverlayDialog createOverlay = new MagicOverlayDialog(activity, targetDialog, magicFrame, recorder, viewInterceptor, contentView);
 			initOverlayAttributes(magicFrame, contentView, createOverlay);
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
 	}
 	
-	public MagicOverlayDialog(Activity 		activity, 
-							  Dialog		targetDialog,
-							  MagicFrame 	magicFrame,
-							  EventRecorder eventRecorder, 
-							  View 			contentView) throws IOException {
-		super(activity, magicFrame, eventRecorder, contentView);
+	public MagicOverlayDialog(Activity 			activity, 
+							  Dialog			targetDialog,
+							  MagicFrame 		magicFrame,
+							  EventRecorder 	eventRecorder, 
+							  ViewInterceptor	viewInterceptor,
+							  View 				contentView) throws IOException {
+		super(activity, magicFrame, eventRecorder, viewInterceptor, contentView);
 		mTargetDialog = targetDialog;
 		mfViewSelectDialogContent = false;
 	}
@@ -78,17 +84,17 @@ public class MagicOverlayDialog extends MagicOverlay {
 						if (text != null) {
 							Resources res = getActivity().getResources();
 							List<Object> resourceIds =  mRecorder.getViewReference().getStringList();		
-							List<String> resIds = TestUtils.getIdForString(res, resourceIds, text);
+							List<String> resIds = ResourceUtils.getIdForString(res, resourceIds, text);
 							if (resIds.size() == 1) {
 								String msg = getActivity().getClass().getName() + "," + resIds.get(0);
-								mRecorder.writeRecord(Constants.EventTags.INTERSTITIAL_DIALOG_CONTENTS_ID, msg);
+								mRecorder.writeRecord(mActivity.getClass().getName(), Constants.EventTags.INTERSTITIAL_DIALOG_CONTENTS_ID, msg);
 								Toast.makeText(getActivity(), "marking dialog with " + text, Toast.LENGTH_SHORT).show();
 
 							} else {
 								String escapedText = StringUtils.escapeString(text, "\"", '\\').replace("\n", "\\n");;
 								String msg = getActivity().getClass().getName() + "," + "\"" + escapedText + "\"";
 								Toast.makeText(getActivity(), "marking dialog with " + text, Toast.LENGTH_SHORT).show();
-								mRecorder.writeRecord(Constants.EventTags.INTERSTITIAL_DIALOG_CONTENTS_TEXT, msg);
+								mRecorder.writeRecord(mActivity.getClass().getName(), Constants.EventTags.INTERSTITIAL_DIALOG_CONTENTS_TEXT, msg);
 							}
 						} else {
 							Toast.makeText(getActivity(), Constants.DisplayStrings.NO_DIALOG_TITLE, Toast.LENGTH_SHORT).show();

@@ -4,6 +4,7 @@ import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.Utility.Constants;
 
+import android.app.Activity;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.os.SystemClock;
@@ -23,8 +24,8 @@ public class RecordDialogOnCancelListener extends RecordListener implements Dial
 	public RecordDialogOnCancelListener() {
 	}
 	
-	public RecordDialogOnCancelListener(EventRecorder eventRecorder, DialogInterface.OnCancelListener originalCancelListener) {
-		super(eventRecorder);
+	public RecordDialogOnCancelListener(String activityName, EventRecorder eventRecorder, DialogInterface.OnCancelListener originalCancelListener) {
+		super(activityName, eventRecorder);
 		mOriginalOnCancelListener = originalCancelListener;
 	}
 	
@@ -42,9 +43,9 @@ public class RecordDialogOnCancelListener extends RecordListener implements Dial
 			setEventBlock(true);
 			try {
 				String description = getDescription(dialog);
-				mEventRecorder.writeRecord(Constants.EventTags.CANCEL_DIALOG, description);
+				mEventRecorder.writeRecord(mActivityName, Constants.EventTags.CANCEL_DIALOG, description);
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, "on cancel dialog");
+				mEventRecorder.writeException(mActivityName, ex, "on cancel dialog");
 			} 
 		}
 		if (!fReentryBlock) {

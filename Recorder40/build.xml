@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Configuration of the Ant build system to generate a Jar file --> 
+<project name="Recorder40" default="install">
+    <import file="../buildandroidjar.xml"/>
+    <property name="jarfile" value="recorder40.jar" />
+
+    <path id="project.all.jars.path" >
+        <pathelement path="../EventRecorderInterface/bin/eventrecorderinterface.jar" />
+        <pathelement path="../Recorder/recorder.jar" />
+    </path>
+    <path id="project.obfuscate.jars.path" >
+        <pathelement path="recorder40.jar" />
+    </path>
+</project>

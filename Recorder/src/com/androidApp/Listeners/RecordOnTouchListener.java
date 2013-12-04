@@ -9,6 +9,7 @@ import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.ReflectionUtils;
 
 
+import android.app.Activity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewParent;
@@ -22,23 +23,23 @@ import android.view.View.OnTouchListener;
  */
 public class RecordOnTouchListener extends RecordListener implements OnTouchListener, IOriginalListener  {
 	protected OnTouchListener 	mOriginalOnTouchListener;
-	protected boolean				mFirstEventFired;				// in ViewGroups, the listener does not receive ACTION_DOWN events.
+	protected boolean			mTouchDown;			
 	
-	public RecordOnTouchListener(EventRecorder eventRecorder, View v) {
-		super(eventRecorder);
+	public RecordOnTouchListener(String activityName, EventRecorder eventRecorder, View v) {
+		super(activityName, eventRecorder);
 		try {
 			mOriginalOnTouchListener = ListenerIntercept.getTouchListener(v);
 			v.setOnTouchListener(this);
-			mFirstEventFired = true;
+			mTouchDown = false;
 		} catch (Exception ex) {
-			mEventRecorder.writeException(ex, v, "create on touch listener");
+			mEventRecorder.writeException(ex, activityName, v, "create on touch listener");
 		}		
 	}
 	
-	public RecordOnTouchListener(EventRecorder eventRecorder, OnTouchListener originalTouchListener) {
-		super(eventRecorder);
+	public RecordOnTouchListener(String activityName, EventRecorder eventRecorder, OnTouchListener originalTouchListener) {
+		super(activityName, eventRecorder);
 		mOriginalOnTouchListener = originalTouchListener;
-		mFirstEventFired = true;
+		mTouchDown = false;
 	}
 	
 	public Object getOriginalListener() {
@@ -47,6 +48,8 @@ public class RecordOnTouchListener extends RecordListener implements OnTouchList
 	
 	/**
 	 * record the actual touch event
+	 * TODO: we should ensure that the event does actually come through RecordWindowCallback,
+	 * but self-motion events are as rare as hen's teeth, and we need to handle move and up as well as down
 	 * <touch_down/touch_up/touch_move>:time,x,y,<reference>,<description>
 	 * 
 	 */
@@ -59,6 +62,7 @@ public class RecordOnTouchListener extends RecordListener implements OnTouchList
 				String eventName = Constants.EventTags.UNKNOWN;
 				if (event.getAction() == MotionEvent.ACTION_DOWN) {
 					eventName = Constants.EventTags.TOUCH_DOWN;
+					mTouchDown = true;
 				} else if (event.getAction() == MotionEvent.ACTION_UP) {
 					eventName = Constants.EventTags.TOUCH_UP;
 				} else if (event.getAction() == MotionEvent.ACTION_MOVE) {
@@ -66,23 +70,20 @@ public class RecordOnTouchListener extends RecordListener implements OnTouchList
 				} else if (event.getAction() == MotionEvent.ACTION_CANCEL) {
 					eventName = Constants.EventTags.TOUCH_CANCEL;
 				}
-				
-				String description = getDescription(v);
-				// we want to save the widget size in the down case, because the motion events have to be
-				// scaled on playback in case it's a different device
-				String logString = "";
-				if (mFirstEventFired) {
-					logString = v.getWidth() + "," + v.getHeight() + ",";
-					mFirstEventFired = false;
+				if (mTouchDown) {
+					String description = getDescription(v);
+					// we want to save the widget size in the down case, because the motion events have to be
+					// scaled on playback in case it's a different device
+					String logString = v.getWidth() + "," + v.getHeight() + "," + 
+								 	   event.getX() + "," + event.getY() + "," + 
+								 	   mEventRecorder.getViewReference().getReference(v) + "," + description;
+					mEventRecorder.writeRecord(mActivityName, eventName, logString);
 				}
-				logString += event.getX() + "," + event.getY() + "," +
-						 	 mEventRecorder.getViewReference().getReference(v) + "," + description;
-				mEventRecorder.writeRecord(eventName, logString);
 				if (event.getAction() == MotionEvent.ACTION_UP) {
-					mFirstEventFired = true;
+					mTouchDown = false;
 				}
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, v, "on touch");
+				mEventRecorder.writeException(ex, mActivityName, v, "on touch");
 			}
 		} 
 		if (!fReentryBlock) {
@@ -94,6 +95,34 @@ public class RecordOnTouchListener extends RecordListener implements OnTouchList
 		return fConsumeEvent;
 	}
 	
+	/**
+	 * does this view listen to touch events
+	 * @param v view to test
+	 * @return true if if the view listens to a touch event
+	 * @throws NoSuchFieldException
+	 * @throws IllegalAccessException
+	 * @throws ClassNotFoundException
+	 */
+	public static boolean hasListenenedToTouch(View v) throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
+		OnTouchListener onTouchListener = (OnTouchListener) ListenerIntercept.getTouchListener(v);
+		// the parent's original Touch listener was stored in the record listener.  if the Touch listener
+		// hasn't been interecepted, then it will be
+		if (onTouchListener != null) {
+			if (onTouchListener instanceof RecordOnTouchListener) {
+				if (((IOriginalListener) onTouchListener).getOriginalListener() != null) {
+					return true;
+				}
+			} else {
+				return true;
+			}
+		}
+		
+		// if the parent overrode onTouch(), then it will listen to the Touch events.
+		if (hasOverriddenOnTouchMethod(v)) {
+			return true;
+		}
+		return false;
+	}
 
 	/**
 	 * if an onTouchListener() is installed for a parent view, we should not install one for this view, since it
@@ -108,21 +137,7 @@ public class RecordOnTouchListener extends RecordListener implements OnTouchList
 		if (v.getParent() instanceof View) {
 			v = (View) v.getParent();
 			while (v != v.getRootView()) {
-				OnTouchListener onTouchListener = (OnTouchListener) ListenerIntercept.getTouchListener(v);
-				// the parent's original Touch listener was stored in the record listener.  if the Touch listener
-				// hasn't been interecepted, then it will be
-				if (onTouchListener != null) {
-					if (onTouchListener instanceof RecordOnTouchListener) {
-						if (((IOriginalListener) onTouchListener).getOriginalListener() != null) {
-							return true;
-						}
-					} else {
-						return true;
-					}
-				}
-				
-				// if the parent overrode onTouch(), then it will listen to the Touch events.
-				if (hasOverriddenOnTouchMethod(v)) {
+				if (hasListenenedToTouch(v)) {
 					return true;
 				}
 				ViewParent vp = v.getParent();

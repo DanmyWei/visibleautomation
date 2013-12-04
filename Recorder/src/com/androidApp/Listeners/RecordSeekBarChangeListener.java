@@ -4,6 +4,7 @@ import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
 
+import android.app.Activity;
 import android.os.SystemClock;
 import android.view.View;
 import android.widget.SeekBar;
@@ -16,18 +17,18 @@ import android.widget.SeekBar;
 public class RecordSeekBarChangeListener extends RecordListener implements SeekBar.OnSeekBarChangeListener, IOriginalListener  {
 	protected SeekBar.OnSeekBarChangeListener 	mOriginalOnSeekBarChangeListener;
 	
-	public RecordSeekBarChangeListener(EventRecorder eventRecorder, SeekBar seekbar) {
-		super(eventRecorder);
+	public RecordSeekBarChangeListener(String activityName, EventRecorder eventRecorder, SeekBar seekbar) {
+		super(activityName, eventRecorder);
 		try {
 			mOriginalOnSeekBarChangeListener = ListenerIntercept.getSeekBarChangeListener(seekbar);
 			seekbar.setOnSeekBarChangeListener(this);
 		} catch (Exception ex) {
-			mEventRecorder.writeException(ex, seekbar, "create on progress changed listener");
+			mEventRecorder.writeException(ex, activityName, seekbar, "create on progress changed listener");
 		}		
 	}
 	
-	public RecordSeekBarChangeListener(EventRecorder eventRecorder, SeekBar.OnSeekBarChangeListener originalOnSeekBarChangeListener) {
-		super(eventRecorder);
+	public RecordSeekBarChangeListener(Activity activity, EventRecorder eventRecorder, SeekBar.OnSeekBarChangeListener originalOnSeekBarChangeListener) {
+		super(activity.getClass().getName(), eventRecorder);
 		mOriginalOnSeekBarChangeListener = originalOnSeekBarChangeListener;
 	}
 
@@ -50,9 +51,9 @@ public class RecordSeekBarChangeListener extends RecordListener implements SeekB
 			if (fromUser) {
 				try {
 					String description = getDescription(seekBar);
-					mEventRecorder.writeRecord( Constants.EventTags.PROGRESS_CHANGED, progress + "," + mEventRecorder.getViewReference().getReference(seekBar) + "," + description);
+					mEventRecorder.writeRecord(mActivityName, Constants.EventTags.PROGRESS_CHANGED, progress + "," + mEventRecorder.getViewReference().getReference(seekBar) + "," + description);
 				} catch (Exception ex) {
-					mEventRecorder.writeException(ex, seekBar, "on progress changed");
+					mEventRecorder.writeException(ex, mActivityName, seekBar, "on progress changed");
 				}
 			}
 		}
@@ -72,9 +73,9 @@ public class RecordSeekBarChangeListener extends RecordListener implements SeekB
 		if (!RecordListener.getEventBlock()) {
 			setEventBlock(true);
 			try {
-				mEventRecorder.writeRecord(Constants.EventTags.START_TRACKING, mEventRecorder.getViewReference().getReference(seekBar));
+				mEventRecorder.writeRecord(mActivityName, Constants.EventTags.START_TRACKING, mEventRecorder.getViewReference().getReference(seekBar));
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, seekBar, "on start tracking touch");
+				mEventRecorder.writeException(ex, mActivityName, seekBar, "on start tracking touch");
 				ex.printStackTrace();
 			}
 		}
@@ -91,9 +92,9 @@ public class RecordSeekBarChangeListener extends RecordListener implements SeekB
 		if (!RecordListener.getEventBlock()) {
 			setEventBlock(true);
 			try {
-				mEventRecorder.writeRecord(Constants.EventTags.STOP_TRACKING, mEventRecorder.getViewReference().getReference(seekBar));
+				mEventRecorder.writeRecord(mActivityName, Constants.EventTags.STOP_TRACKING, mEventRecorder.getViewReference().getReference(seekBar));
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, seekBar, "on stop tracking touch");
+				mEventRecorder.writeException(ex, mActivityName, seekBar, "on stop tracking touch");
 			}
 		}
 		if (!fReentryBlock) {

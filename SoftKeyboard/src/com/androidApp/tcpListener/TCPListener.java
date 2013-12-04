@@ -48,7 +48,9 @@ public class TCPListener implements Runnable {
 	}
 	
 	/**
-	 * interface to broadcast message to anyone who connected to our socket.
+	 * interface to broadcast message to anyone who connected to our socket.  If there's an error of some kind
+	 * then remove the socket.
+	 * TODO: this should be run in a background thread, since it will block on the application.
 	 * @param msg
 	 */
 	public void broadcast(String msg) {

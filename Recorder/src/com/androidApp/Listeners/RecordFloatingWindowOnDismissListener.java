@@ -6,6 +6,7 @@ import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 
 import android.widget.PopupWindow;
+import android.app.Activity;
 import android.view.KeyEvent;
 import android.view.View;
 
@@ -26,10 +27,11 @@ public class RecordFloatingWindowOnDismissListener extends RecordListener implem
 	public RecordFloatingWindowOnDismissListener() {
 	}
 	
-	public RecordFloatingWindowOnDismissListener(EventRecorder 				eventRecorder, 
-											    ViewInterceptor				viewInterceptor,
-											    PopupWindow.OnDismissListener originalDismissListener) {
-		super(eventRecorder);
+	public RecordFloatingWindowOnDismissListener(String							activityName,
+												 EventRecorder 					eventRecorder, 
+											     ViewInterceptor				viewInterceptor,
+											     PopupWindow.OnDismissListener 	originalDismissListener) {
+		super(activityName, eventRecorder);
 		mViewInterceptor = viewInterceptor;
 		mOriginalOnDismissListener = originalDismissListener;
 	}
@@ -46,13 +48,13 @@ public class RecordFloatingWindowOnDismissListener extends RecordListener implem
 				// clear the current popup window so it gets intercepted if it comes up again.
 				mViewInterceptor.setCurrentPopupWindow(null);
 				if (mViewInterceptor.getLastKeyAction() == KeyEvent.KEYCODE_BACK){
-					mEventRecorder.writeRecord(Constants.EventTags.DISMISS_POPUP_WINDOW_BACK_KEY, "dismiss popup window");					
+					mEventRecorder.writeRecord(mActivityName, Constants.EventTags.DISMISS_POPUP_WINDOW_BACK_KEY, "dismiss popup window");					
 				} else {
-					mEventRecorder.writeRecord(Constants.EventTags.DISMISS_POPUP_WINDOW, "dismiss popup window");
+					mEventRecorder.writeRecord(mActivityName, Constants.EventTags.DISMISS_POPUP_WINDOW, "dismiss popup window");
 				}
 				mViewInterceptor.setLastKeyAction(-1);
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, Constants.EventTags.DISMISS_POPUP_WINDOW);
+				mEventRecorder.writeException(mActivityName, ex, Constants.EventTags.DISMISS_POPUP_WINDOW);
 			}
 		}
 		if (!fReentryBlock) {

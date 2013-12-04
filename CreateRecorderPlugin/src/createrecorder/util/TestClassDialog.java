@@ -2,8 +2,10 @@ package createrecorder.util;
 
 import org.eclipse.jface.dialogs.InputDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.window.Window;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.ui.dialogs.ElementListSelectionDialog;
 
 /**
  * dialog to prompt for the test class name.  This needs to be changed to a list dialog with the output from the package list
@@ -14,37 +16,42 @@ public class TestClassDialog {
 	public String mMatchingClass = null;
 	
 	public String getTestClassDialog(Shell shell, String title, String prompt) {
-		InputDialog inputDialog = new InputDialog(shell, title, prompt, "", null); 
-		int answer = inputDialog.open();
+		if (!EclipseExec.isDeviceAttached()) {
+			MessageDialog.openInformation(shell, RecorderConstants.VISIBLE_AUTOMATION, "No device attached");
+			return null;
+		}
+		ElementListSelectionDialog dialog = new ElementListSelectionDialog(shell, new LabelProvider());
+		dialog.setTitle(RecorderConstants.VISIBLE_AUTOMATION);
+		dialog.setMessage("Select a package from the device");
+		String[] matchingClasses = EclipseExec.getAdbCommandOutput("shell pm list packages -f");
+		String[] displayStrings = new String[matchingClasses.length];
+		
+		// strip out the display strings
+		for (int i = 0; i < matchingClasses.length; i++) {
+			String line = matchingClasses[i];
+			int ichColon = line.indexOf('=');
+			line = line.substring(ichColon + 1);
+			displayStrings[i] = line;
+		}
+		dialog.setElements(displayStrings);
+		dialog.setMultipleSelection(false);
+		int answer = dialog.open();
 		if (answer == Window.OK) {
-			String className = inputDialog.getValue();
-			// get the package for the classname package:/data/app/com.example.android.apis-1.apk=com.example.android.apis
-			String[] matchingClasses = EclipseExec.getAdbCommandOutput("shell pm list packages  -f -3");
-			mMatchingClass = null;
-			for (String candidateClass : matchingClasses) {
-				if (candidateClass.endsWith(className)) {
-					mMatchingClass = candidateClass;
+			mMatchingClass = (String) dialog.getFirstResult();
+			for (int iPackage = 0; iPackage < displayStrings.length; iPackage++) {
+				int ichEquals = matchingClasses[iPackage].indexOf('=');
+				if (matchingClasses[iPackage].substring(ichEquals + 1).equals(mMatchingClass)) {
+					// get the package for the classname package:/data/app/com.example.android.apis-1.apk=com.example.android.apis
+					mPackagePath = getPackagePath(matchingClasses[iPackage]);
+					break;
 				}
 			}
-			if (mMatchingClass == null) {
-				MessageDialog.openInformation(
-						shell,
-						"CreateRecorderPlugin",
-						"No matching packages for class " + className);
-			} else {
-				mPackagePath = getPackagePath(mMatchingClass);
-				if (!EclipseExec.executeAdbCommand("pull " + mPackagePath)) {
-					MessageDialog.openInformation(
-							shell,
-							"CreateRecorderPlugin",
-							"failed to pull the APK from the device for package " + mPackagePath);
-				}
-				int ichEquals = mMatchingClass.indexOf("=");
-				if (ichEquals != -1) {
-					mMatchingClass = mMatchingClass.substring(ichEquals + 1);
-				}
-				return mPackagePath;
+			if (!EclipseExec.executeAdbCommand("pull " + mPackagePath)) {
+				MessageDialog.openInformation(shell, RecorderConstants.VISIBLE_AUTOMATION,
+											  "failed to pull the APK from the device for package " + mPackagePath);
+				return null;
 			}
+			return mPackagePath;
 		}
 		return null;
 	}

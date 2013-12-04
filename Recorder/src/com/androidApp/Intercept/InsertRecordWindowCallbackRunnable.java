@@ -1,11 +1,11 @@
 package com.androidApp.Intercept;
 
+import android.app.Activity;
 import android.view.View;
 import android.view.Window;
 
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
-import com.androidApp.Listeners.RecordWindowCallback;
 import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
 
@@ -18,11 +18,16 @@ import com.androidApp.Utility.Constants;
  */
 public class InsertRecordWindowCallbackRunnable implements Runnable {
 	protected Window			mWindow;					// window containing views of interest
+	protected Activity			mActivity;
 	protected EventRecorder 	mRecorder;					// event recorder interface
 	protected ViewInterceptor 	mViewInterceptor;			// to intercept the views contained in the window
 	
-	public InsertRecordWindowCallbackRunnable(Window window, EventRecorder recorder, ViewInterceptor viewInterceptor) {
+	public InsertRecordWindowCallbackRunnable(Window 			window, 
+											  Activity			activity,
+											  EventRecorder 	recorder, 
+											  ViewInterceptor 	viewInterceptor) {
 		mWindow = window;
+		mActivity = activity;
 		mRecorder = recorder;
 		mViewInterceptor = viewInterceptor;
 	}
@@ -32,13 +37,9 @@ public class InsertRecordWindowCallbackRunnable implements Runnable {
 	 */
 	public void run() {
 		try {
-			Window.Callback originalCallback = mWindow.getCallback();
-			if (!(originalCallback instanceof RecordWindowCallback)) {
-				RecordWindowCallback recordCallback = new RecordWindowCallback(mRecorder, mViewInterceptor, originalCallback);
-				mWindow.setCallback(recordCallback);
-			}
+			mViewInterceptor.getInterceptInterface().interceptWindow(mWindow, mActivity, mRecorder, mViewInterceptor);
 		} catch (Exception ex) {
-			mRecorder.writeException(ex, "installing window callback recorder");
+			mRecorder.writeException(mActivity.getClass().getName(), ex, "installing window callback recorder");
 		}
 	}
 

@@ -1,3 +1,4 @@
 		// %DESCRIPTION%
-		%CLASSPATH% view%VARIABLE_INDEX% = (%CLASSPATH%) solo.getView((Class<? extends View>) Class.forName("%INTERNAL_CLASS%"), %VIEW_INDEX%);
+		%CLASSPATH% view%VARIABLE_INDEX% = (%CLASSPATH%) robotiumUtils.getView((Class<? extends View>) Class.forName("%INTERNAL_CLASS%"), %REAL_INDEX%);
+		robotiumUtils.scrollToViewVisible(view%VARIABLE_INDEX%);
 		robotiumUtils.requestFocus(view%VARIABLE_INDEX%, %INSERTION_START%, %INSERTION_END%);

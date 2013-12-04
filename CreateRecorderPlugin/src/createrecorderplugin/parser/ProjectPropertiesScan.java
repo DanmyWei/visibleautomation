@@ -33,4 +33,13 @@ public class ProjectPropertiesScan {
 	public String getTarget() {
 		return mTarget;
 	}
+	
+	// the project properties scan SDK target is returned as target=android-18, so we need to extract it and
+	// parse it into an integer.
+	
+	public int getTargetSDK() {
+		int ichDash = mTarget.lastIndexOf('-');
+		String SDKString = mTarget.substring(ichDash + 1);
+		return Integer.parseInt(SDKString);
+	}
 }

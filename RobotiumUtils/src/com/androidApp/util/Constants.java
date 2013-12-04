@@ -26,5 +26,7 @@ public class Constants {
 		public static final String WEBKIT_CALLBACK_PROXY = "android.webkit.CallbackProxy";
 		public static final String PHONE_DECOR_VIEW = "com.android.internal.policy.impl.PhoneWindow$DecorView";
 		public static final String DIALOG_TITLE = "com.android.internal.widget.DialogTitle";
+		public static final String HORIZONTAL_SCROLL_VIEW = "com.android.widget.HorizontalScrollView";
+
 	}
 }

@@ -1,17 +1,34 @@
 package com.androidApp.Listeners;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.TimerTask;
+
 import com.androidApp.EventRecorder.EventRecorder;
 import com.androidApp.EventRecorder.ListenerIntercept;
+import com.androidApp.Intercept.MagicOverlay;
+import com.androidApp.Intercept.MagicOverlayDialog;
+import com.androidApp.Test.SetupListeners;
 import com.androidApp.Test.ViewInterceptor;
 import com.androidApp.Utility.Constants;
+import com.androidApp.Utility.ShowToastRunnable;
+import com.androidApp.Utility.TestUtils;
+import com.androidApp.Intercept.MagicFrame;
+import com.androidApp.Listeners.IOriginalListener;
+import com.androidApp.Listeners.RecordListener;
+import com.androidApp.Listeners.RecordOnMenuItemClickListener;
 
+import android.app.Activity;
+import android.app.Instrumentation;
+import android.content.Context;
+import android.graphics.Rect;
+import android.os.Debug;
 import android.util.Log;
-import android.view.ActionMode;
-import android.view.ActionMode.Callback;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager.LayoutParams;
 import android.view.accessibility.AccessibilityEvent;
@@ -19,7 +36,8 @@ import android.widget.PopupWindow;
 import android.widget.Toast;
 
 /**
- * window.callback record function to intercept stuff like back and home key events.  TODO: see if this can be applieduniversally
+ * window.callback record function to intercept stuff like back and home key events.  
+ * TODO: see if this can be applied universally
  * @author mattrey
  * TODO: create a function so the textChangedListener can pick up the magic frame and get the mfKeyHit value, since
  * using a static is absolutely EVIL
@@ -27,35 +45,53 @@ import android.widget.Toast;
  *
  */
 public class RecordWindowCallback extends RecordListener implements Window.Callback, IOriginalListener {
-	protected static final String 	TAG = "RecordWindowCallback";
-	protected Window.Callback 		mOriginalCallback;
-	protected ViewInterceptor		mViewInterceptor;
+	protected static final String 		TAG = "RecordWindowCallback";
+	protected Window.Callback 			mOriginalCallback;					// AN ACTIVITY! NO KIDDING!
+	protected ViewInterceptor			mViewInterceptor;					// to retain state information to remember the last key or touch
+	protected Context					mContext;							// so we can toast
+	protected Window					mWindow;							// so we can get the root view
+	protected long						EVENT_RECORD_TIMEOUT_MSEC = 500;	// timeout before event can be recorded
+	protected Activity					mActivity;
+	protected boolean					mfTouchDown;						// touch down was fired.
 	
-	public RecordWindowCallback(EventRecorder 	eventRecorder, 
+	public RecordWindowCallback(Window			window,
+								Activity		activity,
+								Context			context,
+								EventRecorder 	eventRecorder, 
 							    ViewInterceptor	viewInterceptor,
 							    Window.Callback originalCallback) {
-		super(eventRecorder);
+		super(activity.getClass().getName(), eventRecorder);
+		mWindow = window;
+		mActivity = activity;
 		mOriginalCallback = originalCallback;
 		mViewInterceptor = viewInterceptor;
+		mContext = context;
+		mfTouchDown = false;
 	}
 	
 	public Object getOriginalListener() {
 		return mOriginalCallback;
 	}
 
+	/**
+	 * We like to listen to the menu, back, and home keys, and unfortunately, there's no listener,
+	 * so we intercept the window callback, which is normally an activity or something like that, and
+	 * replace the dispatch key event 
+	 */
 	@Override
 	public boolean dispatchKeyEvent(KeyEvent event) {
 		Log.i(TAG, "dispatchKeyEvent action = " + event.getAction() + " keyCode = " + event.getKeyCode());
 		if (event.getAction() == KeyEvent.ACTION_UP){ 
+			mEventRecorder.setEventRecorded(false);
 			switch (event.getKeyCode()) {
 			case KeyEvent.KEYCODE_BACK:
-				mEventRecorder.writeRecordTime(Constants.EventTags.MENU_BACK_KEY);
+				mEventRecorder.writeRecordTime(mActivity.toString(), Constants.EventTags.MENU_BACK_KEY);
 				break;
 			case KeyEvent.KEYCODE_MENU:
-				mEventRecorder.writeRecordTime(Constants.EventTags.MENU_MENU_KEY);
+				mEventRecorder.writeRecordTime(mActivity.toString(), Constants.EventTags.MENU_MENU_KEY);
 				break;
 			case KeyEvent.KEYCODE_HOME:
-				mEventRecorder.writeRecordTime(Constants.EventTags.KEY_HOME);
+				mEventRecorder.writeRecordTime(mActivity.toString(), Constants.EventTags.KEY_HOME);
 				break;
 			} 
 		}
@@ -63,28 +99,44 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 		return mOriginalCallback.dispatchKeyEvent(event);
 	}
 
-	@Override
-	public boolean dispatchKeyShortcutEvent(KeyEvent event) {
-		Log.i(TAG, "dispatchKeyShortcutEvent action = " + event.getAction() + " keyCode = " + event.getKeyCode());
-		return mOriginalCallback.dispatchKeyShortcutEvent(event);
-	}
-
+	/**
+	 * sometimes, actually pretty often, views get created dynamically, and the global layout listener and on
+	 * hierarchy changed listeners don't handle the incoming event.  
+	 */
+	
 	@Override
 	public boolean dispatchTouchEvent(MotionEvent event) {
+		if (event.getAction() == MotionEvent.ACTION_DOWN) {
+			// at this point, the event hasn't been recorded. and we're a real boy! so that means
+			// that listeners should actually record us, as opposed to self-events.
+			mEventRecorder.setEventRecorded(false);
+			mEventRecorder.setTouchedDown(true);
+		
+			// get the content view from the app.  If we've inserted the magic frame (and frankly, we should have
+			// at this point), the content is the first child of the magic frame.
+			View contentView = ((ViewGroup) mWindow.getDecorView()).getChildAt(0);
+			if (contentView instanceof MagicFrame) {
+				contentView = ((ViewGroup) contentView).getChildAt(0);
+			}
+			List<View> hitViews = getHitViews((int) event.getX(), (int) event.getY(), contentView);
+			for (View v : hitViews) {
+				Log.d(TAG, "hitView: " + v);
+			}
+			try {
+				mViewInterceptor.interceptList(mActivity, mActivity.toString(), hitViews);
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}
 		Log.i(TAG, "dispatch touchEvent action = " + event.getAction());
 		return mOriginalCallback.dispatchTouchEvent(event);
 	}
 
 	@Override
 	public boolean dispatchTrackballEvent(MotionEvent event) {
+		mEventRecorder.setEventRecorded(false);
 		Log.i(TAG, "dispatch trackballEvent action = " + event.getAction());
 		return mOriginalCallback.dispatchTrackballEvent(event);
-	}
-
-	@Override
-	public boolean dispatchGenericMotionEvent(MotionEvent event) {
-		Log.i(TAG, "dispatch genericMotionEvent action = " + event.getAction());
-		return mOriginalCallback.dispatchGenericMotionEvent(event);
 	}
 
 	@Override
@@ -120,12 +172,12 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 					MenuItem menuItem = menu.getItem(iItem);
 					MenuItem.OnMenuItemClickListener originalClickListener = ListenerIntercept.getOnMenuItemClickListener(menuItem);
 					if (!(originalClickListener instanceof RecordOnMenuItemClickListener)) {
-						RecordOnMenuItemClickListener recordOnMenuItemClickListener = new RecordOnMenuItemClickListener(mEventRecorder, originalClickListener);
+						RecordOnMenuItemClickListener recordOnMenuItemClickListener = new RecordOnMenuItemClickListener(mActivity.toString(), mEventRecorder, originalClickListener);
 						menuItem.setOnMenuItemClickListener(recordOnMenuItemClickListener);
 					}
 				}
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, "while attempting to intercept menu on click listener");
+				mEventRecorder.writeException(mActivityName, ex, "while attempting to intercept menu on click listener");
 			}
 		}
 		return mOriginalCallback.onMenuOpened(featureId, menu);
@@ -134,13 +186,6 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 	@Override
 	public boolean onMenuItemSelected(int featureId, MenuItem item) {
 		Log.i(TAG, "onMenuItemSelected featureId = " + featureId);
-		/*
-		String message = Integer.toString(item.getItemId());
-		if (item.getTitle() != null) {
-			message += "," + item.getTitle();
-		}
-		mEventRecorder.writeRecord(Constants.EventTags.MENU_ITEM_CLICK, message);
-		*/
 		return mOriginalCallback.onMenuItemSelected(featureId, item);
 	}
 
@@ -182,7 +227,7 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 		Log.i(TAG, "onPanelClosed featureId = " + featureId);
 		if (featureId == 0) {
 			mViewInterceptor.setCurrentOptionsMenuView(null);
-			mEventRecorder.writeRecordTime(Constants.EventTags.CLOSE_OPTIONS_MENU);
+			mEventRecorder.writeRecordTime(mActivityName, Constants.EventTags.CLOSE_OPTIONS_MENU);
 		}
 		mOriginalCallback.onPanelClosed(featureId, menu);
 		
@@ -193,23 +238,38 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 		Log.i(TAG, "onSearchRequested");
 		return mOriginalCallback.onSearchRequested();
 	}
-
-	@Override
-	public ActionMode onWindowStartingActionMode(Callback callback) {
-		Log.i(TAG, "onWindowStartingActionMode");
-		return mOriginalCallback.onWindowStartingActionMode(callback);
+	
+	public EventRecorder getEventRecorder() {
+		return mEventRecorder;
 	}
-
-	@Override
-	public void onActionModeStarted(ActionMode mode) {
-		Log.i(TAG, "onActionModeStarted");
-		mOriginalCallback.onActionModeStarted(mode);
+		
+	// given an event x,y, return the views that were hit.
+	public List<View> getHitViews(int eventX, int eventY, View contentView) {
+		List<View> hitViews = new ArrayList<View>();
+		Rect hitRect = new Rect();
+		getHitViews(eventX, eventY, contentView, hitRect, hitViews);
+		return hitViews;
 	}
-
-	@Override
-	public void onActionModeFinished(ActionMode mode) {
-		Log.i(TAG, "onActionModeFinished");
-		mOriginalCallback.onActionModeFinished(mode);	
+	
+	private boolean getHitViews(int eventX, int eventY, View v, Rect hitRect, List<View> hitViews) {
+		if ((v != null) && v.isShown() && v.isEnabled()) {
+			v.getHitRect(hitRect);
+			Log.d(TAG, "event = " + eventX + ", "  + eventY + " view " + v + " hitRect = " + hitRect.left + ", " + hitRect.top + ", " + (hitRect.right - hitRect.left) + ", " + (hitRect.bottom - hitRect.top));
+			if (hitRect.contains(eventX, eventY)) {
+				hitViews.add(v);
+				if (v instanceof ViewGroup) {
+					ViewGroup vg = (ViewGroup) v;
+					eventX -= hitRect.left;
+					eventY -= hitRect.top;
+					for (int iChild = 0; iChild < vg.getChildCount(); iChild++) {
+						View vChild = vg.getChildAt(iChild);
+						if (getHitViews(eventX, eventY, vChild, hitRect, hitViews)) {
+							return true;
+						}
+					}
+				} 
+			}
+		} 
+		return false;
 	}
-
 }

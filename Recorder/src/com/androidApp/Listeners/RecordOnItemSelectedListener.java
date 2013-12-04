@@ -4,6 +4,7 @@ import com.androidApp.EventRecorder.ListenerIntercept;
 import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
 
+import android.app.Activity;
 import android.os.SystemClock;
 import android.view.View;
 import android.widget.AdapterView;
@@ -17,15 +18,15 @@ import android.widget.Spinner;
 public class RecordOnItemSelectedListener extends RecordListener implements AdapterView.OnItemSelectedListener, IOriginalListener  {
 	protected AdapterView.OnItemSelectedListener	mOriginalItemSelectedListener;
 	
-	public RecordOnItemSelectedListener(EventRecorder eventRecorder, AdapterView adapterView) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
-		super(eventRecorder);
+	public RecordOnItemSelectedListener(String activityName, EventRecorder eventRecorder, AdapterView adapterView) throws IllegalAccessException, ClassNotFoundException, NoSuchFieldException {
+		super(activityName, eventRecorder);
 		mOriginalItemSelectedListener = ListenerIntercept.getItemSelectedListener(adapterView);
 		adapterView.setOnItemSelectedListener(this);
 	}
 
 	
-	public RecordOnItemSelectedListener(EventRecorder eventRecorder, AdapterView.OnItemSelectedListener	originalItemSelectedListener) {
-		super(eventRecorder);
+	public RecordOnItemSelectedListener(String activityName, EventRecorder eventRecorder, AdapterView.OnItemSelectedListener	originalItemSelectedListener) {
+		super(activityName, eventRecorder);
 		mOriginalItemSelectedListener = originalItemSelectedListener;
 	}
 	
@@ -44,12 +45,20 @@ public class RecordOnItemSelectedListener extends RecordListener implements Adap
 	@Override
 	public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
 		boolean fReentryBlock = getReentryBlock();
-		if (!RecordListener.getEventBlock()) {
+		if (shouldRecordEvent(view)) {
 			setEventBlock(true);
+			mEventRecorder.setTouchedDown(false);
 			try {
-				mEventRecorder.writeRecord(Constants.EventTags.ITEM_SELECTED, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
+				
+				// I UTTERLY LOATHE having to do this, but I've not much of a choice.
+				if (parent instanceof Spinner) {
+					mEventRecorder.writeRecord(mActivityName, Constants.EventTags.SPINNER_ITEM_SELECTED, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
+				} else {
+					mEventRecorder.writeRecord(mActivityName, Constants.EventTags.ITEM_SELECTED, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
+					
+				}
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, view, "item selected");
+				mEventRecorder.writeException(ex, mActivityName, view, "item selected");
 			}
 		}
 		if (!fReentryBlock) {

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="%CLASSPACKAGE%.test"
+    package="%TARGET_PACKAGE%.test"
     android:versionCode="1"
     android:versionName="1.0" >
 
@@ -8,9 +8,10 @@
 
     <instrumentation
         android:name="android.test.InstrumentationTestRunner"
-        android:targetPackage="%CLASSPACKAGE%" />
+        android:targetPackage="%TARGET_PACKAGE%" />
 
-    <application android:label="%CLASSPACKAGE%.test" >
+    <application android:label="%TARGET_PACKAGE%.test" 
+        		 android:debuggable="true">
         <uses-library android:name="android.test.runner" />
        <service android:name="com.androidApp.LogService.LogService" >
             <intent-filter>
@@ -19,5 +20,4 @@
             </intent-filter>
          </service>
     </application>
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 </manifest>

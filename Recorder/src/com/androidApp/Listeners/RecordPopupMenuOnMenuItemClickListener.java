@@ -5,6 +5,7 @@ import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.ReflectionUtils;
 
+import android.app.Activity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -20,18 +21,18 @@ public class RecordPopupMenuOnMenuItemClickListener extends RecordListener imple
 	protected PopupMenu.OnMenuItemClickListener	mOriginalMenuItemClickListener;
 	protected View mMenuView;
 	
-	public RecordPopupMenuOnMenuItemClickListener(EventRecorder eventRecorder, View v) {
-		super(eventRecorder);
+	public RecordPopupMenuOnMenuItemClickListener(String activityName, EventRecorder eventRecorder, View v) {
+		super(activityName, eventRecorder);
 		mMenuView = v;
 		try {
 			mOriginalMenuItemClickListener = ListenerIntercept.getPopupMenuOnMenuItemClickListener(v);
 		} catch (Exception ex) {
-			mEventRecorder.writeException(ex, "create popup on item click listener");
+			mEventRecorder.writeException(mActivityName, ex, "create popup on item click listener");
 		}
 	}
 	
-	public RecordPopupMenuOnMenuItemClickListener(EventRecorder eventRecorder, PopupMenu.OnMenuItemClickListener originalListener) {
-		super(eventRecorder);
+	public RecordPopupMenuOnMenuItemClickListener(Activity activity, EventRecorder eventRecorder, PopupMenu.OnMenuItemClickListener originalListener) {
+		super(activity.getClass().getName(), eventRecorder);
 		mOriginalMenuItemClickListener = originalListener;
 	}
 	
@@ -42,13 +43,14 @@ public class RecordPopupMenuOnMenuItemClickListener extends RecordListener imple
 	@Override
 	public boolean onMenuItemClick(MenuItem item) {
 		boolean fReentryBlock = getReentryBlock();
-		if (!RecordListener.getEventBlock()) {
+		if (!RecordListener.getEventBlock() && mEventRecorder.hasTouchedDown()) {
+			mEventRecorder.setTouchedDown(true);
 			setEventBlock(true);
 			try {
 				int position = RecordPopupMenuOnMenuItemClickListener.getMenuItemIndex(item);
-				mEventRecorder.writeRecord(Constants.EventTags.POPUP_MENU_ITEM_CLICK, position + "," + ViewReference.getClassIndexReference(mMenuView) + "," + RecordListener.getDescription(item));
+				mEventRecorder.writeRecord(mActivityName, Constants.EventTags.POPUP_MENU_ITEM_CLICK, position + "," + ViewReference.getClassIndexReference(mMenuView) + "," + RecordListener.getDescription(item));
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, "menu item click " + ex.getMessage());
+				mEventRecorder.writeException(mActivityName, ex, "menu item click " + ex.getMessage());
 			}	
 		}
 		if (!fReentryBlock) {

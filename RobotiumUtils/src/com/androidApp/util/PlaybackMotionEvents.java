@@ -14,6 +14,7 @@ import android.view.View;
 import android.app.Instrumentation;
 import android.content.Context;
 import android.content.res.AssetManager;
+import android.graphics.Rect;
 import android.os.SystemClock;
 
 /**
@@ -90,13 +91,11 @@ public class PlaybackMotionEvents {
 	 * NOTE: this actually changes the point array, so you can only call it ones
 	 * @param v target view
 	 */
-	protected void scaleAndTranslatePointsToView(View v) {
-		int[] location = new int[2];
-		v.getLocationOnScreen(location);
-		int offsetX = location[0];
-		int offsetY = location[1];
-		float scaleX = ((float) v.getMeasuredWidth())/(float) mWidth;
-		float scaleY = ((float) v.getMeasuredHeight())/(float) mHeight;
+	protected void scaleAndTranslatePointsToView(View v, Rect globalVisibleRect) {
+		int offsetX = globalVisibleRect.left;
+		int offsetY = globalVisibleRect.top;
+		float scaleX = ((float) (globalVisibleRect.right - globalVisibleRect.left))/(float) mWidth;
+		float scaleY = ((float) (globalVisibleRect.bottom - globalVisibleRect.top))/(float) mHeight;
 		
 		// translate and scale the points to the new view.  sendPointerSync() sends events scaled to the display. It has no target view
 		for (MotionEventPoint point : mPointList) {
@@ -104,8 +103,11 @@ public class PlaybackMotionEvents {
 			point.mY *= scaleY;
 			point.mX += offsetX;
 			point.mY += offsetY;
-		
 		}
+	}
+	
+	protected boolean ptInRect(Rect rect, MotionEventPoint pt) {
+		return (pt.mX >= rect.left) && (pt.mY >= rect.top) && (pt.mX <= rect.right) && (pt.mY <= rect.bottom);
 	}
 	/**
 	 * play the points back to the application.  Because we rule.s
@@ -114,26 +116,33 @@ public class PlaybackMotionEvents {
 	 */
 	public void playback(Instrumentation instrumentation, View v, boolean fAllowSkip) {
 		if (!mPointList.isEmpty()) {
+			Rect rect = new Rect();
+			v.getGlobalVisibleRect(rect);
 			long startPointTime = mPointList.get(0).mTimeMsec;
 			long startRealTime = SystemClock.uptimeMillis();
 			long realTime = startRealTime;
-			scaleAndTranslatePointsToView(v);
+			scaleAndTranslatePointsToView(v, rect);
 			MotionEventPoint firstPoint = mPointList.get(0);
 			MotionEventPoint lastPoint = mPointList.get(mPointList.size() - 1);
 			boolean fSkip = false;
 			for (MotionEventPoint point : mPointList) {
-				if (!fAllowSkip || !fSkip) {
-					Log.i(TAG, "motion event x = " + point.mX + " y = " + point.mY + "down time = " + startRealTime + " time = " + realTime);
-					if (point.equals(firstPoint)) {
-						MotionEvent event = MotionEvent.obtain(startRealTime, realTime, MotionEvent.ACTION_DOWN, point.mX, point.mY, 0);
-						instrumentation.sendPointerSync(event);
-					} else if (point.equals(lastPoint)) {
-						MotionEvent event = MotionEvent.obtain(startRealTime, realTime, MotionEvent.ACTION_UP, point.mX, point.mY, 0);
-						instrumentation.sendPointerSync(event);
-					} else {
-						MotionEvent event = MotionEvent.obtain(startRealTime, realTime, MotionEvent.ACTION_MOVE, point.mX, point.mY, 0);
-						instrumentation.sendPointerSync(event);
+				if (ptInRect(rect, point)) {
+					if (!fAllowSkip || !fSkip) {
+						Log.i(TAG, "motion event x = " + point.mX + " y = " + point.mY + " down time = " + startRealTime + " time = " + realTime);
+						if (point.equals(firstPoint)) {
+							MotionEvent event = MotionEvent.obtain(startRealTime, realTime, MotionEvent.ACTION_DOWN, point.mX, point.mY, 0);
+							instrumentation.sendPointerSync(event);
+						} else if (point.equals(lastPoint)) {
+							MotionEvent event = MotionEvent.obtain(startRealTime, realTime, MotionEvent.ACTION_UP, point.mX, point.mY, 0);
+							instrumentation.sendPointerSync(event);
+						} else {
+							MotionEvent event = MotionEvent.obtain(startRealTime, realTime, MotionEvent.ACTION_MOVE, point.mX, point.mY, 0);
+							instrumentation.sendPointerSync(event);
+						}
 					}
+				} else {
+					Log.e(TAG, "point x = " + point.mX + " y = " + point.mY + " is outside of " +	
+							   rect.left + "," + rect.top + "," + rect.right + "," + rect.bottom);
 				}
 				long pointElapsedTime = point.mTimeMsec - startPointTime;
 				realTime = SystemClock.uptimeMillis();

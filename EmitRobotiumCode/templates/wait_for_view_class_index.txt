@@ -1,2 +1,2 @@
 		// %DESCRIPTION%
-		TestCase.assertTrue(solo.waitForView(%CLASSPATH%.class, %VIEW_INDEX% + 1, VIEW_WAIT_MSEC));
+		TestCase.assertTrue(robotiumUtils.waitForView(solo.getView(%CLASSPATH%.class, %VIEW_INDEX%), VIEW_WAIT_MSEC));

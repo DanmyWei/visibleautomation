@@ -7,6 +7,7 @@ import com.androidApp.EventRecorder.ViewReference;
 import com.androidApp.Utility.Constants;
 import com.androidApp.Utility.ReflectionUtils;
 
+import android.app.Activity;
 import android.os.SystemClock;
 import android.view.MenuItem;
 import android.view.View;
@@ -20,14 +21,14 @@ import android.widget.AdapterView;
 public class RecordExpandedMenuViewOnItemClickListener extends RecordListener implements AdapterView.OnItemClickListener, IOriginalListener  {
 	protected AdapterView.OnItemClickListener	mOriginalItemClickListener;
 	
-	public RecordExpandedMenuViewOnItemClickListener(EventRecorder eventRecorder, AdapterView<?> adapterView) {
-		super(eventRecorder);
+	public RecordExpandedMenuViewOnItemClickListener(String activityName, EventRecorder eventRecorder, AdapterView<?> adapterView) {
+		super(activityName, eventRecorder);
 		mOriginalItemClickListener = adapterView.getOnItemClickListener();
 		adapterView.setOnItemClickListener(this);
 	}
 	
-	public RecordExpandedMenuViewOnItemClickListener(EventRecorder eventRecorder, AdapterView.OnItemClickListener originalListener) {
-		super(eventRecorder);
+	public RecordExpandedMenuViewOnItemClickListener(String activityName, EventRecorder eventRecorder, AdapterView.OnItemClickListener originalListener) {
+		super(activityName, eventRecorder);
 		mOriginalItemClickListener = originalListener;
 	}
 		
@@ -62,17 +63,17 @@ public class RecordExpandedMenuViewOnItemClickListener extends RecordListener im
 								Class submenuBuildClass = Class.forName(Constants.Classes.SUBMENU_BUILDER);
 								List<MenuItem> items = (List<MenuItem>) ReflectionUtils.getFieldValue(menuBuilderObject, submenuBuildClass, Constants.Fields.ITEMS);
 								MenuItem menuItem = items.get(position);
-								mEventRecorder.writeRecord(Constants.EventTags.MENU_ITEM_CLICK, menuItem.getItemId() + "," + position + "," + RecordListener.getDescription(menuItem));
+								mEventRecorder.writeRecord(mActivityName, Constants.EventTags.MENU_ITEM_CLICK, menuItem.getItemId() + "," + position + "," + RecordListener.getDescription(menuItem));
 							}	
 						}
 					} catch (Exception ex) {
 						// version stuff.
 					}
 				} else {
-					mEventRecorder.writeRecord(Constants.EventTags.ITEM_CLICK, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
+					mEventRecorder.writeRecord(mActivityName, Constants.EventTags.ITEM_CLICK, position + "," + ViewReference.getClassIndexReference(parent) + "," + getDescription(view));
 				};
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, view, "item click");
+				mEventRecorder.writeException(ex, mActivityName, view, "item click");
 			}	
 		}
 		if (!fReentryBlock) {

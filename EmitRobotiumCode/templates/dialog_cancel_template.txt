@@ -1,3 +1,2 @@
 		// %DESCRIPTION%
 		solo.goBack();
-		solo.waitForDialogToClose(DIALOG_CLOSE_TIMEOUT);

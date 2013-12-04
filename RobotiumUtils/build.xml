@@ -2,12 +2,12 @@
 
 <!-- Configuration of the Ant build system to generate a Jar file --> 
 <project name="RobotiumUtils" default="install">
-  <target name="jar" description="Create Jar file">
-        <jar jarfile="robotiumutils.jar" basedir="./bin" >
-       	 	<fileset dir="./bin" includes="*.class"/>
-       	</jar>
-  </target>
-  <target name="install" description="install library" depends="jar">
-      <copy file="robotiumutils.jar" todir="../EmitRobotiumCode/templates" />
-  </target>
+    <import file="../buildandroidjar.xml"/>
+    <property name="jarfile" value="robotiumutils.jar" />
+
+    <path id="project.all.jars.path" >
+    </path>
+    <path id="project.obfuscate.jars.path" >
+        <pathelement path="robotiumutils.jar" />
+    </path>
 </project>

@@ -18,10 +18,13 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Stack;
 
+import com.androidApp.codedefinition.CodeDefinition;
 import com.androidApp.emitter.IEmitCode.LineAndTokens;
+import com.androidApp.parser.ManifestParser;
 import com.androidApp.parser.ProjectPropertiesScan;
 import com.androidApp.savestate.SaveState;
 import com.androidApp.savestate.SaveStateException;
+import com.androidApp.util.AndroidUtil;
 import com.androidApp.util.Constants;
 import com.androidApp.util.FileUtility;
 import com.androidApp.util.StringUtils;
@@ -62,6 +65,12 @@ public class EmitRobotiumCode {
 		String eventsFileName = args[0];
 		String viewDirectiveFileName = args[1];
 		String targetProject = args[2];
+		String testProjectName = null;
+		if (targetProject.lastIndexOf(File.separatorChar) != -1) {
+			testProjectName = targetProject.substring(targetProject.lastIndexOf(File.separatorChar) + 1) + Constants.Extensions.TEST;
+		} else {
+			testProjectName = targetProject + Constants.Extensions.TEST;
+		}
 		boolean fBinary = false;
 		if (args.length == 3) {
 			fBinary = args[2].equals("binary");
@@ -73,14 +82,35 @@ public class EmitRobotiumCode {
 		} else {
 			emitter = new EmitRobotiumCodeSource();
 		}
+		String androidSDK = System.getenv(Constants.Env.ANDROID_HOME);
+		if (androidSDK == null) {
+			System.err.println("The environment variable ANDROID_HOME must be set");
+			System.exit(-1);
+		}
 		SetupRobotiumProject setup = new SetupRobotiumProject();
 		SetupRobotiumProject.Options options = setup.processOptions(args);
 		
 		// scan the project properties file
+		File binDir = new File(targetProject, Constants.Dirs.BIN);
+		File apkFile = FileUtility.findFileRegexp(binDir, ".*" + Constants.Extensions.APK);
+		if (apkFile == null) {
+			System.err.println("unable to find APK in directory " + binDir.toString());
+			System.exit(-1);
+		}
 		File projectPropertiesFile = new File(targetProject,  Constants.Filenames.PROJECT_PROPERTIES_FILENAME);
 		ProjectPropertiesScan projectPropertiesScan = null;
 		try {
 			projectPropertiesScan = new ProjectPropertiesScan(projectPropertiesFile);
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			System.exit(-1);
+		}
+		
+		// scan the project manifest
+		File manifestFile = new File(targetProject, Constants.Filenames.ANDROID_MANIFEST_XML);
+		ManifestParser manifestParser = null;
+		try {
+			manifestParser = new ManifestParser(manifestFile);
 		} catch (Exception ex) {
 			ex.printStackTrace();
 		}
@@ -95,30 +125,31 @@ public class EmitRobotiumCode {
 		// read any conditional code from the handlers directory
 		Hashtable<CodeDefinition, List<LineAndTokens>> outputCode = new Hashtable<CodeDefinition, List<LineAndTokens>>();
 		String applicationPackage = emitter.readApplicationPackage(eventsFileName);
-		String testClassName = StringUtils.getNameFromClassPath(applicationPackage) + Constants.Extensions.TEST;
-		File handlersDir = new File(testClassName, Constants.Dirs.HANDLERS);
+		File handlersDir = new File(testProjectName, Constants.Dirs.HANDLERS);
 		readHandlers(handlersDir, outputCode);
 		
 		// grab the  generate the test code.
 		List<MotionEventList> motionEvents = new ArrayList<MotionEventList>();
 		emitter.generateTestCode(eventsFileName, outputCode, motionEvents);
-		List<LineAndTokens> mainCode = outputCode.get(new CodeDefinition(Constants.MAIN, null));
-		List<LineAndTokens> functionCode = outputCode.get(new CodeDefinition(Constants.FUNCTIONS, null));
+		List<LineAndTokens> mainCode = outputCode.get(new CodeDefinition(Constants.MAIN));
 		if (emitter.getApplicationClassPath() == null) {
 			System.err.println("unable to generate output code, no activity reference");
 			System.exit(-1);
 		}
 		String testClassPath = emitter.getApplicationClassPath() + Constants.Extensions.TEST;
+		int targetSDK = AndroidUtil.getBestAndroidSDKLevel(androidSDK, manifestParser.getMinSDKVersion());
+		List<String> supportLibraries = FileUtility.getSupportLibraries(apkFile.getAbsolutePath());
 		
 		// generated test class name
-		String srcDirName = testClassName + File.separator + Constants.Dirs.SRC;
+		String srcDirName = testProjectName + File.separator + Constants.Dirs.SRC;
 		String packageFilePath = srcDirName + File.separator + FileUtility.sourceDirectoryFromClassName(testClassPath);
-		String templateFileName = testClassName + "." + Constants.Extensions.JAVA;
+		String templateFileName = testProjectName + "." + Constants.Extensions.JAVA;
 		// asset directory to write motion event files to
-		String assetDirName = testClassName + File.separator + Constants.Dirs.ASSETS;
+		String assetDirName = testProjectName + File.separator + Constants.Dirs.ASSETS;
 		
 		// TODO: should change this variable
 		int uniqueFileIndex = FileUtility.uniqueFileIndex(packageFilePath, templateFileName);
+		String testClassName = testProjectName;
 		if (uniqueFileIndex != 0) {
 			testClassName += Integer.toString(uniqueFileIndex) ;
 		}
@@ -134,14 +165,17 @@ public class EmitRobotiumCode {
 				dirs.createDirectories();
 				SetupRobotiumProject.writeBuildXML(testClassName, emitter.getApplicationClassPath());
 				SetupRobotiumProject.copyBuildFiles(testClassName, projectPropertiesScan.getTarget());
-				SetupRobotiumProject.copyLibraries(dirs.mLibDir);
-				SetupRobotiumProject.writeManifest(testClassName, testClassName, testClassPath, emitter.getApplicationPackage());
+				SetupRobotiumProject.copyLibraries(dirs.mLibDir, supportLibraries, manifestParser.getMinSDKVersion());
+				SetupRobotiumProject.writeManifest(testProjectName, emitter.getApplicationPackage(), 
+												   manifestParser.getMinSDKVersion(), Constants.Filenames.ANDROID_MANIFEST_XML);
 				SetupRobotiumProject.copyTestDriverFile(packageFilePath, emitter.getApplicationClassPath() + Constants.Extensions.TEST);
 				SetupRobotiumProject.writeResources(dirs, testClassName);
 				if (fBinary) {
-					SetupRobotiumProject.writeClasspathBinary(testClassName, Constants.Filenames.ROBOTIUM_JAR);
+					SetupRobotiumProject.writeClasspathBinary(testClassName, Constants.Filenames.ROBOTIUM_JAR,
+						    								  targetSDK, supportLibraries);
 				} else {
-					SetupRobotiumProject.writeClasspath(testClassName, targetProject, Constants.Filenames.ROBOTIUM_JAR);
+					SetupRobotiumProject.writeClasspath(testClassName, targetProject, Constants.Filenames.ROBOTIUM_JAR,
+													    targetSDK, supportLibraries);
 				}
 			}
 		} else {
@@ -150,7 +184,7 @@ public class EmitRobotiumCode {
 		
 		// write the header template, the emitter output, and the trailer template.
 		BufferedWriter bw = new BufferedWriter(new FileWriter(outputCodeFileName));
-		emitter.writeHeader(emitter.getApplicationClassPath(), testClassPath, testClassName, emitter.getApplicationClassName(), bw);
+		emitter.writeHeader(emitter.getApplicationClassPath(), testClassPath, testClassName, emitter.getApplicationClassName(), targetSDK, supportLibraries, bw);
 		if (options.mfWriteFunctions) {
 			SplitFunction splitter = new SplitFunction(options.mMinLines);
 			splitter.writeFunctions(bw, "test" + targetProject, 0, mainCode);
@@ -159,14 +193,19 @@ public class EmitRobotiumCode {
 			emitter.writeFunctionHeader(bw);
 			emitter.writeLines(bw, mainCode);
 			emitter.writeTrailer(bw);
-			if (functionCode != null) {
-				emitter.writeLines(bw, functionCode);
+			
+			// output the function definitions
+			for (Entry<CodeDefinition, List<LineAndTokens>> entry : outputCode.entrySet()) {
+				CodeDefinition codeDef = entry.getKey();
+				if (codeDef.getCodeType().equals(Constants.FUNCTION_DEF)) {
+					List<LineAndTokens> lines = entry.getValue();
+					emitter.writeLines(bw, lines);
+				}
 			}
 			emitter.writeTrailer(bw);
 		}
 		
 		bw.close();
-		String androidSDK = System.getenv(Constants.Env.ANDROID_HOME);
 		
 		// save the sql, files, shared_prefs
 		SaveState.saveStateFiles(androidSDK, testClassName + File.separator + Constants.Dirs.SAVESTATE, Constants.Dirs.EXTERNAL_STORAGE, emitter.getApplicationPackage());
@@ -190,43 +229,98 @@ public class EmitRobotiumCode {
 		BufferedReader br = new BufferedReader(new InputStreamReader(is));
 		SuperTokenizer st = new SuperTokenizer(br.readLine(), "\"", ":,", '\\');
 		List<String> tokens = st.toList();
-		String codeDefLine = br.readLine();
-		CodeDefinition codeDef = CodeDefinition.parse(codeDefLine);
-		StringBuffer code = new StringBuffer();
+		String codeDefCallLine = br.readLine();
+		CodeDefinition codeDefCall = CodeDefinition.parse(codeDefCallLine);
+		StringBuffer callCode = new StringBuffer();
 		String line = br.readLine();
-		while (line != null) {
-			code.append(line + "\n");
+		while ((line != null) && !line.startsWith(Constants.FUNCTION_DEF)) {
+			callCode.append(line + "\n");
 			line = br.readLine();
 		}
-		LineAndTokens lineAndTokens = new LineAndTokens(tokens, line);
-		List<LineAndTokens> lineAndTokensList = new ArrayList<LineAndTokens>();
-		lineAndTokensList.add(lineAndTokens);
-		outputCode.put(codeDef, lineAndTokensList);
+		LineAndTokens callLineAndTokens = new LineAndTokens(tokens, callCode.toString());
+		List<LineAndTokens> callLineAndTokensList = new ArrayList<LineAndTokens>();
+		callLineAndTokensList.add(callLineAndTokens);
+		outputCode.put(codeDefCall, callLineAndTokensList);
+		
+		CodeDefinition codeDefDefinition = codeDefCall.makeCopy();
+		codeDefDefinition.setCodeType(Constants.FUNCTION_DEF);
+		StringBuffer definitionCode = new StringBuffer();
+		line = br.readLine();
+		while (line != null) {
+			definitionCode.append(line + "\n");
+			line = br.readLine();
+		}
+		LineAndTokens definitionLineAndTokens = new LineAndTokens(tokens, definitionCode.toString());
+		List<LineAndTokens> definitionLineAndTokensList = new ArrayList<LineAndTokens>();
+		definitionLineAndTokensList.add(definitionLineAndTokens);
+		outputCode.put(codeDefDefinition, definitionLineAndTokensList);
 	}
 	
 	/**
 	 * write out the list of tokens used for a match, then write the condition used in the output
 	 * then the output code.
 	 * @param os outputstream to write to a bufferedWriter
-	 * @param codeDef condition to write into code
-	 * @param code code to execute if condition is passed.
+	 * @param codeDefCall  condition to write into code
+	 * @param codeCall code to execute if condition is passed.
+	 * @param codeDefDefinition function definition
+	 * @param codeDefinition code for function definition
 	 * @throws IOException
 	 * @throws EmitterException
 	 */
 	public static void writeConditionalCode(OutputStream			os,
-										    CodeDefinition			codeDef,
-										    List<LineAndTokens>		code) throws IOException, EmitterException {
+										    CodeDefinition			codeDefCall,
+										    List<LineAndTokens>		linesCall,
+										    CodeDefinition			codeDefDefinition,
+										    List<LineAndTokens>		linesDefinition) throws IOException, EmitterException {
 		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os));
-		LineAndTokens scanTokensLine = code.get(0);
-		String scanLine = StringUtils.delimit(scanTokensLine.mTokens, ',');
-		bw.write(scanLine + "\n");
-		bw.write(codeDef.toString() + "\n");
-		for (LineAndTokens codeLine : code) {
-			bw.write(codeLine.mOutputLine + "\n");
-		}
+		String code = createConditionalCode(codeDefCall, linesCall, codeDefDefinition, linesDefinition);
+		bw.write(code);
 		bw.close();	
 	}
 	
+	/**
+	 * inner variant to create a string suitable for populating an eclipse IFile
+	 * @param codeDefCall  condition to write into code
+	 * @param codeCall code to execute if condition is passed.
+	 * @param codeDefDefinition function definition
+	 * @param codeDefinition code for function definition
+	 * @return the function call, followed by the line function_def, followed by the function definition
+	 * @throws IOException
+	 * @throws EmitterException
+	 */
+	public static String createConditionalCode(CodeDefinition			codeDefCall,
+											   List<LineAndTokens>		linesCall,
+											   CodeDefinition			codeDefDefinition,
+											   List<LineAndTokens>		linesDefinition) {
+		StringBuffer sb = new StringBuffer();
+		LineAndTokens scanTokensLine = linesCall.get(0);
+		String scanLine = StringUtils.delimit(scanTokensLine.mTokens, ',');
+		sb.append(scanLine + "\n");
+		sb.append(codeDefCall.toString() + "\n");
+		for (LineAndTokens codeLine : linesCall) {
+			sb.append(codeLine.mOutputLine + "\n");
+		}
+		sb.append(Constants.FUNCTION_DEF + "\n");
+		for (LineAndTokens codeLine : linesDefinition) {
+			sb.append(codeLine.mOutputLine + "\n");
+		}
+		return sb.toString();
+	}
+	
+	/**
+	 * find the function defintion associated with this function call.
+	 */
+	public static CodeDefinition findFunctionDefinition(CodeDefinition codeDefTarget, Hashtable<CodeDefinition, List<LineAndTokens>> outputCode) {
+		for (Entry<CodeDefinition, List<LineAndTokens>> entry : outputCode.entrySet()) {
+			CodeDefinition codeDefCand = entry.getKey();
+			if (codeDefCand.getCodeType().equals(Constants.FUNCTION_CALL)) {
+				if (codeDefCand.getFunctionName().equals(codeDefTarget.getFunctionName())) {
+					return codeDefCand;
+				}
+			}
+		}
+		return null;
+	}
 	/**
 	 * write the conditional code out into a file, so it can be reused for later runs.
 	 * if the activity is the same activity as in The Code Definition and the previous recorded
@@ -243,10 +337,12 @@ public class EmitRobotiumCode {
 										    File											handlerDir) throws IOException, EmitterException {
 		// write the conditional code, by activity name and unique indexed
 		for (Entry<CodeDefinition, List<LineAndTokens>> entry : outputCode.entrySet()) {
-			CodeDefinition codeDef = entry.getKey();
-			List<LineAndTokens> code = entry.getValue();
-			if (!codeDef.getActivityName().equals(Constants.MAIN) && !codeDef.getActivityName().equals(Constants.FUNCTIONS)) {
-				String templateFileName = StringUtils.getNameFromClassPath(codeDef.getActivityName()) + "." + Constants.Extensions.TEXT;
+			CodeDefinition codeDefCall = entry.getKey();
+			List<LineAndTokens> linesCall = entry.getValue();
+			if (!codeDefCall.getActivityName().equals(Constants.MAIN) && codeDefCall.getActivityName().equals(Constants.FUNCTION_DEF)) {
+				CodeDefinition codeDefDefinition = CodeDefinition.findFunctionDefinition(codeDefCall, outputCode);
+				List<LineAndTokens> linesDefinition = outputCode.get(codeDefDefinition);
+				String templateFileName = StringUtils.getNameFromClassPath(codeDefCall.getActivityName()) + "." + Constants.Extensions.TEXT;
 				int uniqueFileIndex = FileUtility.uniqueFileIndex(handlerDir, templateFileName);
 				if (uniqueFileIndex != 0) {
 					templateFileName += Integer.toString(uniqueFileIndex);
@@ -255,7 +351,7 @@ public class EmitRobotiumCode {
 				// when we write out the conditional code, we write the first set of tokens, because that's what we scan
 				// against to insert it into the output.
 				FileOutputStream fos = new FileOutputStream(file);
-				writeConditionalCode(fos, codeDef, code);
+				writeConditionalCode(fos, codeDefCall, linesCall, codeDefDefinition, linesDefinition);
 			}
 		}
 	}

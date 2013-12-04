@@ -7,4 +7,5 @@
     <classpathentry exported="true" kind="lib" path="libs/recorder.jar"/>
     <classpathentry exported="true" kind="lib" path="libs/eventrecorderinterface.jar"/>
 	<classpathentry kind="output" path="bin/classes"/>
+	%LIBRARIES%
 </classpath>

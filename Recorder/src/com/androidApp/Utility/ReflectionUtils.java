@@ -50,14 +50,38 @@ public class ReflectionUtils {
 	 * @throws NoSuchFieldException the field didn't match anything the class had
 	 * @throws IllegalAccessException I hope this never happens
 	 */
-	public static void setFieldValue(Object o, Class c, String fieldName, Object value) throws NoSuchFieldException, IllegalAccessException {
-		Field field = c.getDeclaredField(fieldName);
+	public static void setFieldValue(Object o, Class c, Constants.Fields fieldName, Object value) throws NoSuchFieldException, IllegalAccessException {
+		Field field = c.getDeclaredField(fieldName.mName);
 		field.setAccessible(true);
 		field.set(o, value);
 	}
 
+	/**
+	 * get a field that we expect to return a boolean value
+	 * @param o
+	 * @param c
+	 * @param fieldName
+	 * @return
+	 * @throws NoSuchFieldException
+	 * @throws IllegalAccessException
+	 */
 	public static boolean getFieldBoolean(Object o, Class c, String fieldName) throws NoSuchFieldException, IllegalAccessException {
 		Field field = c.getDeclaredField(fieldName);
+		field.setAccessible(true);
+		return field.getBoolean(o);
+	}
+
+	/**
+	 * variant which takes a Constants.Fields
+	 * @param o
+	 * @param c
+	 * @param fieldName
+	 * @return
+	 * @throws NoSuchFieldException
+	 * @throws IllegalAccessException
+	 */
+	public static boolean getFieldBoolean(Object o, Class c, Constants.Fields fieldName) throws NoSuchFieldException, IllegalAccessException {
+		Field field = c.getDeclaredField(fieldName.mName);
 		field.setAccessible(true);
 		return field.getBoolean(o);
 	}
@@ -84,6 +108,21 @@ public class ReflectionUtils {
 	 * @return
 	 * @throws NoSuchFieldException the field didn't match anything the class had
 	 * @throws IllegalAccessException I hope this never happens
+	 */
+	public static Object getFieldValue(Object o, Class c, Constants.Fields fieldName) throws NoSuchFieldException, IllegalAccessException {
+		Field field = c.getDeclaredField(fieldName.mName);
+		field.setAccessible(true);
+		return field.get(o);
+	}
+	
+	/**
+	 * variant which just takes a field name with no backup
+	 * @param o
+	 * @param c
+	 * @param fieldName
+	 * @return
+	 * @throws NoSuchFieldException
+	 * @throws IllegalAccessException
 	 */
 	public static Object getFieldValue(Object o, Class c, String fieldName) throws NoSuchFieldException, IllegalAccessException {
 		Field field = c.getDeclaredField(fieldName);
