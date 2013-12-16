@@ -19,18 +19,18 @@ import android.view.View;
 public class RecordOnKeyListener extends RecordListener implements View.OnKeyListener, IOriginalListener  {
 	protected View.OnKeyListener 	mOriginalOnKeyListener;
 	
-	public RecordOnKeyListener(EventRecorder eventRecorder, View v) {
-		super(eventRecorder);
+	public RecordOnKeyListener(String activityName, EventRecorder eventRecorder, View v) {
+		super(activityName, eventRecorder);
 		try {
 			mOriginalOnKeyListener = ListenerIntercept.getKeyListener(v);
 			v.setOnKeyListener(this);
 		} catch (Exception ex) {
-			mEventRecorder.writeException(ex, v, "create on key listener");
+			mEventRecorder.writeException(ex, mActivityName, v, "create on key listener");
 		}		
 	}
 	
-	public RecordOnKeyListener(EventRecorder eventRecorder, View.OnKeyListener originalKeyListener) {
-		super(eventRecorder);
+	public RecordOnKeyListener(String activityName, EventRecorder eventRecorder, View.OnKeyListener originalKeyListener) {
+		super(activityName, eventRecorder);
 		mOriginalOnKeyListener = originalKeyListener;
 	}
 		
@@ -58,10 +58,10 @@ public class RecordOnKeyListener extends RecordListener implements View.OnKeyLis
 				} else if (keyEvent.getAction() == KeyEvent.ACTION_UP) {
 					action = Constants.Action.UP;
 				}
-				mEventRecorder.writeRecord(Constants.EventTags.KEY, keyCode + "," + action + "," +
+				mEventRecorder.writeRecord(mActivityName, Constants.EventTags.KEY, keyCode + "," + action + "," +
 										   mEventRecorder.getViewReference().getReference(v) + "," + getDescription(v));
 			} catch (Exception ex) {
-				mEventRecorder.writeException(ex, v, "key event");
+				mEventRecorder.writeException(ex, mActivityName, v, "key event");
 			}
 		}
 		if (!fReentryBlock) {
