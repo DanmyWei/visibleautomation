@@ -14,7 +14,6 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.webkit.HttpAuthHandler;
 import android.webkit.SslErrorHandler;
-import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
@@ -120,12 +119,14 @@ public class RecordWebViewClient extends WebViewClient implements IOriginalListe
 		}	
 	}
 	
+	/* TODO: version problem?
 	public void onReceivedLoginRequest(WebView view, String realm, String account, String args){
 		if (mOriginalWebViewClient != null) {
 			mOriginalWebViewClient.onReceivedLoginRequest(view, realm, account, args);
 		}
 		
 	}
+	*/
 	
 	public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error){
 		if (mOriginalWebViewClient != null) {
@@ -163,14 +164,15 @@ public class RecordWebViewClient extends WebViewClient implements IOriginalListe
 		}
 	}
 	
+	/* TODO: version?
 	public WebResourceResponse shouldInterceptRequest(WebView view, String url){
 		if (mOriginalWebViewClient != null) {
 			return mOriginalWebViewClient.shouldInterceptRequest(view, url);
 		} else {
 			return null;
 		}
-		
 	}
+	*/
 	public boolean shouldOverrideKeyEvent(WebView view, KeyEvent event){
 		if (mOriginalWebViewClient != null) {
 			return mOriginalWebViewClient.shouldOverrideKeyEvent(view, event);

@@ -20,8 +20,6 @@ import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.CompoundButton;
 import android.widget.ExpandableListView;
-import android.widget.ListPopupWindow;
-import android.widget.NumberPicker;
 import android.widget.PopupWindow;
 import android.widget.SeekBar;
 import android.widget.TabHost;
@@ -429,27 +427,4 @@ public class ListenerIntercept {
 		Class expandedMenuViewClass = Class.forName(Constants.Classes.EXPANDED_MENU_VIEW);
 		return (Menu) ReflectionUtils.getFieldValue(v, expandedMenuViewClass, Constants.Fields.MENU);
 	}
-	
-	public static NumberPicker.OnValueChangeListener getValueChangeListener(NumberPicker numberPicker) throws NoSuchFieldException, IllegalAccessException {
-		return (NumberPicker.OnValueChangeListener) ReflectionUtils.getFieldValue(numberPicker, NumberPicker.class, Constants.Fields.ON_VALUE_CHANGE_LISTENER);
-	}
-	// TODO: unused: remove this
-	public static AdapterView.OnItemClickListener getPopupMenuOnItemClickListener(View v) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
-		Class dropdownListViewClass = Class.forName(Constants.Classes.DROPDOWN_LISTVIEW);
-		Object menuPopupHelperObject = ReflectionUtils.getFieldValue(v, AdapterView.class, Constants.Fields.ONITEM_CLICK_LISTENER);
-		Class menuPopupHelperClass = Class.forName(Constants.Classes.MENU_POPUP_HELPER);
-		Object listPopupWindowObject = ReflectionUtils.getFieldValue(menuPopupHelperObject, menuPopupHelperClass, Constants.Fields.POPUP);
-		Object listenerObject = ReflectionUtils.getFieldValue(listPopupWindowObject, ListPopupWindow.class, Constants.Fields.ITEM_CLICK_LISTENER);
-		return (AdapterView.OnItemClickListener) listenerObject;
-	}
-	
-	// TODO: unused: remove this
-	public static void setPopupMenuOnItemClickListener(View v, AdapterView.OnItemClickListener listener) throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
-		Class dropdownListViewClass = Class.forName(Constants.Classes.DROPDOWN_LISTVIEW);
-		Object menuPopupHelperObject = ReflectionUtils.getFieldValue(v, AdapterView.class, Constants.Fields.ONITEM_CLICK_LISTENER);
-		Class menuPopupHelperClass = Class.forName(Constants.Classes.MENU_POPUP_HELPER);
-		Object listPopupWindowObject = ReflectionUtils.getFieldValue(menuPopupHelperObject, menuPopupHelperClass, Constants.Fields.POPUP);
-		ReflectionUtils.setFieldValue(listPopupWindowObject, ListPopupWindow.class, Constants.Fields.ITEM_CLICK_LISTENER, listener);
-	}
-
 }

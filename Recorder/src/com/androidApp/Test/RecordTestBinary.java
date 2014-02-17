@@ -57,7 +57,7 @@ public abstract class RecordTestBinary extends ActivityInstrumentationTestCase2 
         	Log.i(TAG, "did not read any user-defined interstitial activities");
         }
         
-		mSetupListeners = new SetupListeners(getInstrumentation(), activityName, this, true);
+		mSetupListeners = new SetupListeners(getInstrumentation(), null, activityName, this, true);
 		SaveState.backupDatabases(getInstrumentation().getTargetContext());
 	}
 

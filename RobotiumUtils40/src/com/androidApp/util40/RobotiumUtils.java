@@ -10,6 +10,7 @@ import com.androidApp.util.ViewExtractor;
 import com.jayway.android.robotium.solo.Solo;
 
 import junit.framework.TestCase;
+import android.app.ActionBar;
 import android.app.Activity;
 import android.app.Dialog;
 import android.app.Instrumentation;
@@ -27,9 +28,6 @@ import android.view.ViewGroup;
 import android.view.ViewParent;
 import android.view.WindowManager;
 import android.widget.PopupWindow;
-import android.support.v7.app.ActionBar;
-import android.support.v7.app.ActionBarActivity;
-import android.support.v7.app.ActionBar.Tab;
 
 /**
  * utility class for monitoring activities and sending events to views.
@@ -140,16 +138,12 @@ public class RobotiumUtils extends com.androidApp.util.RobotiumUtils {
 	 * @throws TestException if there is no action bar to select a tab from
 	 */
 	public void selectActionBarTab(Activity activity, int tabIndex) throws TestException {
-		if (activity instanceof ActionBarActivity) {
-			ActionBarActivity actionBarActivity = (ActionBarActivity) activity;
-			ActionBar actionBar = actionBarActivity.getSupportActionBar();
-			if (actionBar == null) {
-				throw new TestException("selectActionBarTab: activity has no action bar");
-			}
-			mInstrumentation.runOnMainSync(new SetActionBarTabRunnable(actionBar, tabIndex));
-		} else {
-			Log.e(TAG, "select action bar tab " + activity + " is not an action bar activity");
+		ActionBar actionBar = activity.getActionBar();
+		if (actionBar == null) {
+			throw new TestException("selectActionBarTab: activity has no action bar");
 		}
+		mInstrumentation.runOnMainSync(new SetActionBarTabRunnable(actionBar, tabIndex));
+
 	}
 	
 	/**

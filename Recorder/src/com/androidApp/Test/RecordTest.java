@@ -55,7 +55,7 @@ public abstract class RecordTest<T extends Activity> extends ActivityInstrumenta
         } catch (Exception ex) {
         	Log.i(TAG, "did not read any user-defined interstitial activities");
         }
-		mSetupListeners = new SetupListeners(getInstrumentation(), activityClass.getName(), this, false);
+		mSetupListeners = new SetupListeners(getInstrumentation(), null, activityClass.getName(), this, false);
 		SaveState.backupDatabases(getInstrumentation().getTargetContext());
 		initializeResources();
 	}

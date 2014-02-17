@@ -21,7 +21,6 @@ import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Context;
 import android.graphics.Rect;
-import android.os.Debug;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -119,9 +118,6 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 				contentView = ((ViewGroup) contentView).getChildAt(0);
 			}
 			List<View> hitViews = getHitViews((int) event.getX(), (int) event.getY(), contentView);
-			for (View v : hitViews) {
-				Log.d(TAG, "hitView: " + v);
-			}
 			try {
 				mViewInterceptor.interceptList(mActivity, mActivity.toString(), hitViews);
 			} catch (Exception ex) {
@@ -246,30 +242,24 @@ public class RecordWindowCallback extends RecordListener implements Window.Callb
 	// given an event x,y, return the views that were hit.
 	public List<View> getHitViews(int eventX, int eventY, View contentView) {
 		List<View> hitViews = new ArrayList<View>();
-		Rect hitRect = new Rect();
-		getHitViews(eventX, eventY, contentView, hitRect, hitViews);
+		Rect viewRect = new Rect();
+		getHitViews(eventX, eventY, contentView, viewRect, hitViews);
 		return hitViews;
 	}
 	
-	private boolean getHitViews(int eventX, int eventY, View v, Rect hitRect, List<View> hitViews) {
+	private void getHitViews(int eventX, int eventY, View v, Rect viewRect, List<View> hitViews) {
 		if ((v != null) && v.isShown() && v.isEnabled()) {
-			v.getHitRect(hitRect);
-			Log.d(TAG, "event = " + eventX + ", "  + eventY + " view " + v + " hitRect = " + hitRect.left + ", " + hitRect.top + ", " + (hitRect.right - hitRect.left) + ", " + (hitRect.bottom - hitRect.top));
-			if (hitRect.contains(eventX, eventY)) {
+			v.getGlobalVisibleRect(viewRect);
+			if (viewRect.contains(eventX, eventY)) {
 				hitViews.add(v);
 				if (v instanceof ViewGroup) {
 					ViewGroup vg = (ViewGroup) v;
-					eventX -= hitRect.left;
-					eventY -= hitRect.top;
 					for (int iChild = 0; iChild < vg.getChildCount(); iChild++) {
 						View vChild = vg.getChildAt(iChild);
-						if (getHitViews(eventX, eventY, vChild, hitRect, hitViews)) {
-							return true;
-						}
+						getHitViews(eventX, eventY, vChild, viewRect, hitViews);
 					}
 				} 
 			}
 		} 
-		return false;
 	}
 }
